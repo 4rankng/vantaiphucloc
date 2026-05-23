@@ -68,7 +68,7 @@ async def list_vehicle_expenses(
     date_from: date | None = Query(None),
     date_to: date | None = Query(None),
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
+    page_size: int = Query(50, ge=1, le=1000),
     _current_user: User = Depends(require_permission("read", "Salary")),
     db: AsyncSession = Depends(get_db),
 ):

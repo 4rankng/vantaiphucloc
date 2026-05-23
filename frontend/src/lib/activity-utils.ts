@@ -22,15 +22,11 @@ export const ACTIVITY_LABELS: Record<string, Record<string, string>> = {
     work_orders: 'tạo phiếu chuyến',
     trip_orders: 'tạo đơn hàng',
     trip_order_work_orders: 'ghép chuyến',
-    reconciliations: 'ghép chuyến',
     clients: 'tạo khách hàng',
     locations: 'tạo địa điểm',
     routes: 'tạo cung đường',
     pricings: 'tạo bảng giá',
     users: 'tạo tài khoản',
-  },
-  CREATE_RECONCILIATION: {
-    _default: 'ghép chuyến',
   },
   UPDATE: {
     work_orders: 'cập nhật phiếu chuyến',
@@ -54,19 +50,15 @@ export const ACTIVITY_LABELS: Record<string, Record<string, string>> = {
     trip_order_work_orders: 'ghép chuyến',
     work_orders: 'ghép chuyến',
     trip_orders: 'ghép chuyến',
-    reconciliations: 'ghép chuyến',
     _default: 'ghép chuyến',
   },
   AUTO_MATCH: {
-    reconciliations: 'tự động ghép chuyến',
     _default: 'tự động ghép chuyến',
   },
   BULK_MATCH: {
-    reconciliations: 'ghép chuyến hàng loạt',
     _default: 'ghép chuyến hàng loạt',
   },
   UNMATCH: {
-    reconciliations: 'bỏ ghép chuyến',
     _default: 'bỏ ghép chuyến',
   },
   CANCEL: {

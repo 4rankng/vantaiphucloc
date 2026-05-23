@@ -8,20 +8,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
     BookedTrip,
-    BookedTripContainer,
-    DeliveredTrip,
-    Vehicle,
-    VehicleDriver,
+    Client,
+    Location,
 )
 from app.utils.excel_utils import add_template_version
 
 _logger = logging.getLogger(__name__)
 
+
 async def generate_booked_trips_excel(
     db: AsyncSession,
     date_from: str | None = None,
     date_to: str | None = None,
-    status: str | None = None,
+    matched: bool | None = None,
     client_id: int | None = None,
 ) -> bytes:
     """Export trip orders to Excel.
@@ -39,94 +38,26 @@ async def generate_booked_trips_excel(
         query = query.where(BookedTrip.trip_date >= date_from)
     if date_to:
         query = query.where(BookedTrip.trip_date <= date_to)
-    if status:
-        query = query.where(BookedTrip.status == status)
+    if matched is not None:
+        query = query.where(BookedTrip.matched == matched)
 
     result = await db.execute(query)
     booked_trips = result.scalars().all()
 
-    to_ids = [to.id for to in booked_trips]
-    containers_map: dict[int, list[BookedTripContainer]] = {}
-    if to_ids:
-        cont_result = await db.execute(
-            select(BookedTripContainer).where(BookedTripContainer.booked_trip_id.in_(to_ids))
-        )
-        for c in cont_result.scalars().all():
-            containers_map.setdefault(c.booked_trip_id, []).append(c)
-
     # Resolve display names via JOIN.
-    from app.models.domain import Client, Location
     client_ids = {to.client_id for to in booked_trips}
     loc_ids = {to.pickup_location_id for to in booked_trips} | {to.dropoff_location_id for to in booked_trips}
     loc_ids.discard(None)
     client_name_by_id = {c.id: c.name for c in (await db.execute(select(Client).where(Client.id.in_(client_ids)))).scalars().all()} if client_ids else {}
     loc_name_by_id = {l.id: l.name for l in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
 
-    # For per-partner export: load match status and vehicle plates
-    match_map: dict[int, str] = {}  # to_id -> "Đã khớp" / "Chưa khớp"
-    plate_map: dict[int, str] = {}  # to_id -> plate
-    vessel_map: dict[int, str] = {}  # to_id -> vessel
+    # For per-partner export: determine match status and vessel from BookedTrip directly
     client_name = None
     if client_id:
         # Get partner name for filename
         p_result = await db.execute(select(Client).where(Client.id == client_id))
         client_obj = p_result.scalar_one_or_none()
         client_name = client_obj.name if client_obj else None
-
-        # Load reconciliation links to determine match status
-        from app.models.domain import Reconciliation
-        if to_ids:
-            recon_result = await db.execute(
-                select(Reconciliation.booked_trip_id).where(
-                    Reconciliation.booked_trip_id.in_(to_ids),
-                    Reconciliation.is_active == True,  # noqa: E712
-                )
-            )
-            matched_to_ids = {r for (r,) in recon_result.all()}
-            for to_id in to_ids:
-                match_map[to_id] = "Đã khớp" if to_id in matched_to_ids else "Chưa khớp"
-
-        # Load driver plates via work orders linked to these TOs
-        from app.models.base import User as _User
-        from app.models.domain import Vehicle
-        if to_ids:
-            # Get driver_ids from work orders linked via reconciliation
-            recon_wo_result = await db.execute(
-                select(Reconciliation.delivered_trip_id, Reconciliation.booked_trip_id).where(
-                    Reconciliation.booked_trip_id.in_(to_ids),
-                    Reconciliation.is_active == True,  # noqa: E712
-                )
-            )
-            wo_to_pairs = recon_wo_result.all()
-            wo_ids = list({r[0] for r in wo_to_pairs})
-
-            if wo_ids:
-                wo_result = await db.execute(
-                    select(DeliveredTrip.id, DeliveredTrip.driver_id, DeliveredTrip.vessel).where(DeliveredTrip.id.in_(wo_ids))
-                )
-                wo_driver_map = {r[0]: r[1] for r in wo_result.all()}
-                wo_vessel_map = {r[0]: (r[2] or "") for r in wo_result.all()}
-                driver_ids = list(set(wo_driver_map.values()))
-
-                if driver_ids:
-                    v_result = await db.execute(
-                        select(VehicleDriver.driver_id, Vehicle.plate)
-                        .join(Vehicle, Vehicle.id == VehicleDriver.vehicle_id)
-                        .where(
-                            VehicleDriver.driver_id.in_(driver_ids),
-                            VehicleDriver.is_active == True,  # noqa: E712
-                            Vehicle.is_active == True,  # noqa: E712
-                        )
-                    )
-                    driver_plate_map = dict(v_result.all())
-
-                    for wo_id, to_id in wo_to_pairs:
-                        driver_id = wo_driver_map.get(wo_id)
-                        if driver_id and driver_id in driver_plate_map:
-                            plate_map[to_id] = driver_plate_map[driver_id]
-                        vessel = wo_vessel_map.get(wo_id, "")
-                        if vessel:
-                            vessel_map[to_id] = vessel
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -147,42 +78,39 @@ async def generate_booked_trips_excel(
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal="center")
 
-    status_labels = {"PENDING": "Chờ ghép", "MATCHED": "Đã đối soát"}
+    match_labels = {True: "Đã khớp", False: "Chưa khớp"}
 
     if client_id:
         stt = 0
         for to in booked_trips:
-            containers = containers_map.get(to.id, [])
             pickup = loc_name_by_id.get(to.pickup_location_id, "")
             dropoff = loc_name_by_id.get(to.dropoff_location_id, "")
             route = f"{pickup} → {dropoff}" if pickup and dropoff else ""
-            plate = plate_map.get(to.id, "")
-            match_status = match_map.get(to.id, "Chưa khớp")
-            for c in containers:
-                stt += 1
-                ws.append([
-                    stt,
-                    c.container_number,
-                    route,
-                    to.trip_date,
-                    plate,
-                    vessel_map.get(to.id, ""),
-                    match_status,
-                    to.revenue or "",
-                ])
+            plate = to.vehicle_plate or ""
+            match_status = "Đã khớp" if to.matched else "Chưa khớp"
+            vessel = to.vessel or ""
+            stt += 1
+            ws.append([
+                stt,
+                to.cont_number or "",
+                route,
+                to.trip_date,
+                plate,
+                vessel,
+                match_status,
+                to.revenue or "",
+            ])
     else:
         for to in booked_trips:
-            containers = containers_map.get(to.id, [])
-            for c in containers:
-                ws.append([
-                    f"TO#{to.id}", to.trip_date,
-                    client_name_by_id.get(to.client_id, ""),
-                    loc_name_by_id.get(to.pickup_location_id, ""),
-                    loc_name_by_id.get(to.dropoff_location_id, ""),
-                    c.container_number, c.cont_type,
-                    to.revenue, to.revenue, 0,
-                    status_labels.get(to.status, to.status),
-                ])
+            ws.append([
+                f"TO#{to.id}", to.trip_date,
+                client_name_by_id.get(to.client_id, ""),
+                loc_name_by_id.get(to.pickup_location_id, ""),
+                loc_name_by_id.get(to.dropoff_location_id, ""),
+                to.cont_number or "", to.cont_type or "",
+                to.revenue, to.revenue, 0,
+                "Đã đối soát" if to.matched else "Chờ ghép",
+            ])
 
     from app.utils.excel_utils import add_template_version as _add_ver
 
@@ -214,10 +142,8 @@ async def generate_doi_soat_excel(
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
-    from app.models.domain import Client, Location, Reconciliation, Vehicle
-    from app.models.base import User as _User
 
-    # ── 1. Load partner ───────────────────────────────────────────────────────
+    # -- 1. Load partner --
     p_result = await db.execute(select(Client).where(Client.id == client_id))
     client = p_result.scalar_one_or_none()
     client_name = client.name if client else f"Client #{client_id}"
@@ -227,28 +153,17 @@ async def generate_doi_soat_excel(
     df = date_type.fromisoformat(date_from)
     dt = date_type.fromisoformat(date_to)
 
-    # ── 2. Load MATCHED trip orders ───────────────────────────────────────────
+    # -- 2. Load MATCHED trip orders --
     to_query = select(BookedTrip).where(
         BookedTrip.client_id == client_id,
         BookedTrip.trip_date >= df,
         BookedTrip.trip_date <= dt,
-        BookedTrip.status == "MATCHED",
+        BookedTrip.matched == True,
     ).order_by(BookedTrip.trip_date, BookedTrip.id)
     to_result = await db.execute(to_query)
     booked_trips = to_result.scalars().all()
 
-    to_ids = [to.id for to in booked_trips]
-
-    # ── 3. Load containers ───────────────────────────────────────────────────
-    containers_map: dict[int, list[BookedTripContainer]] = {}
-    if to_ids:
-        cont_result = await db.execute(
-            select(BookedTripContainer).where(BookedTripContainer.booked_trip_id.in_(to_ids))
-        )
-        for c in cont_result.scalars().all():
-            containers_map.setdefault(c.booked_trip_id, []).append(c)
-
-    # ── 4. Load location names ───────────────────────────────────────────────
+    # -- 3. Load location names --
     loc_ids: set[int] = set()
     for to in booked_trips:
         if to.pickup_location_id:
@@ -260,93 +175,18 @@ async def generate_doi_soat_excel(
         loc_result = await db.execute(select(Location).where(Location.id.in_(loc_ids)))
         loc_name_by_id = {loc.id: loc.name for loc in loc_result.scalars().all()}
 
-    # ── 5. Load plate + vessel + operation_type via Reconciliation → DeliveredTrip ─
-    plate_map: dict[int, str] = {}   # to_id -> plate string
-    vessel_map: dict[int, str] = {}  # to_id -> vessel string
-    op_type_map: dict[int, str] = {} # to_id -> operation_type label
-    _op_labels = {
-        "XUAT_NHAP_TAU": "Xuất / Nhập tàu",
-        "CHUYEN_BAI": "Chuyển bãi",
-        "LAY_VO_HA_HANG": "Lấy vỏ hạ hàng",
-        "CHAY_SA_LAN": "Chạy sà lan",
-        "DONG_KHO": "Đóng kho",
-        "TIEN_LUAT": "Tiền luật",
-    }
-
-    if to_ids:
-        recon_result = await db.execute(
-            select(Reconciliation.delivered_trip_id, Reconciliation.booked_trip_id).where(
-                Reconciliation.booked_trip_id.in_(to_ids),
-                Reconciliation.is_active == True,  # noqa: E712
-            )
-        )
-        wo_to_pairs = recon_result.all()
-        wo_ids = list({r[0] for r in wo_to_pairs})
-
-        if wo_ids:
-            wo_result = await db.execute(
-                select(
-                    DeliveredTrip.id, DeliveredTrip.driver_id, DeliveredTrip.vessel,
-                    DeliveredTrip.vendor_id,
-                    DeliveredTrip.operation_type,
-                    DeliveredTrip.vehicle_id,
-                ).where(DeliveredTrip.id.in_(wo_ids))
-            )
-            wo_rows = wo_result.all()
-            wo_driver_map   = {r[0]: r[1] for r in wo_rows}
-            wo_vessel_map   = {r[0]: (r[2] or "") for r in wo_rows}
-            wo_vehicle_map  = {r[0]: r[5] for r in wo_rows}
-            wo_op_type_map  = {r[0]: (r[4] or "") for r in wo_rows}
-            driver_ids = [d for d in wo_driver_map.values() if d is not None]
-            vehicle_ids = [v for v in wo_vehicle_map.values() if v is not None]
-
-            vehicle_plate_map: dict[int, str] = {}
-            if vehicle_ids:
-                veh_result = await db.execute(
-                    select(Vehicle.id, Vehicle.plate).where(Vehicle.id.in_(vehicle_ids))
-                )
-                vehicle_plate_map = dict(veh_result.all())
-
-            driver_plate_map: dict[int, str] = {}
-            if driver_ids:
-                v_result = await db.execute(
-                    select(VehicleDriver.driver_id, Vehicle.plate)
-                    .join(Vehicle, Vehicle.id == VehicleDriver.vehicle_id)
-                    .where(
-                        VehicleDriver.driver_id.in_(driver_ids),
-                        VehicleDriver.is_active == True,  # noqa: E712
-                        Vehicle.is_active == True,  # noqa: E712
-                    )
-                )
-                driver_plate_map = dict(v_result.all())
-
-            for wo_id, to_id in wo_to_pairs:
-                v_id = wo_vehicle_map.get(wo_id)
-                plate = vehicle_plate_map.get(v_id) if v_id else None
-                if not plate:
-                    d_id = wo_driver_map.get(wo_id)
-                    if d_id and d_id in driver_plate_map:
-                        plate = driver_plate_map[d_id]
-                if plate:
-                    plate_map[to_id] = plate
-
-                vessel = wo_vessel_map.get(wo_id, "")
-                if vessel:
-                    vessel_map[to_id] = vessel
-                op = wo_op_type_map.get(wo_id, "")
-                if op:
-                    op_type_map[to_id] = _op_labels.get(op, op)
-
-    # ── 6. Build Excel workbook ───────────────────────────────────────────────
+    # -- 4. Build Excel workbook --
+    # Plate and vessel come directly from BookedTrip; no Reconciliation link.
+    # operation_type was removed from BookedTrip, so that column stays blank.
     wb = openpyxl.Workbook()
     ws = wb.active
     month_label = df.strftime("%m/%Y")
     ws.title = f"SL T{df.month}.{str(df.year)[2:]}"
 
-    num_cols = 14  # A–N
+    num_cols = 14  # A-N
     last_col = get_column_letter(num_cols)
 
-    # ── Styles ────────────────────────────────────────────────────────────────
+    # -- Styles --
     _bold = Font(bold=True, size=11)
     _bold14 = Font(bold=True, size=14)
     _header_font = Font(bold=True, size=11)
@@ -356,7 +196,7 @@ async def generate_doi_soat_excel(
     left = Alignment(horizontal="left", vertical="center")
     right_align = Alignment(horizontal="right", vertical="center")
 
-    # ── Title block (rows 1–8) ────────────────────────────────────────────────
+    # -- Title block (rows 1-8) --
     ws.merge_cells(f"A1:{last_col}1")
     ws["A1"] = "CÔNG TY TNHH AMT PHÚC LỘC"
     ws["A1"].font = _bold
@@ -387,7 +227,7 @@ async def generate_doi_soat_excel(
     ws.merge_cells(f"A8:{last_col}8")
     ws["A8"] = "Công ty TNHH AMT Phúc Lộc xin gửi tới Quý Công ty bảng kê quyết toán vận tải như sau:"
 
-    # ── Header row 10 ─────────────────────────────────────────────────────────
+    # -- Header row 10 --
     headers = [
         "STT", "NGÀY ĐI", "CHỦ HÀNG", "SỐ CONTAINER",
         "F20'", "F40'", "E20'", "E40'",
@@ -402,8 +242,8 @@ async def generate_doi_soat_excel(
         cell.alignment = center
         cell.border = thin_border
 
-    # ── Subtotal row 11 ───────────────────────────────────────────────────────
-    last_data_row = max(len(booked_trips) * 3 + 11, 12)  # rough estimate
+    # -- Subtotal row 11 --
+    last_data_row = max(len(booked_trips) + 12, 12)  # one row per trip now
     ws.append([
         "", "", "", "",
         f"=SUBTOTAL(9,E12:E{last_data_row})",
@@ -419,59 +259,57 @@ async def generate_doi_soat_excel(
         ws.cell(row=11, column=col_num).font = _bold
         ws.cell(row=11, column=col_num).alignment = center
 
-    # ── Data rows (12+) ──────────────────────────────────────────────────────
+    # -- Data rows (12+) -- one row per BookedTrip now
     stt = 0
     client_code = client.code if client else ""
 
     for to in booked_trips:
-        containers = containers_map.get(to.id, [])
         pickup = loc_name_by_id.get(to.pickup_location_id or 0, "")
         dropoff = loc_name_by_id.get(to.dropoff_location_id or 0, "")
-        plate = plate_map.get(to.id) or to.vehicle_plate or ""
-        op_type = op_type_map.get(to.id, "")
+        plate = to.vehicle_plate or ""
+        vessel = to.vessel or ""
         revenue = to.revenue or 0
         trip_date_str = to.trip_date.strftime("%d/%m/%Y") if to.trip_date else ""
 
-        for c in containers:
-            stt += 1
-            ct = (c.cont_type or "").upper()
+        ct = (to.cont_type or "").upper()
 
-            # Cont type flags
-            f20 = 1 if ct == "F20" else None
-            f40 = 1 if ct == "F40" else None
-            e20 = 1 if ct == "E20" else None
-            e40 = 1 if ct == "E40" else None
+        # Cont type flags
+        f20 = 1 if ct == "F20" else None
+        f40 = 1 if ct == "F40" else None
+        e20 = 1 if ct == "E20" else None
+        e40 = 1 if ct == "E40" else None
 
-            row_num = 11 + stt
-            ws.append([
-                stt, trip_date_str, client_code, c.container_number,
-                f20, f40, e20, e40,
-                plate, pickup, dropoff,
-                revenue if revenue else None,
-                f"=L{row_num}",
-                op_type,
-            ])
+        stt += 1
+        row_num = 11 + stt
+        ws.append([
+            stt, trip_date_str, client_code, to.cont_number or "",
+            f20, f40, e20, e40,
+            plate, pickup, dropoff,
+            revenue if revenue else None,
+            f"=L{row_num}",
+            "",  # operation_type removed from BookedTrip
+        ])
 
-            # Styling
-            for col_num in range(1, num_cols + 1):
-                cell = ws.cell(row=row_num, column=col_num)
-                cell.border = thin_border
-                if col_num in (1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 14):
-                    cell.alignment = center
-                elif col_num == 4:
-                    cell.alignment = left
-                elif col_num in (12, 13):
-                    cell.alignment = right_align
-                    cell.number_format = '#,##0'
-                if col_num == 13:
-                    cell.font = _bold
+        # Styling
+        for col_num in range(1, num_cols + 1):
+            cell = ws.cell(row=row_num, column=col_num)
+            cell.border = thin_border
+            if col_num in (1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 14):
+                cell.alignment = center
+            elif col_num == 4:
+                cell.alignment = left
+            elif col_num in (12, 13):
+                cell.alignment = right_align
+                cell.number_format = '#,##0'
+            if col_num == 13:
+                cell.font = _bold
 
     # Update subtotal range to actual last row
     actual_last = 11 + stt if stt > 0 else 12
     for col_num, col_letter in [(5, "E"), (6, "F"), (7, "G"), (8, "H"), (13, "M")]:
         ws.cell(row=11, column=col_num).value = f"=SUBTOTAL(9,{col_letter}12:{col_letter}{actual_last})"
 
-    # ── Column widths ─────────────────────────────────────────────────────────
+    # -- Column widths --
     col_widths = [6, 12, 12, 18, 6, 6, 6, 6, 14, 20, 20, 14, 14, 16]
     for i, width in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width

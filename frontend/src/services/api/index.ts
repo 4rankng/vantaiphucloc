@@ -26,7 +26,6 @@ import * as auditApi from './audit.api'
 import * as pnlApi from './pnl.api'
 import * as vehicleExpensesApi from './vehicleExpenses.api'
 import * as vehiclesApi from './vehicles.api'
-import * as reconciliationImportsApi from './reconciliationImports.api'
 import * as vehicleDriversApi from './vehicleDrivers.api'
 
 export const apiClient = {
@@ -43,7 +42,6 @@ export const apiClient = {
   createVendor: vendorsApi.createVendor,
   updateVendor: vendorsApi.updateVendor,
   deleteVendor: vendorsApi.deleteVendor,
-  getVendorSummary: vendorsApi.getVendorSummary,
 
   // Routes (DEPRECATED — returns empty)
   getRoutes: routesApi.getRoutes,
@@ -82,36 +80,20 @@ export const apiClient = {
   getSuggestedRoutes: deliveredTripsApi.getSuggestedRoutes,
   bulkImportAndMatch: deliveredTripsApi.bulkImportAndMatch,
   aiParsePreview: deliveredTripsApi.aiParsePreview,
-  updateContainerNumber: deliveredTripsApi.updateContainerNumber,
 
   // Trip Orders
   getBookedTrip: bookedTripsApi.getBookedTrip,
   getBookedTrips: bookedTripsApi.getBookedTrips,
   createBookedTrip: bookedTripsApi.createBookedTrip,
   updateBookedTrip: bookedTripsApi.updateBookedTrip,
-  reconcile: bookedTripsApi.reconcile,
-  unmatch: bookedTripsApi.unmatch,
-  suggestMatches: bookedTripsApi.suggestMatches,
-  suggestWosForTrip: bookedTripsApi.suggestWosForTrip,
   toggleTripConfirmation: bookedTripsApi.toggleTripConfirmation,
-  uploadCustomerExcel: bookedTripsApi.uploadCustomerExcel,
   getDistinctTripPartners: bookedTripsApi.getDistinctTripPartners,
-  exportReconciliationExcel: bookedTripsApi.exportReconciliationExcel,
-  exportDoiSoatExcel: bookedTripsApi.exportDoiSoatExcel,
   importBookedTrips: bookedTripsApi.importBookedTrips,
   exportBookedTripsExcel: bookedTripsApi.exportBookedTripsExcel,
-  autoMatch: bookedTripsApi.autoMatch,
-  autoMatchPreview: bookedTripsApi.autoMatchPreview,
-  autoMatchConfirm: bookedTripsApi.autoMatchConfirm,
-  getMatchScores: bookedTripsApi.getMatchScores,
-  bulkMatch: bookedTripsApi.bulkMatch,
-  batchReconcileForWO: bookedTripsApi.batchReconcileForWO,
-  batchReconcileForTO: bookedTripsApi.batchReconcileForTO,
-  searchBookedTrips: bookedTripsApi.searchBookedTrips,
+  exportDoiSoatExcel: bookedTripsApi.exportDoiSoatExcel,
 
   // Salary
   calculateSalary: salaryApi.calculateSalary,
-  getJobStatus: salaryApi.getJobStatus,
   getDriverEarnings: salaryApi.getDriverEarnings,
   getMyEarnings: salaryApi.getMyEarnings,
   getSalaryConfig: salaryApi.getSalaryConfig,
@@ -140,15 +122,6 @@ export const apiClient = {
   addVehicleDriver: vehicleDriversApi.addVehicleDriver,
   removeVehicleDriver: vehicleDriversApi.removeVehicleDriver,
   createVehicle: vehicleDriversApi.createVehicle,
-
-  // Customer reconciliation imports
-  previewReconciliationImport: reconciliationImportsApi.previewReconciliationImport,
-  commitReconciliationImport: reconciliationImportsApi.commitReconciliationImport,
-  listReconciliationImports: reconciliationImportsApi.listReconciliationImports,
-  getReconciliationImport: reconciliationImportsApi.getReconciliationImport,
-  updateRowVerdict: reconciliationImportsApi.updateRowVerdict,
-  uploadCustomerResponse: reconciliationImportsApi.uploadCustomerResponse,
-  getExportDoiSoatUrl: reconciliationImportsApi.getExportDoiSoatUrl,
 
   // Work Order Export
   exportDeliveredTripsExcel: deliveredTripsApi.exportDeliveredTripsExcel,
@@ -179,7 +152,6 @@ export const apiClient = {
   listExcelSheets: importsApi.listExcelSheets,
   previewCustomerExcel: importsApi.previewCustomerExcel,
   commitCustomerExcel: importsApi.commitCustomerExcel,
-  listImportTemplates: importsApi.listImportTemplates,
   applyPricingToTripIds: importsApi.applyPricingToTripIds,
 
   // Customer-Pricing imports
@@ -193,7 +165,6 @@ export const apiClient = {
 // Re-export types from salary.api
 export type {
   AsyncJobResult,
-  JobStatus,
   DriverEarnings,
   DriverBaseSalary,
   SetDriverBaseSalaryInput,
@@ -212,14 +183,3 @@ export type {
   VehicleExpenseCreate,
   VehicleExpenseCategory,
 } from './vehicleExpenses.api'
-export type {
-  CustomerVerdict,
-  ImportStatus,
-  RowApplyStatus,
-  DiffClassification,
-  ParsedRowInput,
-  ImportPreviewRequest,
-  ReconciliationRow,
-  ReconciliationImport,
-  RowVerdictPayload,
-} from './reconciliationImports.api'

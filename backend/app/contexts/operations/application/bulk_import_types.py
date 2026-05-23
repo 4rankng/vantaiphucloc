@@ -14,7 +14,6 @@ class ImportRow:
     dropoff_location: str | None = None
     amount: int | None = None
     work_type: str | None = None
-    operation_type: str | None = None
     notes: str | None = None
     vehicle_plate: str | None = None
     parse_error: str | None = None

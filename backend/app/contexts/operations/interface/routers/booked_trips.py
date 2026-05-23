@@ -22,7 +22,6 @@ from app.contexts.operations.application import (
     UpdateBookedTrip,
 )
 from app.contexts.operations.application.dto import (
-    TripContainerInput,
     BookedTripCreateInput,
     BookedTripListFilters,
     BookedTripUpdateInput,
@@ -42,8 +41,6 @@ from app.models.base import User
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import (
     CancelRequest,
-    TripContainerOut,
-    
     BookedTripCreate,
     BookedTripOut,
     BookedTripUpdate,
@@ -65,28 +62,20 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-def _trip_to_out(t: BookedTrip, clients, locations, matched_delivered_trip_ids: list[int] | None = None) -> BookedTripOut:
+def _trip_to_out(t: BookedTrip, clients, locations) -> BookedTripOut:
     return BookedTripOut(
         id=int(t.id),  # type: ignore[arg-type]
         trip_date=t.trip_date,
         client=get_client_summary(clients, t.client_id),
         pickup_location=get_location_summary(locations, t.pickup_location_id),
         dropoff_location=get_location_summary(locations, t.dropoff_location_id),
-        containers=[
-            TripContainerOut(
-                id=int(c.id),  # type: ignore[arg-type]
-                container_number=c.container_number,
-                cont_type=c.cont_type,
-            )
-            for c in t.containers
-        ],
+        cont_number=t.cont_number,
+        cont_type=t.cont_type,
         vessel=t.vessel,
         vehicle_plate=t.vehicle_plate,
-        operation_type=t.operation_type,
         work_type=t.work_type,
         revenue=t.revenue,
-        status=t.status,
-        matched_delivered_trip_ids=matched_delivered_trip_ids or [],
+        matched=t.matched,
         created_at=t.created_at,
         updated_at=t.updated_at,
     )
@@ -107,37 +96,7 @@ async def _load_many(session, trips: list[BookedTrip]) -> list[BookedTripOut]:
         {t.pickup_location_id for t in trips}
         | {t.dropoff_location_id for t in trips},
     )
-    # Look up matched delivered trip IDs from Reconciliation table
-    from sqlalchemy import select
-    from app.models.domain import Reconciliation
-    to_ids = [t.id for t in trips]
-    matched_map: dict[int, list[int]] = {tid: [] for tid in to_ids}
-    if to_ids:
-        recon_result = await session.execute(
-            select(Reconciliation.booked_trip_id, Reconciliation.delivered_trip_id).where(
-                Reconciliation.booked_trip_id.in_(to_ids),
-                Reconciliation.is_active == True,  # noqa: E712
-            )
-        )
-        for bt_id, dt_id in recon_result.all():
-            matched_map[bt_id].append(dt_id)
-    return [_trip_to_out(t, clients, locations, matched_map.get(t.id, [])) for t in trips]
-
-
-def _container_inputs(items) -> list[TripContainerInput]:
-    from app.utils.iso6346 import validate_container_number
-    results = []
-    for c in (items or []):
-        cn = (c.container_number or "").strip()
-        if cn:
-            valid, err = validate_container_number(cn)
-            if not valid:
-                raise HTTPException(status_code=422, detail=f"Số container không hợp lệ '{cn}': {err}")
-        results.append(TripContainerInput(
-            container_number=c.container_number,
-            cont_type=c.cont_type,
-        ))
-    return results
+    return [_trip_to_out(t, clients, locations) for t in trips]
 
 
 # ---------------------------------------------------------------------------
@@ -158,254 +117,30 @@ async def create_booked_trip(
             client_id=body.client_id,
             pickup_location_id=body.pickup_location_id,
             dropoff_location_id=body.dropoff_location_id,
-            containers=_container_inputs(body.containers),
+            cont_number=body.cont_number,
+            cont_type=body.cont_type,
             revenue=body.revenue,
-            matched_delivered_trip_ids=body.matched_delivered_trip_ids,
         ))
     except Exception as exc:
         raise translate(exc)
     return await _load_one(use_case.session, t)
 
 
-@router.get("/booked-trips/search")
-async def search_booked_trips(
-    q: str = Query("", description="Search query (container, customer, code, route)"),
-    delivered_trip_id: int = Query(..., description="Work order ID for computing match scores"),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=50),
-    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
-    use_case: GetBookedTrip = Depends(get_get_booked_trip),
-):
-    """Manual search for trip orders — bypasses match suggester threshold.
-
-    Searches ALL PENDING/DRAFT trip orders by container number, partner name,
-    code, pickup/dropoff location, or date. Returns results with match scores
-    computed against the given work order so the accountant can make an
-    informed choice regardless of suggestion thresholds.
-    """
-    from sqlalchemy import select as sa_select, or_ as sa_or, func
-    from app.models.domain import (
-        DeliveredTrip as DeliveredTripORM,
-        BookedTrip as BookedTripORM,
-        BookedTripContainer as TOCORM,
-        DeliveredTripContainer as WOCORM,
-        Reconciliation,
-    )
-    from app.contexts.operations.infrastructure.match_suggester import (
-        _load_alias_groups,
-        _locations_match,
-        _build_criteria,
-        _format_containers,
-        _get_wo_date,
-        WEIGHTS,
-    )
-    from app.utils.iso6346 import normalize_container_number
-    from app.schemas.domain import (
-        CriterionBreakdown,
-        MatchSuggestion as MatchSuggestionSchema,
-    )
-
-    db = use_case.repo.session  # type: ignore[attr-defined]
-
-    # Load the work order
-    wo = (await db.execute(
-        sa_select(DeliveredTripORM).where(DeliveredTripORM.id == delivered_trip_id)
-    )).scalar_one_or_none()
-    if wo is None:
-        raise HTTPException(status_code=404, detail="DeliveredTrip not found")
-
-    # Base query: PENDING or DRAFT trip orders
-    query = sa_select(BookedTripORM).where(
-        BookedTripORM.status.in_(["PENDING", "DRAFT"]),
-    )
-
-    # If there's a search query, filter by it
-    if q.strip():
-        term = f"%{q.strip()}%"
-        # Subquery for container number match
-        container_subquery = (
-            sa_select(TOCORM.booked_trip_id)
-            .where(TOCORM.container_number.ilike(term))
-        )
-        # Subquery for partner name match
-        from app.models.domain import Client as PartnerORM
-        client_subquery = (
-            sa_select(PartnerORM.id)
-            .where(PartnerORM.name.ilike(term))
-        )
-        query = query.where(
-            sa_or(
-                BookedTripORM.id.in_(container_subquery),
-                BookedTripORM.client_id.in_(client_subquery),
-                # Date search: allow YYYY-MM-DD or DD/MM/YYYY patterns
-                BookedTripORM.trip_date.cast(str).ilike(term),
-            )
-        )
-
-    # Exclude trip orders already linked to this WO
-    linked_to_ids = {
-        r[0] for r in (await db.execute(
-            sa_select(Reconciliation.booked_trip_id).where(
-                Reconciliation.delivered_trip_id == delivered_trip_id,
-                Reconciliation.is_active == True,  # noqa: E712
-            )
-        )).all()
-    }
-
-    all_trips = list((await db.execute(query)).scalars().all())
-    filtered = [t for t in all_trips if t.id not in linked_to_ids]
-
-    # Total for pagination
-    total = len(filtered)
-    start = (page - 1) * page_size
-    page_trips = filtered[start:start + page_size]
-
-    if not page_trips:
-        return {
-            "items": [],
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "total_pages": 0,
-        }
-
-    # Load related data for scoring
-    client_ids = {t.client_id for t in page_trips} | {wo.client_id}
-    location_ids = (
-        {t.pickup_location_id for t in page_trips}
-        | {t.dropoff_location_id for t in page_trips}
-        | {wo.pickup_location_id, wo.dropoff_location_id}
-    )
-    clients = await load_client_summaries(db, client_ids)
-    locations = await load_location_summaries(db, location_ids)
-    alias_groups = await _load_alias_groups(db)
-
-    # Load WO containers for scoring
-    wo_cont_rows = (await db.execute(
-        sa_select(WOCORM).where(WOCORM.delivered_trip_id == wo.id)
-    )).scalars().all()
-    wo_container_numbers = {
-        normalize_container_number(c.container_number)
-        for c in wo_cont_rows if c.container_number
-    }
-    wo_date = _get_wo_date(wo)
-    wo_client_name = get_client_summary(clients, wo.client_id).name
-    wo_pickup_name = get_location_summary(locations, wo.pickup_location_id).name
-    wo_dropoff_name = get_location_summary(locations, wo.dropoff_location_id).name
-    wo_containers_str = _format_containers(wo_cont_rows)
-    wo_date_str = wo_date.isoformat() if wo_date else None
-
-    # Load TO containers
-    to_ids = [t.id for t in page_trips]
-    to_cont_rows = (await db.execute(
-        sa_select(TOCORM).where(TOCORM.booked_trip_id.in_(to_ids))
-    )).scalars().all()
-    to_containers_map: dict[int, list] = {}
-    for c in to_cont_rows:
-        to_containers_map.setdefault(c.booked_trip_id, []).append(c)
-
-    results = []
-    for t in page_trips:
-        # Compute match score against WO
-        to_client_name = get_client_summary(clients, t.client_id).name
-        to_pickup_name = get_location_summary(locations, t.pickup_location_id).name
-        to_dropoff_name = get_location_summary(locations, t.dropoff_location_id).name
-        to_date_str = t.trip_date.isoformat() if t.trip_date else None
-
-        matched_fields: list[str] = []
-        match_score = 0
-        max_score = 5
-
-        # Container number check
-        to_cns = {
-            normalize_container_number(c.container_number)
-            for c in to_containers_map.get(t.id, [])
-            if c.container_number
-        }
-        if wo_container_numbers & to_cns:
-            matched_fields.append("container_number")
-            match_score += 1
-        elif any(
-            any(partial in wcn for wcn in wo_container_numbers for partial in to_cns if len(partial) >= 4),
-            False,
-        ):
-            matched_fields.append("container_number_partial")
-            match_score += 1
-
-        # Date check
-        if wo_date and t.trip_date and wo_date == t.trip_date:
-            matched_fields.append("date")
-            match_score += 1
-
-        # Pickup location check
-        if wo.pickup_location_id and t.pickup_location_id:
-            if _locations_match(t.pickup_location_id, wo.pickup_location_id, alias_groups):
-                matched_fields.append("pickup_location")
-                match_score += 1
-
-        # Dropoff location check
-        if wo.dropoff_location_id and t.dropoff_location_id:
-            if _locations_match(t.dropoff_location_id, wo.dropoff_location_id, alias_groups):
-                matched_fields.append("dropoff_location")
-                match_score += 1
-
-        # Client check
-        if wo.client_id and t.client_id and wo.client_id == t.client_id:
-            matched_fields.append("client")
-            match_score += 1
-
-        to_out = await _load_one(db, t)
-        to_containers_display = _format_containers(to_containers_map.get(t.id, []))
-
-        criteria = _build_criteria(
-            matched_fields=matched_fields,
-            wo_date_str=wo_date_str,
-            to_date_str=to_date_str,
-            wo_client=wo_client_name,
-            to_client=to_client_name,
-            wo_pickup=wo_pickup_name,
-            to_pickup=to_pickup_name,
-            wo_dropoff=wo_dropoff_name,
-            to_dropoff=to_dropoff_name,
-            wo_containers=wo_containers_str,
-            to_containers=to_containers_display,
-        )
-
-        results.append({
-            "booked_trip": to_out.model_dump(),
-            "container_id": to_containers_map.get(t.id, [None])[0].id if to_containers_map.get(t.id) else 0,
-            "confidence": "full" if match_score >= 4 else ("partial" if match_score >= 3 else "none"),
-            "matched_fields": matched_fields,
-            "score": match_score / max_score,
-            "criteria": [c.model_dump() for c in criteria],
-            "match_score": match_score,
-            "max_score": max_score,
-        })
-
-    return {
-        "items": results,
-        "total": total,
-        "page": page,
-        "page_size": page_size,
-        "total_pages": math.ceil(total / page_size) if total > 0 else 0,
-    }
-
-
 @router.get("/booked-trips", response_model=PaginatedResponse[BookedTripOut])
 async def list_booked_trips(
     client_id: int | None = None,
-    status: str | None = None,
+    matched: bool | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
     unpriced: bool | None = None,
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
+    page_size: int = Query(50, ge=1, le=1000),
     current_user: User = Depends(require_permission("read", "BookedTrip")),
     use_case: ListBookedTrips = Depends(get_list_booked_trips),
 ):
     items, total = await use_case(BookedTripListFilters(
         page=page, page_size=page_size,
-        client_id=client_id, status=status,
+        client_id=client_id, matched=matched,
         date_from=date_from, date_to=date_to,
         unpriced=unpriced,
     ))
@@ -456,7 +191,7 @@ async def import_booked_trips_excel(
 async def export_booked_trips_excel(
     date_from: date | None = None,
     date_to: date | None = None,
-    status: str | None = None,
+    matched: bool | None = None,
     client_id: int | None = None,
     current_user: User = Depends(require_permission("create", "BookedTrip")),
     use_case: GetBookedTrip = Depends(get_get_booked_trip),
@@ -467,7 +202,7 @@ async def export_booked_trips_excel(
         session,
         date_from=date_from.isoformat() if date_from else None,
         date_to=date_to.isoformat() if date_to else None,
-        status=status,
+        matched=matched,
         client_id=client_id,
     )
     if client_id and client_name:
@@ -560,27 +295,21 @@ async def update_booked_trip(
     current_user: User = Depends(require_permission("read", "BookedTrip")),
     use_case: UpdateBookedTrip = Depends(get_update_booked_trip),
 ):
-    containers_input = (
-        _container_inputs(body.containers) if body.containers is not None
-        else None
-    )
-
     try:
         t = await use_case(booked_trip_id, BookedTripUpdateInput(
             trip_date=body.trip_date,
             client_id=body.client_id,
             pickup_location_id=body.pickup_location_id,
             dropoff_location_id=body.dropoff_location_id,
-            containers=containers_input,
+            cont_number=body.cont_number,
+            cont_type=body.cont_type,
             vessel=body.vessel,
             vehicle_plate=body.vehicle_plate,
-            operation_type=body.operation_type,
             work_type=body.work_type,
             revenue=body.revenue,
             driver_salary=body.driver_salary,
             allowance=body.allowance,
-            status=body.status,
-            matched_delivered_trip_ids=body.matched_delivered_trip_ids,
+            matched=body.matched,
         ))
     except Exception as exc:
         raise translate(exc)

@@ -8,13 +8,14 @@ function unwrap<T>(res: ApiResponse<T>): T {
   throw new Error(res.message ?? 'Lỗi hệ thống')
 }
 
-export function useDeliveredTrips(filters?: { clientId?: number; driverId?: number; dateFrom?: string; dateTo?: string; status?: DeliveredTrip['status']; search?: string; page?: number; pageSize?: number; sortBy?: import('@/services/api/deliveredTrips.api').DeliveredTripSortBy; sortOrder?: import('@/services/api/deliveredTrips.api').SortOrder }) {
+export function useDeliveredTrips(filters?: { clientId?: number; driverId?: number; vendorId?: number; dateFrom?: string; dateTo?: string; matched?: boolean; search?: string; page?: number; pageSize?: number; sortBy?: import('@/services/api/deliveredTrips.api').DeliveredTripSortBy; sortOrder?: import('@/services/api/deliveredTrips.api').SortOrder }) {
   const flatFilters: Record<string, string> = {}
   if (filters?.clientId) flatFilters.clientId = String(filters.clientId)
   if (filters?.driverId) flatFilters.driverId = String(filters.driverId)
+  if (filters?.vendorId) flatFilters.vendorId = String(filters.vendorId)
   if (filters?.dateFrom) flatFilters.dateFrom = filters.dateFrom
   if (filters?.dateTo) flatFilters.dateTo = filters.dateTo
-  if (filters?.status) flatFilters.status = filters.status
+  if (filters?.matched !== undefined) flatFilters.matched = String(filters.matched)
   if (filters?.search) flatFilters.search = filters.search
   if (filters?.page) flatFilters.page = String(filters.page)
   if (filters?.pageSize) flatFilters.pageSize = String(filters.pageSize)

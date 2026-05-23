@@ -1,6 +1,6 @@
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { GlassCard } from '@/components/shared/GlassCard'
-import { getJobStatusBadge, type JobStatus, formatCurrencyShort } from '@/data/domain'
+import { formatCurrencyShort } from '@/data/domain'
 import { tripStatusVariant } from '@/lib/statusMaps'
 import { Button } from '@/components/ui/Button'
 import type { TripData } from '../TripCard'
@@ -28,7 +28,6 @@ export function TripTable({ data, onRowClick, showActions }: TripTableProps) {
         </thead>
         <tbody>
           {data.map((j) => {
-            const s = getJobStatusBadge(j.status as JobStatus)
             return (
               <tr
                 key={j.id}
@@ -40,7 +39,7 @@ export function TripTable({ data, onRowClick, showActions }: TripTableProps) {
                 <td className="px-4 py-2.5 text-[var(--theme-text-muted)] font-mono-num">{j.jobDate}</td>
                 <td className="px-4 py-2.5 text-[var(--theme-text-primary)] max-w-[200px] truncate">{j.route}</td>
                 {showActions && <td className="px-4 py-2.5"><span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">{j.trailerType}</span></td>}
-                <td className="px-4 py-2.5"><StatusBadge variant={tripStatusVariant(j.status)} label={s.label} /></td>
+                <td className="px-4 py-2.5"><StatusBadge variant={tripStatusVariant(j.status)} label={j.status} /></td>
                 <td className="px-4 py-2.5 text-right font-semibold text-[var(--theme-text-primary)] font-mono-num">{formatCurrencyShort(j.revenue)}</td>
                 {showActions && (
                   <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}>

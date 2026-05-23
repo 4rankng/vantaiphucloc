@@ -38,7 +38,6 @@ class PricingCreate(BaseModel):
     work_type: str
     pickup_location_id: int
     dropoff_location_id: int
-    operation_type: str | None = None
     lines: list[PricingLineCreate]
 
 
@@ -47,14 +46,12 @@ class PricingUpdate(BaseModel):
     work_type: str | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
-    operation_type: str | None = None
     lines: list[PricingLineCreate] | None = None
 
 
 class PricingOut(BaseModel):
     id: int
     client: ClientSummaryOut
-    operation_type: str | None = None
     work_type: str
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut

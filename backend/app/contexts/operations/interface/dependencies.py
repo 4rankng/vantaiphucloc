@@ -16,8 +16,6 @@ from app.contexts.operations.application import (
     GetDeliveredTrip,
     ListBookedTrips,
     ListDeliveredTrips,
-    MatchTripToDeliveredTrip,
-    UnmatchTripFromDeliveredTrip,
     UpdateBookedTrip,
     UpdateDeliveredTrip,
 )
@@ -64,18 +62,16 @@ def get_list_booked_trips(
 
 def get_create_booked_trip(
     repo: BookedTripRepository = Depends(get_booked_trip_repository),
-    delivered_trip_repo: DeliveredTripRepository = Depends(get_delivered_trip_repository),
     db: AsyncSession = Depends(get_db),
 ) -> CreateBookedTrip:
-    return CreateBookedTrip(repo, delivered_trip_repo, db)
+    return CreateBookedTrip(repo, db)
 
 
 def get_update_booked_trip(
     repo: BookedTripRepository = Depends(get_booked_trip_repository),
-    delivered_trip_repo: DeliveredTripRepository = Depends(get_delivered_trip_repository),
     db: AsyncSession = Depends(get_db),
 ) -> UpdateBookedTrip:
-    return UpdateBookedTrip(repo, delivered_trip_repo, db)
+    return UpdateBookedTrip(repo, db)
 
 
 def get_delete_booked_trip(
@@ -132,22 +128,3 @@ def get_batch_create_delivered_trips(
     db: AsyncSession = Depends(get_db),
 ) -> BatchCreateDeliveredTrips:
     return BatchCreateDeliveredTrips(repo, db)
-
-
-# ── reconciliation use cases ────────────────────────────────────
-
-
-def get_match_booked_to_delivered_trip(
-    booked_trip_repo: BookedTripRepository = Depends(get_booked_trip_repository),
-    delivered_trip_repo: DeliveredTripRepository = Depends(get_delivered_trip_repository),
-    db: AsyncSession = Depends(get_db),
-) -> MatchTripToDeliveredTrip:
-    return MatchTripToDeliveredTrip(booked_trip_repo, delivered_trip_repo, db)
-
-
-def get_unmatch_booked_from_delivered_trip(
-    booked_trip_repo: BookedTripRepository = Depends(get_booked_trip_repository),
-    delivered_trip_repo: DeliveredTripRepository = Depends(get_delivered_trip_repository),
-    db: AsyncSession = Depends(get_db),
-) -> UnmatchTripFromDeliveredTrip:
-    return UnmatchTripFromDeliveredTrip(booked_trip_repo, delivered_trip_repo, db)

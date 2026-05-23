@@ -1,58 +1,27 @@
 import { useState, useEffect } from 'react'
-import { apiClient } from '@/services/api'
 import {
-  Camera,
-  MapPin,
-  Clock,
   User,
-  ClipboardList,
-  Loader2,
 } from 'lucide-react'
-import { PhotoLightbox } from '@/components/shared/PhotoLightbox'
 import { Drawer } from '@/components/shared/Drawer'
 import { Pill, type PillVariant } from '@/components/shared/Pill'
 import { Button } from '@/components/ui'
-import { EmptyState } from '@/components/shared/EmptyState'
 import { InlineEditable } from '@/components/shared/InlineEditable/InlineEditable'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/Popover/Popover'
 import {
-  useSuggestMatches,
-  useReconcile,
   useUpdateDeliveredTrip,
   useUpdateBookedTrip,
-  useUpdateContainerNumber,
   useClients,
   useLocations,
   useBookedTrip,
 } from '@/hooks/use-queries'
-import type { DeliveredTrip, DeliveredTripStatus, BookedTrip, ContType, OperationType } from '@/data/domain'
-import { CONT_TYPES, OPERATION_TYPE_OPTIONS, OPERATION_TYPE_LABELS } from '@/data/domain'
+import type { DeliveredTrip, BookedTrip, ContType } from '@/data/domain'
+import { CONT_TYPES } from '@/data/domain'
 
-const STATUS_PILL_VARIANT: Record<DeliveredTripStatus, PillVariant> = {
-  PENDING: 'warn',
-  MATCHED: 'success',
-  COMPLETED: 'success',
-  CANCELLED: 'danger',
+function statusPillVariant(matched: boolean): PillVariant {
+  return matched ? 'success' : 'warn'
 }
-const STATUS_LABEL: Record<DeliveredTripStatus, string> = {
-  PENDING: 'Chờ ghép',
-  MATCHED: 'Đã ghép',
-  COMPLETED: 'Hoàn thành',
-  CANCELLED: 'Hủy',
-}
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return '—'
-  const [, m, d] = dateStr.split('-')
-  if (!d) return dateStr
-  return `${d}/${m}`
-}
-
-function scoreColor(score: number, max: number): string {
-  const pct = max > 0 ? score / max : 0
-  if (pct >= 0.8) return 'var(--success)'
-  if (pct >= 0.5) return 'var(--warning)'
-  return 'var(--danger)'
+function statusLabel(matched: boolean): string {
+  return matched ? 'Đã ghép' : 'Chờ ghép'
 }
 
 export function DeliveredTripDetailDrawer({
@@ -63,21 +32,14 @@ export function DeliveredTripDetailDrawer({
   onClose: () => void
 }) {
   const [trip, setTrip] = useState<DeliveredTrip>(initialTrip)
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
-  const { data: suggestionsData, isLoading: suggestionsLoading } = useSuggestMatches(
-    trip.status === 'PENDING' ? trip.id : 0,
-  )
-  const reconcile = useReconcile()
   const _updateTrip = useUpdateDeliveredTrip()
   const _updateBookedTrip = useUpdateBookedTrip()
-  const _updateContainer = useUpdateContainerNumber()
   const { data: clients = [] } = useClients()
   const { data: locations = [] } = useLocations()
-  const [matchingId, setMatchingId] = useState<number | null>(null)
 
   // Load linked booked trip for MATCHED status
   const { data: fetchedBookedTrip } = useBookedTrip(
-    trip.status === 'MATCHED' ? trip.bookedTripId ?? null : null,
+    trip.matched ? trip.bookedTripId ?? null : null,
   )
   const [bookedTrip, setBookedTrip] = useState<BookedTrip | null>(null)
 
@@ -110,45 +72,9 @@ export function DeliveredTripDetailDrawer({
       return updated
     },
   }
-  const updateContainer = {
-    ...(_updateContainer),
-    mutateAsync: async (args: Parameters<typeof _updateContainer.mutateAsync>[0]) => {
-      const updatedContainer = await _updateContainer.mutateAsync(args)
-      setTrip((t) => ({
-        ...t,
-        containers: t.containers?.map((c) =>
-          c.id === updatedContainer.id ? { ...c, containerNumber: updatedContainer.containerNumber } : c,
-        ),
-      }))
-      return updatedContainer
-    },
-  }
-
-  const suggestions = suggestionsData?.suggestions ?? []
-  const hasPhotos = trip.containers?.some((c) => c.photoUrl)
-
-  function handleMatch(bookedTripId: number) {
-    setMatchingId(bookedTripId)
-    reconcile.mutate(
-      { deliveredTripId: trip.id, bookedTripId },
-      { onSuccess: () => onClose() },
-    )
-  }
-
-  function formatTimestamp(ts: string | null | undefined): string {
-    if (!ts) return '—'
-    const d = new Date(ts)
-    return (
-      d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
-      ' ' +
-      d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-    )
-  }
 
   return (
     <>
-      <PhotoLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
-
       <Drawer
         open
         onOpenChange={(o) => {
@@ -157,13 +83,13 @@ export function DeliveredTripDetailDrawer({
         breadcrumb="Đối soát"
         title={
           <span className="flex items-center gap-2">
-            <Pill variant={STATUS_PILL_VARIANT[trip.status]}>
-              {STATUS_LABEL[trip.status]}
+            <Pill variant={statusPillVariant(trip.matched)}>
+              {statusLabel(trip.matched)}
             </Pill>
             Chuyến đã đi
           </span>
         }
-        meta={`${trip.client?.name ?? ''} · ${trip.containers?.[0]?.containerNumber ?? `#${trip.id}`}`}
+        meta={`${trip.client?.name ?? ''} · ${trip.contNumber ?? `#${trip.id}`}`}
         footer={
           <Button variant="ghost" onClick={onClose}>
             Đóng
@@ -188,26 +114,15 @@ export function DeliveredTripDetailDrawer({
               <CriteriaEditRow label="Container">
                 <InlineEditable
                   display={
-                    <span style={{ color: trip.containers?.[0]?.containerNumber ? 'var(--ink)' : 'var(--ink-4)' }}>
-                      {trip.containers?.[0]?.containerNumber ?? 'bất kỳ'}
+                    <span style={{ color: trip.contNumber ? 'var(--ink)' : 'var(--ink-4)' }}>
+                      {trip.contNumber ?? 'bất kỳ'}
                     </span>
                   }
-                  value={trip.containers?.[0]?.containerNumber ?? ''}
+                  value={trip.contNumber ?? ''}
                   placeholder="Số container"
-                  validate={async (v) => {
-                    const raw = v.trim().toUpperCase().replace(/-/g, '')
-                    if (!raw) return null
-                    const res = await apiClient.validateContainer(raw)
-                    if (!res.success || !res.data?.valid) {
-                      return res.data?.error ?? 'Số container không hợp lệ'
-                    }
-                    return null
-                  }}
                   onSave={(v) => {
-                    const c = trip.containers?.[0]
-                    if (!c) return
                     const normalized = v.trim().toUpperCase().replace(/-/g, '')
-                    return updateContainer.mutateAsync({ tripId: trip.id, containerId: c.id, containerNumber: normalized })
+                    return updateTrip.mutateAsync({ id: trip.id, data: { contNumber: normalized || null } })
                   }}
                 />
               </CriteriaEditRow>
@@ -225,15 +140,10 @@ export function DeliveredTripDetailDrawer({
               {/* Loại cont */}
               <CriteriaEditRow label="Loại cont">
                 <InlineSelect
-                  value={trip.containers?.[0]?.contType ?? null}
-                  displayValue={trip.containers?.[0]?.contType}
+                  value={trip.contType ?? null}
+                  displayValue={trip.contType}
                   options={CONT_TYPES.map((t) => ({ value: t, label: t }))}
-                  onChange={(v) => {
-                    const containers = trip.containers?.map((c, i) =>
-                      i === 0 ? { ...c, contType: v as ContType } : c,
-                    )
-                    if (containers) updateTrip.mutate({ id: trip.id, data: { containers } })
-                  }}
+                  onChange={(v) => updateTrip.mutate({ id: trip.id, data: { contType: v as ContType } })}
                 />
               </CriteriaEditRow>
 
@@ -275,20 +185,6 @@ export function DeliveredTripDetailDrawer({
                 />
               </CriteriaEditRow>
 
-              {/* Tác nghiệp */}
-              <CriteriaEditRow label="Tác nghiệp">
-                <InlineSelect
-                  value={trip.operationType ?? null}
-                  displayValue={
-                    trip.operationType
-                      ? OPERATION_TYPE_LABELS[trip.operationType]
-                      : undefined
-                  }
-                  options={OPERATION_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-                  onChange={(v) => updateTrip.mutate({ id: trip.id, data: { operationType: v as OperationType } })}
-                />
-              </CriteriaEditRow>
-
               {/* Khách hàng */}
               <CriteriaEditRow label="Khách hàng">
                 <InlineSelect
@@ -301,97 +197,11 @@ export function DeliveredTripDetailDrawer({
             </div>
           </div>
 
-          {/* Container photos */}
-          {hasPhotos && (
-            <div className="space-y-2">
-              <p
-                className="text-[12px] m-0 font-medium"
-                style={{ color: 'var(--ink-3)' }}
-              >
-                Ảnh container
-              </p>
-              <div
-                className={`grid ${trip.containers.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}
-              >
-                {trip.containers.map((c) => (
-                  <div key={c.id}>
-                    <div
-                      className="relative rounded-lg overflow-hidden aspect-square"
-                      style={{ border: '1px solid var(--line)' }}
-                    >
-                      {c.photoUrl ? (
-                        <button
-                          className="block w-full h-full touch-manipulation"
-                          onClick={() => setLightboxUrl(c.photoUrl!)}
-                          aria-label={`Xem ảnh ${c.containerNumber}`}
-                        >
-                          <img
-                            src={c.photoUrl}
-                            alt={c.containerNumber}
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
-                      ) : (
-                        <div
-                          className="w-full h-full flex flex-col items-center justify-center"
-                          style={{ background: 'var(--surface-2)' }}
-                        >
-                          <Camera className="w-6 h-6" style={{ color: 'var(--ink-3)' }} />
-                        </div>
-                      )}
-                      <div
-                        className="absolute bottom-0 left-0 right-0 px-2 py-1.5 flex items-center justify-between"
-                        style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
-                      >
-                        <p
-                          className="text-[11px] font-mono font-semibold truncate"
-                          style={{ color: '#fff' }}
-                        >
-                          {c.containerNumber}
-                        </p>
-                        {c.contType && (
-                          <span
-                            className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ml-1"
-                            style={{ background: 'var(--accent)', color: '#fff' }}
-                          >
-                            {c.contType}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {/* Photo meta */}
-                    {c.photoTimestamp && (
-                      <p
-                        className="text-[11px] m-0 mt-1 flex items-center gap-1"
-                        style={{ color: 'var(--ink-3)' }}
-                      >
-                        <Clock className="w-3 h-3" />
-                        {formatTimestamp(c.photoTimestamp)}
-                      </p>
-                    )}
-                    {c.photoAddress && (
-                      <p
-                        className="text-[11px] m-0 mt-0.5 flex items-center gap-1"
-                        style={{ color: 'var(--ink-3)' }}
-                      >
-                        <MapPin className="w-3 h-3" />
-                        {c.photoAddress}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Trip details */}
           <div
             className="rounded-lg overflow-hidden"
             style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}
           >
-            {trip.gpsAddress && (
-              <InfoRowCompact icon={MapPin} label="Vị trí GPS" value={trip.gpsAddress} />
-            )}
             {(trip.driver || trip.vehicle) && (
               <div
                 className="flex items-start gap-3 px-3.5 py-2 text-[13px]"
@@ -415,7 +225,7 @@ export function DeliveredTripDetailDrawer({
           </div>
 
           {/* Matched Booked Trip — MATCHED only */}
-          {trip.status === 'MATCHED' && bookedTrip && (
+          {trip.matched && bookedTrip && (
             <div className="space-y-2 pt-2" style={{ borderTop: '1px solid var(--line)' }}>
               <p
                 className="text-[12px] m-0 font-medium"
@@ -439,27 +249,15 @@ export function DeliveredTripDetailDrawer({
                   <CriteriaEditRow label="Container">
                     <InlineEditable
                       display={
-                        <span style={{ color: bookedTrip.containers?.[0]?.containerNumber ? 'var(--ink)' : 'var(--ink-4)' }}>
-                          {bookedTrip.containers?.[0]?.containerNumber ?? 'bất kỳ'}
+                        <span style={{ color: bookedTrip.contNumber ? 'var(--ink)' : 'var(--ink-4)' }}>
+                          {bookedTrip.contNumber ?? 'bất kỳ'}
                         </span>
                       }
-                      value={bookedTrip.containers?.[0]?.containerNumber ?? ''}
+                      value={bookedTrip.contNumber ?? ''}
                       placeholder="Số container"
-                      validate={async (v) => {
-                        const raw = v.trim().toUpperCase().replace(/-/g, '')
-                        if (!raw) return null
-                        const res = await apiClient.validateContainer(raw)
-                        if (!res.success || !res.data?.valid) {
-                          return res.data?.error ?? 'Số container không hợp lệ'
-                        }
-                        return null
-                      }}
                       onSave={(v) => {
                         const normalized = v.trim().toUpperCase().replace(/-/g, '')
-                        const containers = bookedTrip.containers?.map((c, i) =>
-                          i === 0 ? { ...c, containerNumber: normalized } : c,
-                        ) ?? [{ id: 0, containerNumber: normalized, contType: 'F20' as ContType }]
-                        return updateBookedTrip.mutateAsync({ id: bookedTrip.id, data: { containers } })
+                        return updateBookedTrip.mutateAsync({ id: bookedTrip.id, data: { contNumber: normalized || null } })
                       }}
                     />
                   </CriteriaEditRow>
@@ -477,15 +275,10 @@ export function DeliveredTripDetailDrawer({
                   {/* Loại cont */}
                   <CriteriaEditRow label="Loại cont">
                     <InlineSelect
-                      value={bookedTrip.containers?.[0]?.contType ?? null}
-                      displayValue={bookedTrip.containers?.[0]?.contType}
+                      value={bookedTrip.contType ?? null}
+                      displayValue={bookedTrip.contType}
                       options={CONT_TYPES.map((t) => ({ value: t, label: t }))}
-                      onChange={(v) => {
-                        const containers = bookedTrip.containers?.map((c, i) =>
-                          i === 0 ? { ...c, contType: v as ContType } : c,
-                        )
-                        if (containers) updateBookedTrip.mutate({ id: bookedTrip.id, data: { containers } })
-                      }}
+                      onChange={(v) => updateBookedTrip.mutate({ id: bookedTrip.id, data: { contType: v as ContType } })}
                     />
                   </CriteriaEditRow>
 
@@ -510,20 +303,6 @@ export function DeliveredTripDetailDrawer({
                       value={bookedTrip.vessel ?? ''}
                       placeholder="Số tàu"
                       onSave={(v) => updateBookedTrip.mutateAsync({ id: bookedTrip.id, data: { vessel: v || null } })}
-                    />
-                  </CriteriaEditRow>
-
-                  {/* Tác nghiệp */}
-                  <CriteriaEditRow label="Tác nghiệp">
-                    <InlineSelect
-                      value={bookedTrip.operationType ?? null}
-                      displayValue={
-                        bookedTrip.operationType
-                          ? OPERATION_TYPE_LABELS[bookedTrip.operationType]
-                          : undefined
-                      }
-                      options={OPERATION_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-                      onChange={(v) => updateBookedTrip.mutate({ id: bookedTrip.id, data: { operationType: v as OperationType } })}
                     />
                   </CriteriaEditRow>
 
@@ -555,233 +334,9 @@ export function DeliveredTripDetailDrawer({
             </div>
           )}
 
-          {/* Match suggestions — PENDING only */}
-          {trip.status === 'PENDING' && (
-            <div className="space-y-3 pt-2" style={{ borderTop: '1px solid var(--line)' }}>
-              <p
-                className="text-[12px] m-0 font-medium"
-                style={{ color: 'var(--ink-3)' }}
-              >
-                Ghép chuyến
-              </p>
-
-              {suggestionsLoading && (
-                <div className="flex flex-col items-center gap-3 py-6">
-                  <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--accent)' }} />
-                  <p className="text-[13px] m-0" style={{ color: 'var(--ink-2)' }}>
-                    Đang tìm chuyến phù hợp...
-                  </p>
-                </div>
-              )}
-
-              {!suggestionsLoading && suggestions.length === 0 && (
-                <div className="flex flex-col items-center py-4">
-                  <EmptyState
-                    icon={<ClipboardList className="h-5 w-5" />}
-                    title="Không tìm thấy chuyến phù hợp"
-                    compact
-                  />
-                </div>
-              )}
-
-              {suggestions.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[12px] m-0" style={{ color: 'var(--ink-3)' }}>
-                    {suggestions.length} chuyến đặt trước phù hợp
-                  </p>
-                  {suggestions.map((s) => (
-                    <SuggestionCard
-                      key={`${s.bookedTrip.id}-${s.containerId}`}
-                      suggestion={s}
-                      isMatching={matchingId === s.bookedTrip.id && reconcile.isPending}
-                      onMatch={() => handleMatch(s.bookedTrip.id)}
-                      updateBookedTrip={updateBookedTrip}
-                      clients={clients}
-                      locations={locations}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </Drawer>
     </>
-  )
-}
-
-// ─── Suggestion card with editable booked trip fields ────────────────────────
-
-type UpdateBookedTripFn = {
-  mutate: (args: { id: number; data: import('@/services/api/bookedTrips.api').BookedTripUpdatePayload }) => void
-  mutateAsync: (args: { id: number; data: import('@/services/api/bookedTrips.api').BookedTripUpdatePayload }) => Promise<BookedTrip>
-}
-
-function SuggestionCard({
-  suggestion: s,
-  isMatching,
-  onMatch,
-  updateBookedTrip: _update,
-  clients,
-  locations,
-}: {
-  suggestion: import('@/data/domain').MatchSuggestion
-  isMatching: boolean
-  onMatch: () => void
-  updateBookedTrip: UpdateBookedTripFn
-  clients: import('@/data/domain').Client[]
-  locations: import('@/data/domain').Location[]
-}) {
-  const [bt, setBt] = useState(s.bookedTrip)
-  // Keep bt in sync when suggestions re-fetch (e.g. after saving a field)
-  useEffect(() => {
-    setBt(s.bookedTrip)
-  }, [s.bookedTrip.id, s.bookedTrip.updatedAt])
-  const pct = s.maxScore > 0 ? Math.round((s.matchScore / s.maxScore) * 100) : 0
-
-  const save = async (data: import('@/services/api/bookedTrips.api').BookedTripUpdatePayload) => {
-    const updated = await _update.mutateAsync({ id: bt.id, data })
-    setBt(updated)
-  }
-
-  // Derive current display value for each criterion from local bt state
-  const localValue = (name: string): string | null | undefined => {
-    switch (name) {
-      case 'container_number': return bt.containers?.[0]?.containerNumber
-      case 'pickup_location':  return bt.pickupLocation?.name
-      case 'dropoff_location': return bt.dropoffLocation?.name
-      case 'work_type':        return bt.containers?.[0]?.contType
-      case 'vessel':           return bt.vessel
-      case 'vehicle_plate':    return bt.vehiclePlate
-      case 'operation_type':   return bt.operationType
-        ? (OPERATION_TYPE_LABELS[bt.operationType as OperationType] ?? bt.operationType)
-        : null
-      case 'client':           return bt.client?.name
-      default:                 return null
-    }
-  }
-
-  return (
-    <div
-      className="flex flex-col gap-2 px-3.5 py-3"
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--line)',
-        borderRadius: 'var(--r-sm)',
-      }}
-    >
-      <div className="min-w-0">
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1.4fr', gap: '6px 12px' }}>
-          {s.criteria.map((c) => {
-            const matchColor = c.match
-              ? c.fuzzy ? 'var(--warning)' : 'var(--success)'
-              : 'var(--ink-4)'
-            const current = localValue(c.name)
-
-            const editControl = () => {
-              switch (c.name) {
-                case 'vessel':
-                  return (
-                    <InlineEditable
-                      display={<span style={{ color: current ? matchColor : 'var(--ink-4)' }}>{current ?? '—'}</span>}
-                      value={bt.vessel ?? ''}
-                      placeholder="Số tàu"
-                      onSave={(v) => save({ vessel: v || null })}
-                    />
-                  )
-                case 'pickup_location':
-                  return (
-                    <InlineSelect
-                      value={bt.pickupLocation?.id ?? null}
-                      displayValue={current}
-                      options={locations.map((l) => ({ value: l.id, label: l.name }))}
-                      onChange={(id) => save({ pickupLocationId: id as number })}
-                    />
-                  )
-                case 'dropoff_location':
-                  return (
-                    <InlineSelect
-                      value={bt.dropoffLocation?.id ?? null}
-                      displayValue={current}
-                      options={locations.map((l) => ({ value: l.id, label: l.name }))}
-                      onChange={(id) => save({ dropoffLocationId: id as number })}
-                    />
-                  )
-                case 'work_type':
-                  return (
-                    <InlineSelect
-                      value={bt.containers?.[0]?.contType ?? null}
-                      displayValue={current}
-                      options={CONT_TYPES.map((t) => ({ value: t, label: t }))}
-                      onChange={(v) => {
-                        const containers = bt.containers?.map((c, i) =>
-                          i === 0 ? { ...c, contType: v as ContType } : c,
-                        )
-                        if (containers) save({ containers })
-                      }}
-                    />
-                  )
-                case 'operation_type':
-                  return (
-                    <InlineSelect
-                      value={bt.operationType ?? null}
-                      displayValue={current}
-                      options={OPERATION_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-                      onChange={(v) => save({ operationType: v as OperationType })}
-                    />
-                  )
-                case 'client':
-                  return (
-                    <InlineSelect
-                      value={bt.client?.id ?? null}
-                      displayValue={current}
-                      options={clients.map((c) => ({ value: c.id, label: c.name }))}
-                      onChange={(id) => save({ clientId: id as number })}
-                    />
-                  )
-                case 'vehicle_plate':
-                  return (
-                    <InlineEditable
-                      display={<span style={{ color: current ? matchColor : 'var(--ink-4)' }}>{current ?? '—'}</span>}
-                      value={bt.vehiclePlate ?? ''}
-                      placeholder="Biển số xe"
-                      onSave={(v) => save({ vehiclePlate: v || null })}
-                    />
-                  )
-                default:
-                  // Read-only (container_number)
-                  return (
-                    <span className="font-mono font-semibold" style={{ color: current ? matchColor : 'var(--ink-4)' }}>
-                      {current ?? '—'}
-                    </span>
-                  )
-              }
-            }
-
-            return (
-              <div key={c.name} className="flex items-baseline gap-1 min-w-0 text-[12px]">
-                <span className="shrink-0 text-[10px] font-semibold leading-none" style={{ color: matchColor }}>
-                  {c.match ? '✓' : '✕'}
-                </span>
-                <span className="shrink-0 whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>{c.label}:</span>
-                <div className="min-w-0 flex-1 overflow-hidden">{editControl()}</div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-      <div className="flex justify-end">
-        <Button
-          variant={pct >= 80 ? 'default' : 'outline'}
-          size="sm"
-          onClick={onMatch}
-          disabled={isMatching}
-        >
-          {isMatching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-          Ghép
-        </Button>
-      </div>
-    </div>
   )
 }
 

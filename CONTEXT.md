@@ -64,7 +64,9 @@ These are the authoritative English names used in code and database. UI labels a
 
 - **Single-tenant**: Phuc Loc is the only operator. No multi-company support.
 - **Currency**: All amounts in Vietnamese Dong (VND), stored as integers.
-- **Matching model**: One BookedTrip matches at most one DeliveredTrip (a container is on one truck). One DeliveredTrip can match multiple BookedTrips (a truck can carry 1–2 containers). Each BookedTrip = 1 container from client Excel.
+- **Matching model**: 1:1 by container. Each BookedTrip and each DeliveredTrip has exactly one container (`cont_number` + `cont_type` directly on the row, no join tables). A BookedTrip matches at most one DeliveredTrip and vice versa. If a truck carries 2 containers, that's 2 separate DeliveredTrip rows.
+- **Match state**: `matched` boolean on both BookedTrip and DeliveredTrip. No lifecycle statuses (no PENDING/MATCHED/CONFIRMED/COMPLETED/CANCELLED/DRAFT). A trip is either matched or not.
+- **Fraud detection**: A BookedTrip must match at most one DeliveredTrip. If a vendor claims a trip already matched to our own driver (or another vendor), this is fraud — flag and highlight for review, do not auto-match.
 - **Revenue flow**: DeliveredTrip.revenue defaults to 0 at creation. Gets populated from the matched BookedTrip's revenue during reconciliation. Driver never enters financial data.
 - **Financial fields are manual (Phase 1)**: Revenue, driver_salary, allowance on both BookedTrip and DeliveredTrip are entered by the accountant. No auto-population from pricing during matching. Simplify now, automate later if customer asks.
 
@@ -110,9 +112,9 @@ Excel gửi khách hàng gồm các cột:
 - When stable file formats emerge, replace AI with deterministic parsers.
 - **Salary period**: Configurable, default 21st to 20th of month.
 - **Vehicle expenses**: Entered per-receipt (not per trip). All expenses are per-vehicle: fuel (XANG_DAU), repairs (SUA_CHUA), law/permits (TIEN_LUAT), other (KHAC). Only for internal Phuc Loc vehicles — vendor vehicles have no expense entries (costs bundled into driver_salary + allowance).
-- **Vendor workflow**: Vendors (xe ngoài) get a driver-role account. They log into the app and create DeliveredTrips directly, same as internal drivers. At month-end, accountant reconciles all trips (internal + vendor) against client bookings. No separate vendor import pipeline needed.
-- **Vendor vehicles**: Vendors' trucks are stored in the same `vehicles` table, distinguished by `vendor_id`. Internal vehicles have `vendor_id=NULL`. Vendor vehicles also have a plate number. Gap: `vendor_id` column missing from Vehicle model.
-- **Vendor driver pay**: No base salary. Only per-trip productivity pay (driver_salary) + allowance. Same fields on DeliveredTrip, just no DriverSalaryConfig record.
+- **Vendor workflow**: Vendors (xe ngoài) do NOT use the app. At month-end, vendors send Excel files listing trips they completed. The accountant uploads vendor Excel into the system, which creates DeliveredTrips (with vendor_id set) and auto-matches against BookedTrips.
+- **Vendor vehicles**: Vendor trips have `vehicle_plate` as text (from Excel). No `vehicle_id` FK — vendor vehicles are not tracked in the `vehicles` table. `driver_id` is NULL for vendor trips.
+- **Vendor pay**: Vendors have no driver account. Per-trip cost (driver_salary field on DeliveredTrip) is set from vendor Excel import. No allowance or base salary for vendors. Revenue stays 0 for vendor trips — vendor pricing model TBD.
 - **Driver knows vessel**: Vessel number is entered by the driver in the field. Accountant does not know it at dispatch time.
 - **Vessel is per file**: When client sends Excel files, each file represents one vessel. Multiple vessels per month per client.
 - **Driver location search**: Drivers need fuzzy search — type a few characters, system shows suggestions. Locations are a managed list maintained by accountant.

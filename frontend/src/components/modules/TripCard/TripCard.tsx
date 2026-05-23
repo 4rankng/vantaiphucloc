@@ -1,6 +1,6 @@
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { MobileListCard } from '@/components/shared/DataList'
-import { getJobStatusBadge, formatCurrencyShort, type JobStatus } from '@/data/domain'
+import { formatCurrencyShort } from '@/data/domain'
 import { tripStatusVariant } from '@/lib/statusMaps'
 import { Button } from '@/components/ui/Button'
 
@@ -25,7 +25,6 @@ interface TripCardProps {
 }
 
 export function TripCard({ data, onClick, showActions }: TripCardProps) {
-  const s = getJobStatusBadge(data.status as JobStatus)
   return (
     <MobileListCard onClick={onClick}>
       <div className="flex items-center justify-between mb-1.5">
@@ -33,7 +32,7 @@ export function TripCard({ data, onClick, showActions }: TripCardProps) {
           <span className="text-xs font-bold text-[var(--theme-text-primary)] font-mono-num">{data.id}</span>
           <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">{data.trailerType}</span>
         </div>
-        <StatusBadge variant={tripStatusVariant(data.status)} label={s.label} />
+        <StatusBadge variant={tripStatusVariant(data.status)} label={data.status} />
       </div>
       <p className="text-[12px] text-[var(--theme-text-primary)] font-medium truncate">{data.route}</p>
       <div className="mt-2 space-y-1 text-[11px] text-[var(--theme-text-muted)]">

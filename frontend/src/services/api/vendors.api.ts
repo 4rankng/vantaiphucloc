@@ -1,7 +1,7 @@
 import { api } from './client'
 import { toCamel, toSnake, ok, fail, isNetworkError, unwrapList } from './utils'
 import { setCache, getCache } from '@/lib/offline-db'
-import type { Vendor, VendorSummary, ApiResponse, PaginatedResult } from '@/data/domain'
+import type { Vendor, ApiResponse, PaginatedResult } from '@/data/domain'
 
 export type VendorSortBy = 'name' | 'code' | 'created_at'
 export type SortOrder = 'asc' | 'desc'
@@ -71,15 +71,6 @@ export async function deleteVendor(id: number, reason = 'Xoá nhà thầu'): Pro
   try {
     await api.delete(`/vendors/${id}`, { data: { reason } })
     return ok({ success: true })
-  } catch (err) {
-    return fail(err)
-  }
-}
-
-export async function getVendorSummary(vendorId: number, params?: { dateFrom?: string; dateTo?: string }): Promise<ApiResponse<VendorSummary>> {
-  try {
-    const res = await api.get(`/vendor-reconciliation/vendors/${vendorId}/summary`, { params: toSnake(params ?? {}) })
-    return ok(toCamel<VendorSummary>(res.data))
   } catch (err) {
     return fail(err)
   }

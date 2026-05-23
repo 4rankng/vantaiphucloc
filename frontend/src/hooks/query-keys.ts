@@ -1,20 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { searchBookedTrips } from '@/services/api/bookedTrips.api'
-import type { ApiResponse, PaginatedResult, Pricing, DeliveredTrip, BookedTrip, ContType, Client, Vendor, VendorSummary, BulkMatchPair, LocationAlias, MergeLocationsResponse } from '@/data/domain'
+import type { ApiResponse, PaginatedResult, Pricing, DeliveredTrip, BookedTrip, ContType, Client, Vendor, LocationAlias, MergeLocationsResponse } from '@/data/domain'
 import type { DriverEarnings } from '@/services/api/salary.api'
 import type { VehicleExpenseCategory } from '@/services/api/vehicleExpenses.api'
 import type { Vehicle } from '@/services/api/vehicles.api'
-import {
-  listVendorReconciliationImports,
-  getVendorReconciliationImport,
-  uploadVendorReconciliation,
-  exportVendorTripsExcel,
-  updateVendorReconRow,
-  applyVendorReconciliation,
-  discardVendorReconciliation,
-} from '@/services/api/vendorReconciliation.api'
-import type { RowUpdatePayload } from '@/services/api/vendorReconciliation.api'
 
 /** Reject on failed ApiResponse so React Query onError fires. */
 function unwrap<T>(res: ApiResponse<T>): T {
@@ -51,7 +40,6 @@ export const queryKeys = {
   client: (id: number) => ['clients', id] as const,
   vendors: ['vendors'] as const,
   vendor: (id: number) => ['vendors', id] as const,
-  vendorSummary: (id: number) => ['vendor-summary', id] as const,
   routes: ['routes'] as const,
   locations: ['locations'] as const,
   pricings: ['pricings'] as const,
@@ -76,9 +64,6 @@ export const queryKeys = {
   users: ['users'] as const,
   notifications: ['notifications'] as const,
   salaryConfig: ['salary/config'] as const,
-  suggestMatches: (woId: number) => ['suggest-matches', woId] as const,
-  suggestWos: (toId: number) => ['suggest-wos', toId] as const,
-  matchScores: (dateFrom?: string, dateTo?: string) => ['match-scores', dateFrom, dateTo] as const,
   driverBaseSalary: (driverId: number) => ['driver-base-salary', driverId] as const,
   monthlyPnL: (startDate: string, endDate: string) =>
     ['monthly-pnl', startDate, endDate] as const,
@@ -86,12 +71,4 @@ export const queryKeys = {
     ['vehicle-pnl', dateFrom, dateTo, vehicleId ?? 'all'] as const,
   vehicleExpenses: (params?: object) =>
     ['vehicle-expenses', params ?? {}] as const,
-  reconciliationImports: (clientId?: number) =>
-    ['reconciliation-imports', clientId ?? 'all'] as const,
-  reconciliationImport: (id: number) =>
-    ['reconciliation-imports', id] as const,
-  vendorReconImports: (vendorId?: number) =>
-    ['vendor-recon-imports', vendorId ?? 'all'] as const,
-  vendorReconImport: (id: number) =>
-    ['vendor-recon-imports', id] as const,
 }

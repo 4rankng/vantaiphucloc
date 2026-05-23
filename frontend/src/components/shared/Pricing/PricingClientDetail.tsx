@@ -11,8 +11,6 @@ import {
 } from '@/hooks/use-queries'
 import {
   formatCurrencyFull,
-  OPERATION_TYPE_LABELS,
-  type OperationType,
   type Pricing,
   type PricingLine,
   type ContType,
@@ -77,17 +75,14 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
     const map = new Map<string, {
       pickup: string
       dropoff: string
-      operationType: OperationType | null
       workTypeMap: Map<ContType, Pricing>
     }>()
     pricings.forEach(p => {
-      const opType = (p.operationType ?? null) as OperationType | null
-      const groupKey = `${p.pickupLocation.name}|${p.dropoffLocation.name}|${opType ?? ''}`
+      const groupKey = `${p.pickupLocation.name}|${p.dropoffLocation.name}`
       if (!map.has(groupKey)) {
         map.set(groupKey, {
           pickup: p.pickupLocation.name,
           dropoff: p.dropoffLocation.name,
-          operationType: opType,
           workTypeMap: new Map(),
         })
       }
@@ -256,7 +251,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
               </tr>
             </thead>
             <tbody>
-              {filteredGroups.map(([groupKey, { pickup, dropoff, operationType, workTypeMap }], rowIdx) => {
+              {filteredGroups.map(([groupKey, { pickup, dropoff, workTypeMap }], rowIdx) => {
                 // Collect all pricings for actions
                 const allPricings = Array.from(workTypeMap.values())
                 const hasAny = allPricings.length > 0
@@ -280,14 +275,6 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
                           <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{pickup}</span>
                           <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>→</span>
                           <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{dropoff}</span>
-                          {operationType && (
-                            <span
-                              className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
-                              style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}
-                            >
-                              {OPERATION_TYPE_LABELS[operationType] ?? operationType}
-                            </span>
-                          )}
                         </div>
                       </td>
 

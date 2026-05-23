@@ -7,12 +7,6 @@ export interface AsyncJobResult {
   message: string
 }
 
-export interface JobStatus {
-  jobId: string
-  status: 'queued' | 'in_progress' | 'complete' | 'not_found'
-  result: Record<string, unknown> | null
-}
-
 export interface DriverEarnings {
   driverId: number
   driverName: string
@@ -101,15 +95,6 @@ export async function calculateSalary(
     if (driverId != null) payload.driver_id = driverId
     const res = await api.post('/salary/calculate', payload)
     return ok(toCamel<AsyncJobResult[]>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
-}
-
-export async function getJobStatus(jobId: string): Promise<ApiResponse<JobStatus>> {
-  try {
-    const res = await api.get(`/jobs/${jobId}`)
-    return ok(toCamel<JobStatus>(res.data))
   } catch (err) {
     return fail(err)
   }

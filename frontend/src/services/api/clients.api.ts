@@ -14,10 +14,19 @@ export interface ClientFilters {
   pageSize?: number
 }
 
+function mapClient(raw: Record<string, unknown>): Client {
+  const c = toCamel<Client>(raw)
+  if (!c.type && (c as Record<string, unknown>).partnerType) {
+    c.type = 'company'
+  }
+  return c
+}
+
 export async function getClients(): Promise<ApiResponse<Client[]>> {
   try {
     const res = await api.get('/clients', { params: { page_size: 200 } })
-    const data = toCamel<Client[]>(unwrapList(res.data))
+    const rawList = unwrapList(res.data) as Record<string, unknown>[]
+    const data = rawList.map(mapClient)
     await setCache('clients', data)
     return ok(data)
   } catch (err) {
@@ -34,9 +43,9 @@ export async function getClientsPaged(filters?: ClientFilters): Promise<ApiRespo
     if (filters?.sortBy) params.sort_by = filters.sortBy
     if (filters?.sortOrder) params.sort_order = filters.sortOrder
     params.page = String(filters?.page ?? 1)
-    params.page_size = String(filters?.pageSize ?? 50)
+    params.page_size = String(Math.min(filters?.pageSize ?? 50, 200))
     const res = await api.get('/clients', { params })
-    return ok(unwrapPaginated<Client>(res.data, (raw) => toCamel<Client>(raw)))
+    return ok(unwrapPaginated<Client>(res.data, (raw) => mapClient(raw as Record<string, unknown>)))
   } catch (err) {
     return fail(err)
   }
@@ -44,8 +53,9 @@ export async function getClientsPaged(filters?: ClientFilters): Promise<ApiRespo
 
 export async function createClient(data: Omit<Client, 'id' | 'createdAt' | 'updatedAt'> & { type?: 'company' | 'individual' }): Promise<ApiResponse<Client>> {
   try {
-    const res = await api.post('/clients', toSnake(data))
-    return ok(toCamel<Client>(res.data))
+    const payload = { ...toSnake(data), partner_type: 'client' }
+    const res = await api.post('/clients', payload)
+    return ok(mapClient(res.data as Record<string, unknown>))
   } catch (err) {
     return fail(err)
   }
@@ -54,7 +64,7 @@ export async function createClient(data: Omit<Client, 'id' | 'createdAt' | 'upda
 export async function updateClient(id: number, data: Partial<Client>): Promise<ApiResponse<Client>> {
   try {
     const res = await api.put(`/clients/${id}`, toSnake(data))
-    return ok(toCamel<Client>(res.data))
+    return ok(mapClient(res.data as Record<string, unknown>))
   } catch (err) {
     return fail(err)
   }

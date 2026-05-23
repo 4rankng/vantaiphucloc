@@ -159,7 +159,6 @@ def pricing_to_domain(orm: PricingORM, lines: list[PricingLineORM] | None = None
         work_type=orm.work_type,
         pickup_location_id=LocationId(orm.pickup_location_id),
         dropoff_location_id=LocationId(orm.dropoff_location_id),
-        operation_type=orm.operation_type,
         is_active=bool(orm.is_active),
         created_at=orm.created_at,
         updated_at=orm.updated_at,
@@ -176,6 +175,5 @@ def pricing_to_orm(p: Pricing, orm: PricingORM | None = None) -> PricingORM:
     orm.work_type = p.work_type
     orm.pickup_location_id = int(p.pickup_location_id)
     orm.dropoff_location_id = int(p.dropoff_location_id)
-    orm.operation_type = p.operation_type
     orm.is_active = p.is_active
     return orm

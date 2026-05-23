@@ -128,17 +128,6 @@ export interface ApplyPricingByIdsResponse {
   unpriced_trip_ids: number[]
 }
 
-export interface SavedTemplate {
-  id: number
-  client_id: number | null
-  template_name: string
-  structure_hash: string
-  sheet_name: string
-  header_row_index: number
-  last_used_at: string
-  column_count: number
-}
-
 // ──────────────────────────────────────────────────────────────────────────
 // API
 // ──────────────────────────────────────────────────────────────────────────
@@ -196,11 +185,6 @@ export async function applyPricingToTripIds(
     trip_ids: tripIds,
   })
   return res.data as ApplyPricingByIdsResponse
-}
-
-export async function listImportTemplates(clientId: number): Promise<SavedTemplate[]> {
-  const res = await api.get('/imports/customer-excel/templates', { params: { client_id: clientId } })
-  return res.data as SavedTemplate[]
 }
 
 // ──────────────────────────────────────────────────────────────────────────

@@ -109,7 +109,6 @@ _DRIVER_ROUTES_SQL = text("""
     JOIN locations pl ON pl.id = wo.pickup_location_id
     JOIN locations dl ON dl.id = wo.dropoff_location_id
     WHERE wo.driver_id = :driver_id
-      AND wo.status NOT IN ('CANCELLED')
     GROUP BY p.id, pl.id, dl.id
     ORDER BY frequency DESC, last_used DESC
     LIMIT :limit
@@ -132,7 +131,6 @@ _GLOBAL_POPULAR_SQL = text("""
     JOIN partners p ON p.id = wo.client_id
     JOIN locations pl ON pl.id = wo.pickup_location_id
     JOIN locations dl ON dl.id = wo.dropoff_location_id
-    WHERE wo.status NOT IN ('CANCELLED')
     GROUP BY p.id, pl.id, dl.id
     ORDER BY frequency DESC, last_used DESC
     LIMIT :limit

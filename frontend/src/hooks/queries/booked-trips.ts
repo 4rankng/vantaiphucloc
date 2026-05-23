@@ -8,11 +8,11 @@ function unwrap<T>(res: ApiResponse<T>): T {
   throw new Error(res.message ?? 'Lỗi hệ thống')
 }
 
-export function useBookedTrips(filters?: { clientId?: number; driverId?: number; status?: BookedTrip['status']; dateFrom?: string; dateTo?: string; page?: number; pageSize?: number }) {
+export function useBookedTrips(filters?: { clientId?: number; driverId?: number; matched?: boolean; dateFrom?: string; dateTo?: string; page?: number; pageSize?: number }) {
   const flatFilters: Record<string, string> = {}
   if (filters?.clientId) flatFilters.clientId = String(filters.clientId)
   if (filters?.driverId) flatFilters.driverId = String(filters.driverId)
-  if (filters?.status) flatFilters.status = filters.status
+  if (filters?.matched !== undefined) flatFilters.matched = String(filters.matched)
   if (filters?.dateFrom) flatFilters.dateFrom = filters.dateFrom
   if (filters?.dateTo) flatFilters.dateTo = filters.dateTo
   if (filters?.page) flatFilters.page = String(filters.page)

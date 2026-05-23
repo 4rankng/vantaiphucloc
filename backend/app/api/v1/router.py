@@ -16,17 +16,14 @@ from app.contexts.customer_pricing.interface import (
 )
 from app.contexts.operations.interface import (
     imports_router,
-    reconcile_router,
     suggested_routes_router,
     booked_trips_router,
     vendors_router,
     delivered_trips_router,
-    vendor_reconciliation_router,
 )
 from app.contexts.fleet.interface import drivers_router, vehicle_expenses_router, vehicle_drivers_router, vehicles_router
 from app.contexts.billing.interface import reports_router
 from app.contexts.payroll.interface import (
-    customer_reconciliation_router,
     salary_config_router,
     salary_router,
 )
@@ -47,10 +44,8 @@ router.include_router(pricings_router)
 router.include_router(delivered_trips_router)
 router.include_router(suggested_routes_router)
 router.include_router(booked_trips_router)
-router.include_router(reconcile_router)
 router.include_router(salary_router)
 router.include_router(salary_config_router)
-router.include_router(customer_reconciliation_router)
 router.include_router(drivers_router)
 router.include_router(vehicles_router)
 router.include_router(vehicle_expenses_router)
@@ -61,7 +56,6 @@ router.include_router(dashboard_router)
 router.include_router(audit_router)
 router.include_router(reports_router)
 router.include_router(imports_router)
-router.include_router(vendor_reconciliation_router)
 router.include_router(vendors_router)
 
 
@@ -71,8 +65,7 @@ async def health_check():
 
 
 # Stub for clients running stale bundles that still poll the long-removed
-# SSE notification stream. Returns 204 to silence 404 log noise. Do NOT
-# build new clients against this -- notifications now ride on push + arq.
+# SSE notification stream. Returns 204 to silence 404 log noise.
 @router.get("/sse/notifications", include_in_schema=False)
 async def _sse_notifications_stub() -> Response:
     return Response(status_code=204)

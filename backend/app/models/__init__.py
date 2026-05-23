@@ -12,12 +12,11 @@ from .domain import (  # noqa: F401
     Pricing,
     PricingLine,
     DeliveredTrip,
-    DeliveredTripContainer,
     BookedTrip,
-    BookedTripContainer,
-    Reconciliation,
     Setting,
-    CustomerImportTemplate,
+    VehicleDriver,
+    VehicleExpense,
+    DriverSalaryConfig,
 )
 from .audit_log import AuditLog  # noqa: F401
 
@@ -32,11 +31,10 @@ __all__ = [
     "Pricing",
     "PricingLine",
     "DeliveredTrip",
-    "DeliveredTripContainer",
     "BookedTrip",
-    "BookedTripContainer",
-    "Reconciliation",
     "Setting",
-    "CustomerImportTemplate",
+    "VehicleDriver",
+    "VehicleExpense",
+    "DriverSalaryConfig",
     "AuditLog",
 ]

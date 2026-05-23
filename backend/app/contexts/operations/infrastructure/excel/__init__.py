@@ -1,11 +1,5 @@
 """Excel processing package — re-exports all public names for backward compatibility."""
 
-from .reconciliation import (
-    ReconciliationResult,
-    parse_customer_excel,
-    compare_with_system_records,
-    generate_reconciliation_excel,
-)
 from .booked_trip_import import (
     parse_booked_trip_excel,
     import_booked_trips,
@@ -20,10 +14,6 @@ from .customer_response import parse_customer_response_excel
 from .salary_export import generate_salary_excel
 
 __all__ = [
-    "ReconciliationResult",
-    "parse_customer_excel",
-    "compare_with_system_records",
-    "generate_reconciliation_excel",
     "parse_booked_trip_excel",
     "import_booked_trips",
     "generate_booked_trip_template",

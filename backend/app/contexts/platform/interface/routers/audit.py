@@ -34,7 +34,7 @@ router = APIRouter()
 @router.get("/audit-logs", response_model=PaginatedResponse[AuditLogOut])
 async def list_audit_logs(
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
+    page_size: int = Query(50, ge=1, le=1000),
     table_name: str | None = Query(None),
     action: str | None = Query(None),
     is_financial: bool = Query(False),

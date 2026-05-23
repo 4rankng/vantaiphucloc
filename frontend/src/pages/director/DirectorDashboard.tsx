@@ -5,8 +5,8 @@ import {
   Calendar, Activity, User,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { getBookedTripStatusBadge } from '@/data/domain'
 import { useBookedTrips } from '@/hooks/use-queries'
+import { bookedTripStatusBadge } from '@/lib/statusMaps'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { BarChartWidget } from '@/components/shared/Charts'
@@ -75,8 +75,8 @@ export function DirectorDashboard() {
 
   // KPI stats
   const requestedThisMonth = monthlyTrips.length
-  const completedThisMonth = useMemo(() => monthlyTrips.filter(t => t.status === 'MATCHED' || (t.status as string) === 'COMPLETED').length, [monthlyTrips])
-  const pendingThisMonth = useMemo(() => monthlyTrips.filter(t => t.status === 'PENDING').length, [monthlyTrips])
+  const completedThisMonth = useMemo(() => monthlyTrips.filter(t => t.matched).length, [monthlyTrips])
+  const pendingThisMonth = useMemo(() => monthlyTrips.filter(t => !t.matched).length, [monthlyTrips])
   const revenueThisMonth = useMemo(() => monthlyTrips.reduce((s, t) => s + (t.revenue ?? t.unitPrice), 0), [monthlyTrips])
 
   // Previous month for delta
@@ -89,8 +89,8 @@ export function DirectorDashboard() {
     })
   }, [trips, month])
   const prevRequested = prevMonthTrips.length
-  const prevCompleted = prevMonthTrips.filter(t => t.status === 'MATCHED' || (t.status as string) === 'COMPLETED').length
-  const prevPending = prevMonthTrips.filter(t => t.status === 'PENDING').length
+  const prevCompleted = prevMonthTrips.filter(t => t.matched).length
+  const prevPending = prevMonthTrips.filter(t => !t.matched).length
   const prevRevenue = prevMonthTrips.reduce((s, t) => s + (t.revenue ?? t.unitPrice), 0)
 
   const delta = (curr: number, prev: number): string | undefined => {
@@ -314,10 +314,10 @@ export function DirectorDashboard() {
           ) : (
             <div>
               {recentTrips.map((t, i) => {
-                const badge = getBookedTripStatusBadge(t.status)
+                const badge = bookedTripStatusBadge(t.matched)
                 const date = new Date(t.tripDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
                 const route = [t.pickupLocation?.name, t.dropoffLocation?.name].filter(Boolean).join(' → ')
-                const tripContType = t.containers[0]?.contType
+                const tripContType = t.contType
                 const partnerMonogram = monogram(t.client.name)
 
                 return (

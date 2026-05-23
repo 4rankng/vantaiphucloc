@@ -122,29 +122,3 @@ def get_template_version(ws) -> str | None:
         if val and str(val).startswith("TEMPLATE_V"):
             return str(val).replace("TEMPLATE_V", "")
     return None
-
-
-def parse_operation_type(raw: Any) -> str | None:
-    """Parse operation type string (e.g. from Excel cell) into OperationType enum value."""
-    if raw is None:
-        return None
-    val = str(raw).strip().lower()
-    if not val:
-        return None
-
-    if "tàu" in val or "tau" in val or "nhập" in val or "xuất" in val:
-        return "XUAT_NHAP_TAU"
-    if "bãi" in val or "bai" in val:
-        return "CHUYEN_BAI"
-    if "vỏ" in val or "vo" in val or "hạ" in val or "ha" in val:
-        return "LAY_VO_HA_HANG"
-    if "sà lan" in val or "sa lan" in val or "lan" in val:
-        return "CHAY_SA_LAN"
-    if "kho" in val:
-        return "DONG_KHO"
-
-    for name in ["XUAT_NHAP_TAU", "CHUYEN_BAI", "LAY_VO_HA_HANG", "CHAY_SA_LAN", "DONG_KHO"]:
-        if name.lower() == val:
-            return name
-
-    return None

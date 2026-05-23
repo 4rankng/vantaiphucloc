@@ -9,7 +9,7 @@ from app.config import settings
 
 from app.workers.tasks.salary import calculate_salary_task
 from app.workers.tasks.notifications import send_notification_task
-from app.workers.tasks.geocoding import geocode_container_task, geocode_delivered_trip_task
+from app.workers.tasks.geocoding import geocode_location_task
 from app.workers.tasks.reports import generate_monthly_report_task
 from app.workers.tasks.earning_sync import sync_wo_earning_on_to_update
 
@@ -21,14 +21,12 @@ class WorkerSettings:
         calculate_salary_task,
         send_notification_task,
         generate_monthly_report_task,
-        geocode_container_task,
-        geocode_delivered_trip_task,
+        geocode_location_task,
         sync_wo_earning_on_to_update,
     ]
-    cron_jobs = [
-        
-        
-    ]
+    cron_jobs = []
+
+
     redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)
     max_tries = settings.WORKER_MAX_TRIES
     timeout = settings.WORKER_TIMEOUT

@@ -36,7 +36,7 @@ export function ClientJobs() {
   const pricingJobCounts = useMemo(() => {
     const map = new Map<string, number>()
     for (const j of jobs) {
-      const key = `${j.containers[0]?.workType ?? ''}|${j.pickupLocation?.name}→${j.dropoffLocation?.name}`
+      const key = `${j.workType ?? ''}|${j.pickupLocation?.name}→${j.dropoffLocation?.name}`
       map.set(key, (map.get(key) ?? 0) + 1)
     }
     return map
@@ -131,11 +131,11 @@ export function ClientJobs() {
             <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>• {job.driver.name}</span>
           </div>
           <div className="flex flex-wrap gap-1">
-            {job.containers.map((c, i) => (
-              <span key={i} className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}>
-                {c.containerNumber} ({c.workType})
+            {job.contNumber && (
+              <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}>
+                {job.contNumber} ({job.contType ?? job.workType ?? '?'})
               </span>
-            ))}
+            )}
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{job.pickupLocation?.name} → {job.dropoffLocation?.name}</span>

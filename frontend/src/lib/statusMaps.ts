@@ -3,6 +3,12 @@ import type { BadgeVariant } from '@/components/shared/StatusBadge'
 export const tripStatusVariant = (s: string): BadgeVariant =>
   s === 'IN_PROGRESS' ? 'success' : s === 'COMPLETED' ? 'info' : s === 'PLANNED' ? 'warning' : s === 'CANCELLED' ? 'danger' : 'neutral'
 
+export function bookedTripStatusBadge(status: string): { variant: BadgeVariant; label: string } {
+  if (status === 'MATCHED' || status === 'COMPLETED') return { variant: 'success', label: 'Đã khớp' }
+  if (status === 'CANCELLED') return { variant: 'danger', label: 'Hủy' }
+  return { variant: 'warning', label: 'Chờ xử lý' }
+}
+
 export const vehicleStatusMap: Record<string, { variant: BadgeVariant; label: string }> = {
   running: { variant: 'success', label: 'Đang chạy' },
   idle: { variant: 'warning', label: 'Rảnh' },

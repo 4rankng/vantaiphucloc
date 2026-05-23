@@ -49,19 +49,15 @@ export function BookedTripCard({ trip, onClick }: BookedTripCardProps) {
       {/* Route */}
       <RouteDisplay pickupLocation={trip.pickupLocation.name} dropoffLocation={trip.dropoffLocation.name} />
 
-      {/* Containers */}
-      {trip.containers.length > 0 && (
+      {/* Container info */}
+      {(trip.contNumber || trip.contType) && (
         <div className="flex flex-wrap gap-1 mt-1.5">
-          {trip.containers.map((c, i) => (
-            <span key={i} className="flex items-center gap-1">
-              <ContBadge type={c.workType} />
-              {c.containerNumber && (
-                <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>
-                  {c.containerNumber}
-                </span>
-              )}
+          {trip.contType && <ContBadge type={trip.contType} />}
+          {trip.contNumber && (
+            <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>
+              {trip.contNumber}
             </span>
-          ))}
+          )}
         </div>
       )}
 

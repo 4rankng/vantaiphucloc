@@ -56,7 +56,6 @@ export { FilterToolbar } from './FilterToolbar'
 export { DataTablePro } from './DataTablePro'
 
 // ─── Dialogs & overlays ──────────────────────────────────────────────────────
-export { AutoMatchDialog } from './AutoMatchDialog'
 export { ImportResultDialog } from './ImportResultDialog'
 export { ConfirmDialog } from './ConfirmDialog'
 export { ConfirmationCheckbox } from './ConfirmationCheckbox'

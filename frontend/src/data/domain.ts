@@ -1,19 +1,5 @@
 export type Role = 'superadmin' | 'director' | 'accountant' | 'driver'
-export type JobStatus = 'DRAFT' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 export type ContType = 'E20' | 'E40' | 'F20' | 'F40'
-export type DeliveredTripStatus = 'PENDING' | 'MATCHED' | 'COMPLETED' | 'CANCELLED'
-export type BookedTripStatus = 'DRAFT' | 'PENDING' | 'MATCHED' | 'COMPLETED' | 'CONFIRMED' | 'CANCELLED'
-
-export interface ContainerItem {
-  id: number
-  containerNumber: string
-  contType: ContType
-  photoUrl?: string | null
-  photoLat?: number | null
-  photoLng?: number | null
-  photoTimestamp?: string | null
-  photoAddress?: string | null
-}
 
 export const CONT_TYPES: ContType[] = ['E20', 'E40', 'F20', 'F40']
 
@@ -30,11 +16,6 @@ export const ROLE_LABELS: Record<Role, string> = {
   accountant: 'Kế toán',
   driver: 'Tài xế',
 }
-
-// ─── Vehicles (Real plates) ──────────────────────────────────────────────────
-// TODO: Add when vehicle management feature is implemented
-// export interface Tractor { ... }
-// export interface Trailer { ... }
 
 export interface Driver {
   id: number
@@ -98,29 +79,7 @@ export interface VendorSummary {
     containerCount: number
     totalPaid: number
   }>
-  reconciliations: Array<{
-    importId: number
-    periodFrom: string
-    periodTo: string
-    containerCount: number
-    status: string
-  }>
 }
-
-// TODO: Add when job management feature is implemented
-// export interface Job { ... }
-
-// TODO: Add when alert system feature is implemented
-// export interface Alert { ... }
-
-// TODO: Add when expense tracking feature is implemented
-// export interface ExpenseItem { ... }
-
-// TODO: Add when invoicing feature is implemented
-// export interface Invoice { ... }
-
-// TODO: Add when ledger feature is implemented
-// export interface LedgerEntry { ... }
 
 // ─── Read-DTO summaries (nested in API responses) ──────────────────────────
 // Domain DB stores only FKs; backend composes these via batch JOIN. See
@@ -149,49 +108,25 @@ export interface VehicleSummary {
   plate: string
 }
 
-// TODO: Add when reporting feature is implemented
-// export interface MonthlyRevenue { ... }
-
-// TODO: Add when period close feature is implemented
-// export interface PeriodClose { ... }
-
-export type OperationType = 'XUAT_NHAP_TAU' | 'CHUYEN_BAI' | 'LAY_VO_HA_HANG' | 'CHAY_SA_LAN' | 'DONG_KHO'
-
-export const OPERATION_TYPE_LABELS: Record<OperationType, string> = {
-  XUAT_NHAP_TAU: 'Xuất / Nhập tàu',
-  CHUYEN_BAI: 'Chuyển bãi',
-  LAY_VO_HA_HANG: 'Lấy vỏ hạ hàng',
-  CHAY_SA_LAN: 'Chạy sà lan',
-  DONG_KHO: 'Đóng kho',
-}
-
-export const OPERATION_TYPE_OPTIONS: { value: OperationType; label: string }[] =
-  (Object.entries(OPERATION_TYPE_LABELS) as [OperationType, string][]).map(
-    ([value, label]) => ({ value, label }),
-  )
-
 export interface DeliveredTrip {
   id: number
-  containers: ContainerItem[]
+  contNumber: string | null
+  contType: ContType | null
   client: ClientSummary
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
   driver?: DriverSummary | null
   vendorId?: number | null
-  vehicle?: VehicleSummary | null
+  vehiclePlate?: string | null
   vessel?: string | null
-  operationType?: OperationType | null
   workType?: string | null
-  gpsLat?: number | null
-  gpsLng?: number | null
-  gpsAddress?: string | null
   revenue: number
   driverSalary: number
   allowance: number
   tripDate?: string | null
   createdAt: string
   updatedAt: string
-  status: DeliveredTripStatus
+  matched: boolean
   matchedTripCount?: number
   bookedTripId?: number | null
   pendingSync?: boolean
@@ -212,16 +147,9 @@ export interface Pricing {
   workType: ContType
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
-  operationType?: OperationType | null
   lines: PricingLine[]
   createdAt: string
   updatedAt: string
-}
-
-export interface BookedTripContainerItem {
-  id: number
-  containerNumber: string
-  contType: ContType
 }
 
 export interface BookedTrip {
@@ -230,14 +158,14 @@ export interface BookedTrip {
   client: ClientSummary
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
-  containers: BookedTripContainerItem[]
+  contNumber: string | null
+  contType: ContType | null
   vessel: string | null
   vehiclePlate?: string | null
-  operationType?: OperationType | null
   workType?: string | null
   revenue: number
   matchedDeliveredTripIds: number[]
-  status: BookedTripStatus
+  matched: boolean
   createdAt: string
   updatedAt: string
 }
@@ -255,199 +183,6 @@ export interface PaginatedResult<T> {
   page: number
   pageSize: number
   totalPages: number
-}
-
-// ─── Match Suggestions ────────────────────────────────────────────────────────
-
-export type MatchConfidence = 'full' | 'partial' | 'none'
-
-export interface CriterionBreakdown {
-  name: string
-  label: string
-  match: boolean
-  woValue: string | null
-  toValue: string | null
-  fuzzy?: boolean
-}
-
-export interface MatchSuggestion {
-  bookedTrip: BookedTrip
-  containerId: number
-  confidence: MatchConfidence
-  matchedFields: string[]
-  score: number
-  criteria: CriterionBreakdown[]
-  matchScore: number
-  maxScore: number
-  matchWarnings?: string[]
-}
-
-export interface SuggestMatchesResponse {
-  deliveredTripId: number
-  suggestions: MatchSuggestion[]
-}
-
-export interface WOSuggestion {
-  deliveredTrip: DeliveredTrip
-  confidence: MatchConfidence
-  matchedFields: string[]
-  score: number
-  criteria: CriterionBreakdown[]
-  matchScore: number
-  maxScore: number
-  matchWarnings?: string[]
-}
-
-export interface SuggestWosResponse {
-  bookedTripId: number
-  suggestions: WOSuggestion[]
-}
-
-// ─── Match Scores (lightweight for master list) ────────────────────────────────
-
-export interface DeliveredTripMatchScore {
-  deliveredTripId: number
-  bestScore: number
-  bestMatchScore: number
-  maxScore: number
-  suggestionCount: number
-}
-
-export interface MatchScoresResponse {
-  scores: DeliveredTripMatchScore[]
-}
-
-// ─── Auto-match (preview + confirm) ────────────────────────────────────
-
-export interface AutoMatchCriterion {
-  key: string
-  label: string
-  match: boolean
-}
-
-export interface AutoMatchDeliveredTripRef {
-  id: number
-  code: string | null
-  plate: string | null
-  date: string | null
-  clientName: string | null
-}
-
-export interface AutoMatchBookedTripRef {
-  id: number
-  code: string | null
-  clientName: string | null
-  containers: BookedTripContainerItem[]
-}
-
-export interface AutoMatchCandidate {
-  deliveredTripId: number
-  bookedTripId: number
-  score: number
-  matchScore: number
-  maxScore: number
-  matchedFields: string[]
-  criteria: AutoMatchCriterion[]
-  suggestedDefault: boolean
-  deliveredTripRef: AutoMatchDeliveredTripRef | null
-  bookedTripRef: AutoMatchBookedTripRef | null
-}
-
-export interface UnmatchedDeliveredTripRef {
-  id: number
-  code: string | null
-  plate: string | null
-  date: string | null
-}
-
-export interface AutoMatchPreviewResponse {
-  scannedDeliveredTripCount: number
-  skippedAlreadyMatched: number
-  candidates: AutoMatchCandidate[]
-  unmatchedDeliveredTripRefs: UnmatchedDeliveredTripRef[]
-  errors: string[]
-}
-
-export interface AutoMatchConfirmPair {
-  deliveredTripId: number
-  bookedTripId: number
-}
-
-export interface AutoMatchConfirmResult {
-  deliveredTripId: number
-  bookedTripId: number
-  success: boolean
-  error: string | null
-}
-
-export interface AutoMatchConfirmResponse {
-  matched: AutoMatchConfirmResult[]
-  failed: AutoMatchConfirmResult[]
-  durationMs: number
-}
-
-export interface BulkMatchPair {
-  deliveredTripId: number
-  bookedTripId: number
-}
-
-export interface BulkMatchResult {
-  deliveredTripId: number
-  bookedTripId: number
-  success: boolean
-  error: string | null
-}
-
-export interface BulkMatchResponse {
-  matched: BulkMatchResult[]
-  errors: string[]
-}
-
-// ─── Batch Match for WO (1 WO → N BookedTrips) ──────────────────────────────────────
-
-export interface BatchMatchForWOResult {
-  bookedTripId: number
-  success: boolean
-  error: string | null
-}
-
-export interface BatchMatchForWOResponse {
-  deliveredTripId: number
-  results: BatchMatchForWOResult[]
-}
-
-export interface BatchMatchForTOResult {
-  deliveredTripId: number
-  success: boolean
-  error: string | null
-}
-
-export interface BatchMatchForTOResponse {
-  bookedTripId: number
-  results: BatchMatchForTOResult[]
-}
-
-// ─── Reconciliation ────────────────────────────────────────────────────────────
-
-export interface ReconciliationResult {
-  containerNumber: string
-  normalizedNumber: string
-  deliveredTripId?: number
-  bookedTripId?: number
-  status: 'confirmed' | 'pending' | 'rejected'
-  isDuplicate: boolean
-  matchType: 'exact' | 'partial' | 'none'
-}
-
-export interface ReconciliationUploadResponse {
-  success: boolean
-  data: {
-    totalContainers: number
-    duplicatesFound: number
-    confirmed: number
-    pending: number
-    results: ReconciliationResult[]
-  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -490,30 +225,5 @@ export function compactCurrency(amount: number | undefined | null): string {
   return amount.toLocaleString('vi-VN') + ' ₫'
 }
 
-// formatCurrencyFull and formatCurrencyShort removed — identical to formatCurrency
-// Use formatCurrency everywhere instead.
 export { formatCurrency as formatCurrencyFull }
 export { formatCurrency as formatCurrencyShort }
-
-export function getJobStatusBadge(status: JobStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
-  switch (status) {
-    case 'DRAFT': return { variant: 'neutral', label: 'Nháp' }
-    case 'PLANNED': return { variant: 'warning', label: 'Lên kế hoạch' }
-    case 'IN_PROGRESS': return { variant: 'success', label: 'Đang chạy' }
-    case 'COMPLETED': return { variant: 'success', label: 'Đã khớp' }
-    case 'CANCELLED': return { variant: 'danger', label: 'Huỷ' }
-  }
-}
-
-export function getBookedTripStatusBadge(status: BookedTripStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
-  switch (status) {
-    case 'DRAFT': return { variant: 'neutral', label: 'Nháp' }
-    case 'PENDING': return { variant: 'warning', label: 'Chờ ghép' }
-    case 'MATCHED': return { variant: 'success', label: 'Đã khớp' }
-    case 'COMPLETED': return { variant: 'success', label: 'Hoàn thành' }
-    case 'CONFIRMED': return { variant: 'info', label: 'Đã duyệt' }
-    case 'CANCELLED': return { variant: 'danger', label: 'Huỷ' }
-  }
-}
-
-

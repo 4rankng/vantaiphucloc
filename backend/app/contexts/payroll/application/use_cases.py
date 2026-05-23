@@ -21,7 +21,7 @@ from app.contexts.payroll.domain.repositories import (
     DriverSalaryConfigRepository,
     SettingsRepository,
 )
-from app.models.domain import BookedTrip, BookedTripContainer, DeliveredTrip
+from app.models.domain import BookedTrip, DeliveredTrip
 from app.models.base import User
 
 _logger = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ class GetDriverEarnings:
                     func.coalesce(func.sum(DeliveredTrip.allowance), 0),
                 ).where(
                     DeliveredTrip.driver_id == driver_id,
-                    DeliveredTrip.status == "MATCHED",
+                    DeliveredTrip.matched == True,
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= start_date,
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= end_date,
                 )
@@ -261,25 +261,18 @@ class GetMonthlyPnL:
                     BookedTrip.id,
                     BookedTrip.client_id,
                     BookedTrip.revenue,
-                    func.count(BookedTripContainer.id),
-                )
-                .join(
-                    BookedTripContainer,
-                    BookedTripContainer.booked_trip_id == BookedTrip.id,
-                    isouter=True,
                 )
                 .where(
-                    BookedTrip.status == "MATCHED",
+                    BookedTrip.matched == True,
                     BookedTrip.trip_date >= start_date,
                     BookedTrip.trip_date <= end_date,
                 )
-                .group_by(BookedTrip.id, BookedTrip.client_id, BookedTrip.revenue)
             )
         ).all()
 
         revenue = 0
         per_client: dict[int, dict] = {}
-        for to_id, client_id, to_revenue, container_count in per_to_rows:
+        for to_id, client_id, to_revenue in per_to_rows:
             line = int(to_revenue or 0)
             revenue += line
             slot = per_client.setdefault(
@@ -324,7 +317,7 @@ class GetMonthlyPnL:
                     func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
                     func.coalesce(func.sum(DeliveredTrip.allowance), 0),
                 ).where(
-                    DeliveredTrip.status == "MATCHED",
+                    DeliveredTrip.matched == True,
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
                     >= start_date,
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
@@ -340,7 +333,7 @@ class GetMonthlyPnL:
             await self.session.execute(
                 select(DeliveredTrip.driver_id)
                 .where(
-                    DeliveredTrip.status == "MATCHED",
+                    DeliveredTrip.matched == True,
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
                     >= start_date,
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))

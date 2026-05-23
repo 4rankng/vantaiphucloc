@@ -78,7 +78,6 @@ class CreatePricing:
             work_type=data.work_type,
             pickup_location_id=LocationId(data.pickup_location_id),
             dropoff_location_id=LocationId(data.dropoff_location_id),
-            operation_type=data.operation_type,
             lines=_build_lines(data.lines),
         )
         saved = await self.repo.add(p)
@@ -115,8 +114,6 @@ class UpdatePricing:
             p.pickup_location_id = LocationId(data.pickup_location_id)
         if data.dropoff_location_id is not None:
             p.dropoff_location_id = LocationId(data.dropoff_location_id)
-        if data.operation_type is not None:
-            p.operation_type = data.operation_type
         if data.lines is not None:
             p.lines = _build_lines(data.lines)
         saved = await self.repo.save(p)

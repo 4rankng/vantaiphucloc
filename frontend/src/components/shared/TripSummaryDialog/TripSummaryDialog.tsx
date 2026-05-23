@@ -13,7 +13,8 @@ interface TripSummaryDialogProps {
   open: boolean
   onConfirm: () => void
   onClose: () => void
-  containers: Array<{ number: string; type: ContType }>
+  contNumber?: string | null
+  contType?: ContType | null
   clientName: string
   vessel?: string
   pickupLocation: string
@@ -24,7 +25,8 @@ export function TripSummaryDialog({
   open,
   onConfirm,
   onClose,
-  containers,
+  contNumber,
+  contType,
   clientName,
   vessel,
   pickupLocation,
@@ -45,17 +47,22 @@ export function TripSummaryDialog({
         </DialogHeader>
 
         <div className="space-y-3 py-2">
-          {/* Containers */}
-          <div>
-            <p className="text-xs font-semibold mb-1.5" style={{ color: 'var(--theme-text-muted)' }}>
-              Container
-            </p>
-            {containers.map((c, i) => (
-              <p key={i} className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                {c.number} <span className="font-sans text-xs font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>{c.type}</span>
+          {/* Container */}
+          {(contNumber || contType) && (
+            <div>
+              <p className="text-xs font-semibold mb-1.5" style={{ color: 'var(--theme-text-muted)' }}>
+                Container
               </p>
-            ))}
-          </div>
+              <p className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                {contNumber ?? '—'}{' '}
+                {contType && (
+                  <span className="font-sans text-xs font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+                    {contType}
+                  </span>
+                )}
+              </p>
+            </div>
+          )}
 
           {/* Client */}
           <div>

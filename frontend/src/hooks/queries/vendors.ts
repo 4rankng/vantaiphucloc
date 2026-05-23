@@ -37,8 +37,6 @@ export function useCreateVendor() {
     mutationFn: (data: Omit<Vendor, 'id'>) => apiClient.createVendor(data).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vendors'] })
-      qc.invalidateQueries({ queryKey: ['vendor-summary'] })
-      qc.invalidateQueries({ queryKey: ['vendor-recon-imports'] })
     },
   })
 }
@@ -50,8 +48,6 @@ export function useUpdateVendor() {
     mutationFn: ({ id, data }: { id: number; data: Partial<Vendor> }) => apiClient.updateVendor(id, data).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vendors'] })
-      qc.invalidateQueries({ queryKey: ['vendor-summary'] })
-      qc.invalidateQueries({ queryKey: ['vendor-recon-imports'] })
     },
   })
 }
@@ -63,21 +59,7 @@ export function useDeleteVendor() {
     mutationFn: (id: number) => apiClient.deleteVendor(id).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vendors'] })
-      qc.invalidateQueries({ queryKey: ['vendor-summary'] })
-      qc.invalidateQueries({ queryKey: ['vendor-recon-imports'] })
     },
-  })
-}
-
-
-export function useVendorSummary(vendorId: number | null, dateFrom?: string, dateTo?: string) {
-  return useQuery({
-    queryKey: [...queryKeys.vendorSummary(vendorId ?? 0), dateFrom, dateTo],
-    queryFn: async () => {
-      const res = await apiClient.getVendorSummary(vendorId!, { dateFrom, dateTo })
-      return res.success ? res.data : null
-    },
-    enabled: !!vendorId,
   })
 }
 

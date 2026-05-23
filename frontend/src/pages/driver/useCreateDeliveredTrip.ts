@@ -32,16 +32,12 @@ function validateContainerFormat(num: string): string | null {
 }
 
 function woToContainers(wo: DeliveredTrip): ContainerForm[] {
-  return wo.containers.map(c => ({
-    containerNumber: c.containerNumber,
-    workType: c.workType,
-    photoTaken: !!c.photoUrl,
-    photoDataUrl: c.photoUrl || undefined,
-    photoLat: c.photoLat,
-    photoLng: c.photoLng,
-    photoTimestamp: c.photoTimestamp,
+  return [{
+    containerNumber: wo.contNumber ?? '',
+    workType: wo.contType ?? 'E20',
+    photoTaken: false,
     ocrLoading: false,
-  }))
+  }]
 }
 
 export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | null) {
@@ -61,7 +57,6 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   )
   const [clientId, setClientId] = useState(existingDeliveredTrip ? String(existingDeliveredTrip.client.id) : '')
   const [vessel, setVessel] = useState(existingDeliveredTrip?.vessel ?? '')
-  const [operationType, setOperationType] = useState<string>(existingDeliveredTrip?.operationType ?? '')
   const [pickupLocation, setPickupLocation] = useState(existingDeliveredTrip?.pickupLocation.name ?? '')
   const [dropoffLocation, setDropoffLocation] = useState(existingDeliveredTrip?.dropoffLocation.name ?? '')
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
@@ -309,15 +304,6 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     setSubmitting(true)
 
     try {
-      const containerItems = containers.map(c => ({
-        containerNumber: c.containerNumber.trim(),
-        workType: c.workType,
-        photoUrl: c.photoDataUrl ?? '',
-        photoLat: c.photoLat ?? null,
-        photoLng: c.photoLng ?? null,
-        photoTimestamp: c.photoTimestamp ?? null,
-      }))
-
       const pickupId = locations.find(l => l.name === pickupLocation)?.id
       const dropoffId = locations.find(l => l.name === dropoffLocation)?.id
       if (!pickupId || !dropoffId) {
@@ -327,33 +313,22 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
 
       if (isEdit && existingDeliveredTrip) {
         await apiClient.updateDeliveredTrip(existingDeliveredTrip.id, {
-          containers: containerItems,
+          contNumber: containers[0]?.containerNumber.trim() || null,
+          contType: containers[0]?.workType ?? null,
           clientId: Number(clientId),
           pickupLocationId: pickupId,
           dropoffLocationId: dropoffId,
           vessel: vessel || null,
-          operationType: operationType || null,
         })
       } else {
-        const gps = await new Promise<{ lat: number; lng: number }>((resolve) => {
-          if (!navigator.geolocation) return resolve({ lat: 0, lng: 0 })
-          navigator.geolocation.getCurrentPosition(
-            (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-            () => resolve({ lat: 0, lng: 0 }),
-            { enableHighAccuracy: true, timeout: 5000 },
-          )
-        })
-
         await apiClient.createDeliveredTrip({
-          containers: containerItems,
+          contNumber: containers[0]?.containerNumber.trim() || null,
+          contType: containers[0]?.workType ?? null,
           clientId: Number(clientId),
           pickupLocationId: pickupId,
           dropoffLocationId: dropoffId,
           driverId: Number(user!.id),
           vessel: vessel || null,
-          operationType: operationType || null,
-          gpsLat: gps.lat,
-          gpsLng: gps.lng,
         })
       }
 
@@ -366,11 +341,16 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       console.error('Submit failed:', err)
       setSubmitting(false)
     }
-  }, [containers, clientId, vessel, operationType, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingDeliveredTrip])
+  }, [containers, clientId, vessel, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingDeliveredTrip])
 
   // Summary data for dialog
-  const summaryContainers = useMemo(() =>
-    containers.map(c => ({ number: c.containerNumber.trim(), type: c.workType })),
+  const summaryContNumber = useMemo(() =>
+    containers[0]?.containerNumber.trim() || null,
+    [containers],
+  )
+
+  const summaryContType = useMemo(() =>
+    containers[0]?.workType ?? null,
     [containers],
   )
 
@@ -388,7 +368,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     clients, recentOrders,
 
     // Form state
-    containers, clientId, vessel, operationType, pickupLocation, dropoffLocation,
+    containers, clientId, vessel, pickupLocation, dropoffLocation,
     selectedTripId,
 
     // UI state
@@ -396,12 +376,11 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     forceManualEntry, missingFields, containerErrors, suggestionLoading,
 
     // Derived
-    canSubmit, summaryContainers, summaryClientName,
+    canSubmit, summaryContNumber, summaryContType, summaryClientName,
 
     // Actions
     setClientId: (v: string) => { setSelectedTripId(null); setClientId(v) },
     setVessel,
-    setOperationType,
     setPickupLocation: (v: string) => { setSelectedTripId(null); setPickupLocation(v) },
     setDropoffLocation: (v: string) => { setSelectedTripId(null); setDropoffLocation(v) },
     openScanner, openGallery, handleScanComplete, setScannerOpen,

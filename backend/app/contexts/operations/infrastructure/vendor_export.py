@@ -11,10 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.domain import (
     Location,
     Vendor,
-    Vehicle,
-    VehicleDriver,
     DeliveredTrip,
-    DeliveredTripContainer,
 )
 from app.utils.excel_utils import add_template_version
 from app.utils.text import slugify_vi
@@ -42,18 +39,6 @@ async def generate_vendor_export_excel(
         ).order_by(DeliveredTrip.trip_date, DeliveredTrip.id)
     )
     delivered_trips = wo_result.scalars().all()
-    wo_ids = [wo.id for wo in delivered_trips]
-
-    # Load containers
-    containers_map: dict[int, list] = {}
-    if wo_ids:
-        cont_result = await db.execute(
-            select(DeliveredTripContainer).where(
-                DeliveredTripContainer.delivered_trip_id.in_(wo_ids)
-            )
-        )
-        for c in cont_result.scalars().all():
-            containers_map.setdefault(c.delivered_trip_id, []).append(c)
 
     # Load location names
     loc_ids: set[int] = set()
@@ -66,21 +51,6 @@ async def generate_vendor_export_excel(
     if loc_ids:
         loc_result = await db.execute(select(Location).where(Location.id.in_(loc_ids)))
         loc_name_by_id = {loc.id: loc.name for loc in loc_result.scalars().all()}
-
-    # Load vehicle plates via VehicleDriver
-    driver_ids = [wo.driver_id for wo in delivered_trips if wo.driver_id]
-    driver_plate_map: dict[int, str] = {}
-    if driver_ids:
-        v_result = await db.execute(
-            select(VehicleDriver.driver_id, Vehicle.plate)
-            .join(Vehicle, Vehicle.id == VehicleDriver.vehicle_id)
-            .where(
-                VehicleDriver.driver_id.in_(driver_ids),
-                VehicleDriver.is_active == True,  # noqa: E712
-                Vehicle.is_active == True,  # noqa: E712
-            )
-        )
-        driver_plate_map = dict(v_result.all())
 
     # Build Excel
     wb = openpyxl.Workbook()
@@ -152,48 +122,46 @@ async def generate_vendor_export_excel(
     ws.row_dimensions[header_row].height = 32
     ws.freeze_panes = ws.cell(row=5, column=1)
 
-    # Data rows
+    # Data rows — one row per DeliveredTrip (flat cont_number/cont_type)
     stt = 0
     type_count: dict[str, int] = {}
     total_amount = 0
 
     for row_idx, wo in enumerate(delivered_trips):
-        containers = containers_map.get(wo.id, [])
         pickup = loc_name_by_id.get(wo.pickup_location_id or 0, "")
         dropoff = loc_name_by_id.get(wo.dropoff_location_id or 0, "")
-        plate = driver_plate_map.get(wo.driver_id or 0, "")
+        plate = wo.vehicle_plate or ""
         vessel = wo.vessel or ""
-        op_type = _op_labels.get(wo.operation_type or "", wo.operation_type or "")
+        op_type = ""  # operation_type removed; work_type carries equivalent meaning
         revenue = wo.revenue or 0
         trip_date_str = wo.trip_date.strftime("%d/%m/%Y") if wo.trip_date else ""
 
         fill_color = _white if row_idx % 2 == 0 else _grey_row
         row_fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
 
-        for c in containers:
-            stt += 1
-            wt_label = WORK_TYPE_FULL.get(c.work_type or "", c.work_type or "")
-            type_count[wt_label] = type_count.get(wt_label, 0) + 1
-            total_amount += revenue
+        stt += 1
+        cont_label = WORK_TYPE_FULL.get(wo.cont_type or "", wo.cont_type or wo.work_type or "")
+        type_count[cont_label] = type_count.get(cont_label, 0) + 1
+        total_amount += revenue
 
-            data_row = [
-                stt, wo.id, trip_date_str, c.container_number, wt_label,
-                pickup, dropoff, op_type, plate, vessel, revenue or "", "",
-            ]
-            ws.append(data_row)
-            data_row_num = ws.max_row
+        data_row = [
+            stt, wo.id, trip_date_str, wo.cont_number or "", cont_label,
+            pickup, dropoff, op_type, plate, vessel, revenue or "", "",
+        ]
+        ws.append(data_row)
+        data_row_num = ws.max_row
 
-            for col_num in range(1, num_cols + 1):
-                cell = ws.cell(row=data_row_num, column=col_num)
-                cell.fill = row_fill
-                cell.border = thin_border
-                cell.alignment = Alignment(vertical="center")
-                if col_num in (1, 2):
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
-                if col_num == 11 and revenue:
-                    cell.number_format = '#,##0'
-                    cell.alignment = Alignment(horizontal="right", vertical="center")
-            ws.row_dimensions[data_row_num].height = 18
+        for col_num in range(1, num_cols + 1):
+            cell = ws.cell(row=data_row_num, column=col_num)
+            cell.fill = row_fill
+            cell.border = thin_border
+            cell.alignment = Alignment(vertical="center")
+            if col_num in (1, 2):
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+            if col_num == 11 and revenue:
+                cell.number_format = '#,##0'
+                cell.alignment = Alignment(horizontal="right", vertical="center")
+        ws.row_dimensions[data_row_num].height = 18
 
     # Summary
     sum_fill = PatternFill(start_color=_blue_light, end_color=_blue_light, fill_type="solid")

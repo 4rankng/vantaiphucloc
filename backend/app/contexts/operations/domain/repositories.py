@@ -9,9 +9,7 @@ from typing import Sequence
 from app.contexts.operations.domain.entities import BookedTrip, DeliveredTrip
 from app.contexts.operations.domain.value_objects import (
     BookedTripId,
-    BookedTripStatus,
     DeliveredTripId,
-    DeliveredTripStatus,
 )
 
 
@@ -26,7 +24,7 @@ class BookedTripRepository(ABC):
         offset: int,
         limit: int,
         client_id: int | None = None,
-        status: BookedTripStatus | None = None,
+        matched: bool | None = None,
         trip_date_from: date | None = None,
         trip_date_to: date | None = None,
         unpriced_only: bool = False,
@@ -63,9 +61,10 @@ class DeliveredTripRepository(ABC):
         limit: int,
         client_id: int | None = None,
         driver_id: int | None = None,
+        vendor_id: int | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
-        status: DeliveredTripStatus | None = None,
+        matched: bool | None = None,
     ) -> tuple[Sequence[DeliveredTrip], int]: ...
 
     @abstractmethod
@@ -80,6 +79,6 @@ class DeliveredTripRepository(ABC):
     async def save(self, w: DeliveredTrip) -> DeliveredTrip: ...
 
     @abstractmethod
-    async def set_status_bulk(
-        self, ids: Sequence[DeliveredTripId], status: DeliveredTripStatus
+    async def set_matched_bulk(
+        self, ids: Sequence[DeliveredTripId], matched: bool
     ) -> None: ...

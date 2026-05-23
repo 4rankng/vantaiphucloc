@@ -2,7 +2,7 @@ import { api } from './client'
 import { toCamel, toSnake, ok, fail, isNetworkError, unwrapPaginated } from './utils'
 import { setCache, getCache } from '@/lib/offline-db'
 import { offlineQueue } from '@/lib/offline-queue'
-import type { DeliveredTrip, ContainerItem, ApiResponse, PaginatedResult } from '@/data/domain'
+import type { DeliveredTrip, ApiResponse, PaginatedResult } from '@/data/domain'
 
 export interface SuggestedRoute {
   client: { id: number; code: string | null; name: string }
@@ -14,15 +14,16 @@ export interface SuggestedRoute {
   source: 'frequent' | 'recent' | 'popular'
 }
 
-export type DeliveredTripSortBy = 'trip_date' | 'vessel' | 'status' | 'revenue' | 'created_at' | 'operation_type' | 'client_code' | 'vehicle_plate' | 'pickup_name' | 'dropoff_name' | 'container_number' | 'cont_type'
+export type DeliveredTripSortBy = 'trip_date' | 'vessel' | 'matched' | 'revenue' | 'created_at' | 'client_code' | 'vehicle_plate' | 'pickup_name' | 'dropoff_name' | 'cont_number' | 'cont_type'
 export type SortOrder = 'asc' | 'desc'
 
 interface DeliveredTripFilters {
   clientId?: number
   driverId?: number
+  vendorId?: number
   dateFrom?: string
   dateTo?: string
-  status?: DeliveredTrip['status']
+  matched?: boolean
   search?: string
   page?: number
   pageSize?: number
@@ -31,36 +32,34 @@ interface DeliveredTripFilters {
 }
 
 export interface DeliveredTripCreatePayload {
-  containers: ContainerItem[]
+  contNumber?: string | null
+  contType?: string | null
   clientId: number
   pickupLocationId: number
   dropoffLocationId: number
   driverId?: number | null
   vendorId?: number | null
-  vehicleExternalPlate?: string | null
+  vehiclePlate?: string | null
   vessel?: string | null
-  operationType?: string | null
-  gpsLat?: number | null
-  gpsLng?: number | null
+  workType?: string | null
+  tripDate?: string | null
 }
 
 export interface DeliveredTripUpdatePayload {
-  containers?: ContainerItem[]
+  contNumber?: string | null
+  contType?: string | null
   clientId?: number
   pickupLocationId?: number
   dropoffLocationId?: number
   driverId?: number
   vendorId?: number | null
-  vehicleExternalPlate?: string | null
+  vehiclePlate?: string | null
   vessel?: string | null
-  operationType?: string | null
-  gpsLat?: number | null
-  gpsLng?: number | null
-  unitPrice?: number
+  workType?: string | null
+  revenue?: number
   driverSalary?: number
   allowance?: number
-  earning?: number
-  status?: DeliveredTrip['status']
+  matched?: boolean | null
 }
 
 export async function getDeliveredTrip(id: number): Promise<ApiResponse<DeliveredTrip>> {
@@ -73,14 +72,15 @@ export async function getDeliveredTrip(id: number): Promise<ApiResponse<Delivere
 }
 
 export async function getDeliveredTrips(filters?: DeliveredTripFilters): Promise<ApiResponse<PaginatedResult<DeliveredTrip>>> {
-  const cacheKey = `delivered-trips:${filters?.clientId || ''}:${filters?.driverId || ''}:${filters?.status || ''}:${filters?.dateFrom || ''}:${filters?.dateTo || ''}:${filters?.search || ''}:p${filters?.page || 1}:s${filters?.pageSize || 50}:sb${filters?.sortBy || ''}:so${filters?.sortOrder || ''}`
+  const cacheKey = `delivered-trips:${filters?.clientId || ''}:${filters?.driverId || ''}:${filters?.vendorId || ''}:${filters?.matched ?? ''}:${filters?.dateFrom || ''}:${filters?.dateTo || ''}:${filters?.search || ''}:p${filters?.page || 1}:s${filters?.pageSize || 50}:sb${filters?.sortBy || ''}:so${filters?.sortOrder || ''}`
   try {
     const params: Record<string, string> = {}
     if (filters?.clientId) params.client_id = String(filters.clientId)
     if (filters?.driverId) params.driver_id = String(filters.driverId)
+    if (filters?.vendorId) params.vendor_id = String(filters.vendorId)
     if (filters?.dateFrom) params.date_from = filters.dateFrom
     if (filters?.dateTo) params.date_to = filters.dateTo
-    if (filters?.status) params.status = filters.status
+    if (filters?.matched !== undefined) params.matched = String(filters.matched)
     if (filters?.search) params.search = filters.search
     if (filters?.sortBy) params.sort_by = filters.sortBy
     if (filters?.sortOrder) params.sort_order = filters.sortOrder
@@ -122,21 +122,18 @@ export async function createDeliveredTrip(
       // ClientSummary/DriverSummary/LocationSummary here.
       return ok({
         id: -Date.now(),
-        containers: data.containers,
+        contNumber: data.contNumber ?? null,
+        contType: data.contType ?? null,
         client: { id: data.clientId, name: '', code: null },
         pickupLocation: { id: data.pickupLocationId, name: '' },
         dropoffLocation: { id: data.dropoffLocationId, name: '' },
         driver: { id: data.driverId, name: '' },
-        gpsLat: data.gpsLat ?? 0,
-        gpsLng: data.gpsLng ?? 0,
-        gpsAddress: undefined,
         vessel: data.vessel ?? undefined,
-        unitPrice: 0,
+        revenue: 0,
         driverSalary: 0,
         allowance: 0,
-        pricingId: undefined,
         createdAt: new Date().toISOString(),
-        status: 'PENDING',
+        matched: false,
         pendingSync: true,
       } satisfies DeliveredTrip)
     }
@@ -273,22 +270,6 @@ export async function aiParsePreview(file: File): Promise<ApiResponse<TemplatePa
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return ok(toCamel<TemplateParseResult>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
-}
-
-export async function updateContainerNumber(
-  tripId: number,
-  containerId: number,
-  containerNumber: string,
-): Promise<ApiResponse<ContainerItem>> {
-  try {
-    const res = await api.patch(
-      `/delivered-trips/${tripId}/containers/${containerId}`,
-      { container_number: containerNumber },
-    )
-    return ok(toCamel<ContainerItem>(res.data))
   } catch (err) {
     return fail(err)
   }

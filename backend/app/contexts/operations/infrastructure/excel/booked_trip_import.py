@@ -10,14 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
     BookedTrip,
-    BookedTripContainer,
     Client,
     PricingLine,
     Vehicle,
     VehicleDriver,
 )
 from app.utils.iso6346 import normalize_container_number, validate_container_number
-from app.utils.excel_utils import parse_operation_type
 
 _logger = logging.getLogger(__name__)
 
@@ -50,9 +48,6 @@ _TRIP_IMPORT_COLUMNS = {
     "driver_salary": "driver_salary",
     "phu_cap": "allowance",
     "allowance": "allowance",
-    "tac_nghiep": "operation_type",
-    "operation_type": "operation_type",
-    "operation": "operation_type",
 }
 
 
@@ -112,6 +107,7 @@ async def import_booked_trips(
     """Validate and create trip orders from parsed Excel rows.
 
     Groups rows by (trip_date, client_code) to form trip orders.
+    Each group becomes one BookedTrip (flat cont_number/cont_type).
     Returns { created: int, errors: list[str] }.
     """
     from app.contexts.customer_pricing.infrastructure.pricing_lookup import (
@@ -148,7 +144,7 @@ async def import_booked_trips(
         groups.setdefault(key, []).append(row)
 
     for key, group_rows in groups.items():
-        trip_date, client_code_str = key
+        trip_date_str, client_code_str = key
 
         # Look up partner by code
         client_result = await db.execute(
@@ -220,30 +216,20 @@ async def import_booked_trips(
                 allowance = tiered.allowance
                 pricing_id = tiered.pricing.id
 
-        operation_type_raw = first_row.get("operation_type")
-        operation_type = parse_operation_type(operation_type_raw) if operation_type_raw else None
-
+        # One BookedTrip per group — use first container's data
         booked_trip = BookedTrip(
-            trip_date=trip_date_val,
+            trip_date=trip_date_str,
             client_id=client.id,
             pickup_location_id=pickup_id,
             dropoff_location_id=dropoff_id,
-            pricing_id=pricing_id,
-            operation_type=operation_type,
+            work_type=work_type,
+            cont_number=containers_data[0]["container_number"],
+            cont_type=containers_data[0]["work_type"],
             revenue=revenue,
             driver_salary=driver_salary,
             allowance=allowance,
-            status="PENDING",
         )
         db.add(booked_trip)
-        await db.flush()
-
-        for c in containers_data:
-            db.add(BookedTripContainer(
-                booked_trip_id=booked_trip.id,
-                container_number=c["container_number"],
-                work_type=c["work_type"],
-            ))
 
         created += 1
 
@@ -253,14 +239,16 @@ async def import_booked_trips(
 
 def generate_booked_trip_template() -> bytes:
     """Generate a blank Excel template for trip order import."""
+    import openpyxl
+
     headers = [
         "Ngày", "Mã KH", "Điểm lấy", "Điểm trả",
-        "Cung đường", "Số cont", "Loại cont", "Tác nghiệp", "Đơn giá",
+        "Cung đường", "Số cont", "Loại cont", "Đơn giá",
         "Lương TX", "Phụ cấp",
     ]
     examples = [
         "01/05/2026", "KH001", "Cát lái", "KC Bình Dương",
-        "Cát lái - KC Bình Dương", "TCLU1234567", "E20", "Xuất / Nhập tàu", "1500000",
+        "Cát lái - KC Bình Dương", "TCLU1234567", "E20", "1500000",
         "500000", "100000",
     ]
     workbook = openpyxl.Workbook()
@@ -273,7 +261,7 @@ def generate_booked_trip_template() -> bytes:
         for cell in col:
             cell.font = openpyxl.styles.Font(bold=True)
 
-    buf = io.BytesIO()
+    buf = BytesIO()
     workbook.save(buf)
     workbook.close()
     return buf.getvalue()

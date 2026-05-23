@@ -91,7 +91,7 @@ async def list_users(
     sort_by: str | None = None,
     sort_order: str = Query('asc', pattern='^(asc|desc)$'),
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
+    page_size: int = Query(50, ge=1, le=1000),
     current_user: UserORM = Depends(require_permission("list", "User")),
     use_case: ListUsers = Depends(get_list_users),
 ):

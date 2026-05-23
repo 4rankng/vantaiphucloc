@@ -1,42 +1,37 @@
-"""Bulk import work orders from Excel and auto-match against trip orders.
+"""Bulk import delivered trips from Excel.
 
 Parses an Excel file (.xlsx) with flexible column detection, creates
-DeliveredTrip + DeliveredTripContainer rows, then runs matching against existing
-unmatched BookedTrips using the match_suggester scoring logic.
+DeliveredTrip rows with flat container fields.
 """
 
 from __future__ import annotations
 
 import io
 import logging
-import re
-from collections import defaultdict
-from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from dataclasses import dataclass, field  # noqa: F401 — dataclass still used for BulkImportResult
+from datetime import date, datetime
 from typing import Any
 
 import openpyxl
-from sqlalchemy import func, or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
     Location,
     LocationAlias,
     Client,
-    Reconciliation,
-    BookedTrip,
-    BookedTripContainer,
     DeliveredTrip,
-    DeliveredTripContainer,
 )
 from app.utils.excel_utils import (
     CONTAINER_RE,
     looks_like_container,
     parse_amount,
     parse_date,
-    parse_operation_type,
 )
+
 from app.utils.iso6346 import normalize_container_number
+
+from app.contexts.operations.application.bulk_import_types import ImportRow
 
 _logger = logging.getLogger(__name__)
 
@@ -44,7 +39,6 @@ _logger = logging.getLogger(__name__)
 # Column detection
 # ---------------------------------------------------------------------------
 
-# Vietnamese + English header patterns for auto-detection
 _HEADER_PATTERNS: dict[str, list[str]] = {
     "container": ["container", "cont", "số cont", "so cont", "số container", "container no", "công container", "số côn"],
     "date": ["ngày", "date", "ngày đi", "trip date", "ngày chạy", "ngày vận chuyển", "ngày thực hiện"],
@@ -53,15 +47,10 @@ _HEADER_PATTERNS: dict[str, list[str]] = {
     "dropoff": ["điểm trả", "dropoff", "trả hàng", "nơi trả", "đến", "to", "điểm đến", "nơi đến", "trả"],
     "amount": ["tiền", "amount", "cước", "giá", "đơn giá", "unit price", "cước phí", "thành tiền", "tổng tiền", "price"],
     "work_type": ["loại", "work type", "type", "loại cont", "loại container", "size"],
-    "operation_type": ["tác nghiệp", "tac nghiep", "loại tác nghiệp", "loai tac nghiep", "operation", "operation type", "operation_type"],
     "notes": ["ghi chú", "note", "notes", "remark", "remarks", "mô tả", "description"],
 }
 
 
-# Parsing helpers imported from app.utils.excel_utils
-
-# Note: bulk_import_service has a slightly different _parse_amount that
-# handles int/float directly. We wrap the shared version to preserve behavior.
 def _parse_amount(raw: Any) -> int | None:
     if raw is None:
         return None
@@ -96,29 +85,11 @@ def _detect_columns(headers: list[str | None]) -> dict[str, int]:
 
 
 @dataclass
-class ImportRow:
-    """Single row parsed from the Excel file."""
-    row_number: int
-    container_number: str | None = None
-    trip_date: date | None = None
-    client_name: str | None = None
-    pickup_location: str | None = None
-    dropoff_location: str | None = None
-    amount: int | None = None  # In VND (integer)
-    work_type: str | None = None
-    operation_type: str | None = None
-    notes: str | None = None
-    parse_error: str | None = None
-
-
-@dataclass
 class BulkImportResult:
-    """Result of the bulk import + match operation."""
+    """Result of the bulk import operation."""
     total_rows: int
     created: int
-    matched: int
     warnings: int
-    unmatched: int
     errors: list[str] = field(default_factory=list)
     details: list[dict] = field(default_factory=list)
 
@@ -129,7 +100,7 @@ class BulkImportResult:
 
 
 class BulkImportService:
-    """Parse Excel file, create DeliveredTrips, auto-match against BookedTrips."""
+    """Parse Excel file and create DeliveredTrips."""
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -141,12 +112,11 @@ class BulkImportService:
         client_id: int | None = None,
         user_id: int | None = None,
     ) -> BulkImportResult:
-        """Main entry: parse → create WOs → auto-match → return summary."""
+        """Main entry: parse → create trips → return summary."""
         rows = self._parse_excel(content, filename)
         if not rows:
             return BulkImportResult(
-                total_rows=0, created=0, matched=0,
-                warnings=0, unmatched=0,
+                total_rows=0, created=0, warnings=0,
                 errors=["Không tìm thấy dữ liệu hợp lệ trong file"],
             )
 
@@ -155,8 +125,7 @@ class BulkImportService:
 
         if not valid_rows:
             return BulkImportResult(
-                total_rows=len(rows), created=0, matched=0,
-                warnings=0, unmatched=0,
+                total_rows=len(rows), created=0, warnings=0,
                 errors=[r.parse_error for r in error_rows if r.parse_error] or ["Không có dòng hợp lệ"],
             )
 
@@ -167,8 +136,7 @@ class BulkImportService:
 
         if resolved_client_id is None:
             return BulkImportResult(
-                total_rows=len(rows), created=0, matched=0,
-                warnings=0, unmatched=0,
+                total_rows=len(rows), created=0, warnings=0,
                 errors=["Không xác định được khách hàng. Vui lòng chọn khách hàng hoặc thêm cột 'khách' trong file."],
             )
 
@@ -176,18 +144,18 @@ class BulkImportService:
         await self._resolve_locations_for_rows(valid_rows)
 
         # Create DeliveredTrips
-        created_wo_ids: list[int] = []
+        created_ids: list[int] = []
         create_errors: list[str] = []
         details: list[dict] = []
 
         for row in valid_rows:
             try:
-                wo_id = await self._create_delivered_trip(row, resolved_client_id, user_id)
-                created_wo_ids.append(wo_id)
+                trip_id = await self._create_delivered_trip(row, resolved_client_id)
+                created_ids.append(trip_id)
                 details.append({
                     "row": row.row_number,
                     "container": row.container_number,
-                    "delivered_trip_id": wo_id,
+                    "delivered_trip_id": trip_id,
                     "status": "created",
                 })
             except Exception as exc:
@@ -200,20 +168,13 @@ class BulkImportService:
                     "error": str(exc),
                 })
 
-        await self.session.flush()
-
-        # Auto-match created WOs against existing BookedTrips
-        matched, warnings, unmatched = await self._auto_match(created_wo_ids, user_id or 0)
-
         await self.session.commit()
 
         all_errors = [r.parse_error for r in error_rows if r.parse_error] + create_errors
         return BulkImportResult(
             total_rows=len(rows),
-            created=len(created_wo_ids),
-            matched=matched,
-            warnings=warnings,
-            unmatched=unmatched,
+            created=len(created_ids),
+            warnings=0,
             errors=all_errors,
             details=details,
         )
@@ -235,7 +196,6 @@ class BulkImportService:
             # Try to detect header row
             header_idx = self._find_header_row(raw_rows)
             if header_idx is None:
-                # Fallback: look for first row with container number
                 header_idx = self._find_data_start(raw_rows)
                 if header_idx is None:
                     continue
@@ -258,11 +218,9 @@ class BulkImportService:
         return rows_out
 
     def _find_header_row(self, rows: list[tuple]) -> int | None:
-        """Find the first row that looks like a header."""
-        for idx, row in enumerate(rows[:10]):  # Check first 10 rows
+        for idx, row in enumerate(rows[:10]):
             text_cells = [str(c).strip().lower() for c in row if c is not None]
             text = " ".join(text_cells)
-            # Check for multiple header patterns
             matches = 0
             for patterns in _HEADER_PATTERNS.values():
                 for pat in patterns:
@@ -274,14 +232,12 @@ class BulkImportService:
         return None
 
     def _find_data_start(self, rows: list[tuple]) -> int | None:
-        """Find the first row containing a container number."""
         for idx, row in enumerate(rows):
             if any(looks_like_container(c) for c in row):
                 return idx
         return None
 
     def _detect_columns_from_data(self, rows: list[tuple], start_idx: int) -> dict[str, int]:
-        """Infer column roles from data when no header is found."""
         if start_idx >= len(rows):
             return {}
         col_map: dict[str, int] = {}
@@ -294,7 +250,6 @@ class BulkImportService:
         return col_map
 
     def _parse_row(self, row_num: int, cells: list[Any], col_map: dict[str, int]) -> ImportRow:
-        """Parse a single row into an ImportRow."""
         def _get(role: str) -> Any:
             idx = col_map.get(role)
             return cells[idx] if idx is not None and idx < len(cells) else None
@@ -307,7 +262,6 @@ class BulkImportService:
                 container_number = match.group(0)
 
         if container_number is None and _get("container") is not None:
-            # Not a valid container format
             return ImportRow(
                 row_number=row_num,
                 parse_error=f"Số container không hợp lệ: {_get('container')}",
@@ -319,7 +273,6 @@ class BulkImportService:
                 parse_error="Không tìm thấy số container",
             )
 
-        # Normalize container number
         container_number = normalize_container_number(container_number) or container_number
 
         trip_date = parse_date(_get("date"))
@@ -329,14 +282,11 @@ class BulkImportService:
         amount = _parse_amount(_get("amount"))
         work_type_raw = _get("work_type")
         work_type = str(work_type_raw).strip().upper() if work_type_raw is not None else None
-        operation_type = parse_operation_type(_get("operation_type"))
         notes = str(_get("notes")).strip() if _get("notes") is not None else None
 
-        # Validate work_type
         valid_work_types = {"E20", "E40", "F20", "F40"}
         if work_type and work_type not in valid_work_types:
-            # Try to infer from container number prefix or size hints
-            work_type = None  # Will default to E20
+            work_type = None
 
         return ImportRow(
             row_number=row_num,
@@ -347,7 +297,6 @@ class BulkImportService:
             dropoff_location=dropoff,
             amount=amount,
             work_type=work_type or "E20",
-            operation_type=operation_type,
             notes=notes,
         )
 
@@ -356,17 +305,13 @@ class BulkImportService:
     # -----------------------------------------------------------------------
 
     async def _resolve_client_from_rows(self, rows: list[ImportRow]) -> int | None:
-        """Try to resolve client_id from row data."""
         names = {r.client_name for r in rows if r.client_name}
         if not names:
             return None
-        # Try to find matching partner
         for name in names:
             partner = (
                 await self.session.execute(
-                    select(Client).where(
-                        Client.name.ilike(f"%{name}%"),
-                    )
+                    select(Client).where(Client.name.ilike(f"%{name}%"))
                 )
             ).scalar_one_or_none()
             if partner:
@@ -374,12 +319,6 @@ class BulkImportService:
         return None
 
     async def _resolve_locations_for_rows(self, rows: list[ImportRow]) -> None:
-        """Resolve pickup/dropoff location names to IDs. Sets location_id on rows.
-
-        We store the resolved location IDs on the rows as a side effect
-        using a dict attribute.
-        """
-        # Collect all unique location names
         location_names: set[str] = set()
         for r in rows:
             if r.pickup_location:
@@ -390,27 +329,21 @@ class BulkImportService:
         if not location_names:
             return
 
-        # Load existing locations and aliases for matching
         locations = (await self.session.execute(select(Location))).scalars().all()
-        aliases = (await self.session.execute(
-            select(LocationAlias)
-        )).scalars().all()
+        aliases = (await self.session.execute(select(LocationAlias))).scalars().all()
 
-        # Build lookup: normalized_name → location_id
         name_to_id: dict[str, int] = {}
         for loc in locations:
             name_to_id[loc.name.strip().lower()] = loc.id
         for alias in aliases:
             name_to_id[alias.alias_normalized.strip().lower()] = alias.location_id
 
-        # Try to match each location name
         resolved: dict[str, int | None] = {}
         for name in location_names:
             key = name.strip().lower()
             if key in name_to_id:
                 resolved[name] = name_to_id[key]
             else:
-                # Fuzzy: check if any existing location name is contained
                 found = None
                 for loc in locations:
                     if key in loc.name.lower() or loc.name.lower() in key:
@@ -418,15 +351,14 @@ class BulkImportService:
                         break
                 resolved[name] = found
 
-        # Store on rows (use a _resolved dict hack)
         for r in rows:
             r._pickup_location_id = resolved.get(r.pickup_location or "", None)  # type: ignore[attr-defined]
             r._dropoff_location_id = resolved.get(r.dropoff_location or "", None)  # type: ignore[attr-defined]
 
     async def _create_delivered_trip(
-        self, row: ImportRow, client_id: int, user_id: int | None,
+        self, row: ImportRow, client_id: int,
     ) -> int:
-        """Create a DeliveredTrip + DeliveredTripContainer from an ImportRow."""
+        """Create a DeliveredTrip from an ImportRow."""
         pickup_id = getattr(row, "_pickup_location_id", None)
         dropoff_id = getattr(row, "_dropoff_location_id", None)
 
@@ -441,299 +373,14 @@ class BulkImportService:
             client_id=client_id,
             pickup_location_id=pickup_id,
             dropoff_location_id=dropoff_id,
-            driver_id=None,  # Will be assigned later
+            driver_id=None,
             work_type=row.work_type or "E20",
+            cont_number=row.container_number,
+            cont_type=row.work_type or "E20",
             trip_date=row.trip_date,
-            operation_type=row.operation_type,
-            status="PENDING",
             vessel=row.notes if row.notes and ("tau" in row.notes.lower() or "tàu" in row.notes.lower()) else None,
         )
         self.session.add(wo)
         await self.session.flush()
 
-        container = DeliveredTripContainer(
-            delivered_trip_id=wo.id,
-            container_number=row.container_number or "",
-            cont_type=row.work_type or "E20",
-        )
-        self.session.add(container)
-        await self.session.flush()
-
         return int(wo.id)  # type: ignore[arg-type]
-
-    # -----------------------------------------------------------------------
-    # Auto-matching
-    # -----------------------------------------------------------------------
-
-    async def _auto_match(
-        self, wo_ids: list[int], user_id: int,
-    ) -> tuple[int, int, int]:
-        """Match newly created WOs against existing unmatched BookedTrips.
-
-        Returns (matched, warnings, unmatched) counts.
-        Uses the same scoring logic as match_suggester.
-        """
-        if not wo_ids:
-            return 0, 0, 0
-
-        from app.contexts.operations.infrastructure.match_suggester import (
-            FULL_MATCH_THRESHOLD,
-            _load_alias_groups,
-            _locations_match,
-            _effective_weights,
-            _CONTAINER_EXACT,
-            _CONTAINER_1CHAR,
-            _CONTAINER_2CHAR,
-            _CONTAINER_DIGITS_ONLY,
-        )
-
-        # Load created WOs with their containers
-        wos = (await self.session.execute(
-            select(DeliveredTrip).where(DeliveredTrip.id.in_(wo_ids))
-        )).scalars().all()
-
-        wo_container_map: dict[int, list[str]] = {}
-        wo_cont_rows = (await self.session.execute(
-            select(DeliveredTripContainer.delivered_trip_id, DeliveredTripContainer.container_number)
-            .where(DeliveredTripContainer.delivered_trip_id.in_(wo_ids))
-        )).all()
-        for wo_id, cn in wo_cont_rows:
-            wo_container_map.setdefault(wo_id, []).append(
-                normalize_container_number(cn) if cn else ""
-            )
-
-        # Get all active reconciliation links (already matched WOs)
-        already_linked = set(
-            r[0] for r in (await self.session.execute(
-                select(Reconciliation.delivered_trip_id).where(
-                    Reconciliation.is_active == True  # noqa: E712
-                )
-            )).all()
-        )
-
-        # Load alias groups for location matching
-        alias_groups = await _load_alias_groups(self.session)
-
-        matched = 0
-        warnings = 0
-        unmatched = 0
-
-        for wo in wos:
-            if wo.id in already_linked:
-                unmatched += 1
-                continue
-
-            wo_cn_set = set(wo_container_map.get(wo.id, []))
-            if not wo_cn_set:
-                unmatched += 1
-                continue
-
-            # Find candidate BookedTrips
-            container_subquery = (
-                select(BookedTripContainer.booked_trip_id)
-                .where(BookedTripContainer.container_number.in_(wo_cn_set))
-            )
-            candidates = list((await self.session.execute(
-                select(BookedTrip).where(
-                    BookedTrip.status.in_(["PENDING", "MATCHED"]),
-                    or_(
-                        BookedTrip.client_id == wo.client_id,
-                        BookedTrip.id.in_(container_subquery),
-                    ),
-                )
-            )).scalars().all())
-
-            if not candidates:
-                unmatched += 1
-                continue
-
-            # Load TO containers and link counts
-            to_ids = [t.id for t in candidates]
-            to_cont_rows = (await self.session.execute(
-                select(BookedTripContainer)
-                .where(BookedTripContainer.booked_trip_id.in_(to_ids))
-            )).scalars().all()
-            to_containers: dict[int, list[BookedTripContainer]] = defaultdict(list)
-            for c in to_cont_rows:
-                to_containers[c.booked_trip_id].append(c)
-
-            # Count active links per TO
-            link_counts: dict[int, int] = {}
-            if to_ids:
-                link_rows = (await self.session.execute(
-                    select(Reconciliation.booked_trip_id, func.count())
-                    .where(
-                        Reconciliation.booked_trip_id.in_(to_ids),
-                        Reconciliation.is_active == True,  # noqa: E712
-                    ).group_by(Reconciliation.booked_trip_id)
-                )).all()
-                link_counts = {r[0]: r[1] for r in link_rows}
-
-            # Score each candidate TO
-            best_to: BookedTrip | None = None
-            best_score = 0.0
-            best_container_id: int | None = None
-
-            for to in candidates:
-                all_to_conts = to_containers.get(to.id, [])
-                if link_counts.get(to.id, 0) >= len(all_to_conts):
-                    continue  # TO at full capacity
-
-                # Find available containers (not yet linked)
-                used_ids = await self._used_container_ids(to.id, all_to_conts, link_counts.get(to.id, 0))
-                available = [c for c in all_to_conts if c.id not in used_ids]
-                if not available:
-                    continue
-
-                for cont in available:
-                    score = self._score_match(
-                        wo, wo_cn_set, to, cont, alias_groups,
-                    )
-                    if score > best_score:
-                        best_score = score
-                        best_to = to
-                        best_container_id = cont.id
-
-            if best_to and best_score >= FULL_MATCH_THRESHOLD:
-                # Auto-match
-                await self._create_match(wo, best_to, best_score, user_id)
-                if best_score < 1.0:
-                    warnings += 1
-                matched += 1
-            else:
-                unmatched += 1
-
-        return matched, warnings, unmatched
-
-    async def _used_container_ids(
-        self, to_id: int, to_conts: list[BookedTripContainer], link_count: int,
-    ) -> set[int]:
-        """Get IDs of TO containers already used by active reconciliations."""
-        recons = (await self.session.execute(
-            select(Reconciliation.delivered_trip_id).where(
-                Reconciliation.booked_trip_id == to_id,
-                Reconciliation.is_active == True,  # noqa: E712
-            )
-        )).all()
-
-        if not recons:
-            return set()
-
-        wo_ids = [r[0] for r in recons]
-        wo_conts = (await self.session.execute(
-            select(DeliveredTripContainer)
-            .where(DeliveredTripContainer.delivered_trip_id.in_(wo_ids))
-        )).scalars().all()
-
-        used: set[int] = set()
-        for wo_c in wo_conts:
-            wo_cn = normalize_container_number(wo_c.container_number) if wo_c.container_number else None
-            if wo_cn:
-                for to_c in to_conts:
-                    if to_c.id in used:
-                        continue
-                    to_cn = normalize_container_number(to_c.container_number) if to_c.container_number else None
-                    if to_cn == wo_cn:
-                        used.add(to_c.id)
-                        break
-
-        return used
-
-    def _score_match(
-        self,
-        wo: DeliveredTrip,
-        wo_cn_set: set[str],
-        to: BookedTrip,
-        to_cont: BookedTripContainer,
-        alias_groups: dict[int, set[int]],
-    ) -> float:
-        """Score a (WO, TO container) match using 7 criteria."""
-        score = 0.0
-
-        # Determine NULL criteria for weight redistribution
-        vessel_missing = not (to.vessel or wo.vessel)
-        vehicle_missing = not (
-            getattr(to, "vehicle_plate", None) or getattr(wo, "vehicle_id", None)
-        )
-        work_type_missing = not (to.work_type or wo.work_type)
-
-        w = _effective_weights(
-            vessel_missing=vessel_missing,
-            vehicle_missing=vehicle_missing,
-            work_type_missing=work_type_missing,
-        )
-
-        # 1. Container — graduated scoring
-        to_cn = normalize_container_number(to_cont.container_number) if to_cont.container_number else None
-        if to_cn and to_cn in wo_cn_set:
-            score += w.get("container_number", 0) * _CONTAINER_EXACT
-        elif to_cn:
-            from app.utils.fuzzy import container_edit_distance
-            best_dist = None
-            for wo_cn in wo_cn_set:
-                dist = container_edit_distance(to_cn, wo_cn)
-                if dist is not None and (best_dist is None or dist < best_dist):
-                    best_dist = dist
-            if best_dist == 1:
-                score += w.get("container_number", 0) * _CONTAINER_1CHAR
-            elif best_dist == 2:
-                score += w.get("container_number", 0) * _CONTAINER_2CHAR
-            else:
-                to_digits = {re.sub(r'[^0-9]', '', cn) for cn in wo_cn_set if cn}
-                wo_digits = {re.sub(r'[^0-9]', '', to_cn)} if to_cn else set()
-                if to_digits & wo_digits:
-                    score += w.get("container_number", 0) * _CONTAINER_DIGITS_ONLY
-
-        # 2. Pickup location
-        if _locations_match(wo.pickup_location_id, to.pickup_location_id, alias_groups):
-            score += w.get("pickup_location", 0)
-
-        # 3. Dropoff location
-        if _locations_match(wo.dropoff_location_id, to.dropoff_location_id, alias_groups):
-            score += w.get("dropoff_location", 0)
-
-        # 4. Container type (work_type)
-        if not work_type_missing:
-            if to.work_type and wo.work_type and to.work_type == wo.work_type:
-                score += w.get("work_type", 0)
-
-        # 5. Vessel
-        if not vessel_missing:
-            to_vessel = (to.vessel or "").upper().strip()
-            wo_vessel = (wo.vessel or "").upper().strip()
-            if to_vessel and wo_vessel:
-                if to_vessel == wo_vessel:
-                    score += w.get("vessel", 0)
-                elif to_vessel in wo_vessel or wo_vessel in to_vessel:
-                    score += w.get("vessel", 0) * 0.67
-
-        # 6. Vehicle plate — skip in bulk import (vehicle_id FK not easily accessible)
-        # 7. Client
-        if wo.client_id == to.client_id:
-            score += w.get("client", 0)
-
-        return score
-
-    async def _create_match(
-        self, wo: DeliveredTrip, to: BookedTrip, score: float, user_id: int,
-    ) -> None:
-        """Create a reconciliation link between WO and TO."""
-        from app.contexts.operations.domain.value_objects import DeliveredTripStatus, BookedTripStatus
-
-        # Update WO status
-        wo.status = DeliveredTripStatus.MATCHED.value
-
-        # Update TO status
-        if to.status == BookedTripStatus.PENDING.value:
-            to.status = BookedTripStatus.MATCHED.value
-
-        # Create reconciliation link
-        recon = Reconciliation(
-            booked_trip_id=to.id,
-            delivered_trip_id=wo.id,
-            match_score=score,
-            matched_by=user_id,
-            is_active=True,
-        )
-        self.session.add(recon)
-        await self.session.flush()

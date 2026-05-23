@@ -2,20 +2,11 @@ from __future__ import annotations
 
 from enum import Enum
 
-__all__ = ["BookedTripStatus", "DeliveredTripStatus"]
+__all__ = ["WorkType"]
 
 
-class BookedTripStatus(str, Enum):
-    DRAFT = "DRAFT"
-    PENDING = "PENDING"
-    MATCHED = "MATCHED"
-    COMPLETED = "COMPLETED"
-    CONFIRMED = "CONFIRMED"
-    CANCELLED = "CANCELLED"
-
-
-class DeliveredTripStatus(str, Enum):
-    PENDING = "PENDING"
-    MATCHED = "MATCHED"
-    COMPLETED = "COMPLETED"
-    CANCELLED = "CANCELLED"
+class WorkType(str, Enum):
+    E20 = "E20"
+    E40 = "E40"
+    F20 = "F20"
+    F40 = "F40"

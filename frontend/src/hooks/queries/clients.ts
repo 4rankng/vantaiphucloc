@@ -41,7 +41,6 @@ export function useCreateClient() {
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['reconciliation-imports'] })
     },
   })
 }
@@ -56,7 +55,6 @@ export function useUpdateClient() {
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['reconciliation-imports'] })
     },
   })
 }
@@ -71,7 +69,6 @@ export function useDeleteClient() {
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['reconciliation-imports'] })
     },
   })
 }

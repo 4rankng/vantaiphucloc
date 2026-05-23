@@ -18,7 +18,7 @@ context but the import-pipeline layer hosts the file-handling.
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import date
 from typing import Any
 
 from fastapi import (
@@ -36,7 +36,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.customer_pricing.infrastructure.location_resolver import (
     LocationResolverService,
-    ResolverSource,
 )
 from app.contexts.operations.application import CreateBookedTripFromImport
 from app.contexts.operations.application.dto import (
@@ -53,17 +52,9 @@ from app.database import get_db
 from app.models.base import User
 from app.models.domain import Client
 from app.contexts.operations.infrastructure.import_pipeline.canonical import CANONICAL_FIELDS, SKIP_FIELD
-from app.contexts.operations.infrastructure.import_pipeline.column_mapper import ColumnMapping
 from app.contexts.operations.infrastructure.import_pipeline.llm import get_default_classifier
 from app.contexts.operations.infrastructure.import_pipeline.pipeline import (
-    column_mappings_from_dicts,
-    compute_structure_hash,
     run_preview,
-)
-from app.contexts.operations.infrastructure.import_pipeline.templates import (
-    find_template,
-    list_templates_for_partner,
-    save_template,
 )
 from app.contexts.operations.infrastructure.import_pipeline.workbook import load_workbook
 
@@ -101,22 +92,15 @@ class CommitRequest(BaseModel):
     client_id: int
     rows: list[CommitRow]
     overwrite_duplicates: bool = False
-    save_template_as: str | None = None
-    structure_hash: str | None = None
-    sheet_name: str | None = None
-    header_row_index: int | None = None
-    column_mapping: list[dict[str, Any]] | None = None
 
 
 class CommitResponse(BaseModel):
     created: int
-    containers_created: int = 0
     grouped_trips: int = 0
     skipped_duplicates: int = 0
     locations_created: int = 0
     locations_review_flagged: int = 0
     errors: list[str] = Field(default_factory=list)
-    template_id: int | None = None
     created_trip_ids: list[int] = Field(default_factory=list)
 
 
@@ -223,50 +207,12 @@ async def preview_customer_excel(
     trip_date = default_trip_date or date.today()
     classifier = get_default_classifier()
 
-    cached_mapping: list[ColumnMapping] | None = None
-    if client_id is not None:
-        sheets = load_workbook(content, file.filename)
-        if not sheets:
-            raise HTTPException(
-                status_code=400, detail="Tệp Excel không có sheet nào."
-            )
-        from app.contexts.operations.infrastructure.import_pipeline.header_finder import (
-            find_header_row,
-            header_row_text,
-        )
-        from app.contexts.operations.infrastructure.import_pipeline.sheet_picker import score_sheets
-
-        sheet = None
-        if sheet_name:
-            for s in sheets:
-                if s.name == sheet_name:
-                    sheet = s
-                    break
-        if sheet is None:
-            scored = score_sheets(sheets)
-            sheet = scored[0].sheet if scored and scored[0].score > 0 else None
-
-        if sheet is not None:
-            row_idx = header_row_index
-            if row_idx is None:
-                hit = find_header_row(sheet)
-                row_idx = hit.row_index if hit else None
-            if row_idx is not None:
-                hdr_cells = header_row_text(sheet, row_idx)
-                structure_hash = compute_structure_hash(sheet.name, hdr_cells)
-                tpl = await find_template(db, client_id, structure_hash)
-                if tpl is not None:
-                    cached_mapping = column_mappings_from_dicts(
-                        list(tpl.column_mapping)
-                    )
-
     try:
         result = await run_preview(
             content,
             file.filename,
             default_trip_date=trip_date,
             classifier=classifier,
-            cached_mapping=cached_mapping,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -274,7 +220,6 @@ async def preview_customer_excel(
     location_resolutions = await _resolve_preview_locations(db, result.accepted)
 
     payload = result.to_dict()
-    payload["template_used"] = cached_mapping is not None
     payload["location_resolutions"] = location_resolutions
     return payload
 
@@ -362,36 +307,13 @@ async def commit_customer_excel(
     except Exception as exc:
         raise translate(exc)
 
-    template_id: int | None = None
-    if (
-        body.save_template_as
-        and body.structure_hash
-        and body.sheet_name
-        and body.header_row_index is not None
-        and body.column_mapping is not None
-    ):
-        tpl = await save_template(
-            db,
-            client_id=body.client_id,
-            structure_hash=body.structure_hash,
-            template_name=body.save_template_as,
-            sheet_name=body.sheet_name,
-            header_row_index=body.header_row_index,
-            column_mapping=body.column_mapping,
-            user_id=user.id,
-        )
-        template_id = tpl.id
-        await db.commit()
-
     return CommitResponse(
         created=result.created,
-        containers_created=result.containers_created,
         grouped_trips=result.grouped_trips,
         skipped_duplicates=result.skipped_duplicates,
         locations_created=result.locations_created,
         locations_review_flagged=result.locations_review_flagged,
         errors=result.errors,
-        template_id=template_id,
         created_trip_ids=result.created_trip_ids,
     )
 
@@ -466,28 +388,6 @@ async def apply_pricing_to_trip_ids(
         unpriced=len(unpriced_ids),
         unpriced_trip_ids=unpriced_ids[:200],
     )
-
-
-@router.get("/customer-excel/templates")
-async def list_templates(
-    client_id: int,
-    db: AsyncSession = Depends(get_db),
-    _user: User = Depends(require_roles("accountant", "superadmin")),
-):
-    rows = await list_templates_for_partner(db, client_id)
-    return [
-        {
-            "id": r.id,
-            "client_id": r.client_id,
-            "template_name": r.template_name,
-            "structure_hash": r.structure_hash,
-            "sheet_name": r.sheet_name,
-            "header_row_index": r.header_row_index,
-            "last_used_at": r.last_used_at,
-            "column_count": len(r.column_mapping or []),
-        }
-        for r in rows
-    ]
 
 
 # ---------------------------------------------------------------------------

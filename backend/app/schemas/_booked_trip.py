@@ -8,30 +8,10 @@ from ._client import ClientSummaryOut
 from ._location import LocationSummaryOut
 
 __all__ = [
-    "BookedTripContainerPhotoOut",
-    "TripContainerCreate",
-    "TripContainerOut",
     "BookedTripCreate",
     "BookedTripUpdate",
     "BookedTripOut",
 ]
-
-
-class BookedTripContainerPhotoOut(BaseModel):
-    pass  # removed
-
-
-class TripContainerCreate(BaseModel):
-    container_number: str
-    cont_type: str
-
-
-class TripContainerOut(BaseModel):
-    id: int
-    container_number: str
-    cont_type: str
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class BookedTripCreate(BaseModel):
@@ -39,13 +19,12 @@ class BookedTripCreate(BaseModel):
     client_id: int
     pickup_location_id: int
     dropoff_location_id: int
-    containers: list[TripContainerCreate] = []
+    cont_number: str | None = None
+    cont_type: str | None = None
     vessel: str | None = None
     vehicle_plate: str | None = None
-    operation_type: str | None = None
     work_type: str = ""
     revenue: int = Field(ge=0, default=0)
-    matched_delivered_trip_ids: list[int] = []
 
 
 class BookedTripUpdate(BaseModel):
@@ -53,16 +32,15 @@ class BookedTripUpdate(BaseModel):
     client_id: int | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
-    containers: list[TripContainerCreate] | None = None
+    cont_number: str | None = None
+    cont_type: str | None = None
     vessel: str | None = None
     vehicle_plate: str | None = None
-    operation_type: str | None = None
     work_type: str | None = None
     revenue: int | None = None
     driver_salary: int | None = None
     allowance: int | None = None
-    status: str | None = None
-    matched_delivered_trip_ids: list[int] | None = None
+    matched: bool | None = None
 
 
 class BookedTripOut(BaseModel):
@@ -71,14 +49,13 @@ class BookedTripOut(BaseModel):
     client: ClientSummaryOut
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
-    containers: list[TripContainerOut] = []
+    cont_number: str | None = None
+    cont_type: str | None = None
     vessel: str | None = None
     vehicle_plate: str | None = None
-    operation_type: str | None = None
     work_type: str = ""
     revenue: int
-    status: str
-    matched_delivered_trip_ids: list[int] = []
+    matched: bool
     created_at: datetime
     updated_at: datetime
 

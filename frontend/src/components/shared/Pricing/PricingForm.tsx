@@ -1,19 +1,11 @@
 import { useState, useMemo } from 'react'
-import { type Pricing, type PricingLine, type ContType, OPERATION_TYPE_LABELS, type OperationType } from '@/data/domain'
+import { type Pricing, type PricingLine, type ContType } from '@/data/domain'
 import { useLocations } from '@/hooks/use-queries'
 import type { PricingCreatePayload } from '@/services/api/pricings.api'
 import { Label } from '@/components/ui'
-import { InlineSelect } from '@/components/shared/InlineSelect'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { X, Check } from 'lucide-react'
-
-const OPERATION_TYPE_OPTIONS = [
-  { value: '', label: '— Không chọn —' },
-  ...(Object.entries(OPERATION_TYPE_LABELS) as [OperationType, string][]).map(
-    ([value, label]) => ({ value, label })
-  ),
-]
 
 /** Grid order: full containers first, then empty */
 const GRID_ORDER: ContType[] = ['F20', 'F40', 'E20', 'E40']
@@ -178,7 +170,6 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
   )
   const [pickupLocationName, setPickupLocationName] = useState(initial?.pickupLocation.name ?? '')
   const [dropoffLocationName, setDropoffLocationName] = useState(initial?.dropoffLocation.name ?? '')
-  const [operationType, setOperationType] = useState(initial?.operationType ?? '')
   const [workTypeLines, setContTypeLines] = useState<Record<ContType, ContTypeLine>>(() => initContTypeLines(initial))
 
   const clientOptions = useMemo(
@@ -210,10 +201,6 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
     const dropoffId = locations.find(l => l.name === dropoffLocationName)?.id
     if (!clientId || !pickupId || !dropoffId || !hasAnyEnabled) return
 
-    const extraFields = {
-      operationType: operationType || null,
-    }
-
     // When editing, save only the single initial work type
     if (initial) {
       onSave({
@@ -222,7 +209,6 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
         pickupLocationId: pickupId,
         dropoffLocationId: dropoffId,
         lines: workTypeLines[initial.workType].lines,
-        ...extraFields,
       })
       onSaveComplete?.()
       return
@@ -236,7 +222,6 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
         pickupLocationId: pickupId,
         dropoffLocationId: dropoffId,
         lines: workTypeLines[wt].lines,
-        ...extraFields,
       })
     })
     onSaveComplete?.()
@@ -298,25 +283,6 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
                 value={dropoffLocationName}
                 onChange={setDropoffLocationName}
                 placeholder="Chọn điểm trả"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Operation type — optional override */}
-        <div>
-          <div className="typo-label mb-1">TÁC NGHIỆP (tuỳ chọn)</div>
-          <p className="text-[11px] mb-3" style={{ color: 'var(--theme-text-muted)' }}>
-            Để trống = giá mặc định cho tuyến. Chọn tác nghiệp để tạo mức giá riêng.
-          </p>
-          <div className="max-w-md">
-            <div className="space-y-2">
-              <Label className="typo-form-label">Tác nghiệp</Label>
-              <InlineSelect
-                placeholder="— Không chọn —"
-                value={operationType}
-                options={OPERATION_TYPE_OPTIONS}
-                onChange={setOperationType}
               />
             </div>
           </div>

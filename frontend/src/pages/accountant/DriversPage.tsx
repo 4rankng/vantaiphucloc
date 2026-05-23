@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { Car, Plus } from 'lucide-react'
+import { Car, Plus, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { Panel } from '@/components/shared/Panel'
 import { useInfiniteScroll, LoadMoreSentinel, SearchInput, FieldActions } from '@/components/shared/ListUtils'
@@ -306,8 +306,10 @@ export function DriversPage() {
     else { setSortBy(col); setSortOrder('asc') }
   }
   const SortIndicator = ({ col }: { col: DriverSortBy }) => {
-    if (sortBy !== col) return <span style={{ opacity: 0.3, fontSize: 10 }}>↕</span>
-    return <span style={{ fontSize: 10 }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+    if (sortBy !== col) return <ChevronsUpDown className="inline-block ml-1 opacity-30" style={{ width: 12, height: 12, verticalAlign: 'middle' }} />
+    return sortOrder === 'asc'
+      ? <ChevronUp className="inline-block ml-1" style={{ width: 12, height: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />
+      : <ChevronDown className="inline-block ml-1" style={{ width: 12, height: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />
   }
 
   const handleCreate = useCallback(async (data: { username: string; fullName: string; phone: string; plate: string }) => {
@@ -388,9 +390,9 @@ export function DriversPage() {
                 <table className="nepo-table w-full" style={{ minWidth: 600 }}>
                   <thead>
                     <tr>
-                      <th className="text-left cursor-pointer select-none" onClick={() => handleSortCol('full_name')}>Họ tên <SortIndicator col="full_name" /></th>
-                      <th className="text-left cursor-pointer select-none" onClick={() => handleSortCol('phone')}>SĐT <SortIndicator col="phone" /></th>
-                      <th className="text-left cursor-pointer select-none" onClick={() => handleSortCol('username')}>Biển số <SortIndicator col="username" /></th>
+                      <th className="text-left cursor-pointer select-none" style={{ color: sortBy === 'full_name' ? 'var(--accent)' : undefined }} onClick={() => handleSortCol('full_name')}>Họ tên<SortIndicator col="full_name" /></th>
+                      <th className="text-left cursor-pointer select-none" style={{ color: sortBy === 'phone' ? 'var(--accent)' : undefined }} onClick={() => handleSortCol('phone')}>SĐT<SortIndicator col="phone" /></th>
+                      <th className="text-left cursor-pointer select-none" style={{ color: sortBy === 'username' ? 'var(--accent)' : undefined }} onClick={() => handleSortCol('username')}>Biển số<SortIndicator col="username" /></th>
                       <th className="text-right">Lương cơ bản</th>
                       <th className="text-left">Từ ngày</th>
                     </tr>

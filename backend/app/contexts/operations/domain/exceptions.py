@@ -2,11 +2,6 @@
 
 from __future__ import annotations
 
-from app.contexts.operations.domain.value_objects import (
-    BookedTripStatus,
-    DeliveredTripStatus,
-)
-
 
 class OperationsError(Exception):
     """Base exception for the context."""
@@ -30,30 +25,11 @@ class AlreadyExists(OperationsError):
         self.key = key
 
 
-class InvalidStateTransition(OperationsError):
-    """Tried a status change the state machine forbids."""
+class AlreadyMatched(OperationsError):
+    """Tried to match a trip that is already matched."""
 
-    def __init__(
-        self,
-        *,
-        kind: str,
-        current: BookedTripStatus | DeliveredTripStatus | str,
-        attempted: BookedTripStatus | DeliveredTripStatus | str,
-    ) -> None:
-        super().__init__(
-            f"{kind}: invalid transition {current!s} → {attempted!s}"
-        )
+    def __init__(self, kind: str, ident: object) -> None:
+        super().__init__(f"{kind} {ident!r} is already matched")
         self.kind = kind
-        self.current = current
-        self.attempted = attempted
+        self.ident = ident
 
-
-class ContainerCountInvalid(OperationsError):
-    """Container count violates work-type rules (e.g., F40 must be 1, F20 ≤ 2)."""
-
-    def __init__(self, work_type: str, count: int) -> None:
-        super().__init__(
-            f"work_type={work_type!s} does not permit count={count}"
-        )
-        self.work_type = work_type
-        self.count = count

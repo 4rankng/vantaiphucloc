@@ -13,7 +13,6 @@ from app.utils.excel_utils import (
     looks_like_container,
     parse_amount,
     parse_date,
-    parse_operation_type,
 )
 from app.utils.iso6346 import normalize_container_number
 
@@ -27,7 +26,6 @@ _HEADER_PATTERNS: dict[str, list[str]] = {
     "dropoff": ["điểm trả", "dropoff", "trả hàng", "nơi trả", "đến", "to", "điểm đến", "nơi đến", "trả"],
     "amount": ["tiền", "amount", "cước", "giá", "đơn giá", "unit price", "cước phí", "thành tiền", "tổng tiền", "price"],
     "work_type": ["loại", "work type", "type", "loại cont", "loại container", "size"],
-    "operation_type": ["tác nghiệp", "tac nghiep", "loại tác nghiệp", "loai tac nghiep", "operation", "operation type", "operation_type"],
     "notes": ["ghi chú", "note", "notes", "remark", "remarks", "mô tả", "description"],
     "vehicle_plate": ["biển số", "biển số xe", "xe", "vehicle", "plate", "bsx", "bien so", "bien so xe", "số xe"],
 }
@@ -161,7 +159,6 @@ class ExcelParser:
         amount = _parse_amount(_get("amount"))
         work_type_raw = _get("work_type")
         work_type = str(work_type_raw).strip().upper() if work_type_raw is not None else None
-        operation_type = parse_operation_type(_get("operation_type"))
         notes = str(_get("notes")).strip() if _get("notes") is not None else None
         vehicle_plate_raw = _get("vehicle_plate")
         vehicle_plate = str(vehicle_plate_raw).strip() if vehicle_plate_raw is not None else None
@@ -179,7 +176,6 @@ class ExcelParser:
             dropoff_location=dropoff,
             amount=amount,
             work_type=work_type or "E20",
-            operation_type=operation_type,
             notes=notes,
             vehicle_plate=vehicle_plate,
         )

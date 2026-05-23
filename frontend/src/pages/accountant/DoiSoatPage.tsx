@@ -1,51 +1,32 @@
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   ClipboardList,
-  Zap,
-  Unlink,
   Loader2,
-  AlertCircle,
-  CheckCircle,
-  Check,
   DollarSign,
   FileSpreadsheet,
-  Upload,
-  X,
-  AlertTriangle,
-  Camera,
-  MapPin,
-  Clock,
-  User,
-  Truck,
-  Calendar,
 } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { MatchProgressBar } from '@/components/shared/MatchProgressBar'
 import { Panel } from '@/components/shared/Panel'
 import { DataTable, type Column } from '@/components/shared/DataTable'
 import { Toolbar, ToolbarSearch, ToolbarSpacer } from '@/components/shared/Toolbar'
-import { Pill } from '@/components/shared/Pill'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
-// AutoMatchDrawer removed — auto-match now runs inline
 import { ExcelImportDrawer } from '@/components/shared/ExcelImportDrawer'
 import { DeliveredTripDetailDrawer } from '@/components/shared/DeliveredTripDetailDrawer'
 import { FilterTabs } from '@/components/shared/FilterTabs'
 import { StatPill } from '@/components/shared/StatPill'
 import { Pagination } from '@/components/ui/Pagination/Pagination'
 import { useMonthParams } from './use-month-params'
-import { formatCurrency, compactCurrency, OPERATION_TYPE_LABELS } from '@/data/domain'
+import { compactCurrency } from '@/data/domain'
 import { useDebounce } from '@/hooks/use-debounce'
-import { formatMatchDate as formatDate, scoreColor, getDeliveredTripStatusBadge, statusVariant } from '@/lib/match-utils'
-import type { DeliveredTrip, DeliveredTripStatus } from '@/data/domain'
+import { formatMatchDate as formatDate } from '@/lib/match-utils'
+import type { DeliveredTrip } from '@/data/domain'
 import type { DeliveredTripSortBy, SortOrder } from '@/services/api/deliveredTrips.api'
 import {
   useDeliveredTrips,
-  useUnmatch,
   useExportDoiSoatExcel,
-  useAutoMatch,
-  useAutoMatchConfirm,
   useClients,
   useTripDailyStats,
 } from '@/hooks/use-queries'
@@ -53,12 +34,6 @@ import {
 // ─── Status filter type ───────────────────────────────────────────────────────
 
 type StatusFilter = 'ALL' | 'PENDING' | 'MATCHED'
-
-const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
-  ALL: 'Tất cả',
-  PENDING: 'Chờ ghép',
-  MATCHED: 'Đã ghép',
-}
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
@@ -68,9 +43,9 @@ export function DoiSoatPage() {
   const debouncedSearch = useDebounce(search, 400)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [showImport, setShowImport] = useState(false)
-  const [confirmUnmatchId, setConfirmUnmatchId] = useState<number | null>(null)
   const [matchTarget, setMatchTarget] = useState<DeliveredTrip | null>(null)
   const [doiSoatClientId, setDoiSoatClientId] = useState<string>('ALL')
+  const [vendorId, setVendorId] = useState<string>('ALL')
   const [page, setPage] = useState(1)
   const pageSize = 50
   const [sortBy, setSortBy] = useState<DeliveredTripSortBy>('trip_date')
@@ -79,7 +54,7 @@ export function DoiSoatPage() {
   const exportDoiSoat = useExportDoiSoatExcel()
   const { data: clients = [] } = useClients()
 
-  useEffect(() => { setPage(1) }, [statusFilter, dateFrom, dateTo, doiSoatClientId, debouncedSearch])
+  useEffect(() => { setPage(1) }, [statusFilter, dateFrom, dateTo, doiSoatClientId, vendorId, debouncedSearch])
 
   const handleSort = useCallback((key: string, order: SortOrder) => {
     setSortBy(key as DeliveredTripSortBy)
@@ -91,7 +66,8 @@ export function DoiSoatPage() {
     dateFrom,
     dateTo,
     clientId: doiSoatClientId !== 'ALL' && doiSoatClientId !== '' ? Number(doiSoatClientId) : undefined,
-    status: statusFilter !== 'ALL' ? statusFilter : undefined,
+    vendorId: vendorId !== 'ALL' && vendorId !== '' ? Number(vendorId) : undefined,
+    matched: statusFilter !== 'ALL' ? (statusFilter === 'MATCHED') : undefined,
     search: debouncedSearch || undefined,
     page,
     pageSize,
@@ -101,48 +77,6 @@ export function DoiSoatPage() {
   const trips = data?.items ?? []
   const totalPages = data?.totalPages ?? 0
   const totalItems = data?.total ?? 0
-  const unmatchMutation = useUnmatch()
-
-  // Global ESC = cancel unlink, Enter = confirm unlink
-  useEffect(() => {
-    if (confirmUnmatchId === null) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setConfirmUnmatchId(null)
-      } else if (e.key === 'Enter') {
-        const trip = trips.find((t) => t.id === confirmUnmatchId)
-        if (!trip?.bookedTripId || unmatchMutation.isPending) return
-        unmatchMutation.mutate(
-          { deliveredTripId: trip.id, bookedTripId: trip.bookedTripId },
-          { onSuccess: () => setConfirmUnmatchId(null) },
-        )
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [confirmUnmatchId, trips, unmatchMutation])
-  const autoMatch = useAutoMatch()
-  const autoMatchConfirm = useAutoMatchConfirm()
-
-  const autoMatching = autoMatch.isPending || autoMatchConfirm.isPending
-
-  const handleAutoMatch = useCallback(() => {
-    autoMatch.mutate(
-      { dateFrom, dateTo },
-      {
-        onSuccess: (data) => {
-          const pairs = (data.candidates ?? [])
-            .filter((c) => c.suggestedDefault)
-            .map((c) => ({
-              deliveredTripId: c.deliveredTripId,
-              bookedTripId: c.bookedTripId,
-            }))
-          if (pairs.length === 0) return
-          autoMatchConfirm.mutate(pairs)
-        },
-      },
-    )
-  }, [dateFrom, dateTo, autoMatch, autoMatchConfirm])
 
   // Global stats from trip daily stats endpoint
   const { data: dailyStats } = useTripDailyStats(
@@ -194,24 +128,17 @@ export function DoiSoatPage() {
       key: 'containers',
       header: 'Số Cont',
       width: 150,
-      sortKey: 'container_number',
+      sortKey: 'cont_number',
       render: (t) => {
-        if (!t.containers?.length) return <span style={{ color: 'var(--ink-4)' }}>—</span>
-        const first = t.containers[0]
-        const more = t.containers.length - 1
+        if (!t.contNumber) return <span style={{ color: 'var(--ink-4)' }}>—</span>
         return (
           <div className="flex items-center gap-1.5">
             <span
               className="tabular-nums whitespace-nowrap"
               style={{ fontFamily: 'var(--theme-font-mono)', fontSize: 12, color: 'var(--ink)', fontWeight: 600 }}
             >
-              {first.containerNumber}
+              {t.contNumber}
             </span>
-            {more > 0 && (
-              <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>
-                +{more}
-              </span>
-            )}
           </div>
         )
       },
@@ -222,7 +149,7 @@ export function DoiSoatPage() {
       width: 64,
       sortKey: 'cont_type',
       render: (t) => {
-        const ct = t.containers?.[0]?.contType || t.workType
+        const ct = t.contType || t.workType
         return ct ? (
           <span
             className="text-[10.5px] uppercase font-semibold whitespace-nowrap"
@@ -248,7 +175,7 @@ export function DoiSoatPage() {
       sortKey: 'vehicle_plate',
       render: (t) => (
         <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>
-          {t.vehicle?.plate || '—'}
+          {t.vehiclePlate || '—'}
         </span>
       ),
     },
@@ -282,98 +209,6 @@ export function DoiSoatPage() {
           {t.dropoffLocation?.name ?? '—'}
         </span>
       ),
-    },
-    {
-      key: 'operation',
-      header: 'Tác nghiệp',
-      width: 110,
-      sortKey: 'operation_type',
-      render: (t) => {
-        const label = t.operationType ? OPERATION_TYPE_LABELS[t.operationType] : null
-        return label ? (
-          <span className="text-[12px] whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
-            {label}
-          </span>
-        ) : (
-          <span style={{ color: 'var(--ink-4)' }}>—</span>
-        )
-      },
-    },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: 90,
-      render: (t) => {
-        if (t.status === 'MATCHED') {
-          const confirming = confirmUnmatchId === t.id
-          if (confirming) {
-            return (
-              <div className="relative flex flex-col items-center justify-center gap-0.5">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    unmatchMutation.mutate(
-                      { deliveredTripId: t.id, bookedTripId: t.bookedTripId! },
-                      { onSuccess: () => setConfirmUnmatchId(null) },
-                    )
-                  }}
-                  disabled={unmatchMutation.isPending}
-                  className="nepo-row-action"
-                  aria-label="Xác nhận bỏ ghép (Enter)"
-                  title="Xác nhận bỏ ghép (Enter)"
-                  style={{ color: 'var(--danger)' }}
-                >
-                  {unmatchMutation.isPending
-                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    : <Check className="h-3.5 w-3.5" />}
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setConfirmUnmatchId(null) }}
-                  className="nepo-row-action"
-                  aria-label="Huỷ (Esc)"
-                  title="Huỷ (Esc)"
-                  style={{ color: 'var(--ink-3)' }}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-                <span
-                  className="absolute top-full -translate-y-1 right-0 text-[9px] leading-none select-none whitespace-nowrap pointer-events-none"
-                  style={{ color: 'var(--ink-4)' }}
-                >
-                  Enter xác nhận · Esc huỷ
-                </span>
-              </div>
-            )
-          }
-          return (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setConfirmUnmatchId(t.id) }}
-              className="nepo-row-action"
-              aria-label="Bỏ ghép"
-              title="Bỏ ghép"
-              style={{ color: 'var(--danger)' }}
-            >
-              <Unlink className="h-3.5 w-3.5" />
-            </button>
-          )
-        }
-        if (t.status === 'PENDING') {
-          return (
-            <span
-              className="nepo-row-action cursor-default hover:bg-transparent"
-              style={{ color: 'var(--warning)' }}
-              title="Chờ ghép"
-            >
-              <AlertTriangle className="h-3.5 w-3.5" />
-            </span>
-          )
-        }
-        return null
-      },
     },
   ]
 
@@ -453,10 +288,6 @@ export function DoiSoatPage() {
               <FileSpreadsheet className="h-3.5 w-3.5" />
               Nhập Excel
             </Button>
-            <Button variant="ghost" onClick={handleAutoMatch} disabled={autoMatching}>
-              {autoMatching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-              Ghép tự động
-            </Button>
           </div>
         </div>
 
@@ -491,7 +322,7 @@ export function DoiSoatPage() {
             sortOrder={sortOrder}
             onSort={handleSort}
             onRowClick={(t) => setMatchTarget(t)}
-            rowClassName={(t) => t.status === 'MATCHED' ? 'row-matched' : t.status === 'PENDING' ? 'row-pending' : ''}
+            rowClassName={(t) => t.matched ? 'row-matched' : 'row-pending'}
             empty={
               <div className="py-10">
                 <EmptyState
@@ -500,7 +331,7 @@ export function DoiSoatPage() {
                     search.trim()
                       ? 'Không tìm thấy chuyến'
                       : statusFilter !== 'ALL'
-                        ? `Không có chuyến nào "${STATUS_FILTER_LABELS[statusFilter].toLowerCase()}"`
+                        ? `Không có chuyến nào "${(statusFilter === 'PENDING' ? 'cho ghep' : 'da ghep')}"`
                         : 'Chưa có chuyến nào trong tháng này'
                   }
                   compact

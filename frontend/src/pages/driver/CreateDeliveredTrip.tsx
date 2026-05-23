@@ -10,18 +10,17 @@ import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelec
 import { useCreateDeliveredTrip } from './useCreateDeliveredTrip'
 import { useToast } from '@/components/atoms/Toast'
 import type { DeliveredTrip } from '@/data/domain'
-import { OPERATION_TYPE_OPTIONS } from '@/data/domain'
 
 export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliveredTrip?: DeliveredTrip | null }) {
   const {
     isEdit,
     clients, recentOrders,
-    containers, clientId, vessel, operationType, pickupLocation, dropoffLocation,
+    containers, clientId, vessel, pickupLocation, dropoffLocation,
     selectedTripId,
     submitting, scannerOpen, isOnline, summaryOpen, showSuccess,
     forceManualEntry, missingFields, containerErrors, suggestionLoading,
-    canSubmit, summaryContainers, summaryClientName,
-    setClientId, setVessel, setOperationType, setPickupLocation, setDropoffLocation,
+    canSubmit, summaryContNumber, summaryContType, summaryClientName,
+    setClientId, setVessel, setPickupLocation, setDropoffLocation,
     openScanner, handleScanComplete, setScannerOpen,
     updateContainer, addContainer, removeContainer, validateContainerOnBlur,
     handleRecentTripSelect,
@@ -190,19 +189,6 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
         />
       </div>
 
-      {/* Operation Type */}
-      <div className="space-y-1.5">
-        <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tác nghiệp</label>
-        <InlineSelect
-          placeholder="Chọn tác nghiệp"
-          value={operationType}
-          options={OPERATION_TYPE_OPTIONS}
-          onChange={setOperationType}
-        />
-      </div>
-
-
-
       {/* Customer & Route section */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
@@ -310,7 +296,8 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
         open={summaryOpen}
         onConfirm={handleConfirmSubmit}
         onClose={() => setSummaryOpen(false)}
-        containers={summaryContainers}
+        contNumber={summaryContNumber}
+        contType={summaryContType}
         clientName={summaryClientName}
         vessel={vessel}
         pickupLocation={pickupLocation}

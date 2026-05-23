@@ -17,7 +17,7 @@ import asyncio
 import calendar
 import json
 import unicodedata
-from datetime import date, datetime, timezone
+from datetime import date
 from pathlib import Path
 from random import Random
 
@@ -31,16 +31,13 @@ from app.models.domain import (
     Location,
     Pricing,
     PricingLine,
-    Reconciliation,
     Setting,
     BookedTrip,
-    BookedTripContainer,
     Vehicle,
     Vendor,
     VehicleDriver,
     VehicleExpense,
     DeliveredTrip,
-    DeliveredTripContainer,
 )
 from app.core.security import hash_password
 
@@ -238,8 +235,6 @@ CLIENT_WEIGHTS = {"HAIAN": 65, "GLORY": 22, "CONSCIENCE": 13}
 CLIENT_KEYS = list(CLIENT_WEIGHTS.keys())
 CLIENT_W = list(CLIENT_WEIGHTS.values())
 
-OPERATION_TYPES = ["XUAT_NHAP_TAU", "CHUYEN_BAI", "LAY_VO_HA_HANG", "DONG_KHO"]
-OPERATION_TYPE_WEIGHTS = [55, 20, 15, 10]
 
 VESSELS = [
     "HAIAN ALFA 073N", "HAIAN LINK V.138S", "HAIAN BETA 062S",
@@ -286,7 +281,6 @@ def _generate_trips_for_month(year: int, month: int, plates: list[str]) -> list[
             "unit_price": unit_price,
             "trip_date": f"{year}-{month:02d}-{day:02d}",
             "client_code": client_code,
-            "operation_type": rng.choices(OPERATION_TYPES, weights=OPERATION_TYPE_WEIGHTS)[0],
         })
     return trips
 
@@ -324,10 +318,7 @@ TIEN_LUAT_DESCRIPTIONS = [
 async def _clear_operational_data(db) -> None:
     print("\n=== Clearing existing operational data ===")
     for table in [
-        "matched_trips",
-        "delivered_trip_containers",
         "delivered_trips",
-        "booked_trip_containers",
         "booked_trips",
         "vehicle_expenses",
         "driver_salary_configs",
@@ -567,8 +558,8 @@ async def seed_dev() -> None:
                 pricing_map[(client_code, pickup_name, dropoff_name, work_type)] = pricing
         await db.commit()
 
-        # ── 8. DeliveredTrips + BookedTrips + Reconciliations ───────────────
-        print("\n=== Creating DeliveredTrips, BookedTrips, Reconciliations ===")
+        # ── 8. DeliveredTrips + BookedTrips ───────────────────────────────
+        print("\n=== Creating DeliveredTrips + BookedTrips ===")
         ketoan = user_map["ketoan"]
         all_wos: list[DeliveredTrip] = []
         all_tos: list[BookedTrip] = []
@@ -600,23 +591,19 @@ async def seed_dev() -> None:
             drv = driver_map.get(drv_plate)
             if drv is None:
                 drv = driver_map[rng.choice(plates_list)]
-            veh = vehicle_map.get(drv_plate)
-            if veh is None:
-                veh = vehicle_map[rng.choice(plates_list)]
 
             wo = DeliveredTrip(
                 client_id=client.id,
                 pickup_location_id=loc_map[pickup].id,
                 dropoff_location_id=loc_map[dropoff].id,
                 driver_id=drv.id,
-                vehicle_id=veh.id,
                 vessel=trip.get("vessel", ""),
-                operation_type=trip.get("operation_type"),
                 work_type=wt,
+                cont_number=trip["container"],
+                cont_type=f"F{trip['size']}",
                 revenue=trip["unit_price"],
                 driver_salary=prices.get("driver_salary", 150000),
                 allowance=prices.get("allowance", 50000),
-                status="MATCHED",
                 trip_date=trip_date,
             )
             db.add(wo)
@@ -629,10 +616,10 @@ async def seed_dev() -> None:
                 pickup_location_id=loc_map[pickup].id,
                 dropoff_location_id=loc_map[dropoff].id,
                 vessel=trip.get("vessel", ""),
-                operation_type=trip.get("operation_type"),
                 work_type=wt,
+                cont_number=trip["container"],
+                cont_type=f"F{trip['size']}",
                 revenue=trip["unit_price"],
-                status="MATCHED",
             )
             db.add(to)
             all_tos.append(to)
@@ -642,38 +629,6 @@ async def seed_dev() -> None:
         if skipped:
             print(f"  Skipped {skipped} trips (missing locations)")
         print(f"  Created {len(all_wos)} work orders + {len(all_tos)} trip orders")
-
-        for i, wo in enumerate(all_wos):
-            db.add(DeliveredTripContainer(
-                delivered_trip_id=wo.id,
-                container_number=trips[i]["container"],
-                cont_type=f"F{trips[i]['size']}",
-            ))
-        for idx, to in enumerate(all_tos):
-            db.add(BookedTripContainer(
-                booked_trip_id=to.id,
-                container_number=trips[idx]["container"],
-                cont_type=f"F{trips[idx]['size']}",
-            ))
-        await db.flush()
-        print(f"  Created {len(all_wos)} WO containers + {len(all_tos)} TO containers")
-
-        for i in range(min(len(all_wos), len(all_tos))):
-            wo = all_wos[i]
-            to = all_tos[i]
-            db.add(Reconciliation(
-                booked_trip_id=to.id,
-                delivered_trip_id=wo.id,
-                match_score=1.0,
-                matched_by=ketoan.id,
-                matched_at=datetime(
-                    wo.trip_date.year, wo.trip_date.month,
-                    min(28, wo.trip_date.day + 2), tzinfo=timezone.utc,
-                ),
-                is_active=True,
-            ))
-        await db.flush()
-        print(f"  Created {min(len(all_wos), len(all_tos))} reconciliations")
 
         # ── 8b. PENDING trip orders (unmatched, for dashboard "Chờ phân bổ") ──
         print("\n=== Creating PENDING trip orders ===")
@@ -701,18 +656,12 @@ async def seed_dev() -> None:
                     pickup_location_id=loc_map[pickup].id,
                     dropoff_location_id=loc_map[dropoff].id,
                     vessel=rng.choice(VESSELS),
-                    operation_type=rng.choices(OPERATION_TYPES, weights=OPERATION_TYPE_WEIGHTS)[0],
                     work_type=wt,
+                    cont_number=_rand_container(),
+                    cont_type=wt,
                     revenue=unit_price,
-                    status="PENDING",
                 )
                 db.add(to)
-                await db.flush()
-                db.add(BookedTripContainer(
-                    booked_trip_id=to.id,
-                    container_number=_rand_container(),
-                    cont_type=wt,
-                ))
                 to_code_idx += 1
                 pending_count += 1
         await db.flush()
@@ -798,8 +747,8 @@ async def seed_dev() -> None:
         for t in [
             "users", "vehicles", "vehicle_drivers", "locations", "clients", "vendors",
             "settings", "pricings", "pricing_lines",
-            "delivered_trips", "delivered_trip_containers",
-            "booked_trips", "booked_trip_containers", "matched_trips",
+            "delivered_trips",
+            "booked_trips",
             "vehicle_expenses", "driver_salary_configs",
         ]:
             cnt = (await db.execute(text(f"SELECT count(*) FROM {t}"))).scalar()

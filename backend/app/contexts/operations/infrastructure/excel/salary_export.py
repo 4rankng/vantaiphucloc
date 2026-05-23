@@ -5,7 +5,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
-    BookedTrip,
     DeliveredTrip,
 )
 
@@ -20,7 +19,6 @@ async def generate_salary_excel(
     """Export driver earnings breakdown to Excel, computed on-the-fly from matched work orders."""
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment
-    from app.models.domain import Reconciliation
     from datetime import date as _date
 
     from app.models.base import User as _User
@@ -28,42 +26,29 @@ async def generate_salary_excel(
     start_dt = _date.fromisoformat(start_date)
     end_dt = _date.fromisoformat(end_date)
 
-    # Find matched work orders in the date range
+    # Find matched DeliveredTrips in the date range, grouped by driver
     result = await db.execute(
         select(DeliveredTrip).where(
-            DeliveredTrip.status == "MATCHED",
+            DeliveredTrip.matched == True,
+            DeliveredTrip.trip_date >= start_dt,
+            DeliveredTrip.trip_date <= end_dt,
         ).order_by(DeliveredTrip.driver_id)
     )
-    all_matched = result.scalars().all()
+    matched_trips = result.scalars().all()
 
-    # Filter by reconciliations and trip order date range
-    matched_wo_ids = {wo.id for wo in all_matched}
     driver_earnings: dict[int, dict] = {}
-
-    if matched_wo_ids:
-        recon_result = await db.execute(
-            select(Reconciliation, BookedTrip).join(
-                BookedTrip, BookedTrip.id == Reconciliation.booked_trip_id
-            ).where(
-                Reconciliation.delivered_trip_id.in_(matched_wo_ids),
-                Reconciliation.is_active == True,  # noqa: E712
-                BookedTrip.trip_date >= start_dt,
-                BookedTrip.trip_date <= end_dt,
-            )
-        )
-        for recon, trip in recon_result.all():
-            wo = next((w for w in all_matched if w.id == recon.delivered_trip_id), None)
-            if wo is None:
-                continue
-            if wo.driver_id not in driver_earnings:
-                driver_earnings[wo.driver_id] = {
-                    "order_count": 0,
-                    "total_salary": 0,
-                    "total_allowance": 0,
-                }
-            driver_earnings[wo.driver_id]["order_count"] += 1
-            driver_earnings[wo.driver_id]["total_salary"] += wo.driver_salary
-            driver_earnings[wo.driver_id]["total_allowance"] += wo.allowance
+    for wo in matched_trips:
+        if wo.driver_id is None:
+            continue
+        if wo.driver_id not in driver_earnings:
+            driver_earnings[wo.driver_id] = {
+                "order_count": 0,
+                "total_salary": 0,
+                "total_allowance": 0,
+            }
+        driver_earnings[wo.driver_id]["order_count"] += 1
+        driver_earnings[wo.driver_id]["total_salary"] += wo.driver_salary or 0
+        driver_earnings[wo.driver_id]["total_allowance"] += wo.allowance or 0
 
     driver_ids = set(driver_earnings.keys())
     driver_name_by_id = (

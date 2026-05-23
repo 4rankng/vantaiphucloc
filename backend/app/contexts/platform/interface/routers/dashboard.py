@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import Client, Reconciliation, BookedTrip, BookedTripContainer, Vehicle, VehicleDriver, VehicleExpense, DeliveredTrip
+from app.models.domain import Client, BookedTrip, Vehicle, VehicleDriver, VehicleExpense, DeliveredTrip
 from app.models.base import User
 from app.core.deps import get_current_user, require_permission
 from app.core.worker import get_arq_pool
@@ -78,7 +78,7 @@ async def get_dashboard_summary(
     trip_count = trip_count_q.scalar() or 0
 
     active_query = select(func.count(BookedTrip.id)).where(
-        BookedTrip.status == "PENDING"
+        BookedTrip.matched == False
     )
     if parsed_from:
         active_query = active_query.where(BookedTrip.created_at >= parsed_from)
@@ -89,7 +89,7 @@ async def get_dashboard_summary(
 
     # outstanding_debt: confirmed receivables (matched/confirmed/completed booked trips)
     debt_query = select(func.coalesce(func.sum(BookedTrip.revenue), 0)).where(
-        BookedTrip.status.in_(["MATCHED", "CONFIRMED", "COMPLETED"])
+        BookedTrip.matched == True
     )
     if parsed_from:
         debt_query = debt_query.where(BookedTrip.created_at >= parsed_from)
@@ -115,7 +115,7 @@ async def get_dashboard_summary(
         )
         .join(Vehicle, Vehicle.id == VehicleDriver.vehicle_id, isouter=True)
         .join(DeliveredTrip, DeliveredTrip.driver_id == User.id)
-        .where(DeliveredTrip.status == "MATCHED")
+        .where(DeliveredTrip.matched == True)
         .group_by(User.id, User.username, Vehicle.plate)
     )
     driver_salary_summary = [
@@ -131,17 +131,13 @@ async def get_dashboard_summary(
 
     unmatched_q = await db.execute(
         select(func.count(DeliveredTrip.id)).where(
-            ~DeliveredTrip.id.in_(
-                select(Reconciliation.delivered_trip_id).where(
-                    Reconciliation.is_active == True  # noqa: E712
-                )
-            )
+            DeliveredTrip.matched == False
         )
     )
     unmatched_delivered_trip_count = unmatched_q.scalar() or 0
 
     pending_q = await db.execute(
-        select(func.count(BookedTrip.id)).where(BookedTrip.status == "PENDING")
+        select(func.count(BookedTrip.id)).where(BookedTrip.matched == False)
     )
     pending_trip_count = pending_q.scalar() or 0
 
@@ -208,7 +204,7 @@ async def get_kpi_trends(
         .where(
             wo_day >= start_date,
             wo_day <= parsed_end,
-            DeliveredTrip.status == "PENDING",
+            DeliveredTrip.matched == False,
         )
         .group_by(wo_day)
     )).all()
@@ -220,7 +216,7 @@ async def get_kpi_trends(
         .where(
             BookedTrip.trip_date >= start_date,
             BookedTrip.trip_date <= parsed_end,
-            BookedTrip.status == "PENDING",
+            BookedTrip.matched == False,
         )
         .group_by(BookedTrip.trip_date)
     )).all()
@@ -235,7 +231,7 @@ async def get_kpi_trends(
         .where(
             wo_day >= start_date,
             wo_day <= parsed_end,
-            DeliveredTrip.status == "MATCHED",
+            DeliveredTrip.matched == True,
         )
         .group_by(wo_day)
     )).all()
@@ -304,15 +300,13 @@ async def get_vehicle_pnl(
     """Per-vehicle P&L: Doanh thu − Chi phí = Lợi nhuận.
 
     For each vehicle returns:
-      - Doanh thu: SUM(BookedTrip.revenue × container_count) for MATCHED TOs
-        whose reconciled DeliveredTrip has this vehicle_id.  The container count is
-        taken from BookedTripContainer rows linked to each BookedTrip.
-      - CP Xe: vehicle_expenses subtotals (XANG_DAU, SUA_CHUA).
+      - Doanh thu: 0 (reconciliation table dropped; revenue-to-vehicle
+        mapping not yet available).
+      - CP Xe: vehicle_expenses subtotals (XANG_DAU, SUA_CHUA, TIEN_LUAT, KHAC).
       - CP Lương sản lượng: SUM(DeliveredTrip.driver_salary + allowance) for WOs
         on this vehicle.
       - CP Lương cơ bản: effective base salary × period for drivers attached to
         this vehicle via vehicle_drivers.
-      - CP Xe: per-vehicle expenses (XANG_DAU, SUA_CHUA, TIEN_LUAT, KHAC).
     """
     from datetime import datetime as _dt
     from app.contexts.payroll.infrastructure.repositories import SqlDriverSalaryConfigRepository
@@ -332,60 +326,28 @@ async def get_vehicle_pnl(
     veh_rows = (await db.execute(veh_q)).all()
     vehicles: dict[int, str] = {r[0]: r[1] for r in veh_rows}
 
-    # ── 2. Revenue per vehicle via Reconciliation → DeliveredTrip.vehicle_id ────
-    # MATCHED BookedTrips whose reconciliation links a DeliveredTrip with a known vehicle_id.
-    recon_rows = (await db.execute(
-        select(
-            Reconciliation.booked_trip_id,
-            DeliveredTrip.vehicle_id,
-        )
-        .join(DeliveredTrip, DeliveredTrip.id == Reconciliation.delivered_trip_id)
-        .where(
-            Reconciliation.is_active == True,  # noqa: E712
-            DeliveredTrip.vehicle_id.in_(list(vehicles.keys())),
-        )
-    )).all()
-
-    # booked_trip_id → vehicle_id (one WO per recon)
-    to_vehicle: dict[int, int] = {r[0]: r[1] for r in recon_rows if r[1]}
-
-    # Fetch matched TOs in period with container counts
-    to_rows = (await db.execute(
-        select(
-            BookedTrip.id,
-            BookedTrip.revenue,
-            func.count(BookedTripContainer.id),
-        )
-        .join(BookedTripContainer, BookedTripContainer.booked_trip_id == BookedTrip.id, isouter=True)
-        .where(
-            BookedTrip.status == "MATCHED",
-            BookedTrip.trip_date >= df,
-            BookedTrip.trip_date <= dt,
-            BookedTrip.id.in_(list(to_vehicle.keys())),
-        )
-        .group_by(BookedTrip.id, BookedTrip.revenue)
-    )).all()
-
+    # ── 2. Revenue per vehicle ────────────────────────────────────────────
+    # Reconciliation table has been dropped; revenue cannot be mapped to
+    # vehicles through a reconciliation link.  Set revenue to 0 for now.
     revenue_by_vehicle: dict[int, int] = {}
-    for to_id, revenue, container_count in to_rows:
-        vid = to_vehicle.get(to_id)
-        if vid:
-            revenue_by_vehicle[vid] = revenue_by_vehicle.get(vid, 0) + int(revenue or 0) * int(container_count or 0)
 
     # ── 3. CP Lương sản lượng per vehicle ───────────────────────────────────
+    # vehicle_id FK removed; join via vehicle_plate
+    plate_to_vid = {plate: vid for vid, plate in vehicles.items()}
     wo_salary_rows = (await db.execute(
         select(
-            DeliveredTrip.vehicle_id,
+            Vehicle.id,
             func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
             func.coalesce(func.sum(DeliveredTrip.allowance), 0),
         )
+        .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
         .where(
-            DeliveredTrip.status == "MATCHED",
-            DeliveredTrip.vehicle_id.in_(list(vehicles.keys())),
+            DeliveredTrip.matched == True,
+            Vehicle.id.in_(list(vehicles.keys())),
             func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
             func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
         )
-        .group_by(DeliveredTrip.vehicle_id)
+        .group_by(Vehicle.id)
     )).all()
 
     salary_by_vehicle: dict[int, int] = {}
@@ -396,16 +358,17 @@ async def get_vehicle_pnl(
     # ── 3b. Trip count per vehicle for CP Chung allocation ─────────
     wo_count_rows = (await db.execute(
         select(
-            DeliveredTrip.vehicle_id,
+            Vehicle.id,
             func.count(DeliveredTrip.id),
         )
+        .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
         .where(
-            DeliveredTrip.status == "MATCHED",
-            DeliveredTrip.vehicle_id.in_(list(vehicles.keys())),
+            DeliveredTrip.matched == True,
+            Vehicle.id.in_(list(vehicles.keys())),
             func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
             func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
         )
-        .group_by(DeliveredTrip.vehicle_id)
+        .group_by(Vehicle.id)
     )).all()
 
     trip_count_by_vehicle: dict[int, int] = {}
@@ -528,7 +491,7 @@ async def get_trip_daily_stats(
 
     stmt = select(
         DeliveredTrip.trip_date,
-        DeliveredTrip.status,
+        DeliveredTrip.matched,
         func.count(DeliveredTrip.id),
         func.coalesce(func.sum(DeliveredTrip.revenue), 0),
     ).where(
@@ -540,7 +503,7 @@ async def get_trip_daily_stats(
         stmt = stmt.where(DeliveredTrip.client_id == client_id)
 
     rows = (await db.execute(
-        stmt.group_by(DeliveredTrip.trip_date, DeliveredTrip.status)
+        stmt.group_by(DeliveredTrip.trip_date, DeliveredTrip.matched)
     )).all()
 
     day_map: dict[int, dict[str, int]] = {}
@@ -548,15 +511,15 @@ async def get_trip_daily_stats(
     matched = 0
     pending = 0
     total_revenue = 0
-    for trip_date, status, cnt, rev in rows:
+    for trip_date, is_matched, cnt, rev in rows:
         day = trip_date.day if hasattr(trip_date, 'day') else trip_date
         bucket = day_map.setdefault(day, {"matched": 0, "pending": 0})
         total += cnt
-        if status in ("MATCHED", "COMPLETED"):
+        if is_matched:
             bucket["matched"] += cnt
             matched += cnt
             total_revenue += int(rev)
-        elif status not in ("CANCELLED",):
+        else:
             bucket["pending"] += cnt
             pending += cnt
             total_revenue += int(rev)

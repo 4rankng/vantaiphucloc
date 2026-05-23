@@ -28,12 +28,8 @@ from app.core.cache import CacheManager
 def _pricing_cache_key(
     client_id: int, work_type: str,
     pickup_location_id: int, dropoff_location_id: int,
-    operation_type: str | None = None,
 ) -> str:
-    raw = (
-        f"{client_id}:{work_type}:{pickup_location_id}:{dropoff_location_id}"
-        f":{operation_type}"
-    )
+    raw = f"{client_id}:{work_type}:{pickup_location_id}:{dropoff_location_id}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
@@ -54,21 +50,16 @@ async def _exact_pricing_query(
     work_type: str,
     pickup_location_id: int,
     dropoff_location_id: int,
-    operation_type: str | None,
 ) -> PricingORM | None:
-    """Single DB query with exact values (NULLs matched as IS NULL)."""
-    base = [
-        PricingORM.client_id == client_id,
-        PricingORM.work_type == work_type,
-        PricingORM.pickup_location_id == pickup_location_id,
-        PricingORM.dropoff_location_id == dropoff_location_id,
-        PricingORM.is_active == True,  # noqa: E712
-    ]
-    if operation_type is None:
-        base.append(PricingORM.operation_type.is_(None))
-    else:
-        base.append(PricingORM.operation_type == operation_type)
-    res = await db.execute(select(PricingORM).where(*base).limit(1))
+    res = await db.execute(
+        select(PricingORM).where(
+            PricingORM.client_id == client_id,
+            PricingORM.work_type == work_type,
+            PricingORM.pickup_location_id == pickup_location_id,
+            PricingORM.dropoff_location_id == dropoff_location_id,
+            PricingORM.is_active == True,  # noqa: E712
+        ).limit(1)
+    )
     return res.scalar_one_or_none()
 
 
@@ -80,14 +71,9 @@ async def find_pricing(
     dropoff_location_id: int | None = None,
     pickup_location: str | None = None,
     dropoff_location: str | None = None,
-    operation_type: str | None = None,
     cache: CacheManager | None = None,
 ) -> PricingORM | None:
-    """Find the most specific Pricing row using a 2-level fallback chain.
-
-    Fallback order (most specific → least):
-      1. partner + operation_type + lane + work_type  (most specific)
-      2. partner + lane + work_type                   (any operation type — op_type IS NULL)
+    """Find the Pricing row matching client + work_type + lane.
 
     ``pickup_location_id``/``dropoff_location_id`` are preferred. If only
     name strings are passed this resolves them via the ``locations`` table.
@@ -101,7 +87,6 @@ async def find_pricing(
 
     cache_key = _pricing_cache_key(
         client_id, work_type, pickup_location_id, dropoff_location_id,
-        operation_type,
     )
     if cache:
         cached = await cache.get_json("pricing_lookup", cache_key)
@@ -111,19 +96,9 @@ async def find_pricing(
             )
             return res.scalar_one_or_none()
 
-    # --- 2-level fallback ---------------------------------------------------
-    #  Level 1: partner + op_type + lane + work_type (most specific)
     pricing = await _exact_pricing_query(
         db, client_id, work_type, pickup_location_id, dropoff_location_id,
-        operation_type,
     )
-
-    #  Level 2: partner + lane + work_type (any op_type) — only if op_type was given
-    if pricing is None and operation_type is not None:
-        pricing = await _exact_pricing_query(
-            db, client_id, work_type, pickup_location_id, dropoff_location_id,
-            None,
-        )
 
     if pricing and cache:
         await cache.set_json(
@@ -155,13 +130,11 @@ async def find_tiered_pricing(
     dropoff_location_id: int | None = None,
     pickup_location: str | None = None,
     dropoff_location: str | None = None,
-    operation_type: str | None = None,
     cache: CacheManager | None = None,
 ) -> TieredPricing | None:
     """Find pricing + the matching PricingLine for the requested quantity.
 
-    Uses the 2-level fallback chain; falls back to ``quantity=1`` when the
-    exact tier isn't defined.
+    Falls back to ``quantity=1`` when the exact tier isn't defined.
     """
     pricing = await find_pricing(
         db, client_id, work_type,
@@ -169,7 +142,6 @@ async def find_tiered_pricing(
         dropoff_location_id=dropoff_location_id,
         pickup_location=pickup_location,
         dropoff_location=dropoff_location,
-        operation_type=operation_type,
         cache=cache,
     )
     if pricing is None:

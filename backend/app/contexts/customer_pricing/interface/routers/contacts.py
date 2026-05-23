@@ -66,7 +66,7 @@ async def list_clients(
     sort_by: str | None = Query(None, description="Sort column: name | code | type | created_at"),
     sort_order: str = Query('asc', pattern='^(asc|desc)$'),
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
+    page_size: int = Query(50, ge=1, le=1000),
     current_user: User = Depends(require_permission("read", "Partner")),
     use_case: ListPartners = Depends(get_list_partners),
     redis: Redis = Depends(get_redis),

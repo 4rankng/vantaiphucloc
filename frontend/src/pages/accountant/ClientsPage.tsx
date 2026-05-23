@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { Building2, Plus, Trash2 } from 'lucide-react'
+import { Building2, Plus, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -192,35 +192,52 @@ function ClientRow({ client, onEdit, onDelete }: {
 
   return (
     <tr className="cursor-pointer group">
-      <td onClick={cell('code')}>
-        <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>{client.code || '—'}</span>
+      {/* Code */}
+      <td style={{ width: 100 }} onClick={cell('code')}>
+        {client.code
+          ? <span className="inline-block font-mono text-[11px] font-semibold tracking-wide px-1.5 py-0.5 rounded" style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}>{client.code}</span>
+          : <span style={{ color: 'var(--ink-4)' }}>—</span>}
       </td>
+      {/* Name */}
       <td onClick={cell('name')}>
         <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{client.name}</span>
       </td>
-      <td onClick={() => onEdit(null)}>
+      {/* Type badge */}
+      <td style={{ width: 90 }} onClick={() => onEdit(null)}>
         <span
           className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-          style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
+          style={{
+            background: isCompany ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'var(--surface-3)',
+            color: isCompany ? 'var(--accent)' : 'var(--ink-3)',
+          }}
         >
           {isCompany ? 'Công ty' : 'Cá nhân'}
         </span>
       </td>
-      <td onClick={cell('phone')}>
-        <span className="text-[13px]" style={{ color: 'var(--ink-2)' }}>{client.phone || '—'}</span>
+      {/* Phone */}
+      <td style={{ width: 130 }} onClick={cell('phone')}>
+        <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>{client.phone || '—'}</span>
       </td>
+      {/* Address — single line, full text in tooltip */}
       <td onClick={cell('address')}>
-        <span className="text-[13px]" style={{ color: 'var(--ink-2)', whiteSpace: 'normal', wordBreak: 'break-word', maxWidth: 260 }}>{client.address || '—'}</span>
+        <span
+          className="text-[13px] block"
+          style={{ color: 'var(--ink-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 260 }}
+          title={client.address || undefined}
+        >
+          {client.address || <span style={{ color: 'var(--ink-4)' }}>—</span>}
+        </span>
       </td>
-      <td onClick={cell('taxCode')}>
+      {/* Tax code */}
+      <td style={{ width: 120 }} onClick={cell('taxCode')}>
         <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>{client.taxCode || '—'}</span>
       </td>
       {/* Trash — visible on row hover */}
-      <td style={{ width: 32 }}>
+      <td style={{ width: 40 }}>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete() }}
           className="opacity-0 group-hover:opacity-100 flex items-center justify-center rounded transition-opacity"
-          style={{ width: 24, height: 24, color: 'var(--ink-3)' }}
+          style={{ width: 28, height: 28, color: 'var(--ink-3)' }}
           title="Xoá"
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -255,7 +272,7 @@ export function ClientsPage() {
     search: debouncedSearch || undefined,
     sortBy,
     sortOrder,
-    pageSize: 500,
+    pageSize: 200,
   })
   const clients = pagedData?.items ?? []
   const filtered = clients
@@ -278,8 +295,10 @@ export function ClientsPage() {
   }
 
   const SortIndicator = ({ col }: { col: ClientSortBy }) => {
-    if (sortBy !== col) return <span style={{ opacity: 0.3, fontSize: 10 }}>↕</span>
-    return <span style={{ fontSize: 10 }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+    if (sortBy !== col) return <ChevronsUpDown className="inline-block ml-1 opacity-30" style={{ width: 12, height: 12, verticalAlign: 'middle' }} />
+    return sortOrder === 'asc'
+      ? <ChevronUp className="inline-block ml-1" style={{ width: 12, height: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />
+      : <ChevronDown className="inline-block ml-1" style={{ width: 12, height: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />
   }
 
   const handleCreate = useCallback((data: FormData) => {
@@ -351,13 +370,25 @@ export function ClientsPage() {
                 <table className="nepo-table w-full" style={{ minWidth: 640, borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
-                      <th className="text-left cursor-pointer select-none" onClick={() => handleSort('code')}>Mã khách <SortIndicator col="code" /></th>
-                      <th className="text-left cursor-pointer select-none" onClick={() => handleSort('name')}>Tên chủ hàng <SortIndicator col="name" /></th>
-                      <th className="text-left cursor-pointer select-none" onClick={() => handleSort('type')}>Loại <SortIndicator col="type" /></th>
+                      <th
+                        className="text-left cursor-pointer select-none"
+                        style={{ color: sortBy === 'code' ? 'var(--accent)' : undefined }}
+                        onClick={() => handleSort('code')}
+                      >
+                        Mã khách<SortIndicator col="code" />
+                      </th>
+                      <th
+                        className="text-left cursor-pointer select-none"
+                        style={{ color: sortBy === 'name' ? 'var(--accent)' : undefined }}
+                        onClick={() => handleSort('name')}
+                      >
+                        Tên chủ hàng<SortIndicator col="name" />
+                      </th>
+                      <th className="text-left">Loại</th>
                       <th className="text-left">SĐT</th>
                       <th className="text-left">Địa chỉ</th>
                       <th className="text-left">MST</th>
-                      <th style={{ width: 32 }} />
+                      <th style={{ width: 40 }} />
                     </tr>
                   </thead>
                   <tbody>
