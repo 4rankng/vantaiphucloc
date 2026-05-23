@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.operations.application.bulk_import_types import ImportRow
-from app.contexts.operations.infrastructure.excel_parser import ExcelParser
+from app.contexts.operations.infrastructure.import_pipeline.pipeline import run_preview
 from app.models.domain import (
     BookedTrip as BookedTripORM,
     Client,
@@ -19,6 +20,23 @@ from app.models.domain import (
 )
 
 _logger = logging.getLogger(__name__)
+
+
+def _parse_iso_date(val: str | None) -> date | None:
+    if not val:
+        return None
+    from datetime import datetime
+    try:
+        return datetime.strptime(val, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_revenue(val: float | None) -> int | None:
+    if val is None:
+        return None
+    v = int(val)
+    return v if v > 0 else None
 
 
 @dataclass
@@ -44,15 +62,49 @@ class ReconciliationImportService:
         vendor_id: int | None = None,
         driver_id: int | None = None,
     ) -> ReconciliationImportResult:
-        rows = ExcelParser().parse(content, filename)
-        valid = [r for r in rows if r.parse_error is None]
-        error_rows = [r for r in rows if r.parse_error is not None]
+        # Use the sophisticated pipeline (sheet scoring, multi-row headers,
+        # pattern detection) instead of the simple ExcelParser.
+        try:
+            preview = await run_preview(
+                content, filename, default_trip_date=date.today(),
+            )
+        except ValueError as exc:
+            return ReconciliationImportResult(
+                total_rows=0,
+                errors=[str(exc)],
+            )
+
+        # Convert PreviewResult rows to ImportRow format
+        rows: list[ImportRow] = []
+        for item in preview.accepted:
+            v = item.get("values") or {}
+            rows.append(ImportRow(
+                row_number=item.get("source_row_index", 0) + 1,
+                container_number=v.get("container_no"),
+                trip_date=_parse_iso_date(v.get("trip_date")),
+                client_name=v.get("consignee") or v.get("customer_ref"),
+                pickup_location=v.get("pickup_location"),
+                dropoff_location=v.get("dropoff_location"),
+                amount=_parse_revenue(v.get("freight_charge")),
+                cont_type=v.get("cont_type") or "E20",
+                vehicle_plate=v.get("vehicle_plate"),
+            ))
+
+        # Collect rejected rows as errors
+        error_msgs: list[str] = []
+        for r in preview.rejected:
+            raw_desc = r.get("raw", {})
+            reasons = r.get("reasons", [])
+            row_idx = r.get("source_row_index", 0) + 1
+            error_msgs.append(f"Dòng {row_idx}: {', '.join(reasons)}")
+
+        valid = [r for r in rows if r.container_number]
+        all_errors = error_msgs
 
         if not valid:
             return ReconciliationImportResult(
-                total_rows=len(rows),
-                errors=[r.parse_error for r in error_rows if r.parse_error]
-                       or ["Không tìm thấy dữ liệu hợp lệ trong file"],
+                total_rows=len(rows) + len(preview.rejected),
+                errors=all_errors or ["Không tìm thấy dữ liệu hợp lệ trong file"],
             )
 
         # Pre-load locations for resolution
@@ -61,7 +113,7 @@ class ReconciliationImportService:
         # Load unmatched booked trips (for auto-match)
         unmatched_booked = await self._load_unmatched_booked_trips(valid)
 
-        result = ReconciliationImportResult(total_rows=len(rows))
+        result = ReconciliationImportResult(total_rows=len(rows) + len(preview.rejected))
 
         for row in valid:
             try:
@@ -96,6 +148,7 @@ class ReconciliationImportService:
                 })
 
         await self.session.commit()
+        result.errors = all_errors + result.errors
         return result
 
     async def _resolve_locations(self, rows: list[ImportRow]) -> None:
