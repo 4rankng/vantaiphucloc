@@ -31,14 +31,12 @@ import { fuzzyMatch } from '@/lib/search-utils'
 import { groupByVehicle } from '@/lib/accounting-utils'
 import { VendorManagementDrawer } from '@/components/shared/VendorManagementDrawer'
 import { DriverFormDrawer } from '@/components/shared/DriverFormDrawer'
-import { DriverRow, DriverEditRow, type DriverRowFormData } from '@/components/shared/DriverTableRows'
+import { DriverRow, DriverEditRow, type DriverRowFormData, type DriverFocusableField } from '@/components/shared/DriverTableRows'
 import { StatPill } from '@/components/shared/StatPill'
 import { useInfiniteScroll, LoadMoreSentinel, SearchInput } from '@/components/shared/ListUtils'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const BATCH = 15
-
-type DriverFocusableField = 'fullName' | 'phone' | 'plate' | null
 
 
 // ═══════════════════════════════════════════════════════════════════════════════

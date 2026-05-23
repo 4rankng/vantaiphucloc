@@ -5,8 +5,12 @@ import { Plate } from '@/components/shared/Plate'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { FieldActions } from '@/components/shared/ListUtils'
 import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
+import { useActiveField } from '@/components/shared/useActiveField'
+import { tdActive, tdHidden } from '@/components/shared/editCellStyles'
 
-export type DriverFocusableField = 'fullName' | 'phone' | 'plate' | null
+type FocusableField = 'fullName' | 'phone' | 'plate'
+
+export type DriverFocusableField = FocusableField | null
 
 export type DriverRowFormData = {
   fullName: string
@@ -38,25 +42,43 @@ export function DriverEditRow({
   }
   const [plateInput, setPlateInput] = useState('')
   const fullNameRef = useRef<HTMLInputElement>(null)
+  const phoneRef = useRef<HTMLInputElement>(null)
 
-  const { form, set, isDirty, anyDirty, handleSave } = useInlineEditForm<DriverRowFormData>({
+  const { activeField, setActiveField } = useActiveField<FocusableField>(
+    initialFocus ?? 'fullName',
+    { fullName: fullNameRef, phone: phoneRef },
+  )
+
+  const { form, set, handleSave } = useInlineEditForm<DriverRowFormData>({
     initial,
     onSave,
     onCancel,
-    focusRef: initialFocus === 'fullName' ? fullNameRef : undefined,
   })
 
   const showCreatePlate =
     plateInput.trim() &&
     !vehicles.some(v => v.plate.toLowerCase() === plateInput.toLowerCase().trim())
-  const actions = anyDirty ? (
-    <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} />
-  ) : null
+
+  const isLastColumn = activeField === 'plate'
+  const floatingActions = (
+    <div style={{
+      position: 'absolute',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      zIndex: 20,
+      ...(isLastColumn
+        ? { right: '100%', paddingRight: 6 }
+        : { left: '100%', paddingLeft: 6 }),
+    }}>
+      <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} hintAlign={isLastColumn ? 'right' : 'left'} />
+    </div>
+  )
 
   return (
     <tr style={{ background: 'var(--accent-soft)' }}>
-      <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center">
+      {/* Họ tên */}
+      {activeField === 'fullName' ? (
+        <td style={tdActive}>
           <input
             ref={fullNameRef}
             className="nepo-input text-[12px]"
@@ -65,17 +87,28 @@ export function DriverEditRow({
             onChange={e => set('fullName', e.target.value)}
             placeholder="Họ tên"
           />
-          {isDirty('fullName') && actions}
-        </div>
-      </td>
+          {floatingActions}
+        </td>
+      ) : (
+        <td style={tdHidden} onClick={() => setActiveField('fullName')}>
+          <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>
+            {form.fullName || driver.username}
+          </span>
+        </td>
+      )}
+
+      {/* Tài khoản */}
       <td style={{ padding: '5px 8px' }}>
         <span className="text-[12px] font-mono" style={{ color: 'var(--ink-3)' }}>
           {driver.username}
         </span>
       </td>
-      <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center">
+
+      {/* SĐT */}
+      {activeField === 'phone' ? (
+        <td style={tdActive}>
           <input
+            ref={phoneRef}
             className="nepo-input text-[12px]"
             style={{ minWidth: 90, flex: 1 }}
             type="tel"
@@ -83,12 +116,20 @@ export function DriverEditRow({
             onChange={e => set('phone', e.target.value)}
             placeholder="SĐT"
           />
-          {isDirty('phone') && actions}
-        </div>
-      </td>
-      <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center gap-1">
-          <div style={{ flex: 1, minWidth: 100 }}>
+          {floatingActions}
+        </td>
+      ) : (
+        <td style={tdHidden} onClick={() => setActiveField('phone')}>
+          <span className="text-[13px]" style={{ color: 'var(--ink-2)' }}>
+            {form.phone || '—'}
+          </span>
+        </td>
+      )}
+
+      {/* Biển số */}
+      {activeField === 'plate' ? (
+        <td style={tdActive}>
+          <div style={{ minWidth: 100 }}>
             <InlineSelect
               placeholder="Chọn hoặc nhập"
               value={form.plate}
@@ -99,9 +140,17 @@ export function DriverEditRow({
               createNewLabel={showCreatePlate ? `Tạo mới "${plateInput.trim()}"` : undefined}
             />
           </div>
-          {isDirty('plate') && actions}
-        </div>
-      </td>
+          {floatingActions}
+        </td>
+      ) : (
+        <td style={tdHidden} onClick={() => setActiveField('plate')}>
+          {form.plate ? (
+            <Plate>{form.plate}</Plate>
+          ) : (
+            <span className="text-[13px]" style={{ color: 'var(--ink-3)' }}>—</span>
+          )}
+        </td>
+      )}
     </tr>
   )
 }

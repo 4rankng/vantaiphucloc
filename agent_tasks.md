@@ -1,10 +1,4 @@
-# Agent Tasks — Centralize Inline Editing
+# Agent Tasks — Apply Expenses Inline Edit Pattern to Transporters
 
-- [x] (frontend) Create `useActiveField` hook
-- [x] (frontend) Create `editCellStyles` constants
-- [x] (frontend) Refactor `DriverEditRow` to use `useInlineEditForm`
-- [x] (frontend) Refactor `ExpenseEditRow` to use `useActiveField` + `editCellStyles`
-- [x] (frontend) Refactor `VendorRoutePricingEditRow` to use `useActiveField` + `editCellStyles`
-- [x] (frontend) Add username column to transporters driver table
-- [x] (frontend) Run `make test-frontend` to verify — build passes
-- [ ] (frontend) Fix pre-existing lint issues in changed files
+- [x] (frontend) Refactor `DriverEditRow` to use cell-toggle pattern with `useActiveField`, `editCellStyles`, and floating `FieldActions`
+- [x] (frontend) Run `make test-frontend` to verify — lint + build pass
