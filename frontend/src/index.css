@@ -774,21 +774,39 @@
   z-index: 10;
 }
 
-/* ─── Login background SVG animations ─────────────────── */
-@keyframes login-truck-in {
-  from { transform: translateX(-220px); }
-  to   { transform: translateX(0); }
+/* ─── Street + truck illustration animations ───────────── */
+
+/* Road centre-line dashes scroll in the direction of travel */
+@keyframes login-street-scroll {
+  to { stroke-dashoffset: -72; }
 }
-@keyframes login-road-sweep {
-  from { transform: translateX(-100%); }
-  to   { transform: translateX(200%); }
+
+/* Chassis suspension micro-bounce */
+@keyframes login-truck-chassis-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-2px); }
 }
+
+/* Wheel rotation */
+@keyframes login-wheel-rotate {
+  to { transform: rotate(360deg); }
+}
+
+/* transform-box + origin always set so transform-origin: center works in SVG */
+.login-wheel-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .login-truck-drive {
-    animation: login-truck-in 900ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+  .login-street-dash {
+    animation: login-street-scroll 2s linear infinite;
   }
-  .login-road-shimmer {
-    animation: login-road-sweep 1.6s cubic-bezier(0.4, 0, 0.6, 1) 800ms both;
+  .login-truck-bounce {
+    animation: login-truck-chassis-bounce 1.8s ease-in-out infinite;
+  }
+  .login-wheel-spin {
+    animation: login-wheel-rotate 1.5s linear infinite;
   }
 }
 
