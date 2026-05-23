@@ -3,9 +3,11 @@ import {
   autoMatchPreview,
   confirmAutoMatch,
   aiSuggestMatch,
+  unmatchTrip,
   type AutoMatchPreviewResponse,
   type ConfirmMatchResponse,
   type AISuggestionResponse,
+  type UnmatchResponse,
 } from '@/services/api/autoMatch.api'
 import { queryKeys } from '@/hooks/query-keys'
 
@@ -47,6 +49,23 @@ export function useAISuggestMatch() {
       const res = await aiSuggestMatch(deliveredTripId)
       if (!res.success) throw new Error(res.error || 'AI Suggestion failed')
       return res.data
+    },
+  })
+}
+
+export function useUnmatchTrip() {
+  const qc = useQueryClient()
+  return useMutation<UnmatchResponse, Error, number>({
+    mutationFn: async (deliveredTripId) => {
+      const res = await unmatchTrip(deliveredTripId)
+      if (!res.success) throw new Error(res.error || 'Unmatch failed')
+      return res.data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
+      qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
     },
   })
 }

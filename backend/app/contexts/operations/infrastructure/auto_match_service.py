@@ -348,18 +348,27 @@ async def confirm_matches(
     db: AsyncSession,
     pairs: list[tuple[int, int, str | None]],
 ) -> dict:
-    """Commit matched pairs: set matched=True on both sides and sync fields.
+    """Commit matched pairs: set matched=True, sync fields, and apply pricing.
 
     Each pair is (wo_id, to_id, sync_source).
     sync_source: "delivered" | "booked" | None.
-    When sync_source is set, copy SYNCABLE_FIELDS from the source to the target.
+
+    After matching, auto-populates:
+      - DeliveredTrip.revenue from RoutePricing (client, lane, work_type, cont_type)
+      - DeliveredTrip.driver_salary from VendorRoutePricing (if vendor_id is set)
 
     Returns {matched_count, errors}.
     """
     from app.models.domain import DeliveredTrip as WO, BookedTrip as TO
+    from app.core.pricing_lookup import (
+        TripPriceInfo,
+        lookup_client_prices,
+        lookup_vendor_prices,
+    )
 
     matched_count = 0
     errors: list[str] = []
+    matched_pairs: list[tuple] = []
 
     for wo_id, to_id, sync_source in pairs:
         wo = (await db.execute(
@@ -389,7 +398,6 @@ async def confirm_matches(
             for field in SYNCABLE_FIELDS:
                 setattr(wo, field, getattr(to, field))
         else:
-            # Auto-fill: copy from whichever side has a value
             for field in SYNCABLE_FIELDS:
                 wo_val = getattr(wo, field)
                 to_val = getattr(to, field)
@@ -399,8 +407,50 @@ async def confirm_matches(
                     setattr(wo, field, to_val)
 
         wo.matched = True
+        wo.booked_trip_id = to.id
         to.matched = True
         matched_count += 1
+        matched_pairs.append((wo, to))
+
+    # Auto-populate pricing for matched DeliveredTrips
+    if matched_pairs:
+        client_infos = [
+            TripPriceInfo(
+                id=wo.id,
+                partner_id=wo.client_id,
+                pickup_location_id=wo.pickup_location_id,
+                dropoff_location_id=wo.dropoff_location_id,
+                work_type=wo.work_type,
+                cont_type=wo.cont_type,
+            )
+            for wo, _ in matched_pairs
+            if wo.revenue == 0
+        ]
+        if client_infos:
+            client_prices = await lookup_client_prices(db, client_infos)
+            for wo, _ in matched_pairs:
+                price = client_prices.get(wo.id, 0)
+                if price and wo.revenue == 0:
+                    wo.revenue = price
+
+        vendor_infos = [
+            TripPriceInfo(
+                id=wo.id,
+                partner_id=wo.vendor_id,
+                pickup_location_id=wo.pickup_location_id,
+                dropoff_location_id=wo.dropoff_location_id,
+                work_type=wo.work_type,
+                cont_type=wo.cont_type,
+            )
+            for wo, _ in matched_pairs
+            if wo.vendor_id and wo.driver_salary == 0
+        ]
+        if vendor_infos:
+            vendor_prices = await lookup_vendor_prices(db, vendor_infos)
+            for wo, _ in matched_pairs:
+                vprice = vendor_prices.get(wo.id, 0)
+                if vprice and wo.driver_salary == 0:
+                    wo.driver_salary = vprice
 
     await db.flush()
 

@@ -73,6 +73,15 @@ class ConfirmMatchResponse(BaseModel):
     errors: list[str]
 
 
+class UnmatchRequest(BaseModel):
+    delivered_trip_id: int
+
+
+class UnmatchResponse(BaseModel):
+    ok: bool
+    booked_trip_id: int | None = None
+
+
 class AISuggestionResponse(BaseModel):
     suggested_booked_trip_id: int | None = None
     reasoning: str
@@ -155,6 +164,44 @@ async def auto_match_confirm_endpoint(
 ):
     result = await confirm_matches(db, [(p.delivered_trip_id, p.booked_trip_id, p.sync_source) for p in body.pairs])
     return ConfirmMatchResponse(**result)
+
+
+@router.post("/auto-match/unmatch", response_model=UnmatchResponse)
+async def unmatch_endpoint(
+    body: UnmatchRequest,
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy import select
+    from app.models.domain import DeliveredTrip, BookedTrip
+
+    wo = (await db.execute(
+        select(DeliveredTrip).where(DeliveredTrip.id == body.delivered_trip_id)
+    )).scalar_one_or_none()
+
+    if not wo:
+        from fastapi import HTTPException
+        raise HTTPException(404, "Delivered trip not found")
+    if not wo.matched:
+        from fastapi import HTTPException
+        raise HTTPException(400, "Trip is not matched")
+    if not wo.booked_trip_id:
+        from fastapi import HTTPException
+        raise HTTPException(400, "No linked booked trip")
+
+    to = (await db.execute(
+        select(BookedTrip).where(BookedTrip.id == wo.booked_trip_id)
+    )).scalar_one_or_none()
+
+    booked_id = wo.booked_trip_id
+    wo.matched = False
+    wo.booked_trip_id = None
+
+    if to:
+        to.matched = False
+
+    await db.flush()
+    return UnmatchResponse(ok=True, booked_trip_id=booked_id)
 
 
 @router.post("/auto-match/ai-suggest/{delivered_trip_id}", response_model=AISuggestionResponse)

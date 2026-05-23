@@ -3,7 +3,7 @@ import {
   ClipboardList,
   Loader2,
   FileSpreadsheet,
-  Zap,
+  Unlink,
 } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -32,6 +32,7 @@ import {
   useTripDailyStats,
   useAutoMatchPreview,
   useConfirmAutoMatch,
+  useUnmatchTrip,
 } from '@/hooks/use-queries'
 
 // ─── Status filter type ───────────────────────────────────────────────────────
@@ -60,6 +61,7 @@ export function DoiSoatPage() {
   const [showAutoMatch, setShowAutoMatch] = useState(false)
   const autoMatchPreview = useAutoMatchPreview()
   const confirmMatch = useConfirmAutoMatch()
+  const unmatch = useUnmatchTrip()
 
   const handleAutoMatchConfirm = useCallback(
     (from: string, to: string) => {
@@ -288,6 +290,31 @@ export function DoiSoatPage() {
         )
       },
     },
+    {
+      key: 'actions',
+      header: '',
+      width: 44,
+      render: (t) => {
+        if (!t.matched) return null
+        return (
+          <button
+            title="Bỏ ghép chuyến này"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (unmatch.isPending) return
+              unmatch.mutate(t.id)
+            }}
+            className="p-1 rounded hover:bg-red-50 transition-colors"
+            style={{ color: 'var(--ink-4)' }}
+            disabled={unmatch.isPending}
+          >
+            {unmatch.isPending && unmatch.variables === t.id
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : <Unlink className="h-3.5 w-3.5" />}
+          </button>
+        )
+      },
+    },
   ]
 
   return (
@@ -380,15 +407,33 @@ export function DoiSoatPage() {
               <FileSpreadsheet className="h-3.5 w-3.5" />
               Nhập Excel
             </Button>
-            <Button
-              variant="ghost"
-              title="AI ghép tất cả chuyến khớp hoàn toàn (số cont, tuyến, chủ hàng). Bạn sẽ được xem trước trước khi xác nhận."
+            <button
+              title="Tự động ghép tất cả chuyến khớp hoàn toàn (số cont, tuyến, chủ hàng). Bạn sẽ được xem trước trước khi xác nhận."
               onClick={() => setShowAutoMatchDate(true)}
               disabled={autoMatchPreview.isPending}
+              className="ai-btn-glow relative group ml-10 px-5 py-1.5 rounded-full text-white font-semibold text-xs tracking-wide transition-all duration-300 ease-in-out hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-1"
+              style={{ background: 'linear-gradient(to right, #6366f1, #a855f7, #ec4899)' }}
             >
-              {autoMatchPreview.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-              AI ghép chuyến
-            </Button>
+              {/* sparkle — slides in from left on hover */}
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+                  <path d="M20 3v4"/><path d="M22 5h-4"/>
+                  <path d="M4 17v2"/><path d="M5 18H3"/>
+                </svg>
+              </span>
+
+              {/* text shifts right on hover to make room for sparkle */}
+              <span className="inline-flex items-center gap-1.5 group-hover:translate-x-2.5 transition-transform duration-300">
+                {autoMatchPreview.isPending
+                  ? <Loader2 className="h-3 w-3 animate-spin" />
+                  : null}
+                AI
+              </span>
+
+              {/* inner white ring for depth */}
+              <span className="absolute inset-0 rounded-full border border-white/20 pointer-events-none" />
+            </button>
           </div>
         </div>
 

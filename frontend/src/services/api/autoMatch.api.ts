@@ -40,6 +40,11 @@ export interface AISuggestionResponse {
   error?: string
 }
 
+export interface UnmatchResponse {
+  ok: boolean
+  bookedTripId: number | null
+}
+
 export async function autoMatchPreview(params: {
   dateFrom?: string
   dateTo?: string
@@ -78,5 +83,14 @@ export async function aiSuggestMatch(deliveredTripId: number) {
     return ok<AISuggestionResponse>(toCamel(res.data))
   } catch (err) {
     return fail<AISuggestionResponse>(err)
+  }
+}
+
+export async function unmatchTrip(deliveredTripId: number) {
+  try {
+    const res = await api.post('/auto-match/unmatch', { delivered_trip_id: deliveredTripId })
+    return ok<UnmatchResponse>(toCamel(res.data))
+  } catch (err) {
+    return fail<UnmatchResponse>(err)
   }
 }

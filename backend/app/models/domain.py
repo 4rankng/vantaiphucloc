@@ -364,6 +364,7 @@ class DeliveredTrip(AuditableMixin, Base):
     cont_type = Column(String(10), nullable=True)
     vehicle_plate = Column(String(20), nullable=True)
     matched = Column(Boolean, nullable=False, default=False)
+    booked_trip_id = Column(Integer, ForeignKey("booked_trips.id"), nullable=True, index=True)
     revenue = Column(Integer, nullable=False, default=0)
     driver_salary = Column(Integer, nullable=False, default=0)
     allowance = Column(Integer, nullable=False, default=0)
@@ -402,7 +403,6 @@ class BookedTrip(AuditableMixin, Base):
     cont_number = Column(String(50), nullable=True, index=True)
     cont_type = Column(String(10), nullable=True)
     matched = Column(Boolean, nullable=False, default=False)
-    revenue = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
