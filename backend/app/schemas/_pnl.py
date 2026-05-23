@@ -39,6 +39,7 @@ class MonthlyPnLOut(BaseModel):
     total_allowance: int
     total_base_salary: int
     total_vehicle_expenses: int = 0
+    total_vendor_cost: int = 0
     profit: int
     matched_trip_count: int
     client_breakdown: list[ClientRevenueBreakdownOut]
@@ -107,6 +108,7 @@ class VehiclePnLRow(BaseModel):
     cp_xe: VehicleExpenseSummary
     cp_luong_san_luong: int
     cp_luong_co_ban: int
+    cp_vendor: int = 0
     loi_nhuan: int
 
 

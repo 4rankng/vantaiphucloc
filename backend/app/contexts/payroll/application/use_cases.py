@@ -221,6 +221,7 @@ class MonthlyPnLDTO:
     total_allowance: int            # Σ DeliveredTrip.allowance
     total_base_salary: int          # Σ effective base salary per driver
     total_vehicle_expenses: int     # Fuel + Repairs + Law + Other
+    total_vendor_cost: int          # Σ vendor route pricing for xe ngoài
     profit: int                     # revenue − all costs
     matched_trip_count: int
     client_breakdown: list[ClientRevenueBreakdownDTO]
@@ -254,13 +255,16 @@ class GetMonthlyPnL:
     async def __call__(
         self, *, start_date: date, end_date: date
     ) -> MonthlyPnLDTO:
-        # ---- Revenue: Σ revenue over MATCHED TOs ----
+        # ---- Revenue: lookup client route pricing per MATCHED TO ----
         per_to_rows = (
             await self.session.execute(
                 select(
                     BookedTrip.id,
                     BookedTrip.client_id,
-                    BookedTrip.revenue,
+                    BookedTrip.pickup_location_id,
+                    BookedTrip.dropoff_location_id,
+                    BookedTrip.work_type,
+                    BookedTrip.cont_type,
                 )
                 .where(
                     BookedTrip.matched == True,
@@ -270,10 +274,25 @@ class GetMonthlyPnL:
             )
         ).all()
 
+        from app.core.pricing_lookup import TripPriceInfo, lookup_client_prices
+        client_trips = [
+            TripPriceInfo(
+                id=r[0],
+                partner_id=r[1],
+                pickup_location_id=r[2],
+                dropoff_location_id=r[3],
+                work_type=r[4],
+                cont_type=r[5],
+            )
+            for r in per_to_rows
+        ]
+        client_prices = await lookup_client_prices(self.session, client_trips)
+
         revenue = 0
         per_client: dict[int, dict] = {}
-        for to_id, client_id, to_revenue in per_to_rows:
-            line = int(to_revenue or 0)
+        for row in per_to_rows:
+            to_id, client_id = row[0], row[1]
+            line = client_prices.get(to_id, 0)
             revenue += line
             slot = per_client.setdefault(
                 client_id,
@@ -367,9 +386,46 @@ class GetMonthlyPnL:
         ).one()
         total_vehicle_expenses = int(ve_rows[0] or 0)
 
+        # ---- Vendor cost: lookup vendor route pricing for xe ngoài ----
+        vendor_trips_rows = (
+            await self.session.execute(
+                select(
+                    DeliveredTrip.id,
+                    DeliveredTrip.vendor_id,
+                    DeliveredTrip.pickup_location_id,
+                    DeliveredTrip.dropoff_location_id,
+                    DeliveredTrip.work_type,
+                    DeliveredTrip.cont_type,
+                )
+                .where(
+                    DeliveredTrip.matched == True,
+                    DeliveredTrip.vendor_id.isnot(None),
+                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+                    >= start_date,
+                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+                    <= end_date,
+                )
+            )
+        ).all()
+
+        from app.core.pricing_lookup import lookup_vendor_prices
+        vendor_trips = [
+            TripPriceInfo(
+                id=r[0],
+                partner_id=r[1],
+                pickup_location_id=r[2],
+                dropoff_location_id=r[3],
+                work_type=r[4],
+                cont_type=r[5],
+            )
+            for r in vendor_trips_rows
+        ]
+        vendor_prices = await lookup_vendor_prices(self.session, vendor_trips)
+        total_vendor_cost = sum(vendor_prices.values())
+
         profit = revenue - (
             total_productivity + total_allowance + total_base_salary
-            + total_vehicle_expenses
+            + total_vehicle_expenses + total_vendor_cost
         )
 
         return MonthlyPnLDTO(
@@ -380,6 +436,7 @@ class GetMonthlyPnL:
             total_allowance=total_allowance,
             total_base_salary=total_base_salary,
             total_vehicle_expenses=total_vehicle_expenses,
+            total_vendor_cost=total_vendor_cost,
             profit=profit,
             matched_trip_count=matched_trip_count,
             client_breakdown=client_breakdown,

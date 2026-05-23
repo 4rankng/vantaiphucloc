@@ -326,11 +326,19 @@ async def get_vehicle_pnl(
     veh_rows = (await db.execute(veh_q)).all()
     vehicles: dict[int, str] = {r[0]: r[1] for r in veh_rows}
 
-    # ── 2. Revenue per vehicle ────────────────────────────────────────────
-    revenue_rows = (await db.execute(
+    # ── 2. Revenue per vehicle via route pricing lookup ───────────────────
+    from app.core.pricing_lookup import TripPriceInfo, lookup_client_prices, lookup_vendor_prices
+
+    trip_detail_rows = (await db.execute(
         select(
+            DeliveredTrip.id,
+            DeliveredTrip.client_id,
+            DeliveredTrip.vendor_id,
+            DeliveredTrip.pickup_location_id,
+            DeliveredTrip.dropoff_location_id,
+            DeliveredTrip.work_type,
+            DeliveredTrip.cont_type,
             Vehicle.id,
-            func.coalesce(func.sum(DeliveredTrip.revenue), 0),
         )
         .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
         .where(
@@ -339,9 +347,27 @@ async def get_vehicle_pnl(
             func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
             func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
         )
-        .group_by(Vehicle.id)
     )).all()
-    revenue_by_vehicle: dict[int, int] = {vid: int(rev) for vid, rev in revenue_rows if vid}
+
+    client_trips = [
+        TripPriceInfo(id=r[0], partner_id=r[1], pickup_location_id=r[3], dropoff_location_id=r[4], work_type=r[5], cont_type=r[6])
+        for r in trip_detail_rows
+    ]
+    vendor_trips = [
+        TripPriceInfo(id=r[0], partner_id=r[2], pickup_location_id=r[3], dropoff_location_id=r[4], work_type=r[5], cont_type=r[6])
+        for r in trip_detail_rows if r[2] is not None
+    ]
+
+    client_prices = await lookup_client_prices(db, client_trips)
+    vendor_prices = await lookup_vendor_prices(db, vendor_trips)
+
+    revenue_by_vehicle: dict[int, int] = {}
+    vendor_cost_by_vehicle: dict[int, int] = {}
+    for r in trip_detail_rows:
+        trip_id, vid = r[0], r[7]
+        if vid:
+            revenue_by_vehicle[vid] = revenue_by_vehicle.get(vid, 0) + client_prices.get(trip_id, 0)
+            vendor_cost_by_vehicle[vid] = vendor_cost_by_vehicle.get(vid, 0) + vendor_prices.get(trip_id, 0)
 
     # ── 3. CP Lương sản lượng per vehicle ───────────────────────────────────
     # vehicle_id FK removed; join via vehicle_plate
@@ -447,6 +473,7 @@ async def get_vehicle_pnl(
         rev = revenue_by_vehicle.get(vid, 0)
         sal = salary_by_vehicle.get(vid, 0)
         base = base_salary_by_vehicle.get(vid, 0)
+        vcost = vendor_cost_by_vehicle.get(vid, 0)
         xe_cats = cp_xe_by_vehicle.get(vid, {})
         xe_summary = VehicleExpenseSummary(
             xang_dau=xe_cats.get("XANG_DAU", 0),
@@ -455,7 +482,7 @@ async def get_vehicle_pnl(
             khac=xe_cats.get("KHAC", 0),
             total=sum(xe_cats.values()),
         )
-        loi_nhuan = rev - (xe_summary.total + sal + base)
+        loi_nhuan = rev - (xe_summary.total + sal + base + vcost)
         rows.append(VehiclePnLRow(
             vehicle_id=vid,
             plate=plate,
@@ -463,6 +490,7 @@ async def get_vehicle_pnl(
             cp_xe=xe_summary,
             cp_luong_san_luong=sal,
             cp_luong_co_ban=base,
+            cp_vendor=vcost,
             loi_nhuan=loi_nhuan,
         ))
         total_revenue += rev

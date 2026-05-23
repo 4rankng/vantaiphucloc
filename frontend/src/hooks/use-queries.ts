@@ -23,3 +23,5 @@ export { useLocationAliases, useCreateAlias, usePromoteAlias, useDeleteAlias, us
 export { useAutoMatchPreview, useConfirmAutoMatch, useAISuggestMatch } from './queries/auto-match'
 export { useRoutePricings, useCreateRoutePricing, useUpdateRoutePricing, useDeleteRoutePricing } from './queries/route-pricings'
 export { usePreviewRoutePricingImport, useCommitRoutePricingImport } from './queries/route-pricings-import'
+export { useVendorRoutePricings, useCreateVendorRoutePricing, useUpdateVendorRoutePricing, useDeleteVendorRoutePricing } from './queries/vendor-route-pricings'
+export { usePreviewVendorRoutePricingImport, useCommitVendorRoutePricingImport } from './queries/vendor-route-pricings-import'

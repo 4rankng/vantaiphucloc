@@ -1,4 +1,4 @@
-import { Calendar, Route, Settings } from 'lucide-react'
+import { Calendar, Route, Settings, Truck } from 'lucide-react'
 import { SettingCard, type SettingCardItem } from '@/components/shared/SettingCard/SettingCard'
 import { PageHeader } from '@/components/shared/PageHeader'
 
@@ -19,6 +19,14 @@ const SETTINGS_SECTIONS: SettingCardItem[] = [
     path: '/accountant/settings/cuoc-tuyen',
     color: '#0ea5e9',
   },
+  {
+    key: 'vendor-route-pricing',
+    label: 'Cước trả xe ngoài',
+    desc: 'Quản lý bảng giá cước trả nhà thầu theo tuyến đường',
+    icon: Truck,
+    path: '/accountant/settings/cuoc-tra-xe-ngoai',
+    color: '#f97316',
+  },
 ]
 
 export function SettingsPage() {
@@ -30,7 +38,7 @@ export function SettingsPage() {
         lucideIcon={Settings}
       />
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {SETTINGS_SECTIONS.map((section) => (
           <SettingCard key={section.key} section={section} />
         ))}

@@ -70,4 +70,7 @@ export const queryKeys = {
   routePricings: ['route-pricings'] as const,
   routePricingsFiltered: (filters?: { clientId?: number; workType?: string }) =>
     ['route-pricings', filters] as const,
+  vendorRoutePricings: ['vendor-route-pricings'] as const,
+  vendorRoutePricingsFiltered: (filters?: { vendorId?: number; workType?: string }) =>
+    ['vendor-route-pricings', filters] as const,
 }

@@ -910,18 +910,7 @@ export function LocationAliasesPage() {
 
           {/* List — scroll-fade wrapper */}
           <div className="flex-1 overflow-hidden" style={{ position: 'relative' }}>
-            {/* bottom fade */}
-            <div
-              className="pointer-events-none z-10"
-              style={{
-                position: 'absolute',
-                insetInline: 0,
-                bottom: 0,
-                height: 40,
-                background: 'linear-gradient(to bottom, transparent, var(--surface-2))',
-              }}
-            />
-            <div ref={listRef} style={{ height: '100%', overflowY: 'auto' }}>
+              <div ref={listRef} style={{ height: '100%', overflowY: 'auto', paddingBottom: 32 }}>
             {creating && (
               <NewLocationInput
                 onCreate={handleCreate}

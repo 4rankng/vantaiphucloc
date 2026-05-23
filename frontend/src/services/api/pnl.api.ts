@@ -24,6 +24,7 @@ export interface MonthlyPnL {
   totalAllowance: number
   totalBaseSalary: number
   totalVehicleExpenses: number
+  totalVendorCost: number
   profit: number
   matchedTripCount: number
   clientBreakdown: ClientRevenueBreakdown[]
@@ -44,6 +45,7 @@ export interface VehiclePnLRow {
   cpXe: VehicleExpenseSummary
   cpLuongSanLuong: number
   cpLuongCoBan: number
+  cpVendor: number
   loiNhuan: number
 }
 

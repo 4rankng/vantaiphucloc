@@ -284,3 +284,18 @@ export interface RoutePricing {
   createdAt: string
   updatedAt: string
 }
+
+export interface VendorRoutePricing {
+  id: number
+  vendor: { id: number; name: string; code?: string }
+  pickupLocation: LocationSummary
+  dropoffLocation: LocationSummary
+  workType: WorkType
+  f20Price: number | null
+  f40Price: number | null
+  e20Price: number | null
+  e40Price: number | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}

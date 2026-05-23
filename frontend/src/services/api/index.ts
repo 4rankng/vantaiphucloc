@@ -27,6 +27,7 @@ import * as vehicleExpensesApi from './vehicleExpenses.api'
 import * as vehiclesApi from './vehicles.api'
 import * as vehicleDriversApi from './vehicleDrivers.api'
 import * as routePricingsApi from './routePricings.api'
+import * as vendorRoutePricingsApi from './vendorRoutePricings.api'
 
 export const apiClient = {
   // Clients
@@ -162,6 +163,12 @@ export const apiClient = {
   createRoutePricing: routePricingsApi.createRoutePricing,
   updateRoutePricing: routePricingsApi.updateRoutePricing,
   deleteRoutePricing: routePricingsApi.deleteRoutePricing,
+
+  // Vendor Route Pricings (Cước trả xe ngoài)
+  getVendorRoutePricings: vendorRoutePricingsApi.getVendorRoutePricings,
+  createVendorRoutePricing: vendorRoutePricingsApi.createVendorRoutePricing,
+  updateVendorRoutePricing: vendorRoutePricingsApi.updateVendorRoutePricing,
+  deleteVendorRoutePricing: vendorRoutePricingsApi.deleteVendorRoutePricing,
 }
 
 // Re-export types from salary.api
