@@ -9,6 +9,8 @@ import {
   CheckCircle,
   Plus,
   UserPlus,
+  Building2,
+  Truck,
 } from 'lucide-react'
 import { Drawer } from '@/components/shared/Drawer'
 import { StepIndicator } from '@/components/shared/StepIndicator'
@@ -100,26 +102,30 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
         {
           onSuccess: (data) => {
             setPreviewResult(data)
-            const cols = ['Số container', 'Kích thước', 'Loại hàng (F/E)', 'Điểm đi', 'Điểm đến', 'Ngày chuyến', 'Biển số xe', 'Khách hàng / chủ hàng', 'Ghi chú']
+            const cols = ['Ngày đi', 'Chủ hàng', 'Số Cont', 'Loại Cont', 'Số xe chạy', 'Điểm đi', 'Điểm đến', 'Cước', 'Tác nghiệp']
             const rows = (data.accepted ?? []).map(r => ({
-              'Số container': r.values.container_no,
-              'Kích thước': r.values.container_size,
-              'Loại hàng (F/E)': r.values.freight_kind,
+              'Ngày đi': r.values.trip_date,
+              'Chủ hàng': r.values.consignee,
+              'Số Cont': r.values.container_no,
+              'Loại Cont': [r.values.container_size, r.values.freight_kind].filter(Boolean).join(' - '),
+              'Số xe chạy': r.values.vehicle_plate,
               'Điểm đi': r.values.pickup_location,
               'Điểm đến': r.values.dropoff_location,
-              'Ngày chuyến': r.values.trip_date,
-              'Biển số xe': r.values.tractor_plate,
-              'Khách hàng / chủ hàng': r.values.consignee,
-              'Ghi chú': r.values.remarks
+              'Cước': r.values.freight_charge,
+              'Tác nghiệp': r.values.work_type,
             }))
+            const containerKey = Object.keys((data.rejected?.[0]?.raw ?? {}) as Record<string, unknown>).find(k => /container/i.test(k))
             const dups = (data.rejected ?? [])
-              .filter(r => r.reasons.includes('duplicate_in_file') || r.reasons.some(reason => reason.includes('duplicate')))
-              .map((r) => ({
-                type: 'exact' as const,
-                rowIndices: [r.source_row_index],
-                containers: [r.values.container_no],
-                message: `Dòng ${r.source_row_index + 1}: Trùng container ${r.values.container_no}`
-              }))
+              .filter(r => r.reasons?.includes('duplicate_in_file') || r.reasons?.some(reason => reason.includes('duplicate')))
+              .map((r) => {
+                const cNo = containerKey ? String((r.raw as Record<string, unknown>)?.[containerKey] ?? '') : ''
+                return {
+                  type: 'exact' as const,
+                  rowIndices: [r.source_row_index],
+                  containers: [cNo],
+                  message: `Dòng ${r.source_row_index + 1}: Trùng container ${cNo}`
+                }
+              })
             const warns = data.warnings ?? []
 
             setPreviewColumns(cols)
@@ -398,48 +404,45 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
       {/* ── Upload step ── */}
       {step === 'upload' && (
         <div className="space-y-5">
-          {/* Segment Selector for Client vs Vendor */}
-          <div>
-            <label className="nepo-field-label">Loại Excel nhập</label>
-            <div
-              className="grid grid-cols-2 gap-1 p-1"
-              style={{
-                background: 'var(--surface-2)',
-                borderRadius: 'var(--r-sm)',
-                border: '1px solid var(--line)',
-                maxWidth: 400
-              }}
-            >
-              {(['client', 'vendor'] as const).map(type => {
-                const active = importType === type
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => {
-                      setImportType(type)
-                      setFile(null)
-                      setClientId('')
-                      setVendorId('')
-                      setError(null)
-                    }}
-                    className="py-2 text-[13px] font-medium transition-colors rounded"
+          {/* Type selector */}
+          <div className="grid grid-cols-2 gap-3" style={{ maxWidth: 480 }}>
+            {([
+              { type: 'client', icon: Building2, label: 'Chủ hàng', hint: 'Tạo đơn đặt từ file Excel khách hàng' },
+              { type: 'vendor', icon: Truck,     label: 'Nhà xe',    hint: 'Đối soát chuyến đi từ file nhà thầu' },
+            ] as const).map(({ type, icon: Icon, label, hint }) => {
+              const active = importType === type
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => { setImportType(type); setFile(null); setClientId(''); setVendorId(''); setError(null) }}
+                  className="text-left px-4 py-3.5 rounded-xl transition-all"
+                  style={{
+                    background: active ? 'var(--accent-soft)' : 'var(--surface-2)',
+                    border: `1.5px solid ${active ? 'var(--accent)' : 'var(--line)'}`,
+                    outline: 'none',
+                  }}
+                >
+                  <div
+                    className="grid place-items-center mb-2.5"
                     style={{
-                      background: active ? 'var(--surface)' : 'transparent',
-                      color: active ? 'var(--ink)' : 'var(--ink-2)',
-                      boxShadow: active ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                      width: 32, height: 32, borderRadius: 8,
+                      background: active ? 'var(--accent)' : 'var(--surface-3)',
+                      color: active ? '#fff' : 'var(--ink-3)',
+                      transition: 'all 0.15s',
                     }}
                   >
-                    {type === 'client' ? 'Chủ hàng (Đơn đặt)' : 'Nhà xe / Nhà thầu (Chuyến đi)'}
-                  </button>
-                )
-              })}
-            </div>
-            <p className="text-[12px] mt-1.5 m-0" style={{ color: 'var(--ink-3)' }}>
-              {importType === 'client'
-                ? 'Nhập tệp Excel của khách để tạo các đơn hàng đặt (Booked Trips) trong hệ thống.'
-                : 'Nhập tệp Excel của nhà xe vệ tinh để đối soát các chuyến thực tế (Delivered Trips) và tự động so khớp.'}
-            </p>
+                    <Icon className="h-4 w-4" strokeWidth={1.75} />
+                  </div>
+                  <p className="m-0 text-[13.5px] font-semibold" style={{ color: active ? 'var(--accent)' : 'var(--ink)' }}>
+                    {label}
+                  </p>
+                  <p className="m-0 mt-0.5 text-[11.5px] leading-snug" style={{ color: 'var(--ink-3)' }}>
+                    {hint}
+                  </p>
+                </button>
+              )
+            })}
           </div>
 
           {/* Vendor selector if Vendor reconciliation is picked */}

@@ -48,6 +48,8 @@ export interface ParsedRowDto {
     consignee?: string
     commodity?: string
     driver_name?: string
+    vessel?: string
+    freight_charge?: number | null
     remarks?: string
   }
 }
@@ -99,6 +101,8 @@ export interface CommitRow {
   consignee?: string
   commodity?: string
   driver_name?: string
+  vessel?: string
+  freight_charge?: number | null
   remarks?: string
 }
 

@@ -44,6 +44,8 @@ CANONICAL_FIELDS: tuple[CanonicalField, ...] = (
     CanonicalField("commodity",           "Mặt hàng",              False, ""),
     CanonicalField("driver_name",         "Tài xế",                False, ""),
     CanonicalField("vehicle_plate",       "Biển số xe",            False, ""),
+    CanonicalField("vessel",              "Số tàu",                False, ""),
+    CanonicalField("freight_charge",      "Cước",                  False, "Cước chuyến / freight rate."),
     CanonicalField("remarks",             "Ghi chú",               False, ""),
 )
 
@@ -182,6 +184,15 @@ SYNONYMS: dict[str, list[str]] = {
         "so xe", "số xe", "dau keo", "đầu kéo", "tractor",
         "truck", "truck plate",
     ],
+    "vessel": [
+        "vessel", "ship", "ship name", "tau", "tàu", "ten tau", "tên tàu",
+        "so tau", "số tàu", "tau trung quoc", "tàu trung quốc",
+    ],
+    "freight_charge": [
+        "cuoc", "cước", "cuoc chuyen", "cước chuyến", "cuoc chay", "cước chạy",
+        "freight", "freight rate", "rate", "charge", "price",
+        "phi chuyen", "phí chuyến", "don gia", "đơn giá",
+    ],
     "remarks": [
         "remark", "remarks", "note", "notes",
         "ghi chu", "ghi chú", "ghi chu nhap canh", "ghi chú nhập cảnh",
@@ -193,12 +204,8 @@ SYNONYMS: dict[str, list[str]] = {
 # normalized header text OR substring**; both are tried in
 # `column_mapper.py`.
 SKIP_PATTERNS: tuple[str, ...] = (
-    # Vessel
-    "vessel", "voyage", "voy", "voy no", "voy.",
-    "tau", "tàu", "ten tau", "tên tàu",
-    "tau trung quoc", "tàu trung quốc",  # "Chinese vessel name" — Glory file
-    "ship", "ship name",
-    "connecting vessel",
+    # Schedule
+    "ata", "atd", "eta", "etb", "etd", "etc",
     # Schedule
     "ata", "atd", "eta", "etb", "etd", "etc",
     # Ports (operational vessel data, NOT customer-trucking destinations)

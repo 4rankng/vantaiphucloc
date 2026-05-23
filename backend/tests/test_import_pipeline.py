@@ -75,6 +75,8 @@ SAMPLE_IO = DOCS / "templates" / "sample-input-output.xlsx"
         ("Booking No", "customer_ref"),
         ("SỐCONTAINER", "container_no"),
         ("SOCONTAINER", "container_no"),
+        ("Vessel", "vessel"),
+        ("Tên tàu", "vessel"),
     ],
 )
 def test_synonym_dictionary_matches_known_headers(header: str, expected_field: str):
@@ -85,7 +87,7 @@ def test_synonym_dictionary_matches_known_headers(header: str, expected_field: s
 @pytest.mark.parametrize(
     "header",
     [
-        "Vessel", "VOYAGE", "Voy.", "Tên tàu", "POD", "POL",
+        "POD", "POL",
         "Bay", "Slot", "Cell", "Crane", "QC01", "Sales/Mkt",
         "Hãng tàu", "Hãng khai thác",
         "Loại công việc", "Phương thức ra", "Hàng nội/ngoại",
