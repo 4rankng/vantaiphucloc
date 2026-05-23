@@ -78,3 +78,72 @@ export async function deleteRoutePricing(
     return fail(err)
   }
 }
+
+// ── Import ────────────────────────────────────────────────────────
+
+export interface RoutePricingImportPreviewRow {
+  clientRaw: string
+  clientId: number | null
+  clientMatched: boolean
+  pickupRaw: string
+  pickupLocationId: number | null
+  pickupMatched: boolean
+  dropoffRaw: string
+  dropoffLocationId: number | null
+  dropoffMatched: boolean
+  operationType: string | null
+  operationTypeValid: boolean
+  f20Price: number | null
+  f40Price: number | null
+  e20Price: number | null
+  e40Price: number | null
+  rowIndex: number
+  canCommit: boolean
+}
+
+export interface RoutePricingImportPreview {
+  sheetName: string
+  rows: RoutePricingImportPreviewRow[]
+  warnings: string[]
+  stats: {
+    total: number
+    matched: number
+    unmatchedClient: number
+    unmatchedLocation: number
+    hasOperationType: number
+    missingOperationType: number
+  }
+}
+
+export interface RoutePricingImportCommitRow {
+  clientId: number
+  pickupLocationId: number
+  dropoffLocationId: number
+  operationType: string
+  f20Price?: number | null
+  f40Price?: number | null
+  e20Price?: number | null
+  e40Price?: number | null
+}
+
+export interface RoutePricingImportResult {
+  created: number
+  updated: number
+  skipped: number
+}
+
+export async function previewRoutePricingImport(file: File): Promise<RoutePricingImportPreview> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await api.post('/route-pricings/import-preview', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return toCamel<RoutePricingImportPreview>(res.data)
+}
+
+export async function commitRoutePricingImport(
+  rows: RoutePricingImportCommitRow[],
+): Promise<RoutePricingImportResult> {
+  const res = await api.post('/route-pricings/import-commit', toSnake({ rows }))
+  return toCamel<RoutePricingImportResult>(res.data)
+}

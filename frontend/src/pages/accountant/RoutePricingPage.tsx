@@ -1,12 +1,15 @@
-import { Plus, Route } from 'lucide-react'
+import { Plus, Route, FileSpreadsheet } from 'lucide-react'
+import { useState } from 'react'
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout/SettingsPageLayout'
 import { RoutePricingTable } from '@/components/route-pricing/RoutePricingTable'
 import { RoutePricingFilters } from '@/components/route-pricing/RoutePricingFilters'
 import { RoutePricingDialog } from '@/components/route-pricing/RoutePricingDialog'
+import { RoutePricingImportDialog } from '@/components/route-pricing/RoutePricingImportDialog'
 import { useRoutePricing } from '@/components/route-pricing/useRoutePricing'
 
 export function RoutePricingPage() {
+  const [importOpen, setImportOpen] = useState(false)
   const {
     routePricings,
     isLoading,
@@ -36,10 +39,16 @@ export function RoutePricingPage() {
       subtitle="Quản lý bảng giá cước theo tuyến đường và loại hình tác nghiệp"
       icon={Route}
       actions={
-        <Button onClick={openCreate} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Thêm cước tuyến
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-2">
+            <FileSpreadsheet className="h-4 w-4" />
+            Nhập Excel
+          </Button>
+          <Button onClick={openCreate} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Thêm cước tuyến
+          </Button>
+        </div>
       }
     >
       <RoutePricingFilters
@@ -87,6 +96,8 @@ export function RoutePricingPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <RoutePricingImportDialog open={importOpen} onOpenChange={setImportOpen} />
     </SettingsPageLayout>
   )
 }

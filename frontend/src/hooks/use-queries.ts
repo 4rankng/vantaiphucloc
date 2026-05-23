@@ -22,3 +22,4 @@ export { useBulkImportAndMatch, useAIParsePreview, useExportDoiSoatExcel, useTog
 export { useLocationAliases, useCreateAlias, usePromoteAlias, useDeleteAlias, useMergeLocations, usePendingReviewLocations } from './queries/location-aliases'
 export { useAutoMatchPreview, useConfirmAutoMatch } from './queries/auto-match'
 export { useRoutePricings, useCreateRoutePricing, useUpdateRoutePricing, useDeleteRoutePricing } from './queries/route-pricings'
+export { usePreviewRoutePricingImport, useCommitRoutePricingImport } from './queries/route-pricings-import'
