@@ -44,11 +44,12 @@ SUPPORTED_FORMATS = ("pan", "hap", "newway")
 class TariffRow:
     pickup_raw: str
     dropoff_raw: str
-    work_type: str          # F20 | F40 | E20 | E40
+    work_type: str          # CHUYEN_BAI | XUAT_TAU | etc.
     unit_price: int
     quantity: int = 1
     driver_salary: int = 0
     allowance: int = 0
+    cont_type: str | None = None  # F20 | F40 | E20 | E40
     note: str = ""
     old_unit_price: int | None = None
 
@@ -62,6 +63,7 @@ class TariffRow:
             "quantity": self.quantity,
             "driver_salary": self.driver_salary,
             "allowance": self.allowance,
+            "cont_type": self.cont_type,
             "note": self.note,
         }
 
@@ -145,7 +147,7 @@ def parse_pan_bytes(content: bytes) -> PricingPreview:
         full20 = ws.cell(r, 37).value
         full40 = ws.cell(r, 38).value
         pickup, dropoff = _split_route(route)
-        for price, wt in (
+        for price, ct in (
             (empty_p, "E40"), (empty_p, "E20"),
             (full20, "F20"), (full40, "F40"),
         ):
@@ -153,8 +155,9 @@ def parse_pan_bytes(content: bytes) -> PricingPreview:
                 rows.append(TariffRow(
                     pickup_raw=pickup,
                     dropoff_raw=dropoff,
-                    work_type=wt,
+                    work_type="CHUYEN_BAI",
                     unit_price=int(round(price)),
+                    cont_type=ct,
                     note=f"Trucking (HD) row {r}",
                 ))
     wb.close()
@@ -186,7 +189,7 @@ def parse_hap_bytes(content: bytes) -> PricingPreview:
         empty20 = ws.cell(r, 5).value
         empty40 = ws.cell(r, 6).value
         pickup, dropoff = _split_route(route)
-        for price, wt in (
+        for price, ct in (
             (full20, "F20"), (full40, "F40"),
             (empty20, "E20"), (empty40, "E40"),
         ):
@@ -194,8 +197,9 @@ def parse_hap_bytes(content: bytes) -> PricingPreview:
                 rows.append(TariffRow(
                     pickup_raw=pickup,
                     dropoff_raw=dropoff,
-                    work_type=wt,
+                    work_type="CHUYEN_BAI",
                     unit_price=int(round(price)),
+                    cont_type=ct,
                     note=f"CUOC row {r}",
                 ))
     wb.close()
@@ -221,24 +225,25 @@ def parse_newway_bytes(content: bytes) -> PricingPreview:
         empty40 = ws.cell(r, 6).value
         full20 = ws.cell(r, 7).value
         full40 = ws.cell(r, 8).value
-        wt = ("F40" if full40 else "F20" if full20
+        ct = ("F40" if full40 else "F20" if full20
               else "E40" if empty40 else "E20" if empty20 else None)
-        if wt is None:
+        if ct is None:
             continue
-        rows_seen.setdefault((route, wt), {})[int(round(price))] = (
-            rows_seen.get((route, wt), {}).get(int(round(price)), 0) + 1
+        rows_seen.setdefault((route, ct), {})[int(round(price))] = (
+            rows_seen.get((route, ct), {}).get(int(round(price)), 0) + 1
         )
     wb.close()
     rows: list[TariffRow] = []
     warnings: list[str] = []
-    for (route, wt), counts in rows_seen.items():
+    for (route, ct), counts in rows_seen.items():
         best_price = max(counts.items(), key=lambda kv: kv[1])[0]
         pickup, dropoff = _split_route(route)
         rows.append(TariffRow(
             pickup_raw=pickup,
             dropoff_raw=dropoff,
-            work_type=wt,
+            work_type="CHUYEN_BAI",
             unit_price=best_price,
+            cont_type=ct,
             note=f"settlement modal across {sum(counts.values())} trips",
         ))
     if not rows:

@@ -2,10 +2,8 @@
 
 from enum import StrEnum
 
-# Re-export from value_objects (single source of truth)
-from app.contexts.operations.domain.value_objects import (  # noqa: F401
-    WorkType,
-)
+# Re-export from schemas (single source of truth)
+from app.schemas._enums import WorkType as WorkType  # noqa: F401
 
 
 class SalaryStatus(StrEnum):

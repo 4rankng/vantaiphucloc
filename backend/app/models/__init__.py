@@ -19,6 +19,7 @@ from .domain import (  # noqa: F401
     DriverSalaryConfig,
 )
 from .audit_log import AuditLog  # noqa: F401
+from .push import PushSubscription  # noqa: F401
 
 __all__ = [
     "User",
@@ -37,4 +38,5 @@ __all__ = [
     "VehicleExpense",
     "DriverSalaryConfig",
     "AuditLog",
+    "PushSubscription",
 ]

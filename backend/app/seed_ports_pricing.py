@@ -36,22 +36,6 @@ _MEDIA_PATH = (
     Path.home() / ".openclaw" / "media" / "inbound"
 )
 
-# 5 operation types from the Excel
-_OPERATION_TYPES = {
-    "XUẤT/ NHẬP TÀU",
-    "CHUYỂN BÃI",
-    "LẤY VỎ HẠ HÀNG",
-    "ĐÓNG KHO",
-    "CHẠY SÀ LAN",
-}
-
-# Work type columns in the Excel
-_WORK_TYPE_COLUMNS = [
-    ("F20", 5),   # Column E
-    ("F40", 6),   # Column F
-    ("E20", 7),   # Column G
-    ("E40", 8),   # Column H
-]
 
 
 def _find_excel() -> Path:
@@ -68,13 +52,30 @@ def _find_excel() -> Path:
     )
 
 
+def _normalize_operation_type(value: str | None) -> str:
+    if not value:
+        return "CHUYEN_BAI"
+    norm = value.strip().upper()
+    if "CHUYỂN BÃI" in norm or "CHUYEN BAI" in norm:
+        return "CHUYEN_BAI"
+    if "XUẤT" in norm or "NHẬP" in norm or "TAU" in norm or "TÀU" in norm:
+        return "XUAT_TAU"
+    if "LẤY VỎ" in norm:
+        return "LAY_VO_HA_HANG"
+    if "ĐÓNG KHO" in norm:
+        return "DONG_KHO"
+    if "SÀ LAN" in norm:
+        return "CHA_SALAN"
+    return "CHUYEN_BAI"
+
+
 def _read_excel(path: Path) -> tuple[list[str], list[dict]]:
     """Parse both sheets from the Excel file.
 
     Returns:
         ports: list of 62 port names
         pricing_rows: list of dicts with keys:
-            client_name, pickup, dropoff, F20, F40, E20, E40, operation_type
+            client_name, pickup, dropoff, price, work_type
     """
     # data_only=True reads cached formula results
     wb = load_workbook(path, data_only=True)
@@ -105,15 +106,21 @@ def _read_excel(path: Path) -> tuple[list[str], list[dict]]:
             except (ValueError, TypeError):
                 return None
 
-        pricing_rows.append({
-            "client_name": str(client_name).strip(),
-            "pickup": str(row[2]).strip() if row[2] else None,
-            "dropoff": str(row[3]).strip() if row[3] else None,
+        prices = {
             "F20": _val(row[4]) if len(row) > 4 else None,
             "F40": _val(row[5]) if len(row) > 5 else None,
             "E20": _val(row[6]) if len(row) > 6 else None,
             "E40": _val(row[7]) if len(row) > 7 else None,
-            "operation_type": str(row[8]).strip() if row[8] else None,
+        }
+        best_price = max((v for v in prices.values() if v), default=None)
+        operation_type = str(row[8]).strip() if row[8] else None
+
+        pricing_rows.append({
+            "client_name": str(client_name).strip(),
+            "pickup": str(row[2]).strip() if row[2] else None,
+            "dropoff": str(row[3]).strip() if row[3] else None,
+            "price": best_price,
+            "work_type": _normalize_operation_type(operation_type),
         })
 
     return ports, pricing_rows
@@ -208,7 +215,6 @@ async def seed_ports_pricing() -> None:
         for p in result.scalars().all():
             key = (
                 p.client_id,
-                p.operation_type,
                 p.work_type,
                 p.pickup_location_id,
                 p.dropoff_location_id,
@@ -237,48 +243,45 @@ async def seed_ports_pricing() -> None:
                 print(f"  ⚠ Skip: location not found — {pickup_name} → {dropoff_name}")
                 continue
 
-            operation_type = row["operation_type"]
+            work_type = row.get("work_type", "CHUYEN_BAI")
+            price = row.get("price")
+            if price is None or price == 0:
+                skipped_no_price += 1
+                continue
 
-            for work_type in ("F20", "F40", "E20", "E40"):
-                price = row[work_type]
-                if price is None or price == 0:
-                    continue
+            dedup_key = (
+                client.id,
+                work_type,
+                pickup_loc.id,
+                dropoff_loc.id,
+            )
 
-                dedup_key = (
-                    client.id,
-                    operation_type,
-                    work_type,
-                    pickup_loc.id,
-                    dropoff_loc.id,
-                )
+            if dedup_key in existing_pricings:
+                skipped_existing += 1
+                continue
 
-                if dedup_key in existing_pricings:
-                    skipped_existing += 1
-                    continue
+            pricing = Pricing(
+                client_id=client.id,
+                work_type=work_type,
+                pickup_location_id=pickup_loc.id,
+                dropoff_location_id=dropoff_loc.id,
+                is_active=True,
+            )
+            db.add(pricing)
+            await db.flush()
 
-                pricing = Pricing(
-                    client_id=client.id,
-                    operation_type=operation_type,
-                    work_type=work_type,
-                    pickup_location_id=pickup_loc.id,
-                    dropoff_location_id=dropoff_loc.id,
-                    is_active=True,
-                )
-                db.add(pricing)
-                await db.flush()
+            db.add(PricingLine(
+                pricing_id=pricing.id,
+                quantity=1,
+                unit_price=price,
+                driver_salary=0,
+                allowance=0,
+            ))
+            await db.flush()
 
-                db.add(PricingLine(
-                    pricing_id=pricing.id,
-                    quantity=1,
-                    unit_price=price,
-                    driver_salary=0,
-                    allowance=0,
-                ))
-                await db.flush()
-
-                existing_pricings[dedup_key] = pricing
-                created_pricings += 1
-                print(f"  + {client.code}: {pickup_name} → {dropoff_name} {work_type} = {price:,} ({operation_type})")
+            existing_pricings[dedup_key] = pricing
+            created_pricings += 1
+            print(f"  + {client.code}: {pickup_name} → {dropoff_name} {work_type} = {price:,}")
 
         await db.commit()
 

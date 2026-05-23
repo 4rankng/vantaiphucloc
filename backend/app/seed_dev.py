@@ -161,58 +161,34 @@ SEED_VENDORS = [
 
 ALL_PRICING = {
     "HAIAN": {
-        ("NHĐV", "HẢI AN", "F20"): {"unit_price": 386100, "driver_salary": 150000, "allowance": 50000},
-        ("NHĐV", "HẢI AN", "F40"): {"unit_price": 448500, "driver_salary": 180000, "allowance": 70000},
-        ("HẢI AN", "NHĐV", "F20"): {"unit_price": 386100, "driver_salary": 150000, "allowance": 50000},
-        ("HẢI AN", "NHĐV", "F40"): {"unit_price": 448500, "driver_salary": 180000, "allowance": 70000},
-        ("NHĐV", "VIP GREEN", "F20"): {"unit_price": 400000, "driver_salary": 155000, "allowance": 50000},
-        ("NHĐV", "VIP GREEN", "F40"): {"unit_price": 465000, "driver_salary": 185000, "allowance": 70000},
-        ("VIP GREEN", "NHĐV", "F20"): {"unit_price": 400000, "driver_salary": 155000, "allowance": 50000},
-        ("VIP GREEN", "NHĐV", "F40"): {"unit_price": 465000, "driver_salary": 185000, "allowance": 70000},
-        ("HẢI AN", "GREEN PORT", "F20"): {"unit_price": 420000, "driver_salary": 160000, "allowance": 55000},
-        ("HẢI AN", "GREEN PORT", "F40"): {"unit_price": 490000, "driver_salary": 190000, "allowance": 75000},
-        ("GREEN PORT", "HẢI AN", "F20"): {"unit_price": 420000, "driver_salary": 160000, "allowance": 55000},
-        ("GREEN PORT", "HẢI AN", "F40"): {"unit_price": 490000, "driver_salary": 190000, "allowance": 75000},
-        ("NHĐV", "ĐÌNH VŨ", "F20"): {"unit_price": 370000, "driver_salary": 145000, "allowance": 45000},
-        ("NHĐV", "ĐÌNH VŨ", "F40"): {"unit_price": 430000, "driver_salary": 175000, "allowance": 65000},
-        ("ĐÌNH VŨ", "NHĐV", "F20"): {"unit_price": 370000, "driver_salary": 145000, "allowance": 45000},
-        ("ĐÌNH VŨ", "NHĐV", "F40"): {"unit_price": 430000, "driver_salary": 175000, "allowance": 65000},
-        ("HẢI AN", "CHU VĂN AN", "F20"): {"unit_price": 395000, "driver_salary": 152000, "allowance": 48000},
-        ("HẢI AN", "CHU VĂN AN", "F40"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
-        ("CHU VĂN AN", "HẢI AN", "F20"): {"unit_price": 395000, "driver_salary": 152000, "allowance": 48000},
-        ("CHU VĂN AN", "HẢI AN", "F40"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
-        ("NHĐV", "NAM ĐỊNH VỤ", "F20"): {"unit_price": 375000, "driver_salary": 148000, "allowance": 46000},
-        ("NHĐV", "NAM ĐỊNH VỤ", "F40"): {"unit_price": 435000, "driver_salary": 178000, "allowance": 66000},
-        ("NAM ĐỊNH VỤ", "NHĐV", "F20"): {"unit_price": 375000, "driver_salary": 148000, "allowance": 46000},
-        ("NAM ĐỊNH VỤ", "NHĐV", "F40"): {"unit_price": 435000, "driver_salary": 178000, "allowance": 66000},
+        ("NHĐV", "HẢI AN"): {"unit_price": 448500, "driver_salary": 180000, "allowance": 70000},
+        ("HẢI AN", "NHĐV"): {"unit_price": 448500, "driver_salary": 180000, "allowance": 70000},
+        ("NHĐV", "VIP GREEN"): {"unit_price": 465000, "driver_salary": 185000, "allowance": 70000},
+        ("VIP GREEN", "NHĐV"): {"unit_price": 465000, "driver_salary": 185000, "allowance": 70000},
+        ("HẢI AN", "GREEN PORT"): {"unit_price": 490000, "driver_salary": 190000, "allowance": 75000},
+        ("GREEN PORT", "HẢI AN"): {"unit_price": 490000, "driver_salary": 190000, "allowance": 75000},
+        ("NHĐV", "ĐÌNH VŨ"): {"unit_price": 430000, "driver_salary": 175000, "allowance": 65000},
+        ("ĐÌNH VŨ", "NHĐV"): {"unit_price": 430000, "driver_salary": 175000, "allowance": 65000},
+        ("HẢI AN", "CHU VĂN AN"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
+        ("CHU VĂN AN", "HẢI AN"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
+        ("NHĐV", "NAM ĐỊNH VỤ"): {"unit_price": 435000, "driver_salary": 178000, "allowance": 66000},
+        ("NAM ĐỊNH VỤ", "NHĐV"): {"unit_price": 435000, "driver_salary": 178000, "allowance": 66000},
     },
     "GLORY": {
-        ("NHĐV", "HẢI AN", "F20"): {"unit_price": 410000, "driver_salary": 155000, "allowance": 52000},
-        ("NHĐV", "HẢI AN", "F40"): {"unit_price": 475000, "driver_salary": 185000, "allowance": 72000},
-        ("HẢI AN", "NHĐV", "F20"): {"unit_price": 410000, "driver_salary": 155000, "allowance": 52000},
-        ("HẢI AN", "NHĐV", "F40"): {"unit_price": 475000, "driver_salary": 185000, "allowance": 72000},
-        ("NHĐV", "VIP GREEN", "F20"): {"unit_price": 425000, "driver_salary": 160000, "allowance": 52000},
-        ("NHĐV", "VIP GREEN", "F40"): {"unit_price": 495000, "driver_salary": 190000, "allowance": 72000},
-        ("VIP GREEN", "NHĐV", "F20"): {"unit_price": 425000, "driver_salary": 160000, "allowance": 52000},
-        ("VIP GREEN", "NHĐV", "F40"): {"unit_price": 495000, "driver_salary": 190000, "allowance": 72000},
-        ("HẢI AN", "GREEN PORT", "F20"): {"unit_price": 445000, "driver_salary": 165000, "allowance": 57000},
-        ("HẢI AN", "GREEN PORT", "F40"): {"unit_price": 518000, "driver_salary": 195000, "allowance": 77000},
-        ("NHĐV", "ĐÌNH VŨ", "F20"): {"unit_price": 395000, "driver_salary": 150000, "allowance": 47000},
-        ("NHĐV", "ĐÌNH VŨ", "F40"): {"unit_price": 458000, "driver_salary": 180000, "allowance": 67000},
-        ("HẢI AN", "CHU VĂN AN", "F20"): {"unit_price": 420000, "driver_salary": 157000, "allowance": 50000},
-        ("HẢI AN", "CHU VĂN AN", "F40"): {"unit_price": 485000, "driver_salary": 187000, "allowance": 70000},
+        ("NHĐV", "HẢI AN"): {"unit_price": 475000, "driver_salary": 185000, "allowance": 72000},
+        ("HẢI AN", "NHĐV"): {"unit_price": 475000, "driver_salary": 185000, "allowance": 72000},
+        ("NHĐV", "VIP GREEN"): {"unit_price": 495000, "driver_salary": 190000, "allowance": 72000},
+        ("VIP GREEN", "NHĐV"): {"unit_price": 495000, "driver_salary": 190000, "allowance": 72000},
+        ("HẢI AN", "GREEN PORT"): {"unit_price": 518000, "driver_salary": 195000, "allowance": 77000},
+        ("NHĐV", "ĐÌNH VŨ"): {"unit_price": 458000, "driver_salary": 180000, "allowance": 67000},
+        ("HẢI AN", "CHU VĂN AN"): {"unit_price": 485000, "driver_salary": 187000, "allowance": 70000},
     },
     "CONSCIENCE": {
-        ("NHĐV", "HẢI AN", "F20"): {"unit_price": 395000, "driver_salary": 152000, "allowance": 48000},
-        ("NHĐV", "HẢI AN", "F40"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
-        ("HẢI AN", "NHĐV", "F20"): {"unit_price": 395000, "driver_salary": 152000, "allowance": 48000},
-        ("HẢI AN", "NHĐV", "F40"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
-        ("NHĐV", "VIP GREEN", "F20"): {"unit_price": 410000, "driver_salary": 157000, "allowance": 48000},
-        ("NHĐV", "VIP GREEN", "F40"): {"unit_price": 478000, "driver_salary": 187000, "allowance": 68000},
-        ("HẢI AN", "GREEN PORT", "F20"): {"unit_price": 430000, "driver_salary": 162000, "allowance": 53000},
-        ("HẢI AN", "GREEN PORT", "F40"): {"unit_price": 500000, "driver_salary": 192000, "allowance": 73000},
-        ("NHĐV", "ĐÌNH VŨ", "F20"): {"unit_price": 380000, "driver_salary": 147000, "allowance": 44000},
-        ("NHĐV", "ĐÌNH VŨ", "F40"): {"unit_price": 442000, "driver_salary": 177000, "allowance": 64000},
+        ("NHĐV", "HẢI AN"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
+        ("HẢI AN", "NHĐV"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
+        ("NHĐV", "VIP GREEN"): {"unit_price": 478000, "driver_salary": 187000, "allowance": 68000},
+        ("HẢI AN", "GREEN PORT"): {"unit_price": 500000, "driver_salary": 192000, "allowance": 73000},
+        ("NHĐV", "ĐÌNH VŨ"): {"unit_price": 442000, "driver_salary": 177000, "allowance": 64000},
     },
 }
 
@@ -262,14 +238,13 @@ def _generate_trips_for_month(year: int, month: int, plates: list[str]) -> list[
         day = rng.randint(1, days_in_month)
         pickup, dropoff = rng.choice(ROUTES)
         size = rng.choices([20, 40], weights=[75, 25])[0]
-        wt = f"F{size}"
         client_code = rng.choices(CLIENT_KEYS, weights=CLIENT_W)[0]
         pricing_for_client = ALL_PRICING.get(client_code, {})
-        prices = pricing_for_client.get((pickup, dropoff, wt))
+        prices = pricing_for_client.get((pickup, dropoff))
         if prices:
             unit_price = prices["unit_price"]
         else:
-            fallback = ALL_PRICING["HAIAN"].get((pickup, dropoff, wt))
+            fallback = ALL_PRICING["HAIAN"].get((pickup, dropoff))
             unit_price = fallback["unit_price"] if fallback else 400000
         trips.append({
             "container": _rand_container(),
@@ -524,7 +499,7 @@ async def seed_dev() -> None:
 
         for client_code, routes in ALL_PRICING.items():
             client = org_map[client_code]
-            for (pickup_name, dropoff_name, work_type), prices in routes.items():
+            for (pickup_name, dropoff_name), prices in routes.items():
                 pickup_loc = loc_map.get(pickup_name)
                 dropoff_loc = loc_map.get(dropoff_name)
                 if not pickup_loc or not dropoff_loc:
@@ -532,7 +507,7 @@ async def seed_dev() -> None:
                 result = await db.execute(
                     select(Pricing).where(
                         Pricing.client_id == client.id,
-                        Pricing.work_type == work_type,
+                        Pricing.work_type == "CHUYEN_BAI",
                         Pricing.pickup_location_id == pickup_loc.id,
                         Pricing.dropoff_location_id == dropoff_loc.id,
                     )
@@ -540,7 +515,7 @@ async def seed_dev() -> None:
                 pricing = result.scalars().first()
                 if pricing is None:
                     pricing = Pricing(
-                        client_id=client.id, work_type=work_type,
+                        client_id=client.id, work_type="CHUYEN_BAI",
                         pickup_location_id=pickup_loc.id,
                         dropoff_location_id=dropoff_loc.id,
                         is_active=True,
@@ -554,8 +529,8 @@ async def seed_dev() -> None:
                         allowance=prices["allowance"],
                     ))
                     await db.flush()
-                    print(f"  + {client_code}: {pickup_name}→{dropoff_name} {work_type}: {prices['unit_price']:,}")
-                pricing_map[(client_code, pickup_name, dropoff_name, work_type)] = pricing
+                    print(f"  + {client_code}: {pickup_name}→{dropoff_name} CHUYEN_BAI: {prices['unit_price']:,}")
+                pricing_map[(client_code, pickup_name, dropoff_name)] = pricing
         await db.commit()
 
         # ── 8. DeliveredTrips + BookedTrips ───────────────────────────────
@@ -571,7 +546,7 @@ async def seed_dev() -> None:
         for trip in trips:
             pickup = trip["pickup"]
             dropoff = trip["dropoff"]
-            wt = f"F{trip['size']}"
+            wt = "CHUYEN_BAI"
             plate = trip["plate"]
             client_code = trip.get("client_code", "HAIAN")
 
@@ -581,10 +556,10 @@ async def seed_dev() -> None:
 
             client = org_map[client_code]
             client_pricing = ALL_PRICING.get(client_code, {})
-            prices = client_pricing.get((pickup, dropoff, wt))
+            prices = client_pricing.get((pickup, dropoff))
             if not prices:
-                prices = ALL_PRICING["HAIAN"].get((pickup, dropoff, wt), {})
-            pricing = pricing_map.get((client_code, pickup, dropoff, wt))
+                prices = ALL_PRICING["HAIAN"].get((pickup, dropoff), {})
+            pricing = pricing_map.get((client_code, pickup, dropoff))
             trip_date = date.fromisoformat(trip["trip_date"]) if trip["trip_date"] else date(2026, 4, 1)
 
             drv_plate = plate if plate in driver_map else rng.choice(plates_list)
@@ -598,7 +573,7 @@ async def seed_dev() -> None:
                 dropoff_location_id=loc_map[dropoff].id,
                 driver_id=drv.id,
                 vessel=trip.get("vessel", ""),
-                work_type=wt,
+                work_type="CHUYEN_BAI",
                 cont_number=trip["container"],
                 cont_type=f"F{trip['size']}",
                 revenue=trip["unit_price"],
@@ -616,7 +591,7 @@ async def seed_dev() -> None:
                 pickup_location_id=loc_map[pickup].id,
                 dropoff_location_id=loc_map[dropoff].id,
                 vessel=trip.get("vessel", ""),
-                work_type=wt,
+                work_type="CHUYEN_BAI",
                 cont_number=trip["container"],
                 cont_type=f"F{trip['size']}",
                 revenue=trip["unit_price"],
@@ -640,13 +615,12 @@ async def seed_dev() -> None:
             for _ in range(n_pending):
                 pickup, dropoff = rng.choice(ROUTES)
                 size = rng.choices([20, 40], weights=[75, 25])[0]
-                wt = f"F{size}"
                 client_code = rng.choices(CLIENT_KEYS, weights=CLIENT_W)[0]
                 client = org_map[client_code]
                 client_pricing = ALL_PRICING.get(client_code, {})
-                prices = client_pricing.get((pickup, dropoff, wt))
+                prices = client_pricing.get((pickup, dropoff))
                 if not prices:
-                    prices = ALL_PRICING["HAIAN"].get((pickup, dropoff, wt), {})
+                    prices = ALL_PRICING["HAIAN"].get((pickup, dropoff), {})
                 unit_price = prices.get("unit_price", 400000) if prices else 400000
                 trip_date = date(year, month, rng.randint(1, days_in_month))
 
@@ -656,9 +630,9 @@ async def seed_dev() -> None:
                     pickup_location_id=loc_map[pickup].id,
                     dropoff_location_id=loc_map[dropoff].id,
                     vessel=rng.choice(VESSELS),
-                    work_type=wt,
+                    work_type="CHUYEN_BAI",
                     cont_number=_rand_container(),
-                    cont_type=wt,
+                    cont_type=f"F{size}",
                     revenue=unit_price,
                 )
                 db.add(to)
