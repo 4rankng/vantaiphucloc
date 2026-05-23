@@ -329,60 +329,6 @@ class CreateBookedTripFromImport:
         )
 
 
-class ApplyPricingToTrips:
-    """Bulk-apply tiered pricing to a set of BookedTrips."""
-
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
-
-    async def __call__(
-        self,
-        *,
-        client_id: int | None,
-        trip_ids: list[int] | None,
-        skip_already_priced: bool,
-    ) -> tuple[int, list[int]]:
-        from app.contexts.customer_pricing.infrastructure.pricing_lookup import (
-            find_tiered_pricing,
-        )
-        from app.contexts.operations.infrastructure.import_queries import (
-            list_unpriced_trips,
-        )
-
-        rows = await list_unpriced_trips(
-            self.session,
-            client_id=client_id,
-            trip_ids=trip_ids,
-        )
-
-        priced = 0
-        unpriced_ids: list[int] = []
-        for trip in rows:
-            if skip_already_priced and trip.revenue and trip.revenue > 0:
-                priced += 1
-                continue
-            wt = trip.work_type
-            if not wt:
-                unpriced_ids.append(trip.id)
-                continue
-            tiered = await find_tiered_pricing(
-                self.session,
-                client_id=trip.client_id,
-                work_type=wt,
-                quantity=1,
-                pickup_location_id=trip.pickup_location_id,
-                dropoff_location_id=trip.dropoff_location_id,
-            )
-            if tiered is None:
-                unpriced_ids.append(trip.id)
-                continue
-            trip.revenue = tiered.revenue
-            priced += 1
-
-        await self.session.commit()
-        return priced, unpriced_ids
-
-
 # ── Helpers ──────────────────────────────────────────────────────
 
 

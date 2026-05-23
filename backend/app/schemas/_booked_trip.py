@@ -24,7 +24,6 @@ class BookedTripCreate(BaseModel):
     vessel: str | None = None
     vehicle_plate: str | None = None
     work_type: str = ""
-    revenue: int = Field(ge=0, default=0)
 
 
 class BookedTripUpdate(BaseModel):
@@ -37,9 +36,6 @@ class BookedTripUpdate(BaseModel):
     vessel: str | None = None
     vehicle_plate: str | None = None
     work_type: str | None = None
-    revenue: int | None = None
-    driver_salary: int | None = None
-    allowance: int | None = None
     matched: bool | None = None
 
 
@@ -54,7 +50,6 @@ class BookedTripOut(BaseModel):
     vessel: str | None = None
     vehicle_plate: str | None = None
     work_type: str = ""
-    revenue: int
     matched: bool
     created_at: datetime
     updated_at: datetime

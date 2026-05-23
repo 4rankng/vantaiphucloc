@@ -43,7 +43,6 @@ from app.contexts.operations.application.dto import (
     ImportTripRow,
 )
 from app.contexts.operations.interface.dependencies import (
-    get_apply_pricing_to_trips,
     get_create_booked_trip_from_import,
 )
 from app.contexts.operations.interface.error_translation import translate
@@ -319,78 +318,6 @@ async def commit_customer_excel(
         locations_review_flagged=result.locations_review_flagged,
         errors=result.errors,
         created_trip_ids=result.created_trip_ids,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Apply pricing
-# ---------------------------------------------------------------------------
-
-
-class ApplyPricingRequest(BaseModel):
-    client_id: int
-    booked_trip_ids: list[int] | None = None
-
-
-class ApplyPricingResponse(BaseModel):
-    priced: int
-    not_found: int
-    not_found_trip_ids: list[int] = Field(default_factory=list)
-
-
-class ApplyPricingByIdsRequest(BaseModel):
-    trip_ids: list[int]
-
-
-class ApplyPricingByIdsResponse(BaseModel):
-    priced: int
-    unpriced: int
-    unpriced_trip_ids: list[int] = Field(default_factory=list)
-
-
-@router.post("/apply-pricing", response_model=ApplyPricingResponse)
-async def apply_pricing(
-    body: ApplyPricingRequest = Body(...),
-    use_case=Depends(get_apply_pricing_to_trips),
-    _user: User = Depends(require_roles("accountant", "superadmin")),
-):
-    """Legacy endpoint — kept for back-compat. See
-    /imports/customer-excel/apply-pricing for the trip-id-only shape."""
-    priced, unpriced_ids = await use_case(
-        client_id=body.client_id,
-        trip_ids=body.booked_trip_ids,
-        skip_already_priced=False,
-    )
-    return ApplyPricingResponse(
-        priced=priced,
-        not_found=len(unpriced_ids),
-        not_found_trip_ids=unpriced_ids[:50],
-    )
-
-
-@router.post(
-    "/customer-excel/apply-pricing", response_model=ApplyPricingByIdsResponse
-)
-async def apply_pricing_to_trip_ids(
-    body: ApplyPricingByIdsRequest = Body(...),
-    use_case=Depends(get_apply_pricing_to_trips),
-    _user: User = Depends(require_roles("accountant", "superadmin")),
-):
-    """Bulk-apply pricing to a specific list of trip ids. Idempotent —
-    trips with revenue > 0 are counted as already priced and not
-    re-touched."""
-    if not body.trip_ids:
-        return ApplyPricingByIdsResponse(priced=0, unpriced=0, unpriced_trip_ids=[])
-
-    priced, unpriced_ids = await use_case(
-        client_id=None,
-        trip_ids=body.trip_ids,
-        skip_already_priced=True,
-    )
-    return ApplyPricingByIdsResponse(
-        priced=priced,
-        unpriced=len(unpriced_ids),
-        unpriced_trip_ids=unpriced_ids[:200],
     )
 
 

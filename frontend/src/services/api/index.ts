@@ -148,7 +148,6 @@ export const apiClient = {
   listExcelSheets: importsApi.listExcelSheets,
   previewCustomerExcel: importsApi.previewCustomerExcel,
   commitCustomerExcel: importsApi.commitCustomerExcel,
-  applyPricingToTripIds: importsApi.applyPricingToTripIds,
   uploadVendorReconciliation: importsApi.uploadVendorReconciliation,
   previewVendorReconciliation: importsApi.previewVendorReconciliation,
   commitVendorReconciliation: importsApi.commitVendorReconciliation,

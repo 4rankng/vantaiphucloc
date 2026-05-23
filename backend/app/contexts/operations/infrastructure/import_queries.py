@@ -51,22 +51,3 @@ async def find_duplicate_trip(
         .limit(1)
     )
     return res.scalar_one_or_none()
-
-
-async def list_unpriced_trips(
-    session: AsyncSession,
-    *,
-    client_id: int | None,
-    trip_ids: list[int] | None,
-) -> Sequence[BookedTripORM]:
-    """Trips eligible for bulk apply-pricing."""
-    q = select(BookedTripORM)
-    if client_id is not None:
-        q = q.where(
-            BookedTripORM.client_id == client_id,
-            (BookedTripORM.revenue == 0) | (BookedTripORM.revenue.is_(None)),
-        )
-    if trip_ids:
-        q = q.where(BookedTripORM.id.in_(trip_ids))
-    res = await session.execute(q)
-    return list(res.scalars().all())

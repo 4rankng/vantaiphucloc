@@ -54,7 +54,6 @@ class SqlBookedTripRepository(BookedTripRepository):
         matched: bool | None = None,
         trip_date_from: date | None = None,
         trip_date_to: date | None = None,
-        unpriced_only: bool = False,
     ) -> tuple[Sequence[BookedTrip], int]:
         q = select(BookedTripORM)
         if client_id is not None:
@@ -65,8 +64,6 @@ class SqlBookedTripRepository(BookedTripRepository):
             q = q.where(BookedTripORM.trip_date >= trip_date_from)
         if trip_date_to is not None:
             q = q.where(BookedTripORM.trip_date <= trip_date_to)
-        if unpriced_only:
-            q = q.where((BookedTripORM.revenue == 0) | (BookedTripORM.revenue.is_(None)))
         total = await self.session.scalar(
             select(func.count()).select_from(q.subquery())
         ) or 0

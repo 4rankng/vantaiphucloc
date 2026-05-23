@@ -6,7 +6,6 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.operations.application import (
-    ApplyPricingToTrips,
     BatchCreateDeliveredTrips,
     CreateBookedTrip,
     CreateBookedTripFromImport,
@@ -86,12 +85,6 @@ def get_create_booked_trip_from_import(
     db: AsyncSession = Depends(get_db),
 ) -> CreateBookedTripFromImport:
     return CreateBookedTripFromImport(repo, db)
-
-
-def get_apply_pricing_to_trips(
-    db: AsyncSession = Depends(get_db),
-) -> ApplyPricingToTrips:
-    return ApplyPricingToTrips(db)
 
 
 # ── delivered_trip use cases ────────────────────────────────────────

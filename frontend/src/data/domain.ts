@@ -203,7 +203,6 @@ export interface BookedTrip {
   vessel: string | null
   vehiclePlate?: string | null
   workType?: WorkType | null
-  revenue: number
   matchedDeliveredTripIds: number[]
   matched: boolean
   createdAt: string

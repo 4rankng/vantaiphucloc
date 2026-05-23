@@ -51,12 +51,18 @@ async def get_dashboard_summary(
         except ValueError:
             pass
 
-    # Revenue: sum of revenue per trip (no stored revenue column)
-    revenue_query = select(func.coalesce(func.sum(BookedTrip.revenue), 0))
+    # Revenue: sum of revenue from matched DeliveredTrips
+    revenue_query = select(func.coalesce(func.sum(DeliveredTrip.revenue), 0)).where(
+        DeliveredTrip.matched == True  # noqa: E712
+    )
     if parsed_from:
-        revenue_query = revenue_query.where(BookedTrip.created_at >= parsed_from)
+        revenue_query = revenue_query.where(
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= parsed_from
+        )
     if parsed_to:
-        revenue_query = revenue_query.where(BookedTrip.created_at < parsed_to + timedelta(days=1))
+        revenue_query = revenue_query.where(
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) < parsed_to + timedelta(days=1)
+        )
     revenue_q = await db.execute(revenue_query)
     total_revenue = revenue_q.scalar() or 0
 
@@ -87,14 +93,18 @@ async def get_dashboard_summary(
     active_q = await db.execute(active_query)
     active_trips = active_q.scalar() or 0
 
-    # outstanding_debt: confirmed receivables (matched/confirmed/completed booked trips)
-    debt_query = select(func.coalesce(func.sum(BookedTrip.revenue), 0)).where(
-        BookedTrip.matched == True
+    # outstanding_debt: confirmed receivables (matched DeliveredTrips)
+    debt_query = select(func.coalesce(func.sum(DeliveredTrip.revenue), 0)).where(
+        DeliveredTrip.matched == True  # noqa: E712
     )
     if parsed_from:
-        debt_query = debt_query.where(BookedTrip.created_at >= parsed_from)
+        debt_query = debt_query.where(
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= parsed_from
+        )
     if parsed_to:
-        debt_query = debt_query.where(BookedTrip.created_at < parsed_to + timedelta(days=1))
+        debt_query = debt_query.where(
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) < parsed_to + timedelta(days=1)
+        )
     outstanding_debt = (await db.execute(debt_query)).scalar() or 0
 
     # Use vehicle_drivers join for plate lookup so multi-driver vehicles
@@ -237,17 +247,20 @@ async def get_kpi_trends(
     )).all()
     salary_map: dict = {_normalize(r[0]): int(r[1] or 0) for r in salary_rows}
 
-    # ── 6. Revenue per day (all trips dated in window) ───────────────────────
+    # ── 6. Revenue per day (matched DeliveredTrips dated in window) ───────────
     revenue_rows = (await db.execute(
         select(
-            BookedTrip.trip_date.label("d"),
-            func.coalesce(func.sum(BookedTrip.revenue), 0),
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)).label("d"),
+            func.coalesce(func.sum(DeliveredTrip.revenue), 0),
         )
         .where(
-            BookedTrip.trip_date >= start_date,
-            BookedTrip.trip_date <= parsed_end,
+            DeliveredTrip.matched == True,  # noqa: E712
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= start_date,
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= parsed_end,
         )
-        .group_by(BookedTrip.trip_date)
+        .group_by(
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+        )
     )).all()
     revenue_map: dict = {_normalize(r[0]): int(r[1] or 0) for r in revenue_rows}
 

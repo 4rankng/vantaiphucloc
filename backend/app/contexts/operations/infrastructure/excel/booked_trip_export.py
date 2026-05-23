@@ -98,7 +98,6 @@ async def generate_booked_trips_excel(
                 plate,
                 vessel,
                 match_status,
-                to.revenue or "",
             ])
     else:
         for to in booked_trips:
@@ -108,7 +107,6 @@ async def generate_booked_trips_excel(
                 loc_name_by_id.get(to.pickup_location_id, ""),
                 loc_name_by_id.get(to.dropoff_location_id, ""),
                 to.cont_number or "", to.cont_type or "",
-                to.revenue, to.revenue, 0,
                 "Đã đối soát" if to.matched else "Chờ ghép",
             ])
 
@@ -183,7 +181,7 @@ async def generate_doi_soat_excel(
     month_label = df.strftime("%m/%Y")
     ws.title = f"SL T{df.month}.{str(df.year)[2:]}"
 
-    num_cols = 14  # A-N
+    num_cols = 12  # A-L
     last_col = get_column_letter(num_cols)
 
     # -- Styles --
@@ -232,7 +230,7 @@ async def generate_doi_soat_excel(
         "STT", "NGÀY ĐI", "CHỦ HÀNG", "SỐ CONTAINER",
         "F20'", "F40'", "E20'", "E40'",
         "SỐ XE CHẠY", "ĐIỂM ĐI", "ĐIỂM ĐẾN",
-        "CƯỚC CHUYẾN", "TỔNG TT", "TÁC NGHIỆP",
+        "TÁC NGHIỆP",
     ]
     ws.append([])  # row 9 empty
     ws.append(headers)  # row 10
@@ -252,10 +250,8 @@ async def generate_doi_soat_excel(
         f"=SUBTOTAL(9,H12:H{last_data_row})",
         "", "", "",
         "",
-        f"=SUBTOTAL(9,M12:M{last_data_row})",
-        "",
     ])
-    for col_num in [5, 6, 7, 8, 13]:
+    for col_num in [5, 6, 7, 8]:
         ws.cell(row=11, column=col_num).font = _bold
         ws.cell(row=11, column=col_num).alignment = center
 
@@ -268,7 +264,6 @@ async def generate_doi_soat_excel(
         dropoff = loc_name_by_id.get(to.dropoff_location_id or 0, "")
         plate = to.vehicle_plate or ""
         vessel = to.vessel or ""
-        revenue = to.revenue or 0
         trip_date_str = to.trip_date.strftime("%d/%m/%Y") if to.trip_date else ""
 
         ct = (to.cont_type or "").upper()
@@ -285,8 +280,6 @@ async def generate_doi_soat_excel(
             stt, trip_date_str, client_code, to.cont_number or "",
             f20, f40, e20, e40,
             plate, pickup, dropoff,
-            revenue if revenue else None,
-            f"=L{row_num}",
             "",  # work_type handled separately
         ])
 
@@ -294,23 +287,18 @@ async def generate_doi_soat_excel(
         for col_num in range(1, num_cols + 1):
             cell = ws.cell(row=row_num, column=col_num)
             cell.border = thin_border
-            if col_num in (1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 14):
+            if col_num in (1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12):
                 cell.alignment = center
             elif col_num == 4:
                 cell.alignment = left
-            elif col_num in (12, 13):
-                cell.alignment = right_align
-                cell.number_format = '#,##0'
-            if col_num == 13:
-                cell.font = _bold
 
     # Update subtotal range to actual last row
     actual_last = 11 + stt if stt > 0 else 12
-    for col_num, col_letter in [(5, "E"), (6, "F"), (7, "G"), (8, "H"), (13, "M")]:
+    for col_num, col_letter in [(5, "E"), (6, "F"), (7, "G"), (8, "H")]:
         ws.cell(row=11, column=col_num).value = f"=SUBTOTAL(9,{col_letter}12:{col_letter}{actual_last})"
 
     # -- Column widths --
-    col_widths = [6, 12, 12, 18, 6, 6, 6, 6, 14, 20, 20, 14, 14, 16]
+    col_widths = [6, 12, 12, 18, 6, 6, 6, 6, 14, 20, 20, 16]
     for i, width in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
 

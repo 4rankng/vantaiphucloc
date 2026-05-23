@@ -27,7 +27,6 @@ export interface BookedTripCreatePayload {
   unitPrice: number
   driverSalary: number
   allowance: number
-  revenue: number
   matchedDeliveredTripIds?: number[]
 }
 
@@ -44,7 +43,6 @@ export interface BookedTripUpdatePayload {
   unitPrice?: number
   driverSalary?: number
   allowance?: number
-  revenue?: number
   matched?: boolean
   isConfirmed?: boolean
   matchedDeliveredTripIds?: number[]

@@ -184,14 +184,23 @@ export function DeliveredTripDetailDrawer({
 
           {!trip.matched && (
             <div className="pt-2 flex justify-end">
-              <Button 
-                variant="outline" 
-                className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200"
+              <button
                 onClick={() => setShowAISuggest(true)}
+                className="ai-btn-glow relative group inline-flex items-center gap-2 px-5 py-2 rounded-full text-white text-sm font-semibold tracking-wide transition-all duration-300 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-1"
+                style={{ background: 'linear-gradient(to right, #6366f1, #a855f7, #ec4899)' }}
               >
-                <Sparkles className="h-4 w-4 mr-2" />
-                AI Đề xuất
-              </Button>
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+                    <path d="M20 3v4"/><path d="M22 5h-4"/>
+                    <path d="M4 17v2"/><path d="M5 18H3"/>
+                  </svg>
+                </span>
+                <span className="inline-flex items-center gap-2 group-hover:translate-x-2.5 transition-transform duration-300">
+                  AI Đề xuất
+                </span>
+                <span className="absolute inset-0 rounded-full border border-white/20 pointer-events-none" />
+              </button>
             </div>
           )}
 
@@ -227,19 +236,6 @@ export function DeliveredTripDetailDrawer({
                       displayValue={bookedTrip.contType}
                       options={CONT_TYPES.map((t) => ({ value: t, label: t }))}
                       onChange={(v) => updateBookedTrip.mutate({ id: bookedTrip.id, data: { contType: v as ContType } })}
-                    />
-                  </CriteriaEditRow>
-
-                  <CriteriaEditRow label="Doanh thu" className="col-span-1 border-b border-r border-[var(--line)]">
-                    <InlineEditable
-                      display={
-                        <span style={{ color: bookedTrip.revenue ? 'var(--ink)' : 'var(--ink-4)' }}>
-                          {bookedTrip.revenue ? bookedTrip.revenue.toLocaleString('vi-VN') + ' đ' : '—'}
-                        </span>
-                      }
-                      value={String(bookedTrip.revenue ?? '')}
-                      placeholder="Doanh thu"
-                      onSave={(v) => updateBookedTrip.mutateAsync({ id: bookedTrip.id, data: { revenue: Number(v) || 0 } })}
                     />
                   </CriteriaEditRow>
 

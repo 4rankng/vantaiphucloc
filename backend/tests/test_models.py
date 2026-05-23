@@ -105,9 +105,6 @@ class TestColumnNullability:
     def test_delivered_trip_revenue_not_nullable(self):
         assert _col(DeliveredTrip, "revenue").nullable is False
 
-    def test_booked_trip_revenue_not_nullable(self):
-        assert _col(BookedTrip, "revenue").nullable is False
-
     def test_client_name_not_nullable(self):
         assert _col(Client, "name").nullable is False
 
