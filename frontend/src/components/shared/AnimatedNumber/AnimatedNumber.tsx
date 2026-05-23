@@ -15,13 +15,15 @@ function easeOut(t: number): number {
 }
 
 function formatCompact(n: number): string {
-  if (n >= 1_000_000_000) {
-    const v = n / 1_000_000_000
-    return `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(2).replace(/0+$/, '')} tỷ`
+  const abs = Math.abs(n)
+  const sign = n < 0 ? '-' : ''
+  if (abs >= 1_000_000_000) {
+    const v = abs / 1_000_000_000
+    return `${sign}${v % 1 === 0 ? v.toFixed(0) : v.toFixed(2).replace(/0+$/, '')} tỷ`
   }
-  if (n >= 1_000_000) {
-    const v = n / 1_000_000
-    return `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(2).replace(/0+$/, '')} tr`
+  if (abs >= 1_000_000) {
+    const v = abs / 1_000_000
+    return `${sign}${v % 1 === 0 ? v.toFixed(0) : v.toFixed(2).replace(/0+$/, '')} tr`
   }
   return n.toLocaleString('vi-VN')
 }

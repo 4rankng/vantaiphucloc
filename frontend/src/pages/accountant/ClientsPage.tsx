@@ -8,6 +8,7 @@ import { useInfiniteScroll, LoadMoreSentinel, SearchInput, FieldActions } from '
 import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
 import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
 import { StatPill } from '@/components/shared/StatPill'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { useClientsPaged, useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { useDebounce } from '@/hooks/use-debounce'
@@ -330,14 +331,18 @@ export function ClientsPage() {
     <div className="space-y-6 animate-fade-in">
 
       {/* ── Header ── */}
-      <header>
-        <h1 className="typo-display">Chủ hàng</h1>
-        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-          <StatPill count={clients.length} label=" chủ hàng" accent />
-          {companyCount > 0 && <StatPill count={companyCount} label=" công ty" />}
-          {individualCount > 0 && <StatPill count={individualCount} label=" cá nhân" />}
-        </div>
-      </header>
+      <PageHeader
+        title="Chủ hàng"
+        subtitle="Danh sách chủ hàng và thông tin liên hệ"
+        lucideIcon={Building2}
+        actions={
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <StatPill count={clients.length} label=" chủ hàng" accent />
+            {companyCount > 0 && <StatPill count={companyCount} label=" công ty" />}
+            {individualCount > 0 && <StatPill count={individualCount} label=" cá nhân" />}
+          </div>
+        }
+      />
 
       {/* ── Section ── */}
       <section>

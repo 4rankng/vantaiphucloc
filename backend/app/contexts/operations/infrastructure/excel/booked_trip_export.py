@@ -177,7 +177,7 @@ async def generate_doi_soat_excel(
 
     # -- 4. Build Excel workbook --
     # Plate and vessel come directly from BookedTrip; no Reconciliation link.
-    # operation_type was removed from BookedTrip, so that column stays blank.
+    # work_type column in route_pricings; this export column stays blank.
     wb = openpyxl.Workbook()
     ws = wb.active
     month_label = df.strftime("%m/%Y")
@@ -287,7 +287,7 @@ async def generate_doi_soat_excel(
             plate, pickup, dropoff,
             revenue if revenue else None,
             f"=L{row_num}",
-            "",  # operation_type removed from BookedTrip
+            "",  # work_type handled separately
         ])
 
         # Styling

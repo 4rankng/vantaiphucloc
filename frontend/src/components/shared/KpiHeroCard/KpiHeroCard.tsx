@@ -133,10 +133,15 @@ export function KpiHeroCard({
             })()}
           </div>
 
-          {/* row 2: value */}
+          {/* row 2: value — display font for financial impact */}
           <p
-            className="mt-1 truncate font-bold tabular-nums leading-tight tracking-tight text-[18px]"
-            style={{ color: 'var(--theme-text-primary)' }}
+            className="mt-1 truncate font-bold tabular-nums leading-none"
+            style={{
+              color: 'var(--theme-text-primary)',
+              fontFamily: 'var(--theme-font-display)',
+              fontSize: '1.25rem',       /* 20px — readable but not cramped */
+              letterSpacing: '-0.025em',
+            }}
           >
             {displayValue}
           </p>

@@ -1,5 +1,4 @@
 """Domain entity for the Route Pricing context."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -8,10 +7,10 @@ from datetime import datetime, timezone
 from app.contexts.route_pricing.domain.exceptions import NoPriceSet
 from app.contexts.route_pricing.domain.value_objects import (
     LocationId,
-    OperationType,
     PartnerId,
     RoutePricingId,
-    validate_operation_type,
+    WorkType,
+    validate_work_type,
 )
 
 
@@ -25,7 +24,7 @@ class RoutePricing:
     client_id: PartnerId
     pickup_location_id: LocationId
     dropoff_location_id: LocationId
-    operation_type: OperationType
+    work_type: WorkType
     f20_price: int | None = None
     f40_price: int | None = None
     e20_price: int | None = None
@@ -35,7 +34,7 @@ class RoutePricing:
     updated_at: datetime = field(default_factory=_utcnow)
 
     def __post_init__(self) -> None:
-        self.operation_type = validate_operation_type(self.operation_type)
+        self.work_type = validate_work_type(self.work_type)
 
     def ensure_has_price(self) -> None:
         if all(

@@ -91,14 +91,55 @@ export function DataTable<T>({
   onSort,
 }: DataTableProps<T>) {
   if (isLoading) {
+    // Structured shimmer: header bar + per-column pill shapes per row
+    const skeletonCols = columns.slice(0, Math.min(columns.length, 7))
     return (
-      <div className={`p-6 space-y-3 ${className}`}>
-        {Array.from({ length: loadingRows }).map((_, i) => (
+      <div className={`overflow-hidden ${className}`}>
+        {/* Header bar */}
+        <div
+          className="flex items-center gap-4 px-4 py-3 border-b"
+          style={{ background: 'var(--surface-2)', borderColor: 'var(--line-2)' }}
+        >
+          {skeletonCols.map((col) => (
+            <div
+              key={col.key}
+              className="skeleton-shimmer rounded"
+              style={{
+                flexShrink: 0,
+                width: col.width
+                  ? typeof col.width === 'number' ? `${col.width}px` : col.width
+                  : col.align === 'right' ? '10%' : '16%',
+                height: 10,
+              }}
+            />
+          ))}
+        </div>
+        {/* Data rows */}
+        {Array.from({ length: loadingRows }).map((_, rowIdx) => (
           <div
-            key={i}
-            className="h-10 rounded-lg animate-pulse"
-            style={{ background: 'var(--surface-3)' }}
-          />
+            key={rowIdx}
+            className="flex items-center gap-4 px-4 border-b"
+            style={{
+              height: 52,
+              borderColor: 'var(--line)',
+              background: rowIdx % 2 === 1 ? 'var(--surface-2)' : 'var(--surface)',
+            }}
+          >
+            {skeletonCols.map((col, colIdx) => (
+              <div
+                key={col.key}
+                className="skeleton-shimmer rounded-md"
+                style={{
+                  flexShrink: 0,
+                  width: col.width
+                    ? typeof col.width === 'number' ? `${col.width}px` : col.width
+                    : col.align === 'right' ? '10%' : '16%',
+                  height: colIdx === 0 ? 14 : 11,
+                  animationDelay: `${rowIdx * 0.06 + colIdx * 0.04}s`,
+                }}
+              />
+            ))}
+          </div>
         ))}
       </div>
     )

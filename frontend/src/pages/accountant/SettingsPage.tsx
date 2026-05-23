@@ -1,5 +1,6 @@
-import { Calendar, Route } from 'lucide-react'
+import { Calendar, Route, Settings } from 'lucide-react'
 import { SettingCard, type SettingCardItem } from '@/components/shared/SettingCard/SettingCard'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 const SETTINGS_SECTIONS: SettingCardItem[] = [
   {
@@ -23,12 +24,11 @@ const SETTINGS_SECTIONS: SettingCardItem[] = [
 export function SettingsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
-      <header>
-        <h1 className="typo-display">Thiết lập</h1>
-        <p className="typo-body-sm mt-1" style={{ color: 'var(--ink-3)' }}>
-          Cấu hình hệ thống và thông số vận hành
-        </p>
-      </header>
+      <PageHeader
+        title="Thiết lập"
+        subtitle="Cấu hình hệ thống và thông số vận hành"
+        lucideIcon={Settings}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {SETTINGS_SECTIONS.map((section) => (

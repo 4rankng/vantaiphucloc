@@ -86,9 +86,31 @@ export function PageHeader({
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h1 className="typo-h1 lg:typo-display truncate">{title}</h1>
+            <h1
+              className="truncate font-semibold leading-tight"
+              style={{
+                fontFamily: 'var(--theme-font-display)',
+                fontSize: 'clamp(1rem, 1.8vw, 1.375rem)', /* 16px → 22px */
+                letterSpacing: '-0.025em',
+                color: 'var(--theme-text-primary)',
+                textWrap: 'balance',
+              } as React.CSSProperties}
+            >
+              {title}
+            </h1>
             {subtitle && (
-              <p className="typo-body-sm mt-1 line-clamp-2">{subtitle}</p>
+              <p
+                className="mt-1 line-clamp-2"
+                style={{
+                  fontSize: '0.8125rem',
+                  color: 'var(--theme-text-muted)',
+                  letterSpacing: '-0.005em',
+                  lineHeight: 1.5,
+                  maxWidth: '60ch',
+                }}
+              >
+                {subtitle}
+              </p>
             )}
           </div>
         </div>

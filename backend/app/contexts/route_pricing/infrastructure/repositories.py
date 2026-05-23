@@ -1,5 +1,4 @@
 """Concrete repository implementation for the Route Pricing context."""
-
 from __future__ import annotations
 
 from typing import Sequence
@@ -11,9 +10,9 @@ from app.contexts.route_pricing.domain.entities import RoutePricing
 from app.contexts.route_pricing.domain.repositories import RoutePricingRepository
 from app.contexts.route_pricing.domain.value_objects import (
     LocationId,
-    OperationType,
     PartnerId,
     RoutePricingId,
+    WorkType,
 )
 from app.contexts.route_pricing.infrastructure.mappers import (
     route_pricing_to_domain,
@@ -40,7 +39,7 @@ class SqlRoutePricingRepository(RoutePricingRepository):
         client_id: PartnerId,
         pickup_location_id: LocationId,
         dropoff_location_id: LocationId,
-        operation_type: OperationType,
+        work_type: WorkType,
     ) -> RoutePricing | None:
         orm = (
             await self.session.execute(
@@ -48,7 +47,7 @@ class SqlRoutePricingRepository(RoutePricingRepository):
                     RoutePricingORM.client_id == int(client_id),
                     RoutePricingORM.pickup_location_id == int(pickup_location_id),
                     RoutePricingORM.dropoff_location_id == int(dropoff_location_id),
-                    RoutePricingORM.operation_type == operation_type,
+                    RoutePricingORM.work_type == work_type,
                     RoutePricingORM.is_active.is_(True),
                 )
             )
@@ -61,14 +60,14 @@ class SqlRoutePricingRepository(RoutePricingRepository):
         offset: int,
         limit: int,
         client_id: PartnerId | None = None,
-        operation_type: OperationType | None = None,
+        work_type: WorkType | None = None,
         active_only: bool = True,
     ) -> tuple[Sequence[RoutePricing], int]:
         q = select(RoutePricingORM)
         if client_id is not None:
             q = q.where(RoutePricingORM.client_id == int(client_id))
-        if operation_type is not None:
-            q = q.where(RoutePricingORM.operation_type == operation_type)
+        if work_type is not None:
+            q = q.where(RoutePricingORM.work_type == work_type)
         if active_only:
             q = q.where(RoutePricingORM.is_active.is_(True))
         total = (

@@ -8,6 +8,7 @@ import {
 } from '@/components/ui'
 
 import { Panel } from '@/components/shared/Panel'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { Plate } from '@/components/shared/Plate'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
@@ -441,18 +442,17 @@ export function TransportersPage() {
   return (
     <div className="space-y-5 animate-fade-in">
       {/* ── Header ── */}
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="typo-display">Vận tải</h1>
-          <p className="mt-1 text-[13px]" style={{ color: 'var(--ink-3)' }}>
-            Quản lý đội xe nội bộ và nhà thầu vận chuyển
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => setShowVendorMgmt(true)} className="shrink-0 mt-1">
-          <Building2 className="h-4 w-4" />
-          Quản lý nhà thầu
-        </Button>
-      </header>
+      <PageHeader
+        title="Vận tải"
+        subtitle="Quản lý đội xe, tài xế và nhà thầu vận chuyển"
+        lucideIcon={Truck}
+        actions={
+          <Button variant="outline" onClick={() => setShowVendorMgmt(true)} className="shrink-0 mt-1">
+            <Building2 className="h-4 w-4" />
+            Quản lý nhà thầu
+          </Button>
+        }
+      />
 
       {/* ── Fleet section ── */}
       <FleetSection />

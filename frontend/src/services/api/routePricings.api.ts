@@ -6,7 +6,7 @@ export interface RoutePricingCreatePayload {
   clientId: number
   pickupLocationId: number
   dropoffLocationId: number
-  operationType: string
+  workType: string
   f20Price?: number | null
   f40Price?: number | null
   e20Price?: number | null
@@ -17,7 +17,7 @@ export interface RoutePricingUpdatePayload {
   clientId?: number | null
   pickupLocationId?: number | null
   dropoffLocationId?: number | null
-  operationType?: string | null
+  workType?: string | null
   f20Price?: number | null
   f40Price?: number | null
   e20Price?: number | null
@@ -26,7 +26,7 @@ export interface RoutePricingUpdatePayload {
 
 export async function getRoutePricings(params?: {
   clientId?: number
-  operationType?: string
+  workType?: string
   page?: number
   pageSize?: number
 }): Promise<PaginatedResult<RoutePricing>> {
@@ -34,7 +34,7 @@ export async function getRoutePricings(params?: {
     const res = await api.get('/route-pricings', {
       params: toSnake({
         clientId: params?.clientId,
-        operationType: params?.operationType,
+        workType: params?.workType,
         page: params?.page ?? 1,
         pageSize: params?.pageSize ?? 100,
       }),
@@ -91,8 +91,8 @@ export interface RoutePricingImportPreviewRow {
   dropoffRaw: string
   dropoffLocationId: number | null
   dropoffMatched: boolean
-  operationType: string | null
-  operationTypeValid: boolean
+  workType: string | null
+  workTypeValid: boolean
   f20Price: number | null
   f40Price: number | null
   e20Price: number | null
@@ -110,16 +110,19 @@ export interface RoutePricingImportPreview {
     matched: number
     unmatchedClient: number
     unmatchedLocation: number
-    hasOperationType: number
-    missingOperationType: number
+    hasWorkType: number
+    missingWorkType: number
   }
 }
 
 export interface RoutePricingImportCommitRow {
-  clientId: number
-  pickupLocationId: number
-  dropoffLocationId: number
-  operationType: string
+  clientId: number | null
+  clientRaw: string | null
+  pickupLocationId: number | null
+  pickupRaw: string | null
+  dropoffLocationId: number | null
+  dropoffRaw: string | null
+  workType: string | null
   f20Price?: number | null
   f40Price?: number | null
   e20Price?: number | null
@@ -130,6 +133,8 @@ export interface RoutePricingImportResult {
   created: number
   updated: number
   skipped: number
+  createdClients: number
+  createdLocations: number
 }
 
 export async function previewRoutePricingImport(file: File): Promise<RoutePricingImportPreview> {

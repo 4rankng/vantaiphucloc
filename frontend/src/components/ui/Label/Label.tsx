@@ -8,7 +8,8 @@ const Label = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <LabelPrimitive.Root
     ref={ref}
-    className={cn("text-sm font-medium leading-none text-[var(--theme-text-primary)] peer-disabled:cursor-not-allowed peer-disabled:opacity-70", className)}
+    // nepo-field-label: 12px, semibold, --ink-2, slight tight tracking
+    className={cn("nepo-field-label peer-disabled:cursor-not-allowed peer-disabled:opacity-70", className)}
     {...props}
   />
 ))

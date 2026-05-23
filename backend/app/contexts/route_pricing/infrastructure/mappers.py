@@ -1,5 +1,4 @@
 """ORM <-> domain entity mappers for the Route Pricing context."""
-
 from __future__ import annotations
 
 from app.contexts.route_pricing.domain.entities import RoutePricing
@@ -17,7 +16,7 @@ def route_pricing_to_domain(orm: RoutePricingORM) -> RoutePricing:
         client_id=PartnerId(orm.client_id),
         pickup_location_id=LocationId(orm.pickup_location_id),
         dropoff_location_id=LocationId(orm.dropoff_location_id),
-        operation_type=orm.operation_type,
+        work_type=orm.work_type,
         f20_price=orm.f20_price,
         f40_price=orm.f40_price,
         e20_price=orm.e20_price,
@@ -38,7 +37,7 @@ def route_pricing_to_orm(
     orm.client_id = int(rp.client_id)
     orm.pickup_location_id = int(rp.pickup_location_id)
     orm.dropoff_location_id = int(rp.dropoff_location_id)
-    orm.operation_type = rp.operation_type
+    orm.work_type = rp.work_type
     orm.f20_price = rp.f20_price
     orm.f40_price = rp.f40_price
     orm.e20_price = rp.e20_price

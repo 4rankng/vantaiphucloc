@@ -14,14 +14,23 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full items-center justify-between rounded-lg border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] px-3 py-2 text-sm ring-offset-white placeholder:text-[var(--theme-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-brand-secondary)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+      // h-9 = 36px — matches Input and Button default heights for inline form rows
+      "flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3",
+      "text-[13.5px] tracking-[-0.008em] leading-none",
+      "border-[var(--line)] bg-[var(--theme-bg-secondary)] text-[var(--ink)]",
+      "ring-offset-[var(--theme-bg-primary,#FAFAFA)]",
+      "hover:border-[var(--line-2)]",
+      "focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:border-[var(--accent)]",
+      "disabled:cursor-not-allowed disabled:opacity-50",
+      "transition-[border-color,box-shadow] duration-150",
+      "[&>span]:line-clamp-1",
       className
     )}
     {...props}
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4 opacity-50" />
+      <ChevronDown className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--ink-3)', opacity: 0.7 }} />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ))
@@ -35,7 +44,13 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-lg border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] text-[var(--theme-text-primary)] shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden",
+        "rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)]",
+        // Refined shadow — deeper than --sh-sm but softer than --sh-lg
+        "shadow-[0_8px_24px_-4px_rgba(10,10,10,0.12),0_2px_6px_-1px_rgba(10,10,10,0.06)]",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
         position === "popper" && "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
         className
       )}
@@ -58,12 +73,22 @@ const SelectItem = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
-    className={cn("relative flex w-full cursor-default select-none items-center rounded-md py-2 pl-8 pr-2 text-sm outline-none focus:bg-[var(--theme-bg-tertiary)] focus:text-[var(--theme-text-primary)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50", className)}
+    className={cn(
+      // Tighter py-1.5 (24px item height) — dense data forms benefit from compact dropdowns
+      "relative flex w-full cursor-default select-none items-center rounded-md",
+      "py-1.5 pl-7 pr-2",
+      "text-[13px] tracking-[-0.005em] text-[var(--ink-2)]",
+      "outline-none transition-colors duration-100",
+      "focus:bg-[var(--surface-2)] focus:text-[var(--ink)]",
+      "data-[state=checked]:text-[var(--ink)] data-[state=checked]:font-medium",
+      "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
+      className
+    )}
     {...props}
   >
     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
       <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
+        <Check className="h-3.5 w-3.5" style={{ color: 'var(--accent)' }} />
       </SelectPrimitive.ItemIndicator>
     </span>
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>

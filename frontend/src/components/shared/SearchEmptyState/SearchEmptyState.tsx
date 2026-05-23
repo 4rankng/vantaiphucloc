@@ -1,4 +1,5 @@
-import { Hash, X, type LucideIcon } from 'lucide-react'
+import { Search, X, type LucideIcon } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 
 export interface SearchEmptyStateProps {
   /** Whether any filters/search are active */
@@ -30,24 +31,26 @@ export function SearchEmptyState({
     return (
       <div className="py-16 text-center">
         <div
-          className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3"
-          style={{ background: 'var(--theme-bg-tertiary)' }}
+          className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
+          style={{
+            background: 'color-mix(in srgb, var(--accent) 8%, var(--surface-2))',
+            border: '1px solid color-mix(in srgb, var(--accent) 16%, transparent)',
+          }}
         >
-          <Hash className="h-6 w-6" style={{ color: 'var(--theme-text-muted)' }} />
+          <Search className="h-5 w-5" style={{ color: 'var(--accent)' }} />
         </div>
-        <p className="text-sm font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>
+        <p
+          className="font-semibold mb-1"
+          style={{ fontSize: '13.5px', letterSpacing: '-0.012em', color: 'var(--ink)' }}
+        >
           Không tìm thấy kết quả{searchQuery ? ` cho "${searchQuery}"` : ''}
         </p>
-        <p className="text-xs mb-4" style={{ color: 'var(--theme-text-muted)' }}>
+        <p className="typo-meta mb-4">
           Thử xoá bộ lọc hoặc tìm với từ khoá khác
         </p>
-        <button
-          onClick={onClearFilters}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition hover:opacity-80"
-          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
-        >
+        <Button variant="outline" size="sm" onClick={onClearFilters}>
           <X className="w-3.5 h-3.5" /> Xoá tìm kiếm
-        </button>
+        </Button>
       </div>
     )
   }
@@ -55,23 +58,25 @@ export function SearchEmptyState({
   return (
     <div className="py-16 text-center">
       <div
-        className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3"
-        style={{ background: 'var(--theme-bg-tertiary)' }}
+        className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
+        style={{
+          background: 'color-mix(in srgb, var(--accent) 8%, var(--surface-2))',
+          border: '1px solid color-mix(in srgb, var(--accent) 16%, transparent)',
+        }}
       >
-        <Hash className="h-6 w-6" style={{ color: 'var(--theme-text-muted)' }} />
+        <Search className="h-5 w-5" style={{ color: 'var(--accent)' }} />
       </div>
-      <p className="text-sm font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>
+      <p
+        className="font-semibold mb-1"
+        style={{ fontSize: '13.5px', letterSpacing: '-0.012em', color: 'var(--ink)' }}
+      >
         {emptyTitle}
       </p>
       {primaryActionLabel && onPrimaryAction && (
-        <button
-          onClick={onPrimaryAction}
-          className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90"
-          style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
-        >
+        <Button size="sm" onClick={onPrimaryAction} className="mt-3">
           {PrimaryActionIcon && <PrimaryActionIcon className="w-4 h-4" />}
           {primaryActionLabel}
-        </button>
+        </Button>
       )}
     </div>
   )

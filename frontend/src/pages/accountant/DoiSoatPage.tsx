@@ -7,13 +7,14 @@ import {
   Zap,
 } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { MatchProgressBar } from '@/components/shared/MatchProgressBar'
 import { Panel } from '@/components/shared/Panel'
 import { DataTable, type Column } from '@/components/shared/DataTable'
 import { Toolbar, ToolbarSearch, ToolbarSpacer } from '@/components/shared/Toolbar'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
+import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 import { ExcelImportDrawer } from '@/components/shared/ExcelImportDrawer'
 import { DeliveredTripDetailDrawer } from '@/components/shared/DeliveredTripDetailDrawer'
 import { AutoMatchDialog, AutoMatchDateDialog } from '@/components/shared/AutoMatchDialog'
@@ -291,25 +292,16 @@ export function DoiSoatPage() {
     <div className="space-y-6 animate-fade-in">
 
       {/* ── Header ── */}
-      <header className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="min-w-0">
-          <h1 className="typo-display">Đối soát</h1>
-          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-            <StatPill count={globalTotal} label=" chuyến" accent />
-            <StatPill count={globalMatched} label=" đã ghép" />
-            {globalPending > 0 && <StatPill count={globalPending} label=" chờ ghép" />}
-            <span
-              className="inline-flex items-center gap-1 text-[12px] px-2.5 py-0.5 rounded-full font-medium"
-              style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
-            >
-              <DollarSign className="h-3 w-3" style={{ color: 'var(--ink-3)' }} />
-              <span className="font-bold tabular-nums" style={{ color: 'var(--ink)' }}>{compactCurrency(globalRevenue)}</span>
-            </span>
+      <PageHeader
+        title="Đối soát"
+        subtitle="Ghép chuyến thực tế với đơn hàng — theo dõi trạng thái khớp và xuất báo cáo"
+        lucideIcon={ClipboardList}
+        actions={
+          <div className="flex items-center gap-2">
+            <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
           </div>
-          {trips.length > 0 && <MatchProgressBar pct={globalMatchedPct} />}
-        </div>
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
-      </header>
+        }
+      />
 
       {/* ── Table section ── */}
       <section>
@@ -322,19 +314,16 @@ export function DoiSoatPage() {
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            <Select value={doiSoatClientId} onValueChange={setDoiSoatClientId}>
-              <SelectTrigger className="w-[185px] h-8 text-[12.5px]">
-                <SelectValue placeholder="Chọn chủ hàng…" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Tất cả chủ hàng</SelectItem>
-                {clients.map((c) => (
-                  <SelectItem key={c.id} value={String(c.id)}>
-                    {c.code} — {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <InlineSelect
+              placeholder="Tất cả chủ hàng"
+              value={doiSoatClientId}
+              options={[
+                { value: 'ALL', label: 'Tất cả chủ hàng' },
+                ...clients.map((c) => ({ value: String(c.id), label: c.code ? `${c.code} — ${c.name}` : c.name })),
+              ]}
+              onChange={setDoiSoatClientId}
+              style={{ width: 185, height: 32, fontSize: 12.5 }}
+            />
             <Button
               variant="ghost"
               onClick={() => {

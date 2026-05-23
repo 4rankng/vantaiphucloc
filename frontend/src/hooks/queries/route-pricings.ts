@@ -14,7 +14,7 @@ function unwrap<T>(res: ApiResponse<T>): T {
 
 export function useRoutePricings(filters?: {
   clientId?: number
-  operationType?: string
+  workType?: string
 }) {
   return useQuery({
     queryKey: queryKeys.routePricingsFiltered(filters),

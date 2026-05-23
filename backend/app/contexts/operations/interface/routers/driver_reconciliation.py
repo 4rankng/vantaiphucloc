@@ -1,4 +1,4 @@
-"""Vendor reconciliation endpoints — upload vendor Excel and auto-match."""
+"""Driver reconciliation endpoints — upload driver Excel and auto-match."""
 
 from __future__ import annotations
 
@@ -12,11 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import require_roles
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import Vendor
 
 _logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["vendor-reconciliation"])
+router = APIRouter(tags=["driver-reconciliation"])
 
 
 # ---------------------------------------------------------------------------
@@ -24,7 +23,7 @@ router = APIRouter(tags=["vendor-reconciliation"])
 # ---------------------------------------------------------------------------
 
 
-class VendorImportResponse(BaseModel):
+class DriverImportResponse(BaseModel):
     total_rows: int
     created: int
     matched: int
@@ -39,43 +38,36 @@ class VendorImportResponse(BaseModel):
 
 
 @router.post(
-    "/vendor-reconciliation/upload",
-    response_model=VendorImportResponse,
+    "/driver-reconciliation/upload",
+    response_model=DriverImportResponse,
 )
-async def upload_vendor_excel(
-    vendor_id: int = Form(..., description="Vendor (nha xe) ID"),
-    file: UploadFile = File(..., description="Vendor Excel file (.xlsx)"),
+async def upload_driver_excel(
+    file: UploadFile = File(..., description="Driver Excel file (.xlsx)"),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_roles("accountant", "superadmin")),
 ):
-    """Upload vendor Excel file, create DeliveredTrips, auto-match against BookedTrips."""
-    vendor = (await db.execute(
-        select(Vendor).where(Vendor.id == vendor_id, Vendor.is_active == True)  # noqa: E712
-    )).scalar_one_or_none()
-    if vendor is None:
-        raise HTTPException(status_code=404, detail="Khong tim thay nha xe.")
-
+    """Upload driver Excel file, create DeliveredTrips (internal), auto-match against BookedTrips."""
     if file.filename is None:
-        raise HTTPException(status_code=400, detail="Tep tai len khong co ten.")
+        raise HTTPException(status_code=400, detail="Tệp tải lên không có tên.")
 
     content = await file.read()
     if not content:
-        raise HTTPException(status_code=400, detail="Tep tai len rong.")
+        raise HTTPException(status_code=400, detail="Tệp tải lên rỗng.")
 
     from app.contexts.operations.infrastructure.vendor_import_service import (
         ReconciliationImportService,
     )
 
     service = ReconciliationImportService(db)
-    result = await service.import_reconciliation_excel(content, file.filename, vendor_id=vendor_id)
+    result = await service.import_reconciliation_excel(content, file.filename)
 
     if result.total_rows == 0:
         raise HTTPException(
             status_code=400,
-            detail="Khong tim thay du lieu hop le trong file Excel.",
+            detail="Không tìm thấy dữ liệu hợp lệ trong file Excel.",
         )
 
-    return VendorImportResponse(
+    return DriverImportResponse(
         total_rows=result.total_rows,
         created=result.created,
         matched=result.matched,

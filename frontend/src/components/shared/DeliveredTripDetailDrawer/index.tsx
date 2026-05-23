@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   User,
+  Sparkles,
 } from 'lucide-react'
 import { Drawer } from '@/components/shared/Drawer'
 import { Pill, type PillVariant } from '@/components/shared/Pill'
@@ -17,6 +18,7 @@ import type { DeliveredTrip, BookedTrip, ContType } from '@/data/domain'
 import { CONT_TYPES } from '@/data/domain'
 import { CriteriaEditRow } from './CriteriaEditRow'
 import { InlineSelect } from './InlineSelect'
+import { AISuggestionDialog } from '../AISuggestionDialog'
 
 function statusPillVariant(matched: boolean): PillVariant {
   return matched ? 'success' : 'warn'
@@ -33,6 +35,7 @@ export function DeliveredTripDetailDrawer({
   onClose: () => void
 }) {
   const [trip, setTrip] = useState<DeliveredTrip>(initialTrip)
+  const [showAISuggest, setShowAISuggest] = useState(false)
   const _updateTrip = useUpdateDeliveredTrip()
   const _updateBookedTrip = useUpdateBookedTrip()
   const { data: clients = [] } = useClients()
@@ -177,7 +180,18 @@ export function DeliveredTripDetailDrawer({
             </div>
           </div>
 
-
+          {!trip.matched && (
+            <div className="pt-2 flex justify-end">
+              <Button 
+                variant="outline" 
+                className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200"
+                onClick={() => setShowAISuggest(true)}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                AI Đề xuất
+              </Button>
+            </div>
+          )}
 
           {trip.matched && bookedTrip && (
             <div className="space-y-2 pt-2" style={{ borderTop: '1px solid var(--line)' }}>
@@ -273,6 +287,13 @@ export function DeliveredTripDetailDrawer({
 
         </div>
       </Drawer>
+
+      {showAISuggest && (
+        <AISuggestionDialog
+          trip={trip}
+          onClose={() => setShowAISuggest(false)}
+        />
+      )}
     </>
   )
 }

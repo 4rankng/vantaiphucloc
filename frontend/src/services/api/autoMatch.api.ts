@@ -20,6 +20,13 @@ export interface ConfirmMatchResponse {
   errors: string[]
 }
 
+export interface AISuggestionResponse {
+  suggestedBookedTripId: number | null
+  reasoning: string
+  confidence: 'high' | 'medium' | 'low' | 'none'
+  error?: string
+}
+
 export async function autoMatchPreview(params: {
   dateFrom?: string
   dateTo?: string
@@ -48,5 +55,14 @@ export async function confirmAutoMatch(
     return ok<ConfirmMatchResponse>(toCamel(res.data))
   } catch (err) {
     return fail<ConfirmMatchResponse>(err)
+  }
+}
+
+export async function aiSuggestMatch(deliveredTripId: number) {
+  try {
+    const res = await api.post(`/auto-match/ai-suggest/${deliveredTripId}`)
+    return ok<AISuggestionResponse>(toCamel(res.data))
+  } catch (err) {
+    return fail<AISuggestionResponse>(err)
   }
 }

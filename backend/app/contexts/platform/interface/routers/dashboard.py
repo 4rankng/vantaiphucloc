@@ -327,9 +327,21 @@ async def get_vehicle_pnl(
     vehicles: dict[int, str] = {r[0]: r[1] for r in veh_rows}
 
     # ── 2. Revenue per vehicle ────────────────────────────────────────────
-    # Reconciliation table has been dropped; revenue cannot be mapped to
-    # vehicles through a reconciliation link.  Set revenue to 0 for now.
-    revenue_by_vehicle: dict[int, int] = {}
+    revenue_rows = (await db.execute(
+        select(
+            Vehicle.id,
+            func.coalesce(func.sum(DeliveredTrip.revenue), 0),
+        )
+        .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
+        .where(
+            DeliveredTrip.matched == True,
+            Vehicle.id.in_(list(vehicles.keys())),
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
+        )
+        .group_by(Vehicle.id)
+    )).all()
+    revenue_by_vehicle: dict[int, int] = {vid: int(rev) for vid, rev in revenue_rows if vid}
 
     # ── 3. CP Lương sản lượng per vehicle ───────────────────────────────────
     # vehicle_id FK removed; join via vehicle_plate

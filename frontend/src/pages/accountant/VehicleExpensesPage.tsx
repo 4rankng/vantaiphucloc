@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { Fuel, Plus, Trash2, Coins, Wrench } from 'lucide-react'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { Panel } from '@/components/shared/Panel'
 import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
@@ -357,21 +358,20 @@ export function VehicleExpensesPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <header className="flex items-start justify-between gap-5 flex-wrap">
-        <div className="min-w-0">
-          <h1 className="typo-display">Chi phí xe</h1>
-          <p className="typo-body-sm mt-1.5">
-            Theo dõi chi phí xăng dầu, sửa chữa, tiền luật và các khoản khác theo từng xe
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
-          <Button variant="default" onClick={() => setEditingId('new')}>
-            <Plus className="h-4 w-4" />
-            Thêm chi phí
-          </Button>
-        </div>
-      </header>
+      <PageHeader
+        title="Chi phí xe"
+        subtitle="Quản lý chi phí vận hành theo từng xe: xăng dầu, sửa chữa, tiền luật và khác"
+        lucideIcon={Fuel}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setEditingId('new')} className="gap-1.5">
+              <Plus className="h-3.5 w-3.5" />
+              Thêm chi phí
+            </Button>
+            <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-3 gap-3">
         <KpiHeroCard

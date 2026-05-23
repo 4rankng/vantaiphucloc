@@ -1,12 +1,12 @@
-import { useState } from 'react'
-import { TrendingUp, DollarSign, Coins } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { TrendingUp, DollarSign, Coins, Search } from 'lucide-react'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
 import { NepoTable } from '@/components/shared/NepoTable'
 import type { NepoColumn, NepoFooterCell } from '@/components/shared/NepoTable'
 import { Plate } from '@/components/shared/Plate'
-import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
-import { useVehiclePnL, useVehicles } from '@/hooks/use-queries'
+import { useVehiclePnL } from '@/hooks/use-queries'
 import { useMonthParams } from './use-month-params'
 import { compactCurrency } from '@/data/domain'
 import type { VehiclePnLRow, VehiclePnLResponse } from '@/services/api/pnl.api'
@@ -16,23 +16,27 @@ const monoStyle = { fontFamily: 'var(--theme-font-mono)' } as React.CSSPropertie
 
 export function PnLPage() {
   const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
-  const [vehicleFilter, setVehicleFilter] = useState<number | ''>('')
-  const { data: vehicles } = useVehicles()
-  const { data: pnlData, isLoading } = useVehiclePnL(dateFrom, dateTo, vehicleFilter || undefined)
+  const [search, setSearch] = useState('')
+  const { data: pnlData, isLoading } = useVehiclePnL(dateFrom, dateTo)
 
-  const rows: VehiclePnLRow[] = (pnlData as VehiclePnLResponse | undefined)?.rows ?? []
+  const allRows: VehiclePnLRow[] = (pnlData as VehiclePnLResponse | undefined)?.rows ?? []
   const totalRevenue = (pnlData as VehiclePnLResponse | undefined)?.totalRevenue ?? 0
   const totalProfit = (pnlData as VehiclePnLResponse | undefined)?.totalProfit ?? 0
+
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return allRows
+    return allRows.filter(r => r.plate.toLowerCase().includes(q))
+  }, [allRows, search])
 
   const totalCpXangDau = rows.reduce((s, r) => s + r.cpXe.xangDau, 0)
   const totalCpSuaChua = rows.reduce((s, r) => s + r.cpXe.suaChua, 0)
   const totalCpTienLuat = rows.reduce((s, r) => s + r.cpXe.tienLuat, 0)
   const totalCpKhac = rows.reduce((s, r) => s + r.cpXe.khac, 0)
   const totalCpXe = rows.reduce((s, r) => s + r.cpXe.total, 0)
-  const totalCpLuongSL = rows.reduce((s, r) => s + r.cpLuongSanLuong, 0)
-  const totalCpLuongCB = rows.reduce((s, r) => s + r.cpLuongCoBan, 0)
-  const totalCost = totalCpXe + totalCpLuongSL + totalCpLuongCB
-  const marginPct = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0
+  const totalLuongLX = rows.reduce((s, r) => s + r.cpLuongSanLuong + r.cpLuongCoBan, 0)
+  const totalCost = totalCpXe + totalLuongLX
+  const marginPct = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : null
 
   const columns: NepoColumn<VehiclePnLRow>[] = [
     {
@@ -85,31 +89,15 @@ export function PnLPage() {
       render: (r) => <span className="tabular-nums" style={monoStyle}>{compactCurrency(r.cpXe.khac)}</span>,
     },
     {
-      key: 'cpXe',
-      header: 'CP Xe',
+      key: 'luongLX',
+      header: 'Lương LX',
       align: 'right',
-      width: 110,
+      width: 120,
       render: (r) => (
         <span className="tabular-nums font-semibold" style={{ color: 'var(--ink)', ...monoStyle }}>
-          {compactCurrency(r.cpXe.total)}
+          {compactCurrency(r.cpLuongSanLuong + r.cpLuongCoBan)}
         </span>
       ),
-    },
-    {
-      key: 'luongSL',
-      header: 'Lương SL',
-      align: 'right',
-      width: 110,
-      hideBelow: 'md',
-      render: (r) => <span className="tabular-nums" style={monoStyle}>{compactCurrency(r.cpLuongSanLuong)}</span>,
-    },
-    {
-      key: 'luongCB',
-      header: 'Lương CB',
-      align: 'right',
-      width: 110,
-      hideBelow: 'md',
-      render: (r) => <span className="tabular-nums" style={monoStyle}>{compactCurrency(r.cpLuongCoBan)}</span>,
     },
     {
       key: 'profit',
@@ -136,9 +124,7 @@ export function PnLPage() {
     { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpSuaChua)}</span>, align: 'right' },
     { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpTienLuat)}</span>, align: 'right' },
     { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpKhac)}</span>, align: 'right' },
-    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpXe)}</span>, align: 'right' },
-    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpLuongSL)}</span>, align: 'right' },
-    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpLuongCB)}</span>, align: 'right' },
+    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalLuongLX)}</span>, align: 'right' },
     {
       content: (
         <span
@@ -155,15 +141,12 @@ export function PnLPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <header className="flex items-start justify-between gap-5 flex-wrap">
-        <div className="min-w-0">
-          <h1 className="typo-display">Báo cáo</h1>
-          <p className="typo-body-sm mt-1.5">
-            Doanh thu và lợi nhuận từng xe theo kỳ — đối chiếu chi phí xe, lương và biên lợi nhuận
-          </p>
-        </div>
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
-      </header>
+      <PageHeader
+        title="Báo cáo"
+        subtitle="Doanh thu và lợi nhuận từng xe theo kỳ — đối chiếu chi phí xe, lương và biên lợi nhuận"
+        lucideIcon={TrendingUp}
+        actions={<MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />}
+      />
 
       <div className="grid grid-cols-3 gap-3">
         <KpiHeroCard
@@ -176,15 +159,6 @@ export function PnLPage() {
           className="card-hover-lift"
         />
         <KpiHeroCard
-          label="Lợi nhuận"
-          formattedValue={<><AnimatedNumber value={totalProfit} format="compact" /> ₫</>}
-          value={totalProfit}
-          icon={TrendingUp}
-          color={totalProfit >= 0 ? 'emerald' : 'rose'}
-          sublabel={`Biên: ${marginPct.toFixed(1)}%`}
-          className="card-hover-lift"
-        />
-        <KpiHeroCard
           label="Tổng chi phí"
           formattedValue={<><AnimatedNumber value={totalCost} format="compact" /> ₫</>}
           value={totalCost}
@@ -193,18 +167,26 @@ export function PnLPage() {
           sublabel={`Xe + Lương`}
           className="card-hover-lift"
         />
+        <KpiHeroCard
+          label="Lợi nhuận"
+          formattedValue={<><AnimatedNumber value={totalProfit} format="compact" /> ₫</>}
+          value={totalProfit}
+          icon={TrendingUp}
+          color={totalProfit >= 0 ? 'emerald' : 'rose'}
+          sublabel={marginPct != null ? `Biên: ${marginPct.toFixed(1)}%` : 'Biên: —'}
+          className="card-hover-lift"
+        />
       </div>
 
       <div className="flex items-center gap-3">
-        <div style={{ width: 160 }}>
-          <InlineSelect
-            placeholder="Tất cả xe"
-            value={vehicleFilter !== '' ? String(vehicleFilter) : ''}
-            options={[
-              { value: '', label: 'Tất cả xe' },
-              ...(vehicles ?? []).map(v => ({ value: String(v.id), label: v.plate })),
-            ]}
-            onChange={v => setVehicleFilter(v ? Number(v) : '')}
+        <div className="relative" style={{ width: 220 }}>
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Tìm biển số..."
+            className="w-full h-9 pl-8 pr-3 rounded-md border border-input bg-background text-sm outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
       </div>
@@ -215,7 +197,7 @@ export function PnLPage() {
         rowKey={(r) => r.vehicleId}
         isLoading={isLoading}
         emptyText="Không có dữ liệu P&L cho tháng này"
-        minWidth={1000}
+        minWidth={800}
         footerCells={footerCells}
       />
     </div>

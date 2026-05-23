@@ -18,7 +18,7 @@ export interface RoutePricingFormData {
   clientId: number
   pickupLocationId: number
   dropoffLocationId: number
-  operationType: WorkType
+  workType: WorkType
   f20Price: string
   f40Price: string
   e20Price: string
@@ -29,7 +29,7 @@ export const EMPTY_FORM: RoutePricingFormData = {
   clientId: 0,
   pickupLocationId: 0,
   dropoffLocationId: 0,
-  operationType: 'XUẤT/NHẬP TÀU',
+  workType: 'XUẤT/NHẬP TÀU',
   f20Price: '',
   f40Price: '',
   e20Price: '',
@@ -45,7 +45,7 @@ function parsePrice(v: string): number | null {
 export function useRoutePricing() {
   const toast = useToast()
   const [clientId, setClientId] = useState<number | undefined>()
-  const [operationType, setOperationType] = useState<string | undefined>()
+  const [workType, setWorkType] = useState<string | undefined>()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<RoutePricingFormData>(EMPTY_FORM)
@@ -53,7 +53,7 @@ export function useRoutePricing() {
 
   const { data: routePricings = [], isLoading } = useRoutePricings({
     clientId,
-    operationType,
+    workType,
   })
   const { data: clientsData } = useClients()
   const { data: locationsData } = useLocations()
@@ -71,13 +71,13 @@ export function useRoutePricing() {
   }, [])
 
   const openEdit = useCallback(
-    (rp: { id: number; client: { id: number }; pickupLocation: { id: number }; dropoffLocation: { id: number }; operationType: WorkType; f20Price: number | null; f40Price: number | null; e20Price: number | null; e40Price: number | null }) => {
+    (rp: { id: number; client: { id: number }; pickupLocation: { id: number }; dropoffLocation: { id: number }; workType: WorkType; f20Price: number | null; f40Price: number | null; e20Price: number | null; e40Price: number | null }) => {
       setEditingId(rp.id)
       setForm({
         clientId: rp.client.id,
         pickupLocationId: rp.pickupLocation.id,
         dropoffLocationId: rp.dropoffLocation.id,
-        operationType: rp.operationType,
+        workType: rp.workType,
         f20Price: rp.f20Price?.toString() ?? '',
         f40Price: rp.f40Price?.toString() ?? '',
         e20Price: rp.e20Price?.toString() ?? '',
@@ -93,7 +93,7 @@ export function useRoutePricing() {
       clientId: form.clientId,
       pickupLocationId: form.pickupLocationId,
       dropoffLocationId: form.dropoffLocationId,
-      operationType: form.operationType,
+      workType: form.workType,
       f20Price: parsePrice(form.f20Price),
       f40Price: parsePrice(form.f40Price),
       e20Price: parsePrice(form.e20Price),
@@ -154,8 +154,8 @@ export function useRoutePricing() {
     locations,
     clientId,
     setClientId,
-    operationType,
-    setOperationType,
+    workType,
+    setWorkType,
     dialogOpen,
     setDialogOpen,
     editingId,

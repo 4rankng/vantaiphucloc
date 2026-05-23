@@ -4,16 +4,21 @@ import * as ProgressPrimitive from "@radix-ui/react-progress"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
-const progressVariants = cva("relative h-2 w-full overflow-hidden rounded-full bg-[var(--theme-bg-tertiary)]", {
-  variants: {
-    size: {
-      sm: "h-1",
-      default: "h-2",
-      lg: "h-3",
+const progressVariants = cva(
+  // Track: surface-3 gives a subtler, more refined base than theme-bg-tertiary
+  "relative w-full overflow-hidden rounded-full bg-[var(--surface-3)]",
+  {
+    variants: {
+      size: {
+        xs: "h-0.5",   // 2px — ultra-thin, for inline sparkline-like uses
+        sm: "h-1",     // 4px
+        default: "h-2", // 8px
+        lg: "h-3",     // 12px
+      },
     },
-  },
-  defaultVariants: { size: "default" },
-})
+    defaultVariants: { size: "default" },
+  }
+)
 
 interface ProgressProps
   extends React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>,
@@ -25,7 +30,13 @@ const Progress = React.forwardRef<React.ComponentRef<typeof ProgressPrimitive.Ro
   ({ className, size, value, indicatorClassName, ...props }, ref) => (
     <ProgressPrimitive.Root ref={ref} className={cn(progressVariants({ size }), className)} {...props}>
       <ProgressPrimitive.Indicator
-        className={cn("h-full w-full flex-1 rounded-full bg-[var(--theme-brand-primary)] transition-all", indicatorClassName)}
+        className={cn(
+          "h-full w-full flex-1 rounded-full transition-all",
+          // Subtle top highlight makes the bar feel dimensional (like a pill)
+          "bg-[var(--accent)]",
+          "[background-image:linear-gradient(to_bottom,rgba(255,255,255,0.18)_0%,transparent_60%)]",
+          indicatorClassName,
+        )}
         style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
       />
     </ProgressPrimitive.Root>

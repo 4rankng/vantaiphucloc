@@ -22,7 +22,7 @@ _logger = logging.getLogger(__name__)
 
 
 @dataclass
-class VendorImportResult:
+class ReconciliationImportResult:
     total_rows: int = 0
     created: int = 0
     matched: int = 0
@@ -31,24 +31,25 @@ class VendorImportResult:
     details: list[dict] = field(default_factory=list)
 
 
-class VendorImportService:
-    """Parse vendor Excel, create DeliveredTrips, auto-match against BookedTrips."""
+class ReconciliationImportService:
+    """Parse Excel, create DeliveredTrips, auto-match against BookedTrips."""
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def import_vendor_excel(
+    async def import_reconciliation_excel(
         self,
         content: bytes,
         filename: str,
-        vendor_id: int,
-    ) -> VendorImportResult:
+        vendor_id: int | None = None,
+        driver_id: int | None = None,
+    ) -> ReconciliationImportResult:
         rows = ExcelParser().parse(content, filename)
         valid = [r for r in rows if r.parse_error is None]
         error_rows = [r for r in rows if r.parse_error is not None]
 
         if not valid:
-            return VendorImportResult(
+            return ReconciliationImportResult(
                 total_rows=len(rows),
                 errors=[r.parse_error for r in error_rows if r.parse_error]
                        or ["Không tìm thấy dữ liệu hợp lệ trong file"],
@@ -60,11 +61,11 @@ class VendorImportService:
         # Load unmatched booked trips (for auto-match)
         unmatched_booked = await self._load_unmatched_booked_trips(valid)
 
-        result = VendorImportResult(total_rows=len(rows))
+        result = ReconciliationImportResult(total_rows=len(rows))
 
         for row in valid:
             try:
-                trip_id = await self._create_vendor_trip(row, vendor_id)
+                trip_id = await self._create_reconciliation_trip(row, vendor_id, driver_id)
                 result.created += 1
 
                 # Auto-match by container number
@@ -165,8 +166,8 @@ class VendorImportService:
             if b.cont_number and b.cont_number.upper().replace(" ", "") in containers
         }
 
-    async def _create_vendor_trip(
-        self, row: ImportRow, vendor_id: int,
+    async def _create_reconciliation_trip(
+        self, row: ImportRow, vendor_id: int | None, driver_id: int | None,
     ) -> int:
         pickup_id = getattr(row, "_pickup_location_id", None)
         dropoff_id = getattr(row, "_dropoff_location_id", None)
@@ -185,7 +186,7 @@ class VendorImportService:
             client_id=client_id,
             pickup_location_id=pickup_id,
             dropoff_location_id=dropoff_id,
-            driver_id=None,
+            driver_id=driver_id,
             vendor_id=vendor_id,
             vehicle_plate=row.vehicle_plate or "",
             vessel=row.notes if row.notes and ("tau" in row.notes.lower() or "tàu" in row.notes.lower()) else None,

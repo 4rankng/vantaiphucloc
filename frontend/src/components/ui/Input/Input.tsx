@@ -4,12 +4,25 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const inputVariants = cva(
-  "flex w-full rounded-lg border bg-[var(--theme-bg-secondary)] px-3 py-2 text-sm font-sans ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-[var(--theme-text-muted)] placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors",
+  // Base — height matches Button default (h-9 = 36px), consistent with form rows
+  "flex w-full h-9 rounded-lg border px-3 text-[13.5px] leading-none font-sans tracking-[-0.008em] ring-offset-[var(--theme-bg-primary,#FAFAFA)] file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-[var(--theme-text-muted)] placeholder:font-normal placeholder:tracking-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 transition-[border-color,box-shadow] duration-150",
   {
     variants: {
       variant: {
-        default: "border-[var(--theme-border-default)] focus-visible:ring-[var(--theme-brand-secondary)]",
-        error: "border-red-500 focus-visible:ring-red-500",
+        default: [
+          "bg-[var(--theme-bg-secondary)]",
+          "border-[var(--line)]",             /* slightly softer than --line-2 */
+          "text-[var(--ink)]",
+          "hover:border-[var(--line-2)]",
+          "focus-visible:ring-[var(--accent)]",
+          "focus-visible:border-[var(--accent)]",
+        ].join(" "),
+        error: [
+          "bg-[var(--theme-bg-secondary)]",
+          "border-[var(--danger)]",
+          "text-[var(--ink)]",
+          "focus-visible:ring-[var(--danger)]",
+        ].join(" "),
       },
     },
     defaultVariants: { variant: "default" },

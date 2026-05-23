@@ -8,6 +8,7 @@ import { useInfiniteScroll, LoadMoreSentinel, SearchInput, FieldActions } from '
 import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
 import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
 import { StatPill } from '@/components/shared/StatPill'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   useVendors,
   useVendorsPaged,
@@ -284,14 +285,18 @@ export function VendorsPage() {
     <div className="space-y-6 animate-fade-in">
 
       {/* ── Header ── */}
-      <header>
-        <h1 className="typo-display">Nhà thầu</h1>
-        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-          <StatPill count={vendors.length} label=" nhà thầu" accent />
-          <StatPill count={companyCount} label=" công ty" />
-          <StatPill count={individualCount} label=" cá nhân" />
-        </div>
-      </header>
+      <PageHeader
+        title="Nhà thầu"
+        subtitle="Danh sách nhà thầu vận chuyển và thông tin hợp đồng"
+        lucideIcon={Truck}
+        actions={
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <StatPill count={vendors.length} label=" nhà thầu" accent />
+            <StatPill count={companyCount} label=" công ty" />
+            <StatPill count={individualCount} label=" cá nhân" />
+          </div>
+        }
+      />
 
       {/* ── Table section ── */}
       <section>

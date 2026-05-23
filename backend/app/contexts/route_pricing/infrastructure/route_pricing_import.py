@@ -12,12 +12,14 @@ from typing import Any, Sequence
 
 import openpyxl
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.customer_pricing.infrastructure.location_resolver import (
     LocationResolverService,
+    ResolverSource,
 )
-from app.contexts.route_pricing.domain.value_objects import VALID_OPERATION_TYPES
+from app.contexts.route_pricing.domain.value_objects import VALID_WORK_TYPES
 from app.models.domain import Client
 from app.models.domain import RoutePricing as RoutePricingORM
 
@@ -61,11 +63,11 @@ def _parse_int_price(val: Any) -> int | None:
         return None
 
 
-def _normalize_operation_type(raw: str) -> str | None:
+def _normalize_work_type(raw: str) -> str | None:
     cleaned = raw.strip().upper()
     cleaned = re.sub(r"\s*/\s*", "/", cleaned)
     cleaned = re.sub(r"\s+", " ", cleaned)
-    for valid in VALID_OPERATION_TYPES:
+    for valid in VALID_WORK_TYPES:
         if cleaned == valid:
             return valid
     return None
@@ -89,8 +91,8 @@ def parse_route_pricing_bytes(content: bytes) -> dict:
                 col[str(cell).strip().lower()] = idx
 
         parsed: list[dict] = []
-        has_op = 0
-        missing_op = 0
+        has_wt = 0
+        missing_wt = 0
 
         for ridx in range(header_idx + 1, len(all_rows)):
             row = all_rows[ridx]
@@ -107,20 +109,20 @@ def parse_route_pricing_bytes(content: bytes) -> dict:
             if not client_raw or not pickup_raw:
                 continue
 
-            op_raw = str(row[col["tác nghiệp"]] or "").strip() if "tác nghiệp" in col else ""
-            operation_type = _normalize_operation_type(op_raw) if op_raw else None
+            wt_raw = str(row[col["tác nghiệp"]] or "").strip() if "tác nghiệp" in col else ""
+            work_type = _normalize_work_type(wt_raw) if wt_raw else None
 
-            if op_raw:
-                if operation_type:
-                    has_op += 1
+            if wt_raw:
+                if work_type:
+                    has_wt += 1
                 else:
-                    missing_op += 1
+                    missing_wt += 1
 
             parsed.append({
                 "client_raw": client_raw,
                 "pickup_raw": pickup_raw,
                 "dropoff_raw": dropoff_raw,
-                "operation_type": operation_type,
+                "work_type": work_type,
                 "f20_price": _parse_int_price(row[col["f20"]] if "f20" in col else None),
                 "f40_price": _parse_int_price(row[col["f40"]] if "f40" in col else None),
                 "e20_price": _parse_int_price(row[col["e20"]] if "e20" in col else None),
@@ -135,8 +137,8 @@ def parse_route_pricing_bytes(content: bytes) -> dict:
             "warnings": warnings,
             "stats": {
                 "total": len(parsed),
-                "has_operation_type": has_op,
-                "missing_operation_type": missing_op,
+                "has_work_type": has_wt,
+                "missing_work_type": missing_wt,
             },
         }
 
@@ -145,8 +147,16 @@ def parse_route_pricing_bytes(content: bytes) -> dict:
         "sheet_name": "",
         "rows": [],
         "warnings": ["Không tìm thấy sheet chứa bảng cước tuyến. Cần có cột: CHỦ HÀNG, ĐIỂM ĐI, ĐIỂM ĐẾN, và ít nhất 1 cột giá (F20/F40/E20/E40)."],
-        "stats": {"total": 0, "has_operation_type": 0, "missing_operation_type": 0},
+        "stats": {"total": 0, "has_work_type": 0, "missing_work_type": 0},
     }
+
+
+def _find_client(raw_lower: str, client_by_code: dict, client_by_name: dict) -> Client | None:
+    """Exact match by code, then exact match by name (case-insensitive)."""
+    client = client_by_code.get(raw_lower)
+    if client is None:
+        client = client_by_name.get(raw_lower)
+    return client
 
 
 async def preview_with_matching(db: AsyncSession, content: bytes) -> dict:
@@ -184,13 +194,8 @@ async def preview_with_matching(db: AsyncSession, content: bytes) -> dict:
     unmatched_location_count = 0
 
     for r in parsed["rows"]:
-        raw_upper = r["client_raw"].strip().lower()
-        client = client_by_code.get(raw_upper)
-        if client is None:
-            for name_upper, c in client_by_name.items():
-                if raw_upper in name_upper or name_upper in raw_upper:
-                    client = c
-                    break
+        raw_lower = r["client_raw"].strip().lower()
+        client = _find_client(raw_lower, client_by_code, client_by_name)
 
         r["client_id"] = client.id if client else None
         r["client_matched"] = client is not None
@@ -211,10 +216,10 @@ async def preview_with_matching(db: AsyncSession, content: bytes) -> dict:
             unmatched_location_count += 1
 
         r["can_commit"] = (
-            client is not None
-            and pickup_id is not None
-            and dropoff_id is not None
-            and r["operation_type"] is not None
+            r["client_raw"]
+            and r["pickup_raw"]
+            and r["dropoff_raw"]
+            and r["work_type"] is not None
         )
         if r["can_commit"]:
             matched_count += 1
@@ -229,47 +234,144 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
     created = 0
     updated = 0
     skipped = 0
+    created_clients = 0
+    created_locations = 0
+
+    resolver = LocationResolverService(db)
+
+    # Load all clients for matching
+    all_clients = list((await db.execute(
+        select(Client).where(Client.is_active.is_(True))
+    )).scalars().all())
+    client_by_code: dict[str, Client] = {}
+    client_by_name: dict[str, Client] = {}
+    for c in all_clients:
+        if c.code:
+            client_by_code[c.code.strip().lower()] = c
+        client_by_name[c.name.strip().lower()] = c
+
+    # Cache auto-created clients/locations by normalized name to avoid duplicates
+    client_cache: dict[str, int] = {}
+    location_cache: dict[str, int] = {}
+
+    async def _find_or_create_client(raw: str) -> int | None:
+        raw_stripped = raw.strip()
+        if not raw_stripped:
+            return None
+        key = raw_stripped.lower()
+        if key in client_cache:
+            return client_cache[key]
+
+        # Exact match only
+        existing = _find_client(key, client_by_code, client_by_name)
+        if existing:
+            client_cache[key] = existing.id
+            return existing.id
+
+        # Auto-create new client (use savepoint to avoid nuking the whole transaction)
+        new_client = Client(name=raw_stripped, is_active=True)
+        db.add(new_client)
+        try:
+            async with db.begin_nested():
+                await db.flush()
+        except IntegrityError:
+            # Re-query in case another request created it
+            row = (await db.execute(
+                select(Client).where(Client.name == raw_stripped)
+            )).scalar_one_or_none()
+            if row is None:
+                raise
+            new_client = row
+        else:
+            nonlocal created_clients
+            created_clients += 1
+        client_by_name[key] = new_client
+        client_cache[key] = new_client.id
+        return new_client.id
+
+    async def _resolve_location(raw: str) -> int | None:
+        raw_stripped = raw.strip()
+        if not raw_stripped:
+            return None
+        key = raw_stripped.lower()
+        if key in location_cache:
+            return location_cache[key]
+
+        result = await resolver.resolve_or_create(
+            raw_stripped, source=ResolverSource.IMPORT, user_id=None,
+        )
+        loc = result.location
+        if loc is None:
+            return None
+        location_cache[key] = loc.id
+        nonlocal created_locations
+        if result.match_kind.value == "new":
+            created_locations += 1
+        return loc.id
 
     for r in rows:
-        if not all(r.get(k) for k in ("client_id", "pickup_location_id", "dropoff_location_id")):
+        client_id = r.get("client_id")
+        if not client_id:
+            client_id = await _find_or_create_client(r.get("client_raw", ""))
+        pickup_id = r.get("pickup_location_id")
+        if not pickup_id:
+            pickup_id = await _resolve_location(r.get("pickup_raw", ""))
+        dropoff_id = r.get("dropoff_location_id")
+        if not dropoff_id:
+            dropoff_id = await _resolve_location(r.get("dropoff_raw", ""))
+
+        if not client_id or not pickup_id or not dropoff_id:
             skipped += 1
             continue
-        if not r.get("operation_type"):
+
+        work_type = r.get("work_type")
+        if not work_type:
             skipped += 1
             continue
 
         existing = (await db.execute(
             select(RoutePricingORM).where(
-                RoutePricingORM.client_id == r["client_id"],
-                RoutePricingORM.pickup_location_id == r["pickup_location_id"],
-                RoutePricingORM.dropoff_location_id == r["dropoff_location_id"],
-                RoutePricingORM.operation_type == r["operation_type"],
+                RoutePricingORM.client_id == client_id,
+                RoutePricingORM.pickup_location_id == pickup_id,
+                RoutePricingORM.dropoff_location_id == dropoff_id,
+                RoutePricingORM.work_type == work_type,
                 RoutePricingORM.is_active.is_(True),
             )
         )).scalar_one_or_none()
 
         if existing:
             changed = False
-            for col in ("f20_price", "f40_price", "e20_price", "e40_price"):
-                new_val = r.get(col)
-                if new_val is not None and getattr(existing, col) != new_val:
-                    setattr(existing, col, new_val)
+            for schema_col, orm_col in (
+                ("f_20_price", "f20_price"),
+                ("f_40_price", "f40_price"),
+                ("e_20_price", "e20_price"),
+                ("e_40_price", "e40_price"),
+            ):
+                new_val = r.get(schema_col)
+                if new_val is not None and getattr(existing, orm_col) != new_val:
+                    setattr(existing, orm_col, new_val)
                     changed = True
             updated += 1 if changed else 0
             skipped += 1 if not changed else 0
         else:
             db.add(RoutePricingORM(
-                client_id=r["client_id"],
-                pickup_location_id=r["pickup_location_id"],
-                dropoff_location_id=r["dropoff_location_id"],
-                operation_type=r["operation_type"],
-                f20_price=r.get("f20_price"),
-                f40_price=r.get("f40_price"),
-                e20_price=r.get("e20_price"),
-                e40_price=r.get("e40_price"),
+                client_id=client_id,
+                pickup_location_id=pickup_id,
+                dropoff_location_id=dropoff_id,
+                work_type=work_type,
+                f20_price=r.get("f_20_price"),
+                f40_price=r.get("f_40_price"),
+                e20_price=r.get("e_20_price"),
+                e40_price=r.get("e_40_price"),
                 is_active=True,
             ))
             created += 1
 
     await db.commit()
-    return {"created": created, "updated": updated, "skipped": skipped}
+    return {
+        "created": created,
+        "updated": updated,
+        "skipped": skipped,
+        "created_clients": created_clients,
+        "created_locations": created_locations,
+    }

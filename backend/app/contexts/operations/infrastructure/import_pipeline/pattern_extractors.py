@@ -569,12 +569,12 @@ def extract_settlement_list(sheets: list[SheetView], filename: str = "") -> tupl
         # Determine container type from pivoted columns
         work_type = _detect_work_type_from_pivot(row, col_map)
 
-        # Read operation type (Tác nghiệp) from dedicated column
-        operation_type = "CHUYỂN BÃI"
+        # Read work type (Tác nghiệp) from dedicated column
+        work_type_val = "CHUYỂN BÃI"
         if col_map.get("operation") is not None and col_map["operation"] < len(row):
             op_val = _cell_text(row[col_map["operation"]]).strip().upper()
             if op_val:
-                operation_type = _normalize_operation_type(op_val)
+                work_type_val = _normalize_work_type(op_val)
 
         trip_date = None
         if col_map.get("date") is not None and col_map["date"] < len(row):
@@ -621,7 +621,7 @@ def extract_settlement_list(sheets: list[SheetView], filename: str = "") -> tupl
             dropoff=dropoff,
             vessel_name="",
             source_row_index=r,
-            work_type=operation_type,
+            work_type=work_type_val,
             consignee=consignee,
             vehicle_plate=plate,
             freight_charge=amount,
@@ -730,7 +730,7 @@ def _detect_work_type_from_pivot(row: list, col_map: dict[str, int | None]) -> s
 # Utility
 # ---------------------------------------------------------------------------
 
-def _normalize_operation_type(value: str) -> str:
+def _normalize_work_type(value: str) -> str:
     """Normalize operation type value to canonical form."""
     import unicodedata
     norm = value.strip().upper()

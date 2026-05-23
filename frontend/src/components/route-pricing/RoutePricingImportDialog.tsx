@@ -96,10 +96,13 @@ export function RoutePricingImportDialog({ open, onOpenChange }: Props) {
     setError(null)
     commitMut.mutate(
       commitRows.map((r) => ({
-        clientId: r.clientId!,
-        pickupLocationId: r.pickupLocationId!,
-        dropoffLocationId: r.dropoffLocationId!,
-        operationType: r.operationType!,
+        clientId: r.clientId,
+        clientRaw: r.clientRaw,
+        pickupLocationId: r.pickupLocationId,
+        pickupRaw: r.pickupRaw,
+        dropoffLocationId: r.dropoffLocationId,
+        dropoffRaw: r.dropoffRaw,
+        workType: r.workType,
         f20Price: r.f20Price,
         f40Price: r.f40Price,
         e20Price: r.e20Price,
@@ -222,8 +225,8 @@ export function RoutePricingImportDialog({ open, onOpenChange }: Props) {
                           <td><span className="tabular-nums text-[12.5px]" style={{ color: r.e20Price ? 'var(--ink)' : 'var(--ink-3)' }}>{fmtPrice(r.e20Price)}</span></td>
                           <td><span className="tabular-nums text-[12.5px]" style={{ color: r.e40Price ? 'var(--ink)' : 'var(--ink-3)' }}>{fmtPrice(r.e40Price)}</span></td>
                           <td>
-                            <span className="text-[12.5px]" style={{ color: r.operationTypeValid ? 'var(--ink-2)' : 'var(--warning)' }}>
-                              {getWorkTypeLabel(r.operationType) ?? r.operationType ?? '—'}
+                            <span className="text-[12.5px]" style={{ color: r.workTypeValid ? 'var(--ink-2)' : 'var(--warning)' }}>
+                              {getWorkTypeLabel(r.workType) ?? r.workType ?? '—'}
                             </span>
                           </td>
                         </tr>
@@ -235,7 +238,7 @@ export function RoutePricingImportDialog({ open, onOpenChange }: Props) {
 
               {commitRows.length < rows.length && (
                 <p className="text-[12px] m-0" style={{ color: 'var(--ink-3)' }}>
-                  Chỉ {commitRows.length}/{rows.length} dòng đủ điều kiện để lưu (cần khớp chủ hàng + điểm đi/đến).
+                  {commitRows.length}/{rows.length} dòng sẽ được lưu (chủ hàng/địa điểm chưa khớp sẽ được tự động tạo mới).
                 </p>
               )}
             </div>
@@ -247,10 +250,10 @@ export function RoutePricingImportDialog({ open, onOpenChange }: Props) {
                 <CheckCircle className="h-7 w-7" strokeWidth={1.75} />
               </div>
               <h3 className="m-0 text-[16px] font-bold" style={{ color: 'var(--ink)' }}>Nhập dữ liệu thành công</h3>
-              <div className="grid grid-cols-3 gap-3 w-full mt-4">
+              <div className="grid grid-cols-5 gap-3 w-full mt-4">
                 <div className="p-2.5 rounded-lg" style={{ border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
                   <p className="text-[18px] font-bold m-0 tabular-nums" style={{ color: 'var(--success)' }}>{commitMut.data?.created ?? 0}</p>
-                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Tạo mới</p>
+                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Cước tuyến mới</p>
                 </div>
                 <div className="p-2.5 rounded-lg" style={{ border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
                   <p className="text-[18px] font-bold m-0 tabular-nums" style={{ color: 'var(--accent)' }}>{commitMut.data?.updated ?? 0}</p>
@@ -259,6 +262,14 @@ export function RoutePricingImportDialog({ open, onOpenChange }: Props) {
                 <div className="p-2.5 rounded-lg" style={{ border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
                   <p className="text-[18px] font-bold m-0 tabular-nums" style={{ color: 'var(--ink-3)' }}>{commitMut.data?.skipped ?? 0}</p>
                   <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Bỏ qua</p>
+                </div>
+                <div className="p-2.5 rounded-lg" style={{ border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
+                  <p className="text-[18px] font-bold m-0 tabular-nums" style={{ color: 'var(--warning)' }}>{commitMut.data?.createdClients ?? 0}</p>
+                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Chủ hàng mới</p>
+                </div>
+                <div className="p-2.5 rounded-lg" style={{ border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
+                  <p className="text-[18px] font-bold m-0 tabular-nums" style={{ color: 'var(--warning)' }}>{commitMut.data?.createdLocations ?? 0}</p>
+                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Địa điểm mới</p>
                 </div>
               </div>
             </div>
@@ -277,7 +288,7 @@ export function RoutePricingImportDialog({ open, onOpenChange }: Props) {
           {step === 'preview' && (
             <>
               <Button variant="ghost" onClick={handleReset}>Quay lại</Button>
-              <Button onClick={handleCommit} disabled={commitMut.isPending || commitRows.length === 0}>
+              <Button onClick={handleCommit} disabled={commitMut.isPending || rows.length === 0}>
                 {commitMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                 {commitMut.isPending ? 'Đang lưu...' : `Lưu ${commitRows.length} dòng`}
               </Button>

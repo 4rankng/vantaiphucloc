@@ -148,6 +148,7 @@ export const apiClient = {
   commitCustomerExcel: importsApi.commitCustomerExcel,
   applyPricingToTripIds: importsApi.applyPricingToTripIds,
   uploadVendorReconciliation: importsApi.uploadVendorReconciliation,
+  uploadDriverReconciliation: importsApi.uploadDriverReconciliation,
 
   // Customer-Pricing imports
   previewCustomerPricing: importsApi.previewCustomerPricing,

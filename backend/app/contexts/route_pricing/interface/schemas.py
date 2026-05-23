@@ -1,5 +1,4 @@
 """Pydantic schemas for the Route Pricing interface layer."""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -12,7 +11,7 @@ from app.schemas.domain import (
     LocationSummaryOut,
 )
 
-OperationTypeLiteral = Literal[
+WorkTypeLiteral = Literal[
     "XUẤT/NHẬP TÀU",
     "CHUYỂN BÃI",
     "LẤY VỎ HẠ HÀNG",
@@ -25,7 +24,7 @@ class RoutePricingCreate(BaseModel):
     client_id: int
     pickup_location_id: int
     dropoff_location_id: int
-    operation_type: OperationTypeLiteral
+    work_type: WorkTypeLiteral
     f20_price: int | None = None
     f40_price: int | None = None
     e20_price: int | None = None
@@ -36,7 +35,7 @@ class RoutePricingUpdate(BaseModel):
     client_id: int | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
-    operation_type: OperationTypeLiteral | None = None
+    work_type: WorkTypeLiteral | None = None
     f20_price: int | None = None
     f40_price: int | None = None
     e20_price: int | None = None
@@ -48,7 +47,7 @@ class RoutePricingOut(BaseModel):
     client: ClientSummaryOut
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
-    operation_type: str
+    work_type: str
     f20_price: int | None = None
     f40_price: int | None = None
     e20_price: int | None = None
@@ -61,14 +60,17 @@ class RoutePricingOut(BaseModel):
 
 
 class RoutePricingImportRow(BaseModel):
-    client_id: int
-    pickup_location_id: int
-    dropoff_location_id: int
-    operation_type: str
-    f20_price: int | None = None
-    f40_price: int | None = None
-    e20_price: int | None = None
-    e40_price: int | None = None
+    client_id: int | None = None
+    client_raw: str | None = None
+    pickup_location_id: int | None = None
+    pickup_raw: str | None = None
+    dropoff_location_id: int | None = None
+    dropoff_raw: str | None = None
+    work_type: str | None = None
+    f_20_price: int | None = None
+    f_40_price: int | None = None
+    e_20_price: int | None = None
+    e_40_price: int | None = None
 
 
 class RoutePricingImportCommit(BaseModel):
@@ -79,3 +81,5 @@ class RoutePricingImportResult(BaseModel):
     created: int = 0
     updated: int = 0
     skipped: int = 0
+    created_clients: int = 0
+    created_locations: int = 0

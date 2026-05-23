@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -8,12 +8,8 @@ import {
   Button,
   Input,
   Label,
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
 } from '@/components/ui'
+import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 import { WORK_TYPE_LABELS } from '@/data/domain'
 import type { WorkType } from '@/data/domain'
 import type { RoutePricingFormData } from './useRoutePricing'
@@ -73,6 +69,22 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
     [form, onFormChange],
   )
 
+  const clientOptions = useMemo(
+    () => clients.map((c) => ({ value: c.id.toString(), label: c.code ? `${c.code} - ${c.name}` : c.name })),
+    [clients],
+  )
+  const locationOptions = useMemo(
+    () => locations.map((l) => ({ value: l.id.toString(), label: l.name })),
+    [locations],
+  )
+  const workTypeOptions = useMemo(
+    () =>
+      (Object.entries(WORK_TYPE_LABELS) as [WorkType, string][])
+        .filter(([key]) => !['E20', 'E40', 'F20', 'F40'].includes(key))
+        .map(([key, label]) => ({ value: key, label })),
+    [],
+  )
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -87,21 +99,12 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
             <Label className="text-xs font-medium" style={{ color: 'var(--ink-2)' }}>
               Chủ hàng
             </Label>
-            <Select
+            <InlineSelect
+              placeholder="Chọn chủ hàng"
               value={form.clientId ? form.clientId.toString() : ''}
-              onValueChange={(v) => updateField('clientId', Number(v))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Chọn chủ hàng" />
-              </SelectTrigger>
-              <SelectContent>
-                {clients.map((c) => (
-                  <SelectItem key={c.id} value={c.id.toString()}>
-                    {c.code ? `${c.code} - ${c.name}` : c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={clientOptions}
+              onChange={(v) => updateField('clientId', Number(v))}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -109,41 +112,23 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
               <Label className="text-xs font-medium" style={{ color: 'var(--ink-2)' }}>
                 Điểm đi
               </Label>
-              <Select
+              <InlineSelect
+                placeholder="Chọn điểm đi"
                 value={form.pickupLocationId ? form.pickupLocationId.toString() : ''}
-                onValueChange={(v) => updateField('pickupLocationId', Number(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn điểm đi" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((l) => (
-                    <SelectItem key={l.id} value={l.id.toString()}>
-                      {l.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={locationOptions}
+                onChange={(v) => updateField('pickupLocationId', Number(v))}
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-medium" style={{ color: 'var(--ink-2)' }}>
                 Điểm đến
               </Label>
-              <Select
+              <InlineSelect
+                placeholder="Chọn điểm đến"
                 value={form.dropoffLocationId ? form.dropoffLocationId.toString() : ''}
-                onValueChange={(v) => updateField('dropoffLocationId', Number(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn điểm đến" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((l) => (
-                    <SelectItem key={l.id} value={l.id.toString()}>
-                      {l.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={locationOptions}
+                onChange={(v) => updateField('dropoffLocationId', Number(v))}
+              />
             </div>
           </div>
 
@@ -151,23 +136,12 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
             <Label className="text-xs font-medium" style={{ color: 'var(--ink-2)' }}>
               Loại tác nghiệp
             </Label>
-            <Select
-              value={form.operationType}
-              onValueChange={(v) => updateField('operationType', v as WorkType)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.entries(WORK_TYPE_LABELS) as [WorkType, string][]).filter(([key]) => !['E20','E40','F20','F40'].includes(key)).map(
-                  ([key, label]) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
-                    </SelectItem>
-                  ),
-                )}
-              </SelectContent>
-            </Select>
+            <InlineSelect
+              placeholder="Chọn loại tác nghiệp"
+              value={form.workType}
+              options={workTypeOptions}
+              onChange={(v) => updateField('workType', v as WorkType)}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

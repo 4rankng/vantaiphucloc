@@ -5,6 +5,7 @@ import { Panel } from '@/components/shared/Panel'
 import { useInfiniteScroll, LoadMoreSentinel, SearchInput, FieldActions } from '@/components/shared/ListUtils'
 import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
 import { StatPill } from '@/components/shared/StatPill'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { Drawer } from '@/components/shared/Drawer'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { InlineSelect } from '@/components/shared/InlineSelect'
@@ -351,14 +352,18 @@ export function DriversPage() {
     <div className="space-y-6 animate-fade-in">
 
       {/* ── Header ── */}
-      <header>
-        <h1 className="typo-display">Lái xe</h1>
-        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-          <StatPill count={allDrivers.length} label=" lái xe" accent />
-          <StatPill count={assignedCount} label=" đã gắn xe" />
-          <StatPill count={unassignedCount} label=" chưa gắn xe" />
-        </div>
-      </header>
+      <PageHeader
+        title="Lái xe"
+        subtitle="Danh sách tài xế, biển số xe và thông tin vận hành"
+        lucideIcon={Car}
+        actions={
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <StatPill count={allDrivers.length} label=" lái xe" accent />
+            <StatPill count={assignedCount} label=" đã gắn xe" />
+            <StatPill count={unassignedCount} label=" chưa gắn xe" />
+          </div>
+        }
+      />
 
       {/* ── Table section ── */}
       <section>

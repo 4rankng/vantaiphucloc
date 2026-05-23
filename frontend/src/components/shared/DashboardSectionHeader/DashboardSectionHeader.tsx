@@ -22,25 +22,25 @@ export function DashboardSectionHeader({
           <div
             className="flex h-7 w-7 items-center justify-center rounded-lg border"
             style={{
-              background: 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)',
-              borderColor: 'color-mix(in srgb, var(--theme-brand-primary) 12%, transparent)',
+              background: 'color-mix(in srgb, var(--accent) 6%, transparent)',
+              borderColor: 'color-mix(in srgb, var(--accent) 12%, transparent)',
             }}
           >
             <Icon
               className="h-3.5 w-3.5"
-              style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }}
+              style={{ color: 'var(--accent)', opacity: 0.7 }}
             />
           </div>
         )}
         <div>
           <h2
-            className="text-sm font-semibold tracking-wide"
-            style={{ color: 'var(--theme-text-primary)' }}
+            className="font-semibold"
+            style={{ fontSize: '13.5px', letterSpacing: '-0.01em', color: 'var(--ink)' }}
           >
             {title}
           </h2>
           {subtitle && (
-            <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+            <p className="typo-meta mt-0.5">
               {subtitle}
             </p>
           )}

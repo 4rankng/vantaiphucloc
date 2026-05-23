@@ -285,7 +285,7 @@ class RoutePricing(AuditableMixin, Base):
     dropoff_location_id = Column(
         Integer, ForeignKey("locations.id"), nullable=False, index=True
     )
-    operation_type = Column(String(50), nullable=False, index=True)
+    work_type = Column(String(50), nullable=False, index=True)
     f20_price = Column(Integer, nullable=True)
     f40_price = Column(Integer, nullable=True)
     e20_price = Column(Integer, nullable=True)
@@ -301,7 +301,7 @@ class RoutePricing(AuditableMixin, Base):
             "client_id",
             "pickup_location_id",
             "dropoff_location_id",
-            "operation_type",
+            "work_type",
             name="uq_route_pricings_lane",
         ),
     )

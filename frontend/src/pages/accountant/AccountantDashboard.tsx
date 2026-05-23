@@ -7,6 +7,7 @@ import {
 } from '@/hooks/use-queries'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
 import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
 import { RevealList, Reveal } from '@/components/shared/Reveal'
@@ -158,15 +159,12 @@ function DesktopDashboard() {
     <div className="space-y-5 animate-fade-in">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between relative overflow-hidden">
-        <div>
-          <h1 className="typo-display" style={{ color: 'var(--theme-text-primary)' }}>Tổng quan</h1>
-          <p className="typo-body-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>
-            Bảng điều khiển kế toán & vận tải
-          </p>
-        </div>
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
-      </div>
+      <PageHeader
+        title="Tổng quan"
+        subtitle="Bảng điều khiển kế toán & vận tải"
+        lucideIcon={BarChart3}
+        actions={<MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />}
+      />
 
       {/* ── KPI trio: Doanh thu · Chi phí · Lãi ── */}
       <RevealList stagger={70} threshold={0.08}>
@@ -192,7 +190,7 @@ function DesktopDashboard() {
             className="card-hover-lift"
           />
           <KpiHeroCard
-            label="Lãi ròng"
+            label="Lợi nhuận"
             value={laiRong}
             formattedValue={<AnimatedNumber value={laiRong} format="currency" />}
             icon={DollarSign}
@@ -449,10 +447,13 @@ function MobileDashboard() {
 
   return (
     <div className="space-y-4 pb-8">
-      <div className="flex items-center justify-between">
-        <h1 className="typo-h1" style={{ color: 'var(--theme-text-primary)' }}>Tổng quan</h1>
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
-      </div>
+      <PageHeader
+        title="Tổng quan"
+        subtitle="Bảng điều khiển kế toán & vận tải"
+        lucideIcon={BarChart3}
+        compact
+        actions={<MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />}
+      />
 
       <RevealList stagger={70} threshold={0.08}>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -477,7 +478,7 @@ function MobileDashboard() {
             className="card-hover-lift"
           />
           <KpiHeroCard
-            label="Lãi ròng"
+            label="Lợi nhuận"
             value={laiRong}
             formattedValue={<AnimatedNumber value={laiRong} format="currency" />}
             icon={DollarSign}

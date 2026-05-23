@@ -9,10 +9,10 @@ RoutePricingId = NewType("RoutePricingId", int)
 LocationId = NewType("LocationId", int)
 PartnerId = NewType("PartnerId", int)
 
-OperationType = str
+WorkType = str
 Money = int
 
-VALID_OPERATION_TYPES: frozenset[str] = frozenset(
+VALID_WORK_TYPES: frozenset[str] = frozenset(
     {
         "XUẤT/NHẬP TÀU",
         "CHUYỂN BÃI",
@@ -23,11 +23,11 @@ VALID_OPERATION_TYPES: frozenset[str] = frozenset(
 )
 
 
-def validate_operation_type(value: str) -> str:
+def validate_work_type(value: str) -> str:
     norm = value.strip()
-    if norm not in VALID_OPERATION_TYPES:
+    if norm not in VALID_WORK_TYPES:
         raise ValueError(
-            f"Invalid operation_type '{norm}'. "
-            f"Valid: {', '.join(sorted(VALID_OPERATION_TYPES))}"
+            f"Invalid work_type '{norm}'. "
+            f"Valid: {', '.join(sorted(VALID_WORK_TYPES))}"
         )
     return norm

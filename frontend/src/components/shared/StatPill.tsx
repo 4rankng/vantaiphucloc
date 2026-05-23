@@ -13,6 +13,8 @@ export function StatPill({
       style={{
         background: accent ? 'var(--accent-soft)' : 'var(--surface-3)',
         color: accent ? 'var(--accent)' : 'var(--ink-2)',
+        // Non-accent variant gets a subtle border so it doesn't float against white backgrounds
+        border: accent ? 'none' : '1px solid var(--line)',
       }}
     >
       <span

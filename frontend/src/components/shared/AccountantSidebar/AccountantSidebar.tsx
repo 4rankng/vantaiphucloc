@@ -308,7 +308,7 @@ export function AccountantSidebar({
                     </span>
                     <span
                       className="text-[11px] truncate leading-tight"
-                      style={{ color: 'var(--sb-text-muted)', fontFamily: 'var(--theme-font-mono)' }}
+                      style={{ color: 'var(--sb-text-muted)', letterSpacing: '0.01em' }}
                     >
                       {user?.role === 'accountant'
                         ? 'Kế toán'

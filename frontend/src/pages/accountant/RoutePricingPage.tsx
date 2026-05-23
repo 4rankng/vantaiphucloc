@@ -1,4 +1,4 @@
-import { Plus, Route, FileSpreadsheet } from 'lucide-react'
+import { Plus, Route, FileSpreadsheet, AlertTriangle } from 'lucide-react'
 import { useState } from 'react'
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout/SettingsPageLayout'
@@ -17,8 +17,8 @@ export function RoutePricingPage() {
     locations,
     clientId,
     setClientId,
-    operationType,
-    setOperationType,
+    workType,
+    setWorkType,
     dialogOpen,
     setDialogOpen,
     editingId,
@@ -40,13 +40,17 @@ export function RoutePricingPage() {
       icon={Route}
       actions={
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setImportOpen(true)}
+            className="gap-2"
+          >
             <FileSpreadsheet className="h-4 w-4" />
-            Nhập Excel
+            <span>Nhập Excel</span>
           </Button>
           <Button onClick={openCreate} className="gap-2">
             <Plus className="h-4 w-4" />
-            Thêm cước tuyến
+            <span>Thêm cước tuyến</span>
           </Button>
         </div>
       }
@@ -54,8 +58,8 @@ export function RoutePricingPage() {
       <RoutePricingFilters
         clientId={clientId}
         onClientChange={setClientId}
-        operationType={operationType}
-        onOperationTypeChange={setOperationType}
+        workType={workType}
+        onWorkTypeChange={setWorkType}
         clients={clients}
       />
 
@@ -78,15 +82,24 @@ export function RoutePricingPage() {
         locations={locations}
       />
 
+      {/* Delete confirmation */}
       <Dialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Xác nhận xoá?</DialogTitle>
+            <div className="flex items-center gap-3 mb-1">
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                style={{ background: 'color-mix(in srgb, #ef4444 12%, transparent)' }}
+              >
+                <AlertTriangle className="h-5 w-5" style={{ color: '#dc2626' }} />
+              </div>
+              <DialogTitle>Xác nhận xoá?</DialogTitle>
+            </div>
           </DialogHeader>
-          <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
+          <p className="text-sm pl-[52px]" style={{ color: 'var(--ink-3)' }}>
             Cước tuyến sẽ bị vô hiệu hoá. Hành động này không thể hoàn tác.
           </p>
-          <DialogFooter>
+          <DialogFooter className="mt-2">
             <Button variant="outline" onClick={() => setDeleteId(null)} className="flex-1">
               Huỷ
             </Button>

@@ -41,17 +41,17 @@ export function EmptyState({
               compact ? 'h-10 w-10' : 'h-14 w-14',
             )}
             style={{
-              background: 'var(--theme-bg-tertiary)',
-              color: 'var(--theme-text-muted)',
-              border: '1px solid var(--theme-border-default)',
+              background: 'color-mix(in srgb, var(--accent) 8%, var(--surface-2))',
+              color: 'var(--accent)',
+              border: '1px solid color-mix(in srgb, var(--accent) 16%, transparent)',
             }}
           >
             {icon}
           </div>
         )}
-        <p className="typo-h2">{title}</p>
+        <p className="typo-h2" style={{ letterSpacing: '-0.015em' }}>{title}</p>
         {description && (
-          <p className="typo-body-sm mt-1.5 max-w-sm">{description}</p>
+          <p className="typo-meta mt-1.5 max-w-sm">{description}</p>
         )}
         {action && <div className="mt-5">{action}</div>}
       </div>

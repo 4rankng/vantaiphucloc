@@ -275,7 +275,7 @@ export interface RoutePricing {
   client: ClientSummary
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
-  operationType: WorkType
+  workType: WorkType
   f20Price: number | null
   f40Price: number | null
   e20Price: number | null

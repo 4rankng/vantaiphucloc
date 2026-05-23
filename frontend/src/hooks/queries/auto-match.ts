@@ -2,8 +2,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   autoMatchPreview,
   confirmAutoMatch,
+  aiSuggestMatch,
   type AutoMatchPreviewResponse,
   type ConfirmMatchResponse,
+  type AISuggestionResponse,
 } from '@/services/api/autoMatch.api'
 import { queryKeys } from '@/hooks/query-keys'
 
@@ -33,6 +35,16 @@ export function useConfirmAutoMatch() {
       qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
       qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+    },
+  })
+}
+
+export function useAISuggestMatch() {
+  return useMutation<AISuggestionResponse, Error, number>({
+    mutationFn: async (deliveredTripId) => {
+      const res = await aiSuggestMatch(deliveredTripId)
+      if (!res.success) throw new Error(res.error || 'AI Suggestion failed')
+      return res.data
     },
   })
 }

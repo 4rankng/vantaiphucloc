@@ -81,21 +81,22 @@
   /* ─── Typography tokens (NEPO wireframe scale) ───── */
   .typo-display {
     font-family: var(--theme-font-display);
-    font-size: clamp(1.75rem, 3.6vw, 2.5rem); /* 28px → 40px */
-    font-weight: 600;
+    font-size: clamp(1.375rem, 2.2vw, 1.75rem); /* 22px → 28px — SaaS-appropriate, not blog-scale */
+    font-weight: 700;
     /* Generous line-height + small top padding so stacked Vietnamese diacritics
        (ổ, ấ, ầ, ẩ, ễ, …) are not clipped by parents with overflow: hidden. */
-    line-height: 1.2;
-    padding-top: 0.08em;
-    letter-spacing: -0.035em;
+    line-height: 1.25;
+    padding-top: 0.06em;
+    letter-spacing: -0.025em;
     color: var(--theme-text-primary);
+    text-wrap: balance;
   }
   .typo-h1 {
     font-family: var(--theme-font-display);
-    font-size: 1rem;            /* 16px — panel title */
-    font-weight: 600;
+    font-size: 1.0625rem;       /* 17px — panel title, one notch up */
+    font-weight: 700;
     line-height: 1.3;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.022em;
     color: var(--theme-text-primary);
   }
   .typo-h2 {
@@ -173,6 +174,35 @@
   .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
   .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--theme-border-default, #e4e4e7); border-radius: 4px; }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--theme-text-muted, #a1a1aa); }
+
+  /* ─── Text balance (better Vietnamese multi-line heading wrap) ── */
+  .text-balance { text-wrap: balance; }
+  .text-pretty  { text-wrap: pretty; }
+
+  /* ─── Numeric display utilities ─────────────────────────────── */
+  /* Monospaced + tabular — for financial figures in tables */
+  .nepo-num {
+    font-family: var(--theme-font-mono, "JetBrains Mono", ui-monospace, monospace);
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: -0.01em;
+    font-size: 0.84375rem; /* 13.5px — matches nepo-table td */
+  }
+  /* Large display number — for KPI cards, totals, hero stats */
+  .nepo-num-hero {
+    font-family: var(--theme-font-display);
+    font-variant-numeric: tabular-nums lining-nums;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  /* Muted currency suffix — "₫" after a number */
+  .nepo-currency {
+    font-size: 0.75em;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--ink-3);
+    margin-left: 2px;
+  }
 }
 
 /* ─── Glass overlay (header / bottom nav ONLY) ──────────── */
@@ -803,6 +833,29 @@ select {
   animation: live-shimmer 3s ease-in-out infinite;
 }
 
+/* ─── Form input focus glow ─────────────────────────────── */
+/* Applied via CSS so inline-styled variants also pick it up */
+textarea.nepo-input:focus,
+textarea.nepo-textarea:focus,
+input.nepo-input:focus {
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Textarea — consistent with Input height model */
+textarea {
+  font-family: var(--theme-font-body, "Be Vietnam Pro", system-ui, sans-serif);
+  font-size: 13.5px;
+  letter-spacing: -0.008em;
+  line-height: 1.55;
+}
+
+/* ─── Tooltip refinement ───────────────────────────────── */
+[data-radix-tooltip-content] {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.003em;
+}
+
 /* ─── Dialog / Sheet scroll fix (iOS Safari) ───────────── */
 [data-radix-dialog-content] {
   -webkit-overflow-scrolling: touch;
@@ -1037,29 +1090,36 @@ select {
 /* ─── NEPO DataTable ──────────────────────────────────── */
 .nepo-table {
   font-size: 13.5px;
+  letter-spacing: -0.008em; /* slight tightening — denser data reads better */
   color: var(--ink);
   width: 100%;
 }
 .nepo-table thead th {
-  padding: 11px 16px;
+  padding: 10px 16px;
   background: var(--surface-2);
   border-bottom: 1px solid var(--line-2);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ink-3);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-2);  /* was --ink-3, slightly higher contrast improves readability */
   text-transform: uppercase;
-  letter-spacing: 0.055em;
+  letter-spacing: 0.07em;
   white-space: nowrap;
   position: sticky;
   top: 0;
   z-index: 1;
 }
 .nepo-table tbody td {
-  padding: 14px 16px;
+  padding: 13px 16px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
   color: var(--ink-2);
   white-space: nowrap;
+  /* Numeric columns (right-aligned) get tabular figures automatically */
+}
+/* Right-aligned cells — assume numeric, apply tabular nums + mono feel */
+.nepo-table tbody td.text-right {
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.01em;
 }
 .nepo-table tbody tr {
   transition: background 0.12s ease;
@@ -1087,13 +1147,23 @@ select {
   border-bottom: 1px solid var(--line);
 }
 .nepo-table tfoot.nepo-tfoot td {
-  padding: 14px 16px;
+  padding: 13px 16px;
   border-top: 2px solid var(--line-2);
   font-weight: 700;
   font-size: 13.5px;
+  letter-spacing: -0.01em;
   white-space: nowrap;
   background: var(--surface-2);
   color: var(--ink);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ─── Optional zebra striping — add class nepo-table--zebra ── */
+.nepo-table--zebra tbody tr:nth-child(even) td {
+  background: var(--surface-2);
+}
+.nepo-table--zebra tbody tr:nth-child(even).is-selected td {
+  background: var(--accent-soft);
 }
 .nepo-th-sticky,
 .nepo-td-sticky {
@@ -1176,14 +1246,15 @@ select {
   box-shadow: var(--sh);
 }
 
-/* ─── NEPO Sidebar (dark green) ───────────────────────── */
+/* ─── NEPO Sidebar (dark green) ───────────────���───────── */
 .nepo-sidebar-section-label {
-  font-family: var(--theme-font-mono);
-  font-size: 10px;
+  /* Body font — mono was wrong here; labels are navigation text, not code */
+  font-family: var(--theme-font-body);
+  font-size: 10.5px;
   line-height: 1;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-weight: 700;
   color: var(--sb-text-muted);
 }
 .nepo-nav-item {
@@ -1645,12 +1716,15 @@ select {
     line-height: 1.3;
     color: var(--theme-text-primary);
     margin: 0;
-    letter-spacing: -0.015em;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
   }
   .card-header p {
     font-size: 12px;
     color: var(--theme-text-muted);
     margin: 2px 0 0;
+    letter-spacing: -0.003em;
+    line-height: 1.5;
   }
 
   /* ─── Page header ─────────────────────────────────── */

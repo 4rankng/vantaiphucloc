@@ -16,6 +16,9 @@ from app.contexts.operations.infrastructure.auto_match_service import (
     auto_match_preview,
     confirm_matches,
 )
+from app.contexts.operations.infrastructure.ai_reconciliation_service import (
+    get_ai_match_suggestion,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -55,6 +58,13 @@ class ConfirmMatchResponse(BaseModel):
     errors: list[str]
 
 
+class AISuggestionResponse(BaseModel):
+    suggested_booked_trip_id: int | None = None
+    reasoning: str
+    confidence: str
+    error: str | None = None
+
+
 @router.post("/auto-match/preview", response_model=AutoMatchResponse)
 async def auto_match_preview_endpoint(
     body: AutoMatchRequest,
@@ -82,3 +92,23 @@ async def auto_match_confirm_endpoint(
 ):
     result = await confirm_matches(db, [(p.delivered_trip_id, p.booked_trip_id) for p in body.pairs])
     return ConfirmMatchResponse(**result)
+
+
+@router.post("/auto-match/ai-suggest/{delivered_trip_id}", response_model=AISuggestionResponse)
+async def ai_suggest_endpoint(
+    delivered_trip_id: int,
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await get_ai_match_suggestion(db, delivered_trip_id)
+    if "error" in result:
+        return AISuggestionResponse(
+            reasoning="",
+            confidence="none",
+            error=result["error"],
+        )
+    return AISuggestionResponse(
+        suggested_booked_trip_id=result.get("suggested_booked_trip_id"),
+        reasoning=result.get("reasoning", ""),
+        confidence=result.get("confidence", "low"),
+    )

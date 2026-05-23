@@ -52,7 +52,7 @@ def _find_excel() -> Path:
     )
 
 
-def _normalize_operation_type(value: str | None) -> str:
+def _normalize_work_type(value: str | None) -> str:
     if not value:
         return "CHUYỂN BÃI"
     norm = value.strip().upper()
@@ -113,14 +113,14 @@ def _read_excel(path: Path) -> tuple[list[str], list[dict]]:
             "E40": _val(row[7]) if len(row) > 7 else None,
         }
         best_price = max((v for v in prices.values() if v), default=None)
-        operation_type = str(row[8]).strip() if row[8] else None
+        work_type_raw = str(row[8]).strip() if row[8] else None
 
         pricing_rows.append({
             "client_name": str(client_name).strip(),
             "pickup": str(row[2]).strip() if row[2] else None,
             "dropoff": str(row[3]).strip() if row[3] else None,
             "price": best_price,
-            "work_type": _normalize_operation_type(operation_type),
+            "work_type": _normalize_work_type(work_type_raw),
         })
 
     return ports, pricing_rows

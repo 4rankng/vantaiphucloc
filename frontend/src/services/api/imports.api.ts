@@ -284,3 +284,25 @@ export async function uploadVendorReconciliation(file: File, vendorId: number): 
   }
 }
 
+export interface DriverImportResponse {
+  totalRows: number
+  created: number
+  matched: number
+  fraudSkipped: number
+  errors: string[]
+  details: Record<string, any>[]
+}
+
+export async function uploadDriverReconciliation(file: File): Promise<ApiResponse<DriverImportResponse>> {
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await api.post('/driver-reconciliation/upload', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return ok(toCamel<DriverImportResponse>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+

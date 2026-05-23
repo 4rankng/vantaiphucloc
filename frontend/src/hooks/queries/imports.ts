@@ -67,6 +67,19 @@ export function useUploadVendorReconciliation() {
   })
 }
 
+export function useUploadDriverReconciliation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ file }: { file: File }) =>
+      apiClient.uploadDriverReconciliation(file).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+    },
+  })
+}
+
 
 export function useExportDoiSoatExcel() {
   return useMutation({

@@ -1,5 +1,4 @@
 """Route Pricing use cases (CRUD)."""
-
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,7 +38,7 @@ class ListRoutePricings:
         page: int,
         page_size: int,
         client_id: int | None = None,
-        operation_type: str | None = None,
+        work_type: str | None = None,
         active_only: bool = True,
     ) -> tuple[list[RoutePricing], int]:
         offset = (page - 1) * page_size
@@ -47,7 +46,7 @@ class ListRoutePricings:
             offset=offset,
             limit=page_size,
             client_id=PartnerId(client_id) if client_id is not None else None,
-            operation_type=operation_type,
+            work_type=work_type,
             active_only=active_only,
         )
         return list(items), total
@@ -64,7 +63,7 @@ class CreateRoutePricing:
             client_id=PartnerId(data.client_id),
             pickup_location_id=LocationId(data.pickup_location_id),
             dropoff_location_id=LocationId(data.dropoff_location_id),
-            operation_type=data.operation_type,
+            work_type=data.work_type,
             f20_price=data.f20_price,
             f40_price=data.f40_price,
             e20_price=data.e20_price,
@@ -75,7 +74,7 @@ class CreateRoutePricing:
             client_id=rp.client_id,
             pickup_location_id=rp.pickup_location_id,
             dropoff_location_id=rp.dropoff_location_id,
-            operation_type=rp.operation_type,
+            work_type=rp.work_type,
         )
         if existing is not None:
             raise AlreadyExists(
@@ -83,7 +82,7 @@ class CreateRoutePricing:
                     data.client_id,
                     data.pickup_location_id,
                     data.dropoff_location_id,
-                    data.operation_type,
+                    data.work_type,
                 )
             )
         saved = await self.repo.add(rp)
@@ -108,12 +107,12 @@ class UpdateRoutePricing:
             rp.pickup_location_id = LocationId(data.pickup_location_id)
         if data.dropoff_location_id is not None:
             rp.dropoff_location_id = LocationId(data.dropoff_location_id)
-        if data.operation_type is not None:
+        if data.work_type is not None:
             from app.contexts.route_pricing.domain.value_objects import (
-                validate_operation_type,
+                validate_work_type,
             )
 
-            rp.operation_type = validate_operation_type(data.operation_type)
+            rp.work_type = validate_work_type(data.work_type)
         if data.f20_price is not None:
             rp.f20_price = data.f20_price
         if data.f40_price is not None:

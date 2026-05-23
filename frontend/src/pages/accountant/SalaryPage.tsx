@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Wallet, Download, Settings2, Coins, BadgePercent } from 'lucide-react'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
 import { Drawer, DrawerHero } from '@/components/shared/Drawer'
@@ -172,29 +173,28 @@ export function SalaryPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <header className="flex items-start justify-between gap-5 flex-wrap">
-        <div className="min-w-0">
-          <h1 className="typo-display">Lương</h1>
-          <p className="typo-body-sm mt-1.5">
-            Bảng lương tài xế theo kỳ với chi tiết chuyến, lương cơ bản, năng suất và phụ cấp
-          </p>
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={exportMutation.isPending}
-            className="inline-flex items-center gap-1.5 text-[12.5px] font-medium transition-colors disabled:opacity-50"
-            style={{ color: 'var(--ink-3)' }}
-            onMouseEnter={e => (e.currentTarget.style.color = 'var(--ink)')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'var(--ink-3)')}
-          >
-            <Download className="h-3.5 w-3.5" />
-            {exportMutation.isPending ? 'Đang xuất...' : 'Xuất Excel'}
-          </button>
-          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
-        </div>
-      </header>
+      <PageHeader
+        title="Lương"
+        subtitle="Bảng lương tài xế theo kỳ với chi tiết chuyến, lương cơ bản, năng suất và phụ cấp"
+        lucideIcon={Wallet}
+        actions={
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exportMutation.isPending}
+              className="inline-flex items-center gap-1.5 text-[12.5px] font-medium transition-colors disabled:opacity-50"
+              style={{ color: 'var(--ink-3)' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--ink)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--ink-3)')}
+            >
+              <Download className="h-3.5 w-3.5" />
+              {exportMutation.isPending ? 'Đang xuất...' : 'Xuất Excel'}
+            </button>
+            <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-3 gap-3">
         <KpiHeroCard

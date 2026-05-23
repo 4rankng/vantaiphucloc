@@ -63,7 +63,7 @@ async def _to_out(db: AsyncSession, items: list[RoutePricing]) -> list[RoutePric
             dropoff_location=get_location_summary(
                 locations, int(rp.dropoff_location_id)
             ),
-            operation_type=rp.operation_type,
+            work_type=rp.work_type,
             f20_price=rp.f20_price,
             f40_price=rp.f40_price,
             e20_price=rp.e20_price,
@@ -79,7 +79,7 @@ async def _to_out(db: AsyncSession, items: list[RoutePricing]) -> list[RoutePric
 @router.get("/route-pricings", response_model=PaginatedResponse[RoutePricingOut])
 async def list_route_pricings(
     client_id: int | None = None,
-    operation_type: str | None = None,
+    work_type: str | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=1000),
     _current_user: User = Depends(require_permission("read", "RoutePricing")),
@@ -90,7 +90,7 @@ async def list_route_pricings(
         page=page,
         page_size=page_size,
         client_id=client_id,
-        operation_type=operation_type,
+        work_type=work_type,
         active_only=True,
     )
     out_items = await _to_out(db, items)
@@ -116,7 +116,7 @@ async def create_route_pricing(
                 client_id=body.client_id,
                 pickup_location_id=body.pickup_location_id,
                 dropoff_location_id=body.dropoff_location_id,
-                operation_type=body.operation_type,
+                work_type=body.work_type,
                 f20_price=body.f20_price,
                 f40_price=body.f40_price,
                 e20_price=body.e20_price,
@@ -143,7 +143,7 @@ async def update_route_pricing(
                 client_id=body.client_id,
                 pickup_location_id=body.pickup_location_id,
                 dropoff_location_id=body.dropoff_location_id,
-                operation_type=body.operation_type,
+                work_type=body.work_type,
                 f20_price=body.f20_price,
                 f40_price=body.f40_price,
                 e20_price=body.e20_price,

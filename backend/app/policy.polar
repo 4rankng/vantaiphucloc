@@ -65,6 +65,13 @@ allow(user, "create", "Pricing") if role_allow(user, "accountant");
 allow(user, "update", "Pricing") if role_allow(user, "accountant");
 allow(user, "delete", "Pricing") if role_allow(user, "accountant");
 
+# ── Route Pricing ──────────────────────────────────────────────────
+
+allow(user, "read", "RoutePricing") if role_allow(user, "driver");
+allow(user, "create", "RoutePricing") if role_allow(user, "accountant");
+allow(user, "update", "RoutePricing") if role_allow(user, "accountant");
+allow(user, "delete", "RoutePricing") if role_allow(user, "accountant");
+
 # ── Salary ────────────────────────────────────────────────────────
 
 allow(user, "calculate", "Salary") if role_allow(user, "accountant");

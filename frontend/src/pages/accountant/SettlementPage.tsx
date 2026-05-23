@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { Download, FileSpreadsheet } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { Panel } from '@/components/shared/Panel'
 import { Pill } from '@/components/shared/Pill'
 import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
@@ -39,15 +40,12 @@ export function SettlementPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <header className="flex items-start justify-between gap-5 flex-wrap">
-        <div className="min-w-0">
-          <h1 className="typo-display">Xuất đối soát</h1>
-          <p className="typo-body-sm mt-1.5">
-            Xuất Excel bảng đối soát chuyến vận chuyển theo chủ hàng và kỳ
-          </p>
-        </div>
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
-      </header>
+      <PageHeader
+        title="Xuất đối soát"
+        subtitle="Xuất Excel bảng đối soát chuyến vận chuyển theo chủ hàng và kỳ"
+        lucideIcon={Download}
+        actions={<MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-start">
         <Panel

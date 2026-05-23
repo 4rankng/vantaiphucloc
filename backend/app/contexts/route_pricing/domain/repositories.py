@@ -8,9 +8,9 @@ from typing import Sequence
 from app.contexts.route_pricing.domain.entities import RoutePricing
 from app.contexts.route_pricing.domain.value_objects import (
     LocationId,
-    OperationType,
     PartnerId,
     RoutePricingId,
+    WorkType,
 )
 
 
@@ -25,7 +25,7 @@ class RoutePricingRepository(ABC):
         client_id: PartnerId,
         pickup_location_id: LocationId,
         dropoff_location_id: LocationId,
-        operation_type: OperationType,
+        work_type: WorkType,
     ) -> RoutePricing | None: ...
 
     @abstractmethod
@@ -35,7 +35,7 @@ class RoutePricingRepository(ABC):
         offset: int,
         limit: int,
         client_id: PartnerId | None = None,
-        operation_type: OperationType | None = None,
+        work_type: WorkType | None = None,
         active_only: bool = True,
     ) -> tuple[Sequence[RoutePricing], int]: ...
 

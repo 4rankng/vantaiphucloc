@@ -7,7 +7,7 @@ import openpyxl
 
 from app.contexts.route_pricing.infrastructure.route_pricing_import import (
     _find_header_row,
-    _normalize_operation_type,
+    _normalize_work_type,
     _parse_int_price,
     parse_route_pricing_bytes,
 )
@@ -58,33 +58,33 @@ def test_find_header_row_requires_price_col():
     assert _find_header_row(rows) is None
 
 
-# ── _normalize_operation_type ────────────────────────────────────
+# ── _normalize_work_type ─────────────────────────────────────────
 
 
-def test_normalize_op_exact():
-    assert _normalize_operation_type("XUẤT/NHẬP TÀU") == "XUẤT/NHẬP TÀU"
+def test_normalize_wt_exact():
+    assert _normalize_work_type("XUẤT/NHẬP TÀU") == "XUẤT/NHẬP TÀU"
 
 
-def test_normalize_op_case_insensitive():
-    assert _normalize_operation_type("xuất/nhập tàu") == "XUẤT/NHẬP TÀU"
+def test_normalize_wt_case_insensitive():
+    assert _normalize_work_type("xuất/nhập tàu") == "XUẤT/NHẬP TÀU"
 
 
-def test_normalize_op_whitespace():
-    assert _normalize_operation_type("  chuyển   bãi  ") == "CHUYỂN BÃI"
+def test_normalize_wt_whitespace():
+    assert _normalize_work_type("  chuyển   bãi  ") == "CHUYỂN BÃI"
 
 
-def test_normalize_op_invalid():
-    assert _normalize_operation_type("INVALID") is None
+def test_normalize_wt_invalid():
+    assert _normalize_work_type("INVALID") is None
 
 
-def test_normalize_op_empty():
-    assert _normalize_operation_type("") is None
+def test_normalize_wt_empty():
+    assert _normalize_work_type("") is None
 
 
-def test_normalize_op_all_valid():
-    from app.contexts.route_pricing.domain.value_objects import VALID_OPERATION_TYPES
-    for op in VALID_OPERATION_TYPES:
-        assert _normalize_operation_type(op) == op
+def test_normalize_wt_all_valid():
+    from app.contexts.route_pricing.domain.value_objects import VALID_WORK_TYPES
+    for wt in VALID_WORK_TYPES:
+        assert _normalize_work_type(wt) == wt
 
 
 # ── _parse_int_price ─────────────────────────────────────────────
@@ -129,7 +129,7 @@ def test_parse_basic():
     assert result["rows"][0]["client_raw"] == "HPH"
     assert result["rows"][0]["f20_price"] == 400000
     assert result["rows"][0]["e20_price"] is None
-    assert result["rows"][0]["operation_type"] == "XUẤT/NHẬP TÀU"
+    assert result["rows"][0]["work_type"] == "XUẤT/NHẬP TÀU"
     assert result["stats"]["total"] == 2
 
 

@@ -132,7 +132,7 @@ async def generate_vendor_export_excel(
         dropoff = loc_name_by_id.get(wo.dropoff_location_id or 0, "")
         plate = wo.vehicle_plate or ""
         vessel = wo.vessel or ""
-        op_type = ""  # operation_type removed; work_type carries equivalent meaning
+        op_type = ""  # work_type column in route_pricings
         revenue = wo.revenue or 0
         trip_date_str = wo.trip_date.strftime("%d/%m/%Y") if wo.trip_date else ""
 

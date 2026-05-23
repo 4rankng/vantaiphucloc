@@ -59,25 +59,25 @@ export function MonthNavigator({
         </button>
 
         <div className="flex flex-col items-center px-2.5 min-w-0">
+          {/* Body font — navigational label, not code output */}
           <span
             className="leading-tight whitespace-nowrap"
             style={{
               fontSize: '13px',
               fontWeight: 600,
               color: 'var(--ink)',
-              fontFamily: 'var(--theme-font-mono)',
-              letterSpacing: '-0.01em',
+              letterSpacing: '-0.015em',
             }}
           >
             {primaryLabel}
           </span>
           {rangeLabel && (
             <span
-              className="leading-tight whitespace-nowrap"
+              className="leading-tight whitespace-nowrap tabular-nums"
               style={{
                 fontSize: '10.5px',
                 color: 'var(--ink-3)',
-                fontFamily: 'var(--theme-font-mono)',
+                letterSpacing: '0.01em',   /* slight tracking helps short date ranges read clearly */
               }}
             >
               {rangeLabel}

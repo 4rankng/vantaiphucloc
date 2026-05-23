@@ -47,8 +47,19 @@ const DialogContent = React.forwardRef<
     >
       {children}
       {!hideCloseButton && (
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none">
-          <X className="h-4 w-4" />
+        <DialogPrimitive.Close
+          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-lg transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:pointer-events-none"
+          style={{ color: 'var(--ink-3)' }}
+          onMouseEnter={(e) => {
+            ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-3)'
+            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--ink)'
+          }}
+          onMouseLeave={(e) => {
+            ;(e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--ink-3)'
+          }}
+        >
+          <X className="h-3.5 w-3.5" />
         </DialogPrimitive.Close>
       )}
     </DialogPrimitive.Content>
@@ -65,7 +76,19 @@ const DialogTitle = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Title ref={ref} className={cn("text-lg font-semibold leading-none tracking-tight text-[var(--theme-text-primary)]", className)} {...props} />
+  <DialogPrimitive.Title
+    ref={ref}
+    className={cn(className)}
+    style={{
+      fontFamily: 'var(--theme-font-display)',
+      fontSize: '1rem',       /* 16px — precise, not oversized */
+      fontWeight: 700,
+      lineHeight: 1.3,
+      letterSpacing: '-0.02em',
+      color: 'var(--ink)',
+    }}
+    {...props}
+  />
 ))
 DialogTitle.displayName = DialogPrimitive.Title.displayName
 
