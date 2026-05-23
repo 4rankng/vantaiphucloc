@@ -196,6 +196,7 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
             'created_at': DeliveredTripORM.created_at,
             'cont_number': DeliveredTripORM.cont_number,
             'cont_type': DeliveredTripORM.cont_type,
+            'work_type': DeliveredTripORM.work_type,
         }
         sort_col = _SORTABLE_DIRECT.get(sort_by or '') if sort_by else None
 

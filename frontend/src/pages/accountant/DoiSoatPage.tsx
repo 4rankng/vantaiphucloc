@@ -21,7 +21,7 @@ import { FilterTabs } from '@/components/shared/FilterTabs'
 import { StatPill } from '@/components/shared/StatPill'
 import { Pagination } from '@/components/ui/Pagination/Pagination'
 import { useMonthParams } from './use-month-params'
-import { compactCurrency } from '@/data/domain'
+import { compactCurrency, getWorkTypeLabel } from '@/data/domain'
 import { useDebounce } from '@/hooks/use-debounce'
 import { formatMatchDate as formatDate } from '@/lib/match-utils'
 import type { DeliveredTrip } from '@/data/domain'
@@ -150,6 +150,17 @@ export function DoiSoatPage() {
       ),
     },
     {
+      key: 'vessel',
+      header: 'Số tàu',
+      width: 90,
+      sortKey: 'vessel',
+      render: (t) => (
+        <span className="text-[13px] truncate block" style={{ color: 'var(--ink-2)' }}>
+          {t.vessel || '—'}
+        </span>
+      ),
+    },
+    {
       key: 'client',
       header: 'Chủ hàng',
       width: 100,
@@ -172,6 +183,37 @@ export function DoiSoatPage() {
           </span>
         )
       },
+    },
+    {
+      key: 'vehicle',
+      header: 'Số xe chạy',
+      width: 90,
+      sortKey: 'vehicle_plate',
+      render: (t) => (
+        <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>
+          {t.vehiclePlate || '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'pickup',
+      header: 'Điểm đi',
+      sortKey: 'pickup_name',
+      render: (t) => (
+        <span className="text-[12.5px] truncate block" style={{ color: 'var(--ink-2)' }}>
+          {t.pickupLocation?.name ?? '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'dropoff',
+      header: 'Điểm đến',
+      sortKey: 'dropoff_name',
+      render: (t) => (
+        <span className="text-[12.5px] truncate block" style={{ color: 'var(--ink-2)' }}>
+          {t.dropoffLocation?.name ?? '—'}
+        </span>
+      ),
     },
     {
       key: 'containers',
@@ -198,7 +240,7 @@ export function DoiSoatPage() {
       width: 64,
       sortKey: 'cont_type',
       render: (t) => {
-        const ct = t.contType || t.workType
+        const ct = t.contType
         return ct ? (
           <span
             className="text-[10.5px] uppercase font-semibold whitespace-nowrap"
@@ -218,46 +260,30 @@ export function DoiSoatPage() {
       },
     },
     {
-      key: 'vehicle',
-      header: 'Số xe chạy',
-      width: 90,
-      sortKey: 'vehicle_plate',
-      render: (t) => (
-        <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>
-          {t.vehiclePlate || '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'vessel',
-      header: 'Số tàu',
-      width: 90,
-      sortKey: 'vessel',
-      render: (t) => (
-        <span className="text-[13px] truncate block" style={{ color: 'var(--ink-2)' }}>
-          {t.vessel || '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'pickup',
-      header: 'Điểm đi',
-      sortKey: 'pickup_name',
-      render: (t) => (
-        <span className="text-[12.5px] truncate block" style={{ color: 'var(--ink-2)' }}>
-          {t.pickupLocation?.name ?? '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'dropoff',
-      header: 'Điểm đến',
-      sortKey: 'dropoff_name',
-      render: (t) => (
-        <span className="text-[12.5px] truncate block" style={{ color: 'var(--ink-2)' }}>
-          {t.dropoffLocation?.name ?? '—'}
-        </span>
-      ),
+      key: 'workType',
+      header: 'Tác nghiệp',
+      width: 100,
+      sortKey: 'work_type',
+      render: (t) => {
+        const wt = t.workType
+        const label = getWorkTypeLabel(wt)
+        return label ? (
+          <span
+            className="text-[11px] font-semibold whitespace-nowrap"
+            style={{
+              color: 'var(--ink-2)',
+              background: 'var(--surface-3)',
+              padding: '1px 5px',
+              borderRadius: 4,
+              letterSpacing: '0.04em',
+            }}
+          >
+            {label}
+          </span>
+        ) : (
+          <span style={{ color: 'var(--ink-4)' }}>—</span>
+        )
+      },
     },
   ]
 

@@ -30,13 +30,13 @@ export function InlineSelect({
     <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setSearch('') }}>
       <PopoverTrigger asChild>
         <button
-          className="group inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 -mx-1.5 text-left text-[12px] transition-colors w-full flex-wrap"
+          className="group inline-flex items-center justify-end gap-1.5 rounded-md px-2 py-1 -mx-2 text-right text-[13px] transition-colors max-w-full font-medium"
           style={{ background: 'transparent', color: displayValue ? 'var(--ink)' : 'var(--ink-4)' }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)' }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)' }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
         >
-          <span className="truncate italic">{displayValue ?? 'bất kỳ'}</span>
-          <svg className="shrink-0 opacity-40 ml-auto" width="10" height="10" viewBox="0 0 10 10">
+          <span className={`truncate ${!displayValue ? 'italic font-normal' : ''}`}>{displayValue ?? 'chưa chọn'}</span>
+          <svg className="shrink-0 opacity-40" width="12" height="12" viewBox="0 0 10 10">
             <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
@@ -58,7 +58,7 @@ export function InlineSelect({
             />
           </div>
         )}
-        <div className="py-1 max-h-52 overflow-y-auto">
+        <div className="py-1 max-h-72 overflow-y-auto custom-scrollbar pr-1">
           <button
             className="w-full text-left px-3 py-1.5 text-[12px] flex items-center gap-2 transition-colors"
             style={{ color: 'var(--theme-text-muted)' }}

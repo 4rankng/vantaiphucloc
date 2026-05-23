@@ -40,7 +40,7 @@ class TripLine:
     container_number: str
     cont_type: str          # F20 | F40 | E20 | E40
     work_type: str          # tác nghiệp: XUẤT/NHẬP TÀU, CHUYỂN BÃI, etc.
-    tractor_plate: str      # may be ""
+    vehicle_plate: str      # may be ""
     pickup_location: str
     dropoff_location: str
     unit_price: int

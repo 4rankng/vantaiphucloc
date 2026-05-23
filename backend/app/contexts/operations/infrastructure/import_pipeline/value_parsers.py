@@ -183,12 +183,14 @@ def parse_date(raw: Any) -> date | None:
 # ---------------------------------------------------------------------------
 
 _PLATE_NORM_RE = re.compile(r"\s+")
+_TRIM_PUNCT_RE = re.compile(r"^[\s.,;:\-_/\\]+|[\s.,;:\-_/\\]+$")
 
 
 def parse_string(raw: Any, max_len: int = 500) -> str:
     if raw is None:
         return ""
     s = str(raw).strip()
+    s = _TRIM_PUNCT_RE.sub("", s)
     s = _PLATE_NORM_RE.sub(" ", s)
     return s[:max_len]
 
@@ -237,9 +239,11 @@ def build_cont_type(freight_kind: Any, size: Any, type_code: str | None = None) 
         elif fk in ("E", "EMPTY", "R", "RỖNG", "RONG", "VỎ", "VO", "0", "N"):
             fe = "E"
 
-    # Normalize size
+    # Normalize size (only 20 or 40 are valid)
     sz = str(size).strip() if size else "20"
     m = re.match(r"^(\d+)", sz)
     sz = m.group(1) if m else "20"
+    if sz not in ("20", "40"):
+        sz = "20"
 
     return f"{fe}{sz}"

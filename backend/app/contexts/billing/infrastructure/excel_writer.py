@@ -119,7 +119,7 @@ def _write_sl_sheet(wb: openpyxl.Workbook, data: SettlementStatement, sheet_name
         ws.cell(row=row, column=7, value=1 if ct == "E20" else None).alignment = _CENTER
         ws.cell(row=row, column=8, value=1 if ct == "E40" else None).alignment = _CENTER
 
-        ws.cell(row=row, column=9, value=line.tractor_plate).alignment = _CENTER
+        ws.cell(row=row, column=9, value=line.vehicle_plate).alignment = _CENTER
         ws.cell(row=row, column=10, value=line.vessel).alignment = _CENTER
         ws.cell(row=row, column=11, value=line.pickup_location).alignment = _LEFT
         ws.cell(row=row, column=12, value=line.dropoff_location).alignment = _LEFT

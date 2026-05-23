@@ -175,7 +175,7 @@ async def create_delivered_trip_endpoint(
 _VALID_SORT_COLS = {
     'trip_date', 'vessel', 'matched', 'revenue', 'created_at',
     'client_code', 'vehicle_plate', 'pickup_name', 'dropoff_name',
-    'cont_number', 'cont_type',
+    'cont_number', 'cont_type', 'work_type',
 }
 
 

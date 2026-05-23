@@ -104,7 +104,7 @@ async def get_dashboard_summary(
         select(
             User.id.label("driver_id"),
             User.username.label("driver_name"),
-            Vehicle.plate.label("tractor_plate"),
+            Vehicle.plate.label("vehicle_plate"),
             func.count(DeliveredTrip.id).label("total_jobs"),
             func.coalesce(func.sum(DeliveredTrip.driver_salary + DeliveredTrip.allowance), 0).label("total_salary"),
         )
@@ -122,7 +122,7 @@ async def get_dashboard_summary(
         {
             "driver_id": row.driver_id,
             "driver_name": row.driver_name,
-            "tractor_plate": row.tractor_plate,
+            "vehicle_plate": row.vehicle_plate,
             "total_jobs": row.total_jobs,
             "total_salary": row.total_salary,
         }

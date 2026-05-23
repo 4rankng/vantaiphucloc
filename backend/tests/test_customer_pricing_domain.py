@@ -26,13 +26,15 @@ from app.contexts.customer_pricing.domain.value_objects import (
 # -- value object validation ------------------------------------------
 
 
-def test_normalize_work_type_rejects_unknown():
-    assert normalize_work_type("f20") == "F20"
+def test_normalize_work_type_accepts_any_nonempty():
+    assert normalize_work_type("f20") == "f20"
     assert normalize_work_type(" E40 ") == "E40"
-    with pytest.raises(ValueError):
-        normalize_work_type("F30")
+    assert normalize_work_type("CHẠY SÀ LAN") == "CHẠY SÀ LAN"
+    assert normalize_work_type("CHUYỂN BÃI") == "CHUYỂN BÃI"
     with pytest.raises(ValueError):
         normalize_work_type(None)
+    with pytest.raises(ValueError):
+        normalize_work_type("   ")
 
 
 # -- Partner ----------------------------------------------------------
@@ -131,12 +133,12 @@ def test_pricing_normalizes_work_type_at_construction():
         id=None, client_id=PartnerId(1), work_type=" f40 ",
         pickup_location_id=LocationId(1), dropoff_location_id=LocationId(2),
     )
-    assert p.work_type == "F40"
+    assert p.work_type == "f40"
 
 
-def test_pricing_construction_rejects_unknown_work_type():
-    with pytest.raises(ValueError):
-        Pricing(
-            id=None, client_id=PartnerId(1), work_type="X10",
-            pickup_location_id=LocationId(1), dropoff_location_id=LocationId(2),
-        )
+def test_pricing_construction_accepts_custom_work_type():
+    p = Pricing(
+        id=None, client_id=PartnerId(1), work_type="CHẠY SÀ LAN",
+        pickup_location_id=LocationId(1), dropoff_location_id=LocationId(2),
+    )
+    assert p.work_type == "CHẠY SÀ LAN"

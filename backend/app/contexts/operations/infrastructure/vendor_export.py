@@ -89,11 +89,11 @@ async def generate_vendor_export_excel(
 
     # Header row
     _op_labels = {
-        "XUAT_NHAP_TAU": "Xuất / Nhập tàu",
-        "CHUYEN_BAI": "Chuyển bãi",
-        "LAY_VO_HA_HANG": "Lấy vỏ hạ hàng",
-        "CHAY_SA_LAN": "Chạy sà lan",
-        "DONG_KHO": "Đóng kho",
+        "XUẤT/NHẬP TÀU": "Xuất / Nhập tàu",
+        "CHUYỂN BÃI": "Chuyển bãi",
+        "LẤY VỎ HẠ HÀNG": "Lấy vỏ hạ hàng",
+        "CHẠY SÀ LAN": "Chạy sà lan",
+        "ĐÓNG KHO": "Đóng kho",
     }
     WORK_TYPE_FULL = {
         "E20": "Rỗng 20ft", "E40": "Rỗng 40ft",

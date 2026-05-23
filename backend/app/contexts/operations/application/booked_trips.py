@@ -263,7 +263,8 @@ class CreateBookedTripFromImport:
 
                 pickup = r.pickup_location or ""
                 dropoff = r.dropoff_location or ""
-                work_type = r.work_type or ""
+                cont_type = r.cont_type or f"{r.freight_kind}{r.container_size}" or "E20"
+                operation_type = r.work_type or "CHUYỂN BÃI"
 
                 pickup_loc = None
                 dropoff_loc = None
@@ -298,9 +299,9 @@ class CreateBookedTripFromImport:
                     pickup_location_id=pickup_loc.id,
                     dropoff_location_id=dropoff_loc.id,
                     revenue=0,
-                    work_type=work_type,
+                    work_type=operation_type,
                     cont_number=cn,
-                    cont_type=work_type,
+                    cont_type=cont_type,
                     matched=False,
                 )
                 if review_needed:

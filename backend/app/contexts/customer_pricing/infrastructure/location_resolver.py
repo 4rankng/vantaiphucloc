@@ -200,10 +200,12 @@ class LocationResolverService:
         """
         result = await self.find_match(raw_name)
 
-        # NEW with no location yet → create. NEW with a location means we
-        # already created it earlier in this same resolver instance and
-        # cached the result; reuse it instead of duplicating.
-        if result.match_kind == MatchKind.NEW and result.location is None:
+        # No location resolved → create one. This covers both NEW (no
+        # candidates at all) and FUZZY_AMBIGUOUS (candidates exist but
+        # none met the auto-link threshold). A location created from a
+        # fuzzy-ambiguous match is flagged for review so an admin can
+        # merge duplicates later.
+        if result.location is None:
             loc = Location(
                 name=raw_name.strip()[:255],
                 is_active=True,
@@ -219,14 +221,11 @@ class LocationResolverService:
                 location=loc,
                 match_kind=MatchKind.NEW,
                 suggestions=result.suggestions,
-                review_needed=False,
+                review_needed=result.match_kind != MatchKind.NEW,
             )
             self._cache[normalize(raw_name)] = result
             # Reset name-cache so subsequent calls in this request see it.
             self._all_names = None
-
-        if result.location is None:
-            return result
 
         # Always record the raw input as an alias if it's not already one.
         # Exception: if raw_input matches the canonical name verbatim,

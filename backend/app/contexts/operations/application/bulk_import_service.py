@@ -280,13 +280,13 @@ class BulkImportService:
         pickup = str(_get("pickup")).strip() if _get("pickup") is not None else None
         dropoff = str(_get("dropoff")).strip() if _get("dropoff") is not None else None
         amount = _parse_amount(_get("amount"))
-        work_type_raw = _get("work_type")
-        work_type = str(work_type_raw).strip().upper() if work_type_raw is not None else None
+        cont_type_raw = _get("work_type")  # header says "work_type" but it's really container type
+        cont_type = str(cont_type_raw).strip().upper() if cont_type_raw is not None else None
         notes = str(_get("notes")).strip() if _get("notes") is not None else None
 
-        valid_work_types = {"E20", "E40", "F20", "F40"}
-        if work_type and work_type not in valid_work_types:
-            work_type = None
+        valid_cont_types = {"E20", "E40", "F20", "F40"}
+        if cont_type and cont_type not in valid_cont_types:
+            cont_type = None
 
         return ImportRow(
             row_number=row_num,
@@ -296,7 +296,7 @@ class BulkImportService:
             pickup_location=pickup,
             dropoff_location=dropoff,
             amount=amount,
-            work_type=work_type or "E20",
+            cont_type=cont_type or "E20",
             notes=notes,
         )
 
@@ -374,9 +374,9 @@ class BulkImportService:
             pickup_location_id=pickup_id,
             dropoff_location_id=dropoff_id,
             driver_id=None,
-            work_type=row.work_type or "E20",
+            work_type="CHUYỂN BÃI",
             cont_number=row.container_number,
-            cont_type=row.work_type or "E20",
+            cont_type=row.cont_type or "E20",
             trip_date=row.trip_date,
             vessel=row.notes if row.notes and ("tau" in row.notes.lower() or "tàu" in row.notes.lower()) else None,
         )

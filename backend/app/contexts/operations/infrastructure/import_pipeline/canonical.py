@@ -182,7 +182,7 @@ SYNONYMS: dict[str, list[str]] = {
     "vehicle_plate": [
         "plate", "license plate", "bks", "bien so", "biển số",
         "so xe", "số xe", "dau keo", "đầu kéo", "tractor",
-        "truck", "truck plate",
+        "truck", "truck plate", "so xe chay", "số xe chạy",
     ],
     "vessel": [
         "vessel", "ship", "ship name", "tau", "tàu", "ten tau", "tên tàu",

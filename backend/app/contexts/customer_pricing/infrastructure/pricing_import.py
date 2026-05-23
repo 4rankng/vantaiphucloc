@@ -44,7 +44,7 @@ SUPPORTED_FORMATS = ("pan", "hap", "newway")
 class TariffRow:
     pickup_raw: str
     dropoff_raw: str
-    work_type: str          # CHUYEN_BAI | XUAT_TAU | etc.
+    work_type: str          # CHUYỂN BÃI | XUẤT/NHẬP TÀU | etc.
     unit_price: int
     quantity: int = 1
     driver_salary: int = 0
@@ -155,7 +155,7 @@ def parse_pan_bytes(content: bytes) -> PricingPreview:
                 rows.append(TariffRow(
                     pickup_raw=pickup,
                     dropoff_raw=dropoff,
-                    work_type="CHUYEN_BAI",
+                    work_type="CHUYỂN BÃI",
                     unit_price=int(round(price)),
                     cont_type=ct,
                     note=f"Trucking (HD) row {r}",
@@ -197,7 +197,7 @@ def parse_hap_bytes(content: bytes) -> PricingPreview:
                 rows.append(TariffRow(
                     pickup_raw=pickup,
                     dropoff_raw=dropoff,
-                    work_type="CHUYEN_BAI",
+                    work_type="CHUYỂN BÃI",
                     unit_price=int(round(price)),
                     cont_type=ct,
                     note=f"CUOC row {r}",
@@ -241,7 +241,7 @@ def parse_newway_bytes(content: bytes) -> PricingPreview:
         rows.append(TariffRow(
             pickup_raw=pickup,
             dropoff_raw=dropoff,
-            work_type="CHUYEN_BAI",
+            work_type="CHUYỂN BÃI",
             unit_price=best_price,
             cont_type=ct,
             note=f"settlement modal across {sum(counts.values())} trips",

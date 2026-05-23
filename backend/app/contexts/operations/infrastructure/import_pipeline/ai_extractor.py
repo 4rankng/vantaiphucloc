@@ -105,17 +105,17 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
             except ValueError:
                 continue
 
-            work_type = str(item.get("cont_type", "E20")).strip().upper()
-            # Validate work_type
-            if not re.match(r"^[EF](20|40|45)$", work_type):
-                work_type = "E20"
+            cont_type = str(item.get("cont_type", "E20")).strip().upper()
+            # Validate cont_type
+            if not re.match(r"^[EF](20|40|45)$", cont_type):
+                cont_type = "E20"
 
             pickup = str(item.get("pickup", "")).strip()
             dropoff = str(item.get("dropoff", "")).strip()
 
             rows.append(ExtractedRow(
                 container_number=cont_no,
-                work_type=work_type,
+                cont_type=cont_type,
                 pickup=pickup,
                 dropoff=dropoff,
                 vessel_name="",

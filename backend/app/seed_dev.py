@@ -113,6 +113,10 @@ SEED_LOCATIONS = [
     {"name": "CHU VĂN AN", "lat": 20.8460, "lng": 106.7700},
 ]
 
+SEED_LOCATION_ALIASES = [
+    {"location_name": "NHĐV", "alias": "NDV", "source": "seed"},
+]
+
 SEED_CLIENTS = [
     {
         "code": "HAIAN",
@@ -507,7 +511,7 @@ async def seed_dev() -> None:
                 result = await db.execute(
                     select(Pricing).where(
                         Pricing.client_id == client.id,
-                        Pricing.work_type == "CHUYEN_BAI",
+                        Pricing.work_type == "CHUYỂN BÃI",
                         Pricing.pickup_location_id == pickup_loc.id,
                         Pricing.dropoff_location_id == dropoff_loc.id,
                     )
@@ -515,7 +519,7 @@ async def seed_dev() -> None:
                 pricing = result.scalars().first()
                 if pricing is None:
                     pricing = Pricing(
-                        client_id=client.id, work_type="CHUYEN_BAI",
+                        client_id=client.id, work_type="CHUYỂN BÃI",
                         pickup_location_id=pickup_loc.id,
                         dropoff_location_id=dropoff_loc.id,
                         is_active=True,
@@ -529,7 +533,7 @@ async def seed_dev() -> None:
                         allowance=prices["allowance"],
                     ))
                     await db.flush()
-                    print(f"  + {client_code}: {pickup_name}→{dropoff_name} CHUYEN_BAI: {prices['unit_price']:,}")
+                    print(f"  + {client_code}: {pickup_name}→{dropoff_name} CHUYỂN BÃI: {prices['unit_price']:,}")
                 pricing_map[(client_code, pickup_name, dropoff_name)] = pricing
         await db.commit()
 
@@ -546,7 +550,7 @@ async def seed_dev() -> None:
         for trip in trips:
             pickup = trip["pickup"]
             dropoff = trip["dropoff"]
-            wt = "CHUYEN_BAI"
+            wt = "CHUYỂN BÃI"
             plate = trip["plate"]
             client_code = trip.get("client_code", "HAIAN")
 
@@ -573,7 +577,7 @@ async def seed_dev() -> None:
                 dropoff_location_id=loc_map[dropoff].id,
                 driver_id=drv.id,
                 vessel=trip.get("vessel", ""),
-                work_type="CHUYEN_BAI",
+                work_type="CHUYỂN BÃI",
                 cont_number=trip["container"],
                 cont_type=f"F{trip['size']}",
                 revenue=trip["unit_price"],
@@ -591,7 +595,7 @@ async def seed_dev() -> None:
                 pickup_location_id=loc_map[pickup].id,
                 dropoff_location_id=loc_map[dropoff].id,
                 vessel=trip.get("vessel", ""),
-                work_type="CHUYEN_BAI",
+                work_type="CHUYỂN BÃI",
                 cont_number=trip["container"],
                 cont_type=f"F{trip['size']}",
                 revenue=trip["unit_price"],
@@ -630,7 +634,7 @@ async def seed_dev() -> None:
                     pickup_location_id=loc_map[pickup].id,
                     dropoff_location_id=loc_map[dropoff].id,
                     vessel=rng.choice(VESSELS),
-                    work_type="CHUYEN_BAI",
+                    work_type="CHUYỂN BÃI",
                     cont_number=_rand_container(),
                     cont_type=f"F{size}",
                     revenue=unit_price,

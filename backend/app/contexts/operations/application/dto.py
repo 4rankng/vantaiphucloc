@@ -53,9 +53,18 @@ class BookedTripListFilters:
 class ImportTripRow:
     """One row from the customer-Excel import pipeline, post-mapping."""
     container_no: str
-    work_type: str = ""
+    container_size: str = ""
+    freight_kind: str = ""
+    cont_type: str = ""
+    work_type: str = "CHUYỂN BÃI"
+    container_type_iso: str = ""
+    gross_weight_kg: float | None = None
+    seal_no: str = ""
+    commodity: str = ""
     pickup_location: str = ""
     dropoff_location: str = ""
+    pickup_date: date | None = None
+    dropoff_date: date | None = None
     trip_date: date | None = None
     customer_ref: str = ""
     consignee: str = ""

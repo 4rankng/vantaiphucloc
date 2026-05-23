@@ -164,20 +164,20 @@ async def import_booked_trips(
         containers_data = []
         for row in group_rows:
             cn = normalize_container_number(str(row.get("container_number", "")).strip())
-            wt = str(row.get("work_type", "")).strip().upper()
+            ct = str(row.get("work_type", "")).strip().upper()
             if cn:
                 valid, err = validate_container_number(cn)
                 if not valid:
                     errors.append(f"Nhóm {key}: Container {cn} không hợp lệ — {err}")
                     continue
-                containers_data.append({"container_number": cn, "work_type": wt or "E20"})
+                containers_data.append({"container_number": cn, "cont_type": ct or "E20"})
 
         if not containers_data:
             errors.append(f"Nhóm {key}: không có số container")
             continue
 
-        work_type = containers_data[0]["work_type"]
-        container_count = sum(1 for c in containers_data if c["work_type"] == work_type) or 1
+        cont_type = containers_data[0]["cont_type"]
+        container_count = sum(1 for c in containers_data if c["cont_type"] == cont_type) or 1
 
         # Try auto-pricing
         revenue = int(first_row.get("revenue") or 0)
@@ -222,9 +222,9 @@ async def import_booked_trips(
             client_id=client.id,
             pickup_location_id=pickup_id,
             dropoff_location_id=dropoff_id,
-            work_type=work_type,
+            work_type="CHUYỂN BÃI",
             cont_number=containers_data[0]["container_number"],
-            cont_type=containers_data[0]["work_type"],
+            cont_type=containers_data[0]["cont_type"],
             revenue=revenue,
             driver_salary=driver_salary,
             allowance=allowance,

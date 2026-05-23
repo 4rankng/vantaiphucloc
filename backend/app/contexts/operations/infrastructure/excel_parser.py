@@ -157,15 +157,15 @@ class ExcelParser:
         pickup = str(_get("pickup")).strip() if _get("pickup") is not None else None
         dropoff = str(_get("dropoff")).strip() if _get("dropoff") is not None else None
         amount = _parse_amount(_get("amount"))
-        work_type_raw = _get("work_type")
-        work_type = str(work_type_raw).strip().upper() if work_type_raw is not None else None
+        cont_type_raw = _get("work_type")
+        cont_type = str(cont_type_raw).strip().upper() if cont_type_raw is not None else None
         notes = str(_get("notes")).strip() if _get("notes") is not None else None
         vehicle_plate_raw = _get("vehicle_plate")
         vehicle_plate = str(vehicle_plate_raw).strip() if vehicle_plate_raw is not None else None
 
-        valid_work_types = {"E20", "E40", "F20", "F40"}
-        if work_type and work_type not in valid_work_types:
-            work_type = None
+        valid_cont_types = {"E20", "E40", "F20", "F40"}
+        if cont_type and cont_type not in valid_cont_types:
+            cont_type = None
 
         return ImportRow(
             row_number=row_num,
@@ -175,7 +175,6 @@ class ExcelParser:
             pickup_location=pickup,
             dropoff_location=dropoff,
             amount=amount,
-            work_type=work_type or "E20",
-            notes=notes,
+            cont_type=cont_type or "E20",
             vehicle_plate=vehicle_plate,
         )

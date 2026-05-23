@@ -116,7 +116,7 @@ class SqlSettlementDataLoader(SettlementDataLoader):
                     container_number=trip.cont_number or "",
                     cont_type=(trip.cont_type or "").upper(),
                     work_type=(trip.work_type or "").upper(),
-                    tractor_plate=trip.vehicle_plate or "",
+                    vehicle_plate=trip.vehicle_plate or "",
                     vessel=trip.vessel or "",
                     pickup_location=name_by_loc_id.get(
                         trip.pickup_location_id, ""

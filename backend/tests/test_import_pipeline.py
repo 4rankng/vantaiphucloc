@@ -391,7 +391,7 @@ def test_extract_bay_plan_glory(glory_sheets):
     assert len(accepted) > 0
     for row in accepted:
         assert len(row.container_number) == 11  # 4 letters + 7 digits
-        assert row.work_type in ("E20", "E40", "F20", "F40")
+        assert row.cont_type in ("E20", "E40", "F20", "F40")
         assert row.pickup != ""
         assert row.dropoff != ""
     # GLORY has containers across multiple port sections
@@ -403,7 +403,7 @@ def test_extract_bay_plan_conscience(conscience_sheets):
     accepted, rejected = extract_bay_plan(conscience_sheets, "8.CONSCIENCE 2615N.xlsx")
     assert len(accepted) > 0
     for row in accepted:
-        assert row.work_type in ("E20", "E40", "F20", "F40")
+        assert row.cont_type in ("E20", "E40", "F20", "F40")
 
 
 def test_extract_loading_list(haian_sheets):
@@ -411,7 +411,7 @@ def test_extract_loading_list(haian_sheets):
     assert len(accepted) > 0
     for row in accepted:
         assert len(row.container_number) == 11
-        assert row.work_type in ("E20", "E40", "F20", "F40", "E45", "F45")
+        assert row.cont_type in ("E20", "E40", "F20", "F40", "E45", "F45")
     # Should have vessel name
     vessel_names = {r.vessel_name for r in accepted if r.vessel_name}
     assert len(vessel_names) >= 1
@@ -422,7 +422,7 @@ def test_extract_invoice(phucloc_sheets):
     assert len(accepted) > 0
     for row in accepted:
         assert len(row.container_number) == 11
-        assert row.work_type in ("E20", "E40", "F20", "F40")
+        assert row.cont_type in ("E20", "E40", "F20", "F40")
         assert row.pickup != ""
         assert row.dropoff != ""
 
@@ -444,7 +444,8 @@ async def test_glory_pattern_preview(pattern_files_present):
     assert res.stats["accepted_count"] > 0
     first = res.accepted[0]["values"]
     assert "container_no" in first
-    assert first["work_type"] in ("E20", "E40", "F20", "F40")
+    assert first["cont_type"] in ("E20", "E40", "F20", "F40")
+    assert first["work_type"]  # operation type
     assert first["pickup_location"] != ""
 
 
@@ -495,16 +496,17 @@ def test_extract_settlement_list(sample_io_sheets):
     assert len(accepted) > 0
     for row in accepted:
         assert len(row.container_number) == 11
-        assert row.work_type in ("E20", "E40", "F20", "F40")
+        assert row.cont_type in ("E20", "E40", "F20", "F40")
+        assert row.work_type  # operation type (e.g., CHUYỂN BÃI, XUẤT/NHẬP TÀU)
         assert row.pickup != ""
         assert row.dropoff != ""
 
 
 def test_settlement_list_work_types(sample_io_sheets):
     accepted, _ = extract_settlement_list(sample_io_sheets, "sample-input-output.xlsx")
-    work_types = {r.work_type for r in accepted}
-    assert len(work_types) >= 2
-    assert all(wt in ("E20", "E40", "F20", "F40") for wt in work_types)
+    cont_types = {r.cont_type for r in accepted}
+    assert len(cont_types) >= 2
+    assert all(ct in ("E20", "E40", "F20", "F40") for ct in cont_types)
 
 
 def test_settlement_list_locations(sample_io_sheets):
@@ -523,7 +525,8 @@ async def test_settlement_list_e2e_preview():
     assert res.stats["accepted_count"] > 0
     first = res.accepted[0]["values"]
     assert "container_no" in first
-    assert first["work_type"] in ("E20", "E40", "F20", "F40")
+    assert first["cont_type"] in ("E20", "E40", "F20", "F40")
+    assert first["work_type"]  # operation type
     assert first["pickup_location"] != ""
     assert first["dropoff_location"] != ""
     for w in res.warnings:

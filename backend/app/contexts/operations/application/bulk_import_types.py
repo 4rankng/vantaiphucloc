@@ -13,7 +13,7 @@ class ImportRow:
     pickup_location: str | None = None
     dropoff_location: str | None = None
     amount: int | None = None
-    work_type: str | None = None
+    cont_type: str | None = None  # E20, E40, F20, F40
     notes: str | None = None
     vehicle_plate: str | None = None
     parse_error: str | None = None

@@ -1,5 +1,5 @@
 import { Clock, CheckCircle, Lock } from 'lucide-react'
-import { formatCurrencyFull, type DeliveredTrip } from '@/data/domain'
+import { formatCurrencyFull, getWorkTypeLabel, type DeliveredTrip } from '@/data/domain'
 import { formatDate } from '@/lib/format'
 import { resolveRoute } from '@/lib/route-utils'
 
@@ -54,7 +54,7 @@ function ContainerList({ wo }: { wo: DeliveredTrip }) {
             className="text-xs font-bold px-1.5 py-0.5 rounded-md shrink-0"
             style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}
           >
-            {c.workType}
+            {getWorkTypeLabel(c.workType) ?? c.workType}
           </span>
         </div>
       ))}

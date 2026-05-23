@@ -14,7 +14,7 @@ export interface SuggestedRoute {
   source: 'frequent' | 'recent' | 'popular'
 }
 
-export type DeliveredTripSortBy = 'trip_date' | 'vessel' | 'matched' | 'revenue' | 'created_at' | 'client_code' | 'vehicle_plate' | 'pickup_name' | 'dropoff_name' | 'cont_number' | 'cont_type'
+export type DeliveredTripSortBy = 'trip_date' | 'vessel' | 'matched' | 'revenue' | 'created_at' | 'client_code' | 'vehicle_plate' | 'pickup_name' | 'dropoff_name' | 'cont_number' | 'cont_type' | 'work_type'
 export type SortOrder = 'asc' | 'desc'
 
 interface DeliveredTripFilters {

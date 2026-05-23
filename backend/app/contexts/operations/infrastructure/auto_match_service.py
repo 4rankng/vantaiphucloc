@@ -9,7 +9,7 @@ Seven weighted matching criteria:
   2. Pickup location (0.15) — key route discriminator
   3. Dropoff location (0.15) — key route discriminator
   4. Container type / work_type (0.12) — E20/E40/F20/F40 narrows matches
-  5. Vessel number (0.12) — strong for XUAT_NHAP_TAU operations
+  5. Vessel number (0.12) — strong for XUẤT/NHẬP TÀU operations
   6. Vehicle plate (0.10) — links to specific truck/driver
   7. Customer / client (0.06) — coarse filter only
 

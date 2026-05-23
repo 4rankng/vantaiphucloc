@@ -24,6 +24,26 @@ export const WORK_TYPE_LABELS: Record<WorkType, string> = {
   'XUẤT/NHẬP TÀU': 'Xuất / Nhập tàu',
 }
 
+const _normWt = (s: string) =>
+  s.toUpperCase().replace(/[_\s\-/]+/g, ' ').replace(/[ĐĐ]/g, 'D').normalize('NFD').replace(/[̀-ͯ]/g, '')
+
+// Pre-built reverse map: normalized key → label (handles DB values like "CHUYEN_BAI")
+const _workTypeLookup: Map<string, string> = (() => {
+  const m = new Map<string, string>()
+  for (const key of WORK_TYPES) {
+    m.set(_normWt(key), WORK_TYPE_LABELS[key])
+  }
+  return m
+})()
+
+export function getWorkTypeLabel(wt: string | null | undefined): string | undefined {
+  if (!wt) return undefined
+  // Direct match first
+  const direct = WORK_TYPE_LABELS[wt as WorkType]
+  if (direct) return direct
+  return _workTypeLookup.get(_normWt(wt))
+}
+
 export const ROLE_LABELS: Record<Role, string> = {
   superadmin: 'SuperAdmin',
   director: 'Giám đốc',

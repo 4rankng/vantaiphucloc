@@ -69,7 +69,7 @@ export function Drawer({
                 </p>
               )}
               <DialogPrimitive.Title
-                className={titleHidden ? 'sr-only' : 'm-0 truncate'}
+                className={titleHidden ? 'sr-only' : 'm-0 flex items-center justify-between gap-2'}
                 style={
                   titleHidden
                     ? undefined

@@ -29,11 +29,15 @@ from app.contexts.operations.infrastructure.import_pipeline.pattern_detector imp
 @dataclass
 class ExtractedRow:
     container_number: str
-    work_type: str          # E20, E40, F20, F40
+    cont_type: str              # E20, E40, F20, F40 (container type code)
     pickup: str
     dropoff: str
     vessel_name: str
-    source_row_index: int   # 0-based row in the sheet
+    source_row_index: int       # 0-based row in the sheet
+    work_type: str = "CHUYỂN BÃI"  # Operation type: CHUYỂN BÃI, XUẤT/NHẬP TÀU, etc.
+    consignee: str = ""
+    vehicle_plate: str = ""
+    freight_charge: float | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +123,7 @@ def extract_bay_plan(sheets: list[SheetView], filename: str = "") -> tuple[list[
 
             accepted.append(ExtractedRow(
                 container_number=cont_no,
-                work_type=work_type,
+                cont_type=work_type,
                 pickup="HAIPHONG",
                 dropoff=port or "",
                 vessel_name=vessel_name,
@@ -310,7 +314,7 @@ def extract_loading_list(sheets: list[SheetView], filename: str = "") -> tuple[l
 
         accepted.append(ExtractedRow(
             container_number=cont_no,
-            work_type=work_type,
+            cont_type=work_type,
             pickup=pickup,
             dropoff=pod,
             vessel_name=vessel_name,
@@ -464,7 +468,7 @@ def extract_invoice(sheets: list[SheetView], filename: str = "") -> tuple[list[E
 
         accepted.append(ExtractedRow(
             container_number=cont_no,
-            work_type=work_type,
+            cont_type=work_type,
             pickup=pickup,
             dropoff=dropoff,
             vessel_name=vessel_val,
@@ -562,8 +566,15 @@ def extract_settlement_list(sheets: list[SheetView], filename: str = "") -> tupl
             rejected.append({"source_row_index": r, "reason": "bad_container_no", "raw": cont_val})
             continue
 
-        # Determine work_type from pivoted columns
+        # Determine container type from pivoted columns
         work_type = _detect_work_type_from_pivot(row, col_map)
+
+        # Read operation type (Tác nghiệp) from dedicated column
+        operation_type = "CHUYỂN BÃI"
+        if col_map.get("operation") is not None and col_map["operation"] < len(row):
+            op_val = _cell_text(row[col_map["operation"]]).strip().upper()
+            if op_val:
+                operation_type = _normalize_operation_type(op_val)
 
         trip_date = None
         if col_map.get("date") is not None and col_map["date"] < len(row):
@@ -576,14 +587,44 @@ def extract_settlement_list(sheets: list[SheetView], filename: str = "") -> tupl
         dropoff = ""
         if col_map.get("dropoff") is not None and col_map["dropoff"] < len(row):
             dropoff = parse_string(row[col_map["dropoff"]], max_len=255)
+            
+        consignee = ""
+        if col_map.get("consignee") is not None and col_map["consignee"] < len(row):
+            consignee = parse_string(row[col_map["consignee"]], max_len=255)
+            
+        plate = ""
+        if col_map.get("plate") is not None and col_map["plate"] < len(row):
+            from app.contexts.operations.infrastructure.import_pipeline.value_parsers import parse_plate
+            plate = parse_plate(row[col_map["plate"]])
+            
+        amount = None
+        if col_map.get("amount") is not None and col_map["amount"] < len(row):
+            raw_amt = row[col_map["amount"]]
+            if raw_amt is not None and str(raw_amt).strip():
+                try:
+                    cleaned_fc = re.sub(r"[^\d.,\-]", "", str(raw_amt))
+                    if "," in cleaned_fc and "." in cleaned_fc:
+                        if cleaned_fc.rfind(".") > cleaned_fc.rfind(","):
+                            cleaned_fc = cleaned_fc.replace(",", "")
+                        else:
+                            cleaned_fc = cleaned_fc.replace(".", "").replace(",", ".")
+                    elif "," in cleaned_fc:
+                        cleaned_fc = cleaned_fc.replace(",", "")
+                    amount = float(cleaned_fc) if cleaned_fc else None
+                except ValueError:
+                    pass
 
         accepted.append(ExtractedRow(
             container_number=cont_no,
-            work_type=work_type,
+            cont_type=work_type,
             pickup=pickup,
             dropoff=dropoff,
             vessel_name="",
             source_row_index=r,
+            work_type=operation_type,
+            consignee=consignee,
+            vehicle_plate=plate,
+            freight_charge=amount,
         ))
 
     return accepted, rejected
@@ -688,6 +729,27 @@ def _detect_work_type_from_pivot(row: list, col_map: dict[str, int | None]) -> s
 # ---------------------------------------------------------------------------
 # Utility
 # ---------------------------------------------------------------------------
+
+def _normalize_operation_type(value: str) -> str:
+    """Normalize operation type value to canonical form."""
+    import unicodedata
+    norm = value.strip().upper()
+    # Strip diacritics for matching
+    folded = unicodedata.normalize("NFD", norm)
+    folded = "".join(c for c in folded if not unicodedata.combining(c))
+    folded = folded.replace("Đ", "D").replace("đ", "d")
+    if "CHUYEN BAI" in folded or "CHUYỂN BÃI" in norm:
+        return "CHUYỂN BÃI"
+    if "XUAT" in folded and ("NHAP" in folded or "TAU" in folded):
+        return "XUẤT/NHẬP TÀU"
+    if "LAY VO" in folded or "HA HANG" in folded:
+        return "LẤY VỎ HẠ HÀNG"
+    if "DONG KHO" in folded or "ĐÓNG KHO" in norm:
+        return "ĐÓNG KHO"
+    if "SA LAN" in folded or "SÀ LAN" in norm:
+        return "CHẠY SÀ LAN"
+    return norm or "CHUYỂN BÃI"
+
 
 def _cell_text(cell) -> str:
     if cell is None:

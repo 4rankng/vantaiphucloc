@@ -25,7 +25,7 @@ import {
   useVendors,
 } from '@/hooks/use-queries'
 import type { DuplicateGroup } from '@/services/api/deliveredTrips.api'
-import type { Client } from '@/data/domain'
+import { getWorkTypeLabel, type Client } from '@/data/domain'
 
 type ClientFormData = Omit<Client, 'id'>
 
@@ -107,12 +107,12 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
               'Ngày đi': r.values.trip_date,
               'Chủ hàng': r.values.consignee,
               'Số Cont': r.values.container_no,
-              'Loại Cont': [r.values.container_size, r.values.freight_kind].filter(Boolean).join(' - '),
+              'Loại Cont': r.values.cont_type ?? `${r.values.freight_kind ?? ''}${r.values.container_size ?? ''}`,
               'Số xe chạy': r.values.vehicle_plate,
               'Điểm đi': r.values.pickup_location,
               'Điểm đến': r.values.dropoff_location,
               'Cước': r.values.freight_charge,
-              'Tác nghiệp': r.values.work_type,
+              'Tác nghiệp': getWorkTypeLabel(r.values.work_type) ?? r.values.work_type,
             }))
             const containerKey = Object.keys((data.rejected?.[0]?.raw ?? {}) as Record<string, unknown>).find(k => /container/i.test(k))
             const dups = (data.rejected ?? [])

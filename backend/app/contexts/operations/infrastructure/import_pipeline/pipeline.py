@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import asdict, dataclass, field
 from datetime import date
 from typing import Any
@@ -232,13 +233,32 @@ def _parse_row(
     plate = parse_plate(raw_dict.get("vehicle_plate")) if "vehicle_plate" in raw_dict else ""
     remarks = parse_string(raw_dict.get("remarks"), max_len=500) if "remarks" in raw_dict else ""
 
-    work_type = f"{kind}{size}"  # F20 / F40 / E20 / E40
+    # Parse money for freight charge. We can reuse parse_weight_kg since it handles 10.5M vs 10500 nicely, or just simple float parse.
+    raw_freight = raw_dict.get("freight_charge")
+    freight_charge = None
+    if raw_freight is not None and str(raw_freight).strip():
+        try:
+            # simple strip non-numeric except dot and comma
+            cleaned_fc = re.sub(r"[^\d.,\-]", "", str(raw_freight))
+            if "," in cleaned_fc and "." in cleaned_fc:
+                if cleaned_fc.rfind(".") > cleaned_fc.rfind(","):
+                    cleaned_fc = cleaned_fc.replace(",", "")
+                else:
+                    cleaned_fc = cleaned_fc.replace(".", "").replace(",", ".")
+            elif "," in cleaned_fc:
+                cleaned_fc = cleaned_fc.replace(",", "")
+            freight_charge = float(cleaned_fc) if cleaned_fc else None
+        except ValueError:
+            pass
+
+    cont_type = f"{kind}{size}"  # F20 / F40 / E20 / E40
 
     parsed = {
         "container_no": cont_no,
         "container_size": size,
         "freight_kind": kind,
-        "work_type": work_type,
+        "cont_type": cont_type,
+        "work_type": "CHUYỂN BÃI",
         "container_type_iso": parse_string(raw_dict.get("container_type_iso"), max_len=20),
         "gross_weight_kg": weight,
         "seal_no": seal,
@@ -252,6 +272,7 @@ def _parse_row(
         "commodity": commodity,
         "driver_name": driver_name,
         "vehicle_plate": plate,
+        "freight_charge": freight_charge,
         "remarks": remarks,
     }
     return raw_dict, parsed
@@ -450,9 +471,10 @@ def _build_preview_from_extracted(
             "source_row_index": row.source_row_index,
             "values": {
                 "container_no": row.container_number,
-                "container_size": row.work_type[1:],  # "20" or "40"
-                "freight_kind": row.work_type[0],      # "E" or "F"
-                "work_type": row.work_type,
+                "container_size": row.cont_type[1:],  # "20" or "40"
+                "freight_kind": row.cont_type[0],      # "E" or "F"
+                "cont_type": row.cont_type,             # E20/F20/E40/F40
+                "work_type": row.work_type,             # CHUYỂN BÃI, XUẤT/NHẬP TÀU, etc.
                 "pickup_location": row.pickup,
                 "dropoff_location": row.dropoff,
                 "vessel_name": row.vessel_name,
@@ -463,10 +485,11 @@ def _build_preview_from_extracted(
                 "pickup_date": None,
                 "dropoff_date": None,
                 "customer_ref": "",
-                "consignee": "",
+                "consignee": row.consignee,
                 "commodity": "",
                 "driver_name": "",
-                "vehicle_plate": "",
+                "vehicle_plate": row.vehicle_plate,
+                "freight_charge": row.freight_charge,
                 "remarks": "",
             },
         })

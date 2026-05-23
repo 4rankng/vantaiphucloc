@@ -54,19 +54,19 @@ def _find_excel() -> Path:
 
 def _normalize_operation_type(value: str | None) -> str:
     if not value:
-        return "CHUYEN_BAI"
+        return "CHUYỂN BÃI"
     norm = value.strip().upper()
     if "CHUYỂN BÃI" in norm or "CHUYEN BAI" in norm:
-        return "CHUYEN_BAI"
+        return "CHUYỂN BÃI"
     if "XUẤT" in norm or "NHẬP" in norm or "TAU" in norm or "TÀU" in norm:
-        return "XUAT_TAU"
+        return "XUẤT/NHẬP TÀU"
     if "LẤY VỎ" in norm:
-        return "LAY_VO_HA_HANG"
+        return "LẤY VỎ HẠ HÀNG"
     if "ĐÓNG KHO" in norm:
-        return "DONG_KHO"
+        return "ĐÓNG KHO"
     if "SÀ LAN" in norm:
-        return "CHA_SALAN"
-    return "CHUYEN_BAI"
+        return "CHẠY SÀ LAN"
+    return "CHUYỂN BÃI"
 
 
 def _read_excel(path: Path) -> tuple[list[str], list[dict]]:
@@ -243,7 +243,7 @@ async def seed_ports_pricing() -> None:
                 print(f"  ⚠ Skip: location not found — {pickup_name} → {dropoff_name}")
                 continue
 
-            work_type = row.get("work_type", "CHUYEN_BAI")
+            work_type = row.get("work_type", "CHUYỂN BÃI")
             price = row.get("price")
             if price is None or price == 0:
                 skipped_no_price += 1

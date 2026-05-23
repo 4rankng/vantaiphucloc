@@ -5,11 +5,11 @@ import { useOffline } from '@/contexts/OfflineContext'
 import { apiClient } from '@/services/api'
 import { useLocations } from '@/hooks/use-queries'
 import type { PhotoMeta } from '@/components/shared/ContainerScanner'
-import type { Client, ContType, DeliveredTrip } from '@/data/domain'
+import type { Client, WorkType, DeliveredTrip } from '@/data/domain'
 
 export interface ContainerForm {
   containerNumber: string
-  workType: ContType
+  workType: WorkType
   photoTaken: boolean
   photoDataUrl?: string
   photoLat?: number | null

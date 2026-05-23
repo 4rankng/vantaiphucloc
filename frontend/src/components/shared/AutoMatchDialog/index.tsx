@@ -157,22 +157,6 @@ export function AutoMatchDialog({
             </span>
             Tự động ghép
           </DialogTitle>
-          <DialogDescription>
-            Quét{' '}
-            <span className="font-medium tabular-nums" style={{ color: 'var(--theme-text-primary, #09090B)' }}>
-              {scannedCount.toLocaleString()}
-            </span>{' '}
-            chuyến chưa ghép — tìm thấy{' '}
-            <span className="font-medium tabular-nums" style={{ color: 'var(--theme-text-primary, #09090B)' }}>
-              {candidates.length}
-            </span>{' '}
-            ứng viên
-            {candidates.length > 0 && (
-              <span>
-                {' '}({fullMatches.length} khớp đầy đủ, {partialMatches.length} khớp một phần)
-              </span>
-            )}
-          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
@@ -228,31 +212,13 @@ export function AutoMatchDialog({
                 <circle cx="60" cy="50" r="2.5" fill="#F59E0B" fillOpacity="0.9" />
               </svg>
 
-              <div className="space-y-1.5">
-                <p className="text-[14px] font-medium" style={{ color: 'var(--theme-text-primary, #09090B)' }}>
-                  Không tìm thấy ứng viên ghép nào
+              <div className="space-y-2 mt-2">
+                <p className="text-[15px] font-medium" style={{ color: 'var(--theme-text-primary, #09090B)' }}>
+                  Không có đề xuất ghép tự động
                 </p>
-                <p className="text-[12px] leading-relaxed max-w-[260px]" style={{ color: 'var(--theme-text-muted, #8B919B)' }}>
-                  Đã quét {scannedCount.toLocaleString()} chuyến trong tháng này —{' '}
-                  không có cặp nào khớp tự động.
+                <p className="text-[13px] leading-relaxed max-w-[280px]" style={{ color: 'var(--theme-text-muted, #64748B)' }}>
+                  Hệ thống chưa tìm thấy cặp chuyến nào phù hợp. Có <strong style={{ color: 'var(--theme-text-primary, #09090B)', fontWeight: 500 }}>{unmatchedCount.toLocaleString()}</strong> chuyến cần được đối chiếu thủ công.
                 </p>
-              </div>
-
-              {/* Stat pill */}
-              <div
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium"
-                style={{
-                  background: 'color-mix(in srgb, #F59E0B 10%, transparent)',
-                  color: '#D97706',
-                  border: '1px solid color-mix(in srgb, #F59E0B 25%, transparent)',
-                }}
-              >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M6 1L1 10.5h10L6 1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" fill="none" />
-                  <line x1="6" y1="5" x2="6" y2="7.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <circle cx="6" cy="9" r="0.6" fill="currentColor" />
-                </svg>
-                {unmatchedCount.toLocaleString()} chuyến cần đối chiếu thủ công
               </div>
             </div>
           ) : (

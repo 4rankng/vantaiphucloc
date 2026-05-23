@@ -89,7 +89,7 @@ class CreateDeliveredTrip:
     async def __call__(
         self, data: DeliveredTripCreateInput, user: CurrentUserContext
     ) -> DeliveredTrip:
-        work_type = data.work_type or (data.cont_type or "")
+        work_type = data.work_type or "CHUYỂN BÃI"
         if work_type:
             work_type = normalize_work_type(work_type)
 
@@ -212,7 +212,7 @@ class BatchCreateDeliveredTrips:
             for i, item in enumerate(items):
                 async with self.session.begin_nested():
                     try:
-                        work_type = item.work_type or (item.cont_type or "")
+                        work_type = item.work_type or "CHUYỂN BÃI"
                         if work_type:
                             work_type = normalize_work_type(work_type)
                         driver_id = (

@@ -165,7 +165,7 @@ def _value_pattern_match(c: int, header_text: str, samples: list[str]) -> Column
     plate_hits = sum(1 for s in samples if PLATE_RE.match(s.strip()))
     if plate_hits / max(len(samples), 1) >= 0.5:
         return ColumnMapping(
-            c, header_text, "tractor_plate",
+            c, header_text, "vehicle_plate",
             confidence=0.7, source="value_pattern",
             sample_values=samples, reason="VN plate shape",
         )

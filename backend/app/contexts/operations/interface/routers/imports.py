@@ -72,7 +72,8 @@ class CommitRow(BaseModel):
     container_no: str
     container_size: str
     freight_kind: str
-    work_type: str
+    cont_type: str = ""
+    work_type: str = "CHUYỂN BÃI"
     container_type_iso: str = ""
     gross_weight_kg: float | None = None
     seal_no: str = ""
@@ -281,11 +282,14 @@ async def commit_customer_excel(
             container_no=r.container_no,
             container_size=r.container_size,
             freight_kind=r.freight_kind,
+            cont_type=r.cont_type,
             work_type=r.work_type,
             container_type_iso=r.container_type_iso,
             gross_weight_kg=r.gross_weight_kg,
             seal_no=r.seal_no,
             commodity=r.commodity,
+            pickup_date=r.pickup_date,
+            dropoff_date=r.dropoff_date,
             pickup_location=r.pickup_location,
             dropoff_location=r.dropoff_location,
             trip_date=r.trip_date,
