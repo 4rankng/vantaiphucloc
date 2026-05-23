@@ -1,25 +1,34 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 import { Search, Check, X } from 'lucide-react'
 
 // ─── Infinite scroll hook ─────────────────────────────────────────────────────
+// Uses a callback ref so the IntersectionObserver is attached whenever the
+// sentinel element mounts — including after async data loads make hasMore=true.
 
 export function useInfiniteScroll(onLoadMore: () => void) {
-  const sentinelRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = sentinelRef.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting) onLoadMore() },
+  const onLoadMoreRef = useRef(onLoadMore)
+  useEffect(() => { onLoadMoreRef.current = onLoadMore }, [onLoadMore])
+
+  const observerRef = useRef<IntersectionObserver | null>(null)
+
+  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
+    if (observerRef.current) {
+      observerRef.current.disconnect()
+      observerRef.current = null
+    }
+    if (!node) return
+    observerRef.current = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) onLoadMoreRef.current() },
       { threshold: 0.1 },
     )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [onLoadMore])
+    observerRef.current.observe(node)
+  }, [])
+
   return sentinelRef
 }
 
 export function LoadMoreSentinel({ sentinelRef, hasMore }: {
-  sentinelRef: React.RefObject<HTMLDivElement>; hasMore: boolean
+  sentinelRef: React.Ref<HTMLDivElement>; hasMore: boolean
 }) {
   if (!hasMore) return null
   return (

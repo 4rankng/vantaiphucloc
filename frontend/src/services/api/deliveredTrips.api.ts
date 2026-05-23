@@ -261,12 +261,12 @@ export interface TemplateParseResult {
   warnings: string[]
 }
 
-export async function aiParsePreview(file: File): Promise<ApiResponse<TemplateParseResult>> {
+export async function parsePreview(file: File): Promise<ApiResponse<TemplateParseResult>> {
   try {
     const formData = new FormData()
     formData.append('file', file)
 
-    const res = await api.post('/delivered-trips/ai-parse-preview', formData, {
+    const res = await api.post('/delivered-trips/parse-preview', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return ok(toCamel<TemplateParseResult>(res.data))

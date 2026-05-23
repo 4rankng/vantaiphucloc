@@ -37,6 +37,7 @@ export function useCreateVendor() {
     mutationFn: (data: Omit<Vendor, 'id'>) => apiClient.createVendor(data).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vendors'] })
+      qc.invalidateQueries({ queryKey: ['vendors-paged'] })
     },
   })
 }
@@ -48,6 +49,7 @@ export function useUpdateVendor() {
     mutationFn: ({ id, data }: { id: number; data: Partial<Vendor> }) => apiClient.updateVendor(id, data).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vendors'] })
+      qc.invalidateQueries({ queryKey: ['vendors-paged'] })
     },
   })
 }
@@ -59,6 +61,7 @@ export function useDeleteVendor() {
     mutationFn: (id: number) => apiClient.deleteVendor(id).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vendors'] })
+      qc.invalidateQueries({ queryKey: ['vendors-paged'] })
     },
   })
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { MapPin, Plus, AlertTriangle, Merge, ArrowUp, Trash2, Search, X, Check, Pencil, Tag } from 'lucide-react'
+import { MapPin, Plus, AlertTriangle, Merge, ArrowUp, Trash2, Search, X, Check, Pencil, Tag, ArrowUpDown } from 'lucide-react'
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
 import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
@@ -23,30 +23,86 @@ import type { Location, LocationAlias } from '@/data/domain'
 
 // ─── Near-duplicate detection ─────────────────────────────────────────────────
 
+/** Levenshtein edit distance with early-exit for large gaps. */
+function editDistance(a: string, b: string): number {
+  if (Math.abs(a.length - b.length) > 3) return 99
+  const n = b.length
+  const dp: number[] = Array.from({ length: n + 1 }, (_, i) => i)
+  for (let i = 1; i <= a.length; i++) {
+    let prev = dp[0]
+    dp[0] = i
+    for (let j = 1; j <= n; j++) {
+      const tmp = dp[j]
+      dp[j] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[j], dp[j - 1])
+      prev = tmp
+    }
+  }
+  return dp[n]
+}
+
+/** Normalized word tokens, filtering out single-char noise. */
+function getTokens(name: string): string[] {
+  return normalizeVietnamese(name).split(/\s+/).filter(t => t.length > 1)
+}
+
 /**
- * Returns true if two location names look like potential duplicates:
- * one is a prefix/substring of the other in normalized form, OR they share
- * a common acronym pattern (e.g. "NAM ĐỊNH VŨ" ↔ "NHĐV").
+ * Returns true if two location names look like potential duplicates.
+ *
+ * Checks (in order of confidence):
+ *  1. Alias cross-check  — A's name is in B's alias list or vice versa
+ *  2. Edit distance ≤ 2  — catches typos on strings ≥ 6 chars
+ *  3. Token overlap      — ≥ 2 shared significant word tokens (len > 2)
+ *  4. Acronym match      — initials of multi-word name equals the other
  */
-function looksLikeDuplicate(a: string, b: string): boolean {
-  const na = normalizeVietnamese(a).replace(/\s+/g, '')
-  const nb = normalizeVietnamese(b).replace(/\s+/g, '')
-  if (!na || !nb || na === nb) return false
-  if (na.length < 3 || nb.length < 3) return false
-  // Substring containment (e.g., "đình vũ" inside "nam định vũ")
-  if (na.includes(nb) || nb.includes(na)) return true
-  // Acronym match (e.g., "nhđv" vs "namdinhvu" → first letters of each word)
-  const initialsA = normalizeVietnamese(a).split(/\s+/).map(w => w[0]).join('')
-  const initialsB = normalizeVietnamese(b).split(/\s+/).map(w => w[0]).join('')
-  if (initialsA.length >= 2 && initialsA === nb) return true
-  if (initialsB.length >= 2 && initialsB === na) return true
+function looksLikeDuplicate(
+  a: string, b: string,
+  aAliases: string[] = [],
+  bAliases: string[] = [],
+): boolean {
+  const normA = normalizeVietnamese(a)
+  const normB = normalizeVietnamese(b)
+  if (!normA || !normB || normA === normB) return false
+
+  // 1. Alias cross-check
+  if (aAliases.some(alias => normalizeVietnamese(alias) === normB)) return true
+  if (bAliases.some(alias => normalizeVietnamese(alias) === normA)) return true
+
+  const flatA = normA.replace(/\s+/g, '')
+  const flatB = normB.replace(/\s+/g, '')
+  if (flatA.length < 3 || flatB.length < 3) return false
+
+  // 2. Edit distance ≤ 2 (only for strings long enough to avoid short false-positives)
+  if (Math.min(flatA.length, flatB.length) >= 6 && editDistance(flatA, flatB) <= 2) return true
+
+  // 3. Token overlap: ≥ 2 shared tokens longer than 2 chars
+  const tokensA = getTokens(a)
+  const tokensB = new Set(getTokens(b).filter(t => t.length > 2))
+  const shared = tokensA.filter(t => t.length > 2 && tokensB.has(t)).length
+  if (shared >= 2) return true
+
+  // 4. Acronym match: initials of a multi-word name == the other name
+  if (tokensA.length >= 2) {
+    const initialsA = tokensA.map(w => w[0]).join('')
+    if (initialsA.length >= 2 && initialsA === flatB) return true
+  }
+  if (getTokens(b).length >= 2) {
+    const initialsB = getTokens(b).map(w => w[0]).join('')
+    if (initialsB.length >= 2 && initialsB === flatA) return true
+  }
+
   return false
 }
 
-function findDuplicateHint(loc: Location, all: Location[]): Location | null {
+function findDuplicateHint(
+  loc: Location,
+  all: Location[],
+  aliasesByLoc: Map<number, LocationAlias[]>,
+): Location | null {
+  const locAliases = (aliasesByLoc.get(loc.id) ?? []).map(a => a.alias)
   for (const other of all) {
     if (other.id === loc.id) continue
-    if (looksLikeDuplicate(loc.name, other.name)) return other
+    const otherAliases = (aliasesByLoc.get(other.id) ?? []).map(a => a.alias)
+    if (looksLikeDuplicate(loc.name, other.name, locAliases, otherAliases)) return other
   }
   return null
 }
@@ -231,11 +287,12 @@ function EditableLocationName({
 // ─── Right-side detail panel ──────────────────────────────────────────────────
 
 function LocationDetailPanel({
-  location, aliases, allLocations, onUpdate, onDelete, onPromoteAlias, onDeleteAlias, onAddAlias,
+  location, aliases, allAliases, allLocations, onUpdate, onDelete, onPromoteAlias, onDeleteAlias, onAddAlias,
   onMergeInto, updatePending, addingAlias, promoting,
 }: {
   location: Location
   aliases: LocationAlias[]
+  allAliases: LocationAlias[]
   allLocations: Location[]
   onUpdate: (id: number, name: string) => void
   onDelete: (loc: Location) => void
@@ -250,7 +307,19 @@ function LocationDetailPanel({
   const [adding, setAdding] = useState(false)
   const [newAlias, setNewAlias] = useState('')
   const newAliasRef = useRef<HTMLInputElement>(null)
-  const duplicate = useMemo(() => findDuplicateHint(location, allLocations), [location, allLocations])
+  const aliasesByLocAll = useMemo(() => {
+    const m = new Map<number, LocationAlias[]>()
+    for (const a of allAliases) {
+      const list = m.get(a.locationId) ?? []
+      list.push(a)
+      m.set(a.locationId, list)
+    }
+    return m
+  }, [allAliases])
+  const duplicate = useMemo(
+    () => findDuplicateHint(location, allLocations, aliasesByLocAll),
+    [location, allLocations, aliasesByLocAll],
+  )
 
   useEffect(() => { setNewAlias(''); setAdding(false) }, [location.id])
   useEffect(() => { if (adding) newAliasRef.current?.focus() }, [adding])
@@ -612,7 +681,7 @@ function MergeDialog({
           </p>
         </div>
 
-        <div className="space-y-3 pt-1">
+        <div className="pt-1">
           <div>
             <label className="nepo-field-label">
               Địa điểm nguồn <span style={{ color: 'var(--ink-3)' }}>(sẽ bị gộp)</span>
@@ -627,6 +696,28 @@ function MergeDialog({
               onChange={v => setSource(v ? Number(v) : '')}
             />
           </div>
+
+          {/* Swap button */}
+          <div className="flex items-center justify-center my-2">
+            <button
+              type="button"
+              onClick={() => { const tmp = source; setSource(target); setTarget(tmp) }}
+              disabled={source === '' && target === ''}
+              title="Hoán đổi nguồn và đích"
+              className="flex items-center justify-center rounded-full transition-colors"
+              style={{
+                width: 32,
+                height: 32,
+                background: 'var(--surface-3)',
+                color: source !== '' || target !== '' ? 'var(--accent)' : 'var(--ink-4)',
+                border: '1px solid var(--line)',
+                opacity: source === '' && target === '' ? 0.5 : 1,
+              }}
+            >
+              <ArrowUpDown className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
           <div>
             <label className="nepo-field-label">
               Địa điểm đích <span style={{ color: 'var(--ink-3)' }}>(giữ lại)</span>
@@ -693,14 +784,14 @@ export function LocationAliasesPage() {
     return m
   }, [aliases])
 
-  // Detect potential duplicates (compute once per location-set change)
+  // Detect potential duplicates (recomputes when locations or aliases change)
   const duplicateIds = useMemo(() => {
     const ids = new Set<number>()
     for (const loc of locations) {
-      if (findDuplicateHint(loc, locations)) ids.add(loc.id)
+      if (findDuplicateHint(loc, locations, aliasesByLoc)) ids.add(loc.id)
     }
     return ids
-  }, [locations])
+  }, [locations, aliasesByLoc])
 
   // Search filter (matches both location name and any alias) + optional dupe-only filter
   const filtered = useMemo(() => {
@@ -828,12 +919,12 @@ export function LocationAliasesPage() {
   }
 
   return (
-    <div className="animate-fade-in flex flex-col" style={{ minHeight: 'calc(100dvh - 80px)' }}>
+    <div className="animate-fade-in flex flex-col" style={{ height: 'calc(100dvh - 80px)', maxHeight: 'calc(100dvh - 80px)', overflow: 'hidden' }}>
       {/* ── Header ── */}
       <div className="shrink-0">
         <PageHeader
           title="Địa điểm"
-          subtitle="Quản lý địa điểm và tên phụ"
+          subtitle="Tên phụ giúp hệ thống nhận ra các cách viết khác nhau của cùng một địa điểm khi ghép chuyến tự động"
           lucideIcon={MapPin}
           actions={
             <div className="flex items-center gap-2">
@@ -955,6 +1046,7 @@ export function LocationAliasesPage() {
             <LocationDetailPanel
               location={selected}
               aliases={selectedAliases}
+              allAliases={aliases}
               allLocations={locations}
               onUpdate={handleUpdate}
               onDelete={(loc) => setDeleteTarget(loc)}

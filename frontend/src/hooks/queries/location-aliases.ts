@@ -36,6 +36,7 @@ export function usePromoteAlias() {
       apiClient.confirmAlias(aliasId).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['location-aliases'] })
+      qc.invalidateQueries({ queryKey: ['pending-review-locations'] })
       qc.invalidateQueries({ queryKey: queryKeys.locations })
     },
   })
@@ -49,7 +50,10 @@ export function useDeleteAlias() {
       const res = await apiClient.rejectAlias(aliasId)
       return unwrap(res)
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['location-aliases'] }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['location-aliases'] })
+      qc.invalidateQueries({ queryKey: ['pending-review-locations'] })
+    },
   })
 }
 
@@ -66,6 +70,7 @@ export function useMergeLocations() {
       qc.invalidateQueries({ queryKey: ['pricings'] })
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['pending-review-locations'] })
     },
   })
 }

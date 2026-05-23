@@ -419,7 +419,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
       {step === 'upload' && (
         <div className="space-y-5">
           {/* Type selector */}
-          <div className="grid grid-cols-2 gap-3" style={{ maxWidth: 480 }}>
+          <div className="grid grid-cols-3 gap-3" style={{ maxWidth: 660 }}>
             {([
               { type: 'client', icon: Building2, label: 'Chủ hàng', hint: 'Tạo đơn đặt từ file Excel khách hàng' },
               { type: 'vendor', icon: Truck,     label: 'Nhà xe',    hint: 'Đối soát chuyến đi từ file nhà thầu' },

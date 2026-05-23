@@ -303,6 +303,17 @@ export function DoiSoatPage() {
         }
       />
 
+      {/* ── Match progress summary ── */}
+      {!isLoading && globalTotal > 0 && (
+        <div className="flex flex-wrap items-center gap-3 px-1">
+          <StatPill count={globalTotal} label="chuyến" />
+          <StatPill count={globalMatched} label="đã ghép" accent />
+          <StatPill count={globalPending} label="chờ ghép" />
+          <StatPill count={`${compactCurrency(globalRevenue)}`} label="doanh thu" />
+          <MatchProgressBar pct={globalMatchedPct} />
+        </div>
+      )}
+
       {/* ── Table section ── */}
       <section>
         {/* Section header + action buttons */}
@@ -326,6 +337,7 @@ export function DoiSoatPage() {
             />
             <Button
               variant="ghost"
+              title={doiSoatClientId === 'ALL' || !doiSoatClientId ? 'Chọn chủ hàng để xuất file đối soát' : 'Xuất Excel đối soát cho chủ hàng đã chọn'}
               onClick={() => {
                 if (!doiSoatClientId || doiSoatClientId === 'ALL') return
                 exportDoiSoat.mutate(
@@ -354,6 +366,7 @@ export function DoiSoatPage() {
             </Button>
             <Button
               variant="ghost"
+              title="Tự động ghép tất cả chuyến khớp hoàn toàn (số cont, tuyến, chủ hàng). Bạn sẽ được xem trước trước khi xác nhận."
               onClick={() => setShowAutoMatchDate(true)}
               disabled={autoMatchPreview.isPending}
             >
@@ -383,6 +396,14 @@ export function DoiSoatPage() {
               counts={statusCounts}
             />
           </Toolbar>
+
+          {!isLoading && filtered.length > 0 && (
+            <div className="px-4 py-1.5" style={{ borderBottom: '1px solid var(--line)' }}>
+              <span className="text-[11.5px]" style={{ color: 'var(--ink-4)' }}>
+                Nhấp vào hàng để xem chi tiết và ghép nối chuyến
+              </span>
+            </div>
+          )}
 
           <DataTable
             columns={columns}

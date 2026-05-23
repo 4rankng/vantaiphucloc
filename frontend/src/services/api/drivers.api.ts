@@ -38,7 +38,7 @@ export async function getDriversPaged(filters?: DriverFilters): Promise<ApiRespo
 }
 
 export async function createDriver(
-  data: { username: string; fullName?: string; phone: string },
+  data: { username: string; fullName?: string; phone: string; password?: string },
 ): Promise<ApiResponse<Driver>> {
   try {
     const res = await api.post('/drivers', toSnake(data))
@@ -55,6 +55,18 @@ export async function updateDriver(
   try {
     const res = await api.put(`/drivers/${id}`, toSnake(data))
     return ok(toCamel<Driver>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function resetDriverPassword(
+  driverId: number,
+  newPassword: string,
+): Promise<ApiResponse<{ message: string }>> {
+  try {
+    const res = await api.put(`/drivers/${driverId}/reset-password`, { new_password: newPassword })
+    return ok(res.data)
   } catch (err) {
     return fail(err)
   }

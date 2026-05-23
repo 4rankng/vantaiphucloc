@@ -13,7 +13,7 @@ const SETTINGS_SECTIONS: SettingCardItem[] = [
   },
   {
     key: 'route-pricing',
-    label: 'Cước tuyến',
+    label: 'Cước thu chủ hàng',
     desc: 'Quản lý bảng giá cước theo tuyến đường và loại hình tác nghiệp',
     icon: Route,
     path: '/accountant/settings/cuoc-tuyen',
@@ -38,7 +38,7 @@ export function SettingsPage() {
         lucideIcon={Settings}
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {SETTINGS_SECTIONS.map((section) => (
           <SettingCard key={section.key} section={section} />
         ))}

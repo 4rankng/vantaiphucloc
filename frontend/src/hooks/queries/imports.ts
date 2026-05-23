@@ -17,15 +17,17 @@ export function useBulkImportAndMatch() {
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
     },
   })
 }
 
 
-export function useAIParsePreview() {
+export function useParsePreview() {
   return useMutation({
     mutationFn: ({ file }: { file: File }) =>
-      apiClient.aiParsePreview(file).then(unwrap),
+      apiClient.parsePreview(file).then(unwrap),
   })
 }
 
@@ -50,6 +52,8 @@ export function useCommitCustomerExcel() {
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
     },
   })
 }
@@ -63,6 +67,8 @@ export function useUploadVendorReconciliation() {
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
     },
   })
 }
@@ -76,6 +82,8 @@ export function useUploadDriverReconciliation() {
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
     },
   })
 }
@@ -93,7 +101,11 @@ export function useToggleTripConfirmation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (bookedTripId: number) => apiClient.toggleTripConfirmation(bookedTripId).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['booked-trips'] }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+    },
   })
 }
 

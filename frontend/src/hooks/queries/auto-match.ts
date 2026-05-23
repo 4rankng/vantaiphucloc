@@ -35,6 +35,8 @@ export function useConfirmAutoMatch() {
       qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
       qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
     },
   })
 }

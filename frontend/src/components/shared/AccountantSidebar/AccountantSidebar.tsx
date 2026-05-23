@@ -8,17 +8,14 @@ import {
   UserCircle,
   ChevronLeft,
   Building2,
-  Truck,
   Container,
-  Calendar,
   ClipboardCheck,
-  Upload,
   Fuel,
   Wallet,
   TrendingUp,
-  FileSpreadsheet,
   MapPin,
   KeyRound,
+  ReceiptText,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
@@ -69,6 +66,7 @@ const ACCOUNTANT_NAV_SECTIONS: SidebarSection[] = [
       { label: 'Chi phí xe', href: '/accountant/expenses', icon: Fuel },
       { label: 'Lương', href: '/accountant/salary', icon: Wallet },
       { label: 'Báo cáo', href: '/accountant/pnl', icon: TrendingUp },
+      { label: 'Xuất đối soát', href: '/accountant/settlement', icon: ReceiptText },
     ],
   },
   {

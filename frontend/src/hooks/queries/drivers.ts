@@ -35,10 +35,11 @@ export function useDriversPaged(filters?: DriverFilters) {
 export function useCreateDriver() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { username: string; fullName?: string; phone: string }) =>
+    mutationFn: (data: { username: string; fullName?: string; phone: string; password?: string }) =>
       apiClient.createDriver(data).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['drivers'] })
+      qc.invalidateQueries({ queryKey: ['drivers-paged'] })
       qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
       qc.invalidateQueries({ queryKey: ['driver-earnings'] })
       qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
@@ -54,6 +55,7 @@ export function useUpdateDriver() {
       apiClient.updateDriver(id, data).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['drivers'] })
+      qc.invalidateQueries({ queryKey: ['drivers-paged'] })
       qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
       qc.invalidateQueries({ queryKey: ['driver-earnings'] })
       qc.invalidateQueries({ queryKey: ['salary-dashboard'] })

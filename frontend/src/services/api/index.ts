@@ -74,7 +74,7 @@ export const apiClient = {
   validateContainer: deliveredTripsApi.validateContainer,
   getSuggestedRoutes: deliveredTripsApi.getSuggestedRoutes,
   bulkImportAndMatch: deliveredTripsApi.bulkImportAndMatch,
-  aiParsePreview: deliveredTripsApi.aiParsePreview,
+  parsePreview: deliveredTripsApi.parsePreview,
 
   // Trip Orders
   getBookedTrip: bookedTripsApi.getBookedTrip,
@@ -126,6 +126,7 @@ export const apiClient = {
   getDriversPaged: driversApi.getDriversPaged,
   createDriver: driversApi.createDriver,
   updateDriver: driversApi.updateDriver,
+  resetDriverPassword: driversApi.resetDriverPassword,
 
   // Dashboard & Notifications
   getDashboardSummary: dashboardApi.getDashboardSummary,

@@ -65,7 +65,10 @@ export function useCreateUser() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: Parameters<typeof apiClient.createUser>[0]) => apiClient.createUser(data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.users }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.users })
+      qc.invalidateQueries({ queryKey: ['users-paged'] })
+    },
   })
 }
 
@@ -74,7 +77,10 @@ export function useUpdateUser() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: string | number; data: Record<string, unknown> }) => apiClient.updateUser(id, data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.users }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.users })
+      qc.invalidateQueries({ queryKey: ['users-paged'] })
+    },
   })
 }
 
@@ -83,7 +89,10 @@ export function useDeleteUser() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string | number) => apiClient.deleteUser(id).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.users }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.users })
+      qc.invalidateQueries({ queryKey: ['users-paged'] })
+    },
   })
 }
 

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   useMonthlyPnL,
   useVehiclePnL,
@@ -95,6 +96,7 @@ type VehicleSortCol = 'plate' | 'revenue' | 'totalCp' | 'profit' | 'margin'
 // ─── Desktop dashboard ────────────────────────────────────────────────────────
 
 function DesktopDashboard() {
+  const navigate = useNavigate()
   const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
 
   // Previous month dates for delta computation
@@ -377,6 +379,21 @@ function DesktopDashboard() {
                 ))
               )}
             </div>
+            {unmatchedTrips.length > 0 && (
+              <div
+                className="px-4 py-2.5"
+                style={{ borderTop: '1px solid var(--theme-border-light)' }}
+              >
+                <button
+                  type="button"
+                  onClick={() => navigate('/accountant/doi-soat')}
+                  className="text-[12px] font-medium transition-colors"
+                  style={{ color: 'var(--theme-brand-primary)' }}
+                >
+                  Vào trang đối soát →
+                </button>
+              </div>
+            )}
           </DashboardCard>
           </Reveal>
 
@@ -389,6 +406,7 @@ function DesktopDashboard() {
 // ─── Mobile dashboard ─────────────────────────────────────────────────────────
 
 function MobileDashboard() {
+  const navigate = useNavigate()
   const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
 
   const prevMonth    = month === 1 ? 12 : month - 1
@@ -641,6 +659,21 @@ function MobileDashboard() {
             ))
           )}
         </div>
+        {unmatchedTrips.length > 0 && (
+          <div
+            className="px-4 py-2.5"
+            style={{ borderTop: '1px solid var(--theme-border-light)' }}
+          >
+            <button
+              type="button"
+              onClick={() => navigate('/accountant/doi-soat')}
+              className="text-[12px] font-medium transition-colors"
+              style={{ color: 'var(--theme-brand-primary)' }}
+            >
+              Vào trang đối soát →
+            </button>
+          </div>
+        )}
       </DashboardCard>
     </div>
   )

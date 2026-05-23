@@ -298,3 +298,48 @@ async def update_delivered_trip(
     except Exception as exc:
         _logger.exception("Failed to load WO#%s after update", delivered_trip_id)
         raise translate(exc)
+
+
+# ---------------------------------------------------------------------------
+# Parse preview (heuristic column mapping — no DB write)
+# ---------------------------------------------------------------------------
+
+@router.post("/delivered-trips/parse-preview")
+async def parse_preview(
+    file: UploadFile,
+    current_user: User = Depends(require_permission("create", "DeliveredTrip")),
+):
+    """Heuristic column-mapping preview for Excel/CSV input files.
+
+    Detects header row, maps columns, parses rows, and checks for duplicate
+    containers.  Does NOT write to DB — the user must confirm via the
+    bulk-import-and-match endpoint.
+    """
+    from dataclasses import asdict
+    from fastapi import HTTPException
+
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Tệp tải lên không có tên.")
+
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Tệp tải lên rỗng.")
+
+    try:
+        from app.ai.pipeline import parse_template_excel
+        result = parse_template_excel(io.BytesIO(contents), file.filename)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        _logger.exception("parse_preview failed: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Lỗi phân tích file: {exc}") from exc
+
+    return {
+        "filename": result.filename,
+        "sheet_name": result.sheet_name,
+        "total_rows": result.total_rows,
+        "columns": result.columns,
+        "rows": result.rows[:100],
+        "duplicate_groups": [asdict(g) for g in (result.duplicate_groups or [])],
+        "warnings": result.warnings or [],
+    }

@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { Car, Plus, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+import { Car, Plus, ChevronUp, ChevronDown, ChevronsUpDown, Key } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { Panel } from '@/components/shared/Panel'
 import { useInfiniteScroll, LoadMoreSentinel, SearchInput, FieldActions } from '@/components/shared/ListUtils'
@@ -10,6 +10,7 @@ import { Drawer } from '@/components/shared/Drawer'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useDrivers, useDriversPaged, useCreateDriver, useUpdateDriver, useVehicles } from '@/hooks/use-queries'
+import { apiClient } from '@/services/api'
 import { useDriverBaseSalaryForm } from '@/components/payroll/useDriverBaseSalaryForm'
 import { useToast } from '@/components/atoms/Toast'
 import { useQueryClient } from '@tanstack/react-query'
@@ -152,9 +153,39 @@ function DriverEditRow({ driver, onSave, onCancel, saving, initialFocus, vehicle
 
 // ─── Driver row (read mode) ───────────────────────────────────────────────────
 
-function DriverRow({ driver, onEdit }: {
+function ResetPasswordDialog({ open, onClose, onSave, saving }: {
+  open: boolean; onClose: () => void; onSave: (password: string) => void; saving?: boolean
+}) {
+  const [password, setPassword] = useState('')
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.3)' }}>
+      <div className="bg-white rounded-xl shadow-xl p-5 w-full max-w-sm space-y-4">
+        <h3 className="text-sm font-bold" style={{ color: 'var(--ink)' }}>Đổi mật khẩu</h3>
+        <input
+          className="nepo-input"
+          type="text"
+          placeholder="Mật khẩu mới"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          autoFocus
+          onKeyDown={e => { if (e.key === 'Enter' && password.trim()) onSave(password.trim()) }}
+        />
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>Huỷ</Button>
+          <Button variant="default" onClick={() => onSave(password.trim())} disabled={!password.trim() || !!saving}>
+            {saving ? 'Đang lưu...' : 'Xác nhận'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DriverRow({ driver, onEdit, onResetPassword }: {
   driver: Driver
   onEdit: (field: FocusableField) => void
+  onResetPassword: () => void
 }) {
   const salary = useDriverBaseSalaryForm({ driverId: driver.id })
   const currentSalary = salary.currentRate
@@ -185,6 +216,15 @@ function DriverRow({ driver, onEdit }: {
       <td>
         <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>{salaryFrom || '—'}</span>
       </td>
+      <td>
+        <button
+          onClick={(e) => { e.stopPropagation(); onResetPassword() }}
+          className="p-1 rounded hover:bg-gray-100 transition-colors"
+          title="Đổi mật khẩu"
+        >
+          <Key className="h-3.5 w-3.5" style={{ color: 'var(--ink-3)' }} />
+        </button>
+      </td>
     </tr>
   )
 }
@@ -193,17 +233,17 @@ function DriverRow({ driver, onEdit }: {
 // (Kept because creating a driver requires a username field not shown in the table)
 
 function DriverFormDrawer({ open, onClose, onSave, saving }: {
-  open: boolean; onClose: () => void; onSave: (data: { username: string; fullName: string; phone: string; plate: string }) => void; saving?: boolean
+  open: boolean; onClose: () => void; onSave: (data: { username: string; fullName: string; phone: string; plate: string; password?: string }) => void; saving?: boolean
 }) {
-  const [form, setForm] = useState({ username: '', fullName: '', phone: '', plate: '' })
+  const [form, setForm] = useState({ username: '', fullName: '', phone: '', plate: '', password: '' })
   const { data: vehicles = [] } = useVehicles()
   const [plateInput, setPlateInput] = useState('')
   const showCreatePlate = plateInput.trim() && !vehicles.some(v => v.plate.toLowerCase() === plateInput.toLowerCase().trim())
 
   const handleSave = () => {
     if (!form.username.trim()) return
-    onSave({ ...form, plate: plateInput.trim() || form.plate.trim() })
-    setForm({ username: '', fullName: '', phone: '', plate: '' })
+    onSave({ ...form, plate: plateInput.trim() || form.plate.trim(), password: form.password.trim() || undefined })
+    setForm({ username: '', fullName: '', phone: '', plate: '', password: '' })
     setPlateInput('')
   }
 
@@ -256,6 +296,12 @@ function DriverFormDrawer({ open, onClose, onSave, saving }: {
             />
           </div>
         </div>
+        <div>
+          <label className="nepo-field-label" htmlFor="drv-new-password">Mật khẩu</label>
+          <input id="drv-new-password" type="text" value={form.password}
+            onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+            placeholder="Mặc định = số điện thoại" className="nepo-input" />
+        </div>
       </div>
     </Drawer>
   )
@@ -280,6 +326,8 @@ export function DriversPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingField, setEditingField] = useState<FocusableField>(null)
   const [saving, setSaving] = useState(false)
+  const [resetPwdDriver, setResetPwdDriver] = useState<Driver | null>(null)
+  const [resetPwdSaving, setResetPwdSaving] = useState(false)
 
   // Infinite scroll
   const [limit, setLimit] = useState(BATCH)
@@ -313,8 +361,8 @@ export function DriversPage() {
       : <ChevronDown className="inline-block ml-1" style={{ width: 12, height: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />
   }
 
-  const handleCreate = useCallback(async (data: { username: string; fullName: string; phone: string; plate: string }) => {
-    createDriver.mutate({ username: data.username, fullName: data.fullName, phone: data.phone }, {
+  const handleCreate = useCallback(async (data: { username: string; fullName: string; phone: string; plate: string; password?: string }) => {
+    createDriver.mutate({ username: data.username, fullName: data.fullName, phone: data.phone, password: data.password }, {
       onSuccess: async (newDriver) => {
         if (data.plate.trim() && newDriver?.id) try { await assignVehicle(newDriver.id, data.plate.trim()) } catch {}
         toast.success('Đã thêm lái xe')
@@ -347,6 +395,20 @@ export function DriversPage() {
       setSaving(false)
     }
   }, [updateDriver, qc, toast])
+
+  const handleResetPassword = useCallback(async (password: string) => {
+    if (!resetPwdDriver) return
+    setResetPwdSaving(true)
+    try {
+      await apiClient.resetDriverPassword(resetPwdDriver.id, password)
+      toast.success('Đã đổi mật khẩu')
+      setResetPwdDriver(null)
+    } catch {
+      toast.error('Không thể đổi mật khẩu')
+    } finally {
+      setResetPwdSaving(false)
+    }
+  }, [resetPwdDriver, toast])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -400,6 +462,7 @@ export function DriversPage() {
                       <th className="text-left cursor-pointer select-none" style={{ color: sortBy === 'username' ? 'var(--accent)' : undefined }} onClick={() => handleSortCol('username')}>Biển số<SortIndicator col="username" /></th>
                       <th className="text-right">Lương cơ bản</th>
                       <th className="text-left">Từ ngày</th>
+                      <th className="w-10" />
                     </tr>
                   </thead>
                   <tbody>
@@ -419,6 +482,7 @@ export function DriversPage() {
                           key={d.id}
                           driver={d}
                           onEdit={(field) => { setEditingId(d.id); setEditingField(field) }}
+                          onResetPassword={() => setResetPwdDriver(d)}
                         />
                       )
                     )}
@@ -437,6 +501,14 @@ export function DriversPage() {
         onClose={() => setShowCreate(false)}
         onSave={handleCreate}
         saving={createDriver.isPending}
+      />
+
+      {/* ── Reset password dialog ── */}
+      <ResetPasswordDialog
+        open={!!resetPwdDriver}
+        onClose={() => setResetPwdDriver(null)}
+        onSave={handleResetPassword}
+        saving={resetPwdSaving}
       />
     </div>
   )

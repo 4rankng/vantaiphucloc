@@ -20,7 +20,8 @@ from app.contexts.fleet.interface.dependencies import (
     get_create_driver,
     get_list_drivers,
 )
-from app.contexts.fleet.interface.schemas import DriverCreateIn, DriverOut
+from app.contexts.identity.interface.dependencies import get_password_hasher
+from app.contexts.fleet.interface.schemas import DriverCreateIn, DriverOut, DriverResetPasswordIn
 from app.core.cache import CacheManager
 from app.database import get_db
 from app.core.deps import get_current_user, require_permission
@@ -126,6 +127,7 @@ async def create_driver(
         username=body.username,
         phone=body.phone,
         full_name=body.full_name,
+        password=body.password,
     )
     dto = await use_case(payload)
     await CacheManager(redis).invalidate_namespace("drivers")
@@ -260,3 +262,24 @@ async def set_driver_vehicle(
         created_at=user.created_at,
         updated_at=user.updated_at,
     )
+
+
+@router.put("/drivers/{driver_id}/reset-password")
+async def reset_driver_password(
+    driver_id: int,
+    body: DriverResetPasswordIn,
+    _current_user: User = Depends(require_permission("update", "Driver")),
+    db: AsyncSession = Depends(get_db),
+    hasher=Depends(get_password_hasher),
+):
+    from fastapi import HTTPException
+
+    user = (await db.execute(
+        select(User).where(User.id == driver_id, User.role == "driver")
+    )).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=404, detail="Driver not found")
+
+    user.hashed_password = hasher.hash(body.new_password)
+    await db.commit()
+    return {"message": "Password reset successfully"}

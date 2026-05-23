@@ -4,7 +4,7 @@ import { Drawer } from '@/components/shared/Drawer'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useVehicles } from '@/hooks/use-queries'
 
-export type DriverFormData = { fullName: string; phone: string; plate: string; username: string }
+export type DriverFormData = { fullName: string; phone: string; plate: string; username: string; password?: string }
 
 export function DriverFormDrawer({
   onSave,
@@ -20,6 +20,7 @@ export function DriverFormDrawer({
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [plate, setPlate] = useState('')
+  const [password, setPassword] = useState('')
   const [plateInput, setPlateInput] = useState('')
   const showCreatePlate = plateInput.trim() && !vehicles.some(v => v.plate.toLowerCase() === plateInput.toLowerCase().trim())
 
@@ -29,7 +30,7 @@ export function DriverFormDrawer({
         <>
           <Button variant="ghost" onClick={onClose}>Huỷ</Button>
           <Button variant="default"
-            onClick={() => onSave({ username, fullName, phone, plate: plateInput.trim() || plate.trim() })}
+            onClick={() => onSave({ username, fullName, phone, plate: plateInput.trim() || plate.trim(), password: password.trim() || undefined })}
             disabled={!username.trim() || isPending}>
             {isPending ? 'Đang lưu...' : 'Xác nhận'}
           </Button>
@@ -62,6 +63,12 @@ export function DriverFormDrawer({
               createNewLabel={showCreatePlate ? `Tạo mới "${plateInput.trim()}"` : undefined}
             />
           </div>
+        </div>
+        <div>
+          <label className="nepo-field-label" htmlFor="drv-password">Mật khẩu</label>
+          <input id="drv-password" type="text" value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="Mặc định = số điện thoại" className="nepo-input" />
         </div>
       </div>
     </Drawer>

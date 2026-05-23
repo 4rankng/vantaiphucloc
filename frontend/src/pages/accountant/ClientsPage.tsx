@@ -1,17 +1,18 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useCallback, useMemo } from 'react'
 import { Building2, Plus, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Panel } from '@/components/shared/Panel'
-import { useInfiniteScroll, LoadMoreSentinel, SearchInput, FieldActions } from '@/components/shared/ListUtils'
+import { LoadMoreSentinel, SearchInput, FieldActions } from '@/components/shared/ListUtils'
 import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
 import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
 import { StatPill } from '@/components/shared/StatPill'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { useClientsPaged, useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
+import { useClientsInfinite, useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { useDebounce } from '@/hooks/use-debounce'
+import { useInfiniteScroll } from '@/components/shared/ListUtils'
 import type { Client } from '@/data/domain'
 import type { ClientSortBy } from '@/services/api/clients.api'
 
@@ -30,8 +31,6 @@ type FormData = {
 const EMPTY_FORM: FormData = {
   code: '', name: '', type: 'company', phone: '', taxCode: '', address: '', contactPerson: '',
 }
-
-const BATCH = 15
 
 // ─── Inline edit row ──────────────────────────────────────────────────────────
 
@@ -96,7 +95,7 @@ function ClientEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
               style={{ width: '100%', borderColor: errors.name ? 'var(--status-error, #e53)' : undefined }}
               value={form.name}
               onChange={e => set('name', e.target.value)}
-  
+
               placeholder="Tên chủ hàng *"
             />
             {errors.name && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.name}</p>}
@@ -167,7 +166,7 @@ function ClientEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
               style={{ width: '100%', borderColor: errors.taxCode ? 'var(--status-error, #e53)' : undefined }}
               value={form.taxCode}
               onChange={e => set('taxCode', e.target.value)}
-  
+
               placeholder="MST"
             />
             {errors.taxCode && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.taxCode}</p>}
@@ -252,7 +251,6 @@ function ClientRow({ client, onEdit, onDelete }: {
 
 export function ClientsPage() {
   const toast = useToast()
-  // Keep useClients for counts (loads all without search)
   const { data: allClients = [] } = useClients()
   const createClient = useCreateClient()
   const updateClient = useUpdateClient()
@@ -262,25 +260,31 @@ export function ClientsPage() {
   const debouncedSearch = useDebounce(search, 400)
   const [sortBy, setSortBy] = useState<ClientSortBy>('name')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
-  const [limit, setLimit] = useState(BATCH)
   const [editingId, setEditingId] = useState<string | 'new' | null>(null)
   const [editingField, setEditingField] = useState<FocusableField>(null)
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null)
 
-  useEffect(() => { setLimit(BATCH) }, [debouncedSearch, sortBy, sortOrder])
-
-  const { data: pagedData, isLoading } = useClientsPaged({
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useClientsInfinite({
     search: debouncedSearch || undefined,
     sortBy,
     sortOrder,
-    pageSize: 200,
   })
-  const clients = pagedData?.items ?? []
-  const filtered = clients
 
-  const visible = filtered.slice(0, limit)
-  const hasMore = limit < filtered.length
-  const loadMore = useCallback(() => setLimit(n => n + BATCH), [])
+  const clients = useMemo(() =>
+    data?.pages.flatMap(p => p.items) ?? [], [data])
+
+  const total = data?.pages[0]?.total ?? 0
+  const hasMore = hasNextPage ?? false
+
+  const loadMore = useCallback(() => {
+    if (hasMore && !isFetchingNextPage) fetchNextPage()
+  }, [hasMore, isFetchingNextPage, fetchNextPage])
   const sentinel = useInfiniteScroll(loadMore)
 
   const companyCount = allClients.filter(c => c.type === 'company').length
@@ -302,15 +306,15 @@ export function ClientsPage() {
       : <ChevronDown className="inline-block ml-1" style={{ width: 12, height: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />
   }
 
-  const handleCreate = useCallback((data: FormData) => {
-    createClient.mutate(data, {
+  const handleCreate = useCallback((formData: FormData) => {
+    createClient.mutate(formData, {
       onSuccess: () => { toast.success('Đã thêm chủ hàng'); setEditingId(null) },
       onError: () => toast.error('Không thể thêm chủ hàng'),
     })
   }, [createClient, toast])
 
-  const handleUpdate = useCallback((id: string, data: FormData) => {
-    updateClient.mutate({ id, data }, {
+  const handleUpdate = useCallback((id: string, formData: FormData) => {
+    updateClient.mutate({ id, data: formData }, {
       onSuccess: () => { toast.success('Đã cập nhật'); setEditingId(null) },
       onError: () => toast.error('Không thể cập nhật'),
     })
@@ -337,7 +341,7 @@ export function ClientsPage() {
         lucideIcon={Building2}
         actions={
           <div className="flex items-center gap-1.5 flex-wrap">
-            <StatPill count={clients.length} label=" chủ hàng" accent />
+            <StatPill count={total} label=" chủ hàng" accent />
             {companyCount > 0 && <StatPill count={companyCount} label=" công ty" />}
             {individualCount > 0 && <StatPill count={individualCount} label=" cá nhân" />}
           </div>
@@ -356,7 +360,7 @@ export function ClientsPage() {
         <Panel flush>
           {isLoading ? (
             <TableSkeleton rows={5} />
-          ) : filtered.length === 0 && editingId !== 'new' ? (
+          ) : clients.length === 0 && editingId !== 'new' ? (
             <div className="py-10">
               <EmptyState
                 icon={<Building2 className="h-5 w-5" />}
@@ -405,7 +409,7 @@ export function ClientsPage() {
                         saving={createClient.isPending}
                       />
                     )}
-                    {visible.map((c) =>
+                    {clients.map((c) =>
                       editingId === c.id ? (
                         <ClientEditRow
                           key={c.id}
@@ -418,7 +422,7 @@ export function ClientsPage() {
                             address: c.address ?? '',
                             contactPerson: c.contactPerson ?? '',
                           }}
-                          onSave={(data) => handleUpdate(c.id, data)}
+                          onSave={(formData) => handleUpdate(c.id, formData)}
                           onCancel={() => setEditingId(null)}
                           saving={updateClient.isPending}
                           initialFocus={editingField}

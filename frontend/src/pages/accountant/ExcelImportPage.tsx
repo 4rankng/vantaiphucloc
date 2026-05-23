@@ -8,7 +8,7 @@ import { StepIndicator } from '@/components/shared/StepIndicator'
 import { Button } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { LinkButton } from '@/components/shared/LinkButton/LinkButton'
-import { useBulkImportAndMatch, useAIParsePreview, useClients } from '@/hooks/use-queries'
+import { useBulkImportAndMatch, useParsePreview, useClients } from '@/hooks/use-queries'
 
 type Step = 'upload' | 'preview' | 'done'
 
@@ -79,7 +79,7 @@ export function ExcelImportPage() {
 
   const { data: clients = [] } = useClients()
   const bulkImport = useBulkImportAndMatch()
-  const aiPreview = useAIParsePreview()
+  const parsePreview = useParsePreview()
 
   const handleFileSelect = useCallback((f: File | null) => {
     if (!f) return
@@ -90,7 +90,7 @@ export function ExcelImportPage() {
   function handlePreview() {
     if (!file) return
     setError(null)
-    aiPreview.mutate(
+    parsePreview.mutate(
       { file },
       {
         onSuccess: (data) => {
@@ -182,6 +182,9 @@ export function ExcelImportPage() {
                   options={clients.map(c => ({ value: String(c.id), label: c.name }))}
                   onChange={setClientId}
                 />
+                <p className="text-[11.5px]" style={{ color: 'var(--ink-4)' }}>
+                  Để trống nếu muốn hệ thống tự suy từ nội dung file — chọn thủ công nếu muốn chắc chắn
+                </p>
               </div>
 
               <div className="space-y-1.5">
@@ -224,13 +227,13 @@ export function ExcelImportPage() {
                 <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>
                   Hỗ trợ .xlsx, .xls, .csv
                 </span>
-                <Button variant="default" onClick={handlePreview} disabled={!file || aiPreview.isPending}>
-                  {aiPreview.isPending ? (
+                <Button variant="default" onClick={handlePreview} disabled={!file || parsePreview.isPending}>
+                  {parsePreview.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Upload className="h-4 w-4" />
                   )}
-                  {aiPreview.isPending ? 'Đang phân tích...' : 'Xem trước'}
+                  {parsePreview.isPending ? 'Đang phân tích...' : 'Xem trước'}
                 </Button>
               </div>
             </div>
@@ -304,7 +307,7 @@ export function ExcelImportPage() {
 
             <div className="flex items-center justify-between pt-1">
               <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>
-                Dữ liệu sẽ được nhập và tự động ghép với chuyến đã đi
+                Hệ thống đã ánh xạ các cột — dữ liệu sẽ được nhập rồi tự động ghép với chuyến đã đi
               </span>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" onClick={() => { setStep('upload'); setPreviewData([]); setPreviewColumns([]) }}>

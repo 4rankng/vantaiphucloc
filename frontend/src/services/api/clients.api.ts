@@ -24,7 +24,7 @@ function mapClient(raw: Record<string, unknown>): Client {
 
 export async function getClients(): Promise<ApiResponse<Client[]>> {
   try {
-    const res = await api.get('/clients', { params: { page_size: 200 } })
+    const res = await api.get('/clients', { params: { page_size: 1000 } })
     const rawList = unwrapList(res.data) as Record<string, unknown>[]
     const data = rawList.map(mapClient)
     await setCache('clients', data)
@@ -43,7 +43,7 @@ export async function getClientsPaged(filters?: ClientFilters): Promise<ApiRespo
     if (filters?.sortBy) params.sort_by = filters.sortBy
     if (filters?.sortOrder) params.sort_order = filters.sortOrder
     params.page = String(filters?.page ?? 1)
-    params.page_size = String(Math.min(filters?.pageSize ?? 50, 200))
+    params.page_size = String(filters?.pageSize ?? 50)
     const res = await api.get('/clients', { params })
     return ok(unwrapPaginated<Client>(res.data, (raw) => mapClient(raw as Record<string, unknown>)))
   } catch (err) {

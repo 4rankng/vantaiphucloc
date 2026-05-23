@@ -54,6 +54,8 @@ export function useCreateDeliveredTrip() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
     },
   })
 }
@@ -68,6 +70,8 @@ export function useUpdateDeliveredTrip() {
       qc.invalidateQueries({ queryKey: ['suggest-matches'] })
       qc.invalidateQueries({ queryKey: ['suggest-wos'] })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
     },
   })
 }

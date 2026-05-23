@@ -46,9 +46,6 @@ export function useUpdateVendorRoutePricing() {
       id: number
       data: VendorRoutePricingUpdatePayload
     }) => apiClient.updateVendorRoutePricing(id, data).then(unwrap),
-    onError: () => {
-      qc.invalidateQueries({ queryKey: ['vendor-route-pricings'] })
-    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vendor-route-pricings'] })
     },

@@ -25,6 +25,7 @@ class CreateDriverInput:
     username: str
     phone: str | None = None
     full_name: str | None = None
+    password: str | None = None
 
 
 class ListDrivers:
@@ -66,7 +67,8 @@ class CreateDriver:
         self.hasher = password_hasher
 
     async def __call__(self, payload: CreateDriverInput) -> DriverDTO:
-        hashed = self.hasher.hash(payload.phone)
+        raw_password = payload.password or payload.phone
+        hashed = self.hasher.hash(raw_password)
         driver = await self.repo.create(
             username=payload.username,
             phone=payload.phone,
