@@ -58,3 +58,24 @@ class RoutePricingOut(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RoutePricingImportRow(BaseModel):
+    client_id: int
+    pickup_location_id: int
+    dropoff_location_id: int
+    operation_type: str
+    f20_price: int | None = None
+    f40_price: int | None = None
+    e20_price: int | None = None
+    e40_price: int | None = None
+
+
+class RoutePricingImportCommit(BaseModel):
+    rows: list[RoutePricingImportRow]
+
+
+class RoutePricingImportResult(BaseModel):
+    created: int = 0
+    updated: int = 0
+    skipped: int = 0

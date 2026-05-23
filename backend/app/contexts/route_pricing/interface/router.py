@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, File as FastAPIFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.route_pricing.application.dto import (
@@ -24,6 +24,12 @@ from app.contexts.route_pricing.interface.schemas import (
     RoutePricingCreate,
     RoutePricingOut,
     RoutePricingUpdate,
+    RoutePricingImportCommit,
+    RoutePricingImportResult,
+)
+from app.contexts.route_pricing.infrastructure.route_pricing_import import (
+    preview_with_matching,
+    commit_import_rows,
 )
 from app.core.deps import require_permission
 from app.core.summaries import (
@@ -160,3 +166,23 @@ async def delete_route_pricing(
     except Exception as e:
         raise translate(e)
     return Response()
+
+
+@router.post("/route-pricings/import-preview")
+async def import_preview_route_pricings(
+    file: UploadFile = FastAPIFile(...),
+    _current_user: User = Depends(require_permission("update", "RoutePricing")),
+    db: AsyncSession = Depends(get_db),
+):
+    content = await file.read()
+    return await preview_with_matching(db, content)
+
+
+@router.post("/route-pricings/import-commit", response_model=RoutePricingImportResult)
+async def import_commit_route_pricings(
+    body: RoutePricingImportCommit,
+    _current_user: User = Depends(require_permission("update", "RoutePricing")),
+    db: AsyncSession = Depends(get_db),
+):
+    rows = [r.model_dump() for r in body.rows]
+    return await commit_import_rows(db, rows)
