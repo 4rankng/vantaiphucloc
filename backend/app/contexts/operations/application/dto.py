@@ -18,7 +18,6 @@ class BookedTripCreateInput:
     work_type: str = ""
     cont_number: str | None = None
     cont_type: str | None = None
-    revenue: int = 0
 
 
 @dataclass
@@ -32,9 +31,6 @@ class BookedTripUpdateInput:
     work_type: str | None = None
     cont_number: str | None = None
     cont_type: str | None = None
-    revenue: int | None = None
-    driver_salary: int | None = None
-    allowance: int | None = None
     matched: bool | None = None
 
 
@@ -46,7 +42,6 @@ class BookedTripListFilters:
     matched: bool | None = None
     date_from: date | None = None
     date_to: date | None = None
-    unpriced: bool | None = None
 
 
 @dataclass

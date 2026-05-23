@@ -1,8 +1,5 @@
-"""Read-side query helpers for the partner-Excel import + apply-pricing
-flows in operations.application.booked_trips.
-
-Mutations (price assignment, status flip) still happen on the ORM rows
-themselves inside the use case -- this module only reads.
+"""Read-side query helpers for the partner-Excel import flow
+in operations.application.booked_trips.
 """
 
 from __future__ import annotations

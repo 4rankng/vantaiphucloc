@@ -29,7 +29,6 @@ from app.contexts.operations.domain.repositories import (
 )
 from app.contexts.operations.domain.value_objects import (
     BookedTripId,
-    normalize_work_type,
 )
 
 
@@ -59,7 +58,6 @@ class ListBookedTrips:
         self, filters: BookedTripListFilters
     ) -> tuple[list[BookedTrip], int]:
         offset = (filters.page - 1) * filters.page_size
-        unpriced_only = filters.unpriced is True
         items, total = await self.repo.list(
             offset=offset,
             limit=filters.page_size,
@@ -67,10 +65,7 @@ class ListBookedTrips:
             matched=filters.matched,
             trip_date_from=filters.date_from,
             trip_date_to=filters.date_to,
-            unpriced_only=unpriced_only,
         )
-        if filters.unpriced is False:
-            items = [t for t in items if (t.revenue or 0) > 0]
         return list(items), total
 
 
@@ -78,8 +73,7 @@ class ListBookedTrips:
 
 
 class CreateBookedTrip:
-    """Create a BookedTrip from API input. Applies tiered pricing if the
-    partner has a matching pricing rule."""
+    """Create a BookedTrip from API input."""
 
     def __init__(
         self,
@@ -90,24 +84,6 @@ class CreateBookedTrip:
         self.session = session
 
     async def __call__(self, data: BookedTripCreateInput) -> BookedTrip:
-        revenue = int(data.revenue or 0)
-
-        if data.work_type:
-            wt = normalize_work_type(data.work_type)
-            from app.contexts.customer_pricing.infrastructure.pricing_lookup import (
-                find_tiered_pricing,
-            )
-            tiered = await find_tiered_pricing(
-                self.session,
-                client_id=data.client_id,
-                work_type=wt,
-                quantity=1,
-                pickup_location_id=data.pickup_location_id,
-                dropoff_location_id=data.dropoff_location_id,
-            )
-            if tiered:
-                revenue = tiered.revenue
-
         t = BookedTrip(
             id=None,
             trip_date=data.trip_date,
@@ -117,7 +93,6 @@ class CreateBookedTrip:
             work_type=data.work_type,
             cont_number=data.cont_number,
             cont_type=data.cont_type,
-            revenue=revenue,
             matched=False,
         )
 
@@ -163,12 +138,6 @@ class UpdateBookedTrip:
             t.cont_number = data.cont_number
         if data.cont_type is not None:
             t.cont_type = data.cont_type
-        if data.revenue is not None:
-            t.revenue = int(data.revenue)
-        if data.driver_salary is not None:
-            t.driver_salary = int(data.driver_salary)
-        if data.allowance is not None:
-            t.allowance = int(data.allowance)
         if data.matched is not None:
             t.matched = data.matched
         t.updated_at = _utcnow()
@@ -195,19 +164,16 @@ class DeleteBookedTrip:
         await self.session.commit()
 
 
-# ── Bulk import + apply pricing ──────────────────────────────────
+# ── Bulk import ──────────────────────────────────────────────────
 
 
 class CreateBookedTripFromImport:
     """Create BookedTrips from the partner-Excel import pipeline.
 
     Each row becomes one BookedTrip (one container per trip).
-    Pricing is intentionally NOT applied here -- the accountant prices
-    the trip later via Apply Pricing or manually.
+    Pricing is auto-applied when the trip is later matched to a DeliveredTrip.
 
-    Idempotent on `(client_id, trip_date, container_number)`. Returns
-    counts plus the new trip ids so the UI can chain the apply-pricing
-    flow.
+    Idempotent on `(client_id, trip_date, container_number)`.
     """
 
     def __init__(
@@ -298,7 +264,6 @@ class CreateBookedTripFromImport:
                     client_id=partner.id,
                     pickup_location_id=pickup_loc.id,
                     dropoff_location_id=dropoff_loc.id,
-                    revenue=0,
                     work_type=work_type_val,
                     cont_number=cn,
                     cont_type=cont_type,

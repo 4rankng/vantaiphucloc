@@ -225,9 +225,6 @@ async def import_booked_trips(
             work_type="CHUYỂN BÃI",
             cont_number=containers_data[0]["container_number"],
             cont_type=containers_data[0]["cont_type"],
-            revenue=revenue,
-            driver_salary=driver_salary,
-            allowance=allowance,
         )
         db.add(booked_trip)
 

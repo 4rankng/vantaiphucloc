@@ -55,11 +55,6 @@ class TestMonetaryFieldsAreInteger:
         col = _col(DeliveredTrip, field)
         assert isinstance(col.type, Integer)
 
-    @pytest.mark.parametrize("field", ["revenue"])
-    def test_booked_trip_monetary_fields(self, field):
-        col = _col(BookedTrip, field)
-        assert isinstance(col.type, Integer)
-
 
 # ---------------------------------------------------------------------------
 # 2. Pricing table no longer has financial columns

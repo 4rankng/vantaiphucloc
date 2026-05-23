@@ -74,7 +74,6 @@ def _trip_to_out(t: BookedTrip, clients, locations) -> BookedTripOut:
         vessel=t.vessel,
         vehicle_plate=t.vehicle_plate,
         work_type=t.work_type,
-        revenue=t.revenue,
         matched=t.matched,
         created_at=t.created_at,
         updated_at=t.updated_at,
@@ -119,7 +118,6 @@ async def create_booked_trip(
             dropoff_location_id=body.dropoff_location_id,
             cont_number=body.cont_number,
             cont_type=body.cont_type,
-            revenue=body.revenue,
         ))
     except Exception as exc:
         raise translate(exc)
@@ -132,7 +130,6 @@ async def list_booked_trips(
     matched: bool | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
-    unpriced: bool | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=1000),
     current_user: User = Depends(require_permission("read", "BookedTrip")),
@@ -142,7 +139,6 @@ async def list_booked_trips(
         page=page, page_size=page_size,
         client_id=client_id, matched=matched,
         date_from=date_from, date_to=date_to,
-        unpriced=unpriced,
     ))
     out = await _load_many(use_case.repo.session, items)  # type: ignore[attr-defined]
     return PaginatedResponse[BookedTripOut](
@@ -306,9 +302,6 @@ async def update_booked_trip(
             vessel=body.vessel,
             vehicle_plate=body.vehicle_plate,
             work_type=body.work_type,
-            revenue=body.revenue,
-            driver_salary=body.driver_salary,
-            allowance=body.allowance,
             matched=body.matched,
         ))
     except Exception as exc:

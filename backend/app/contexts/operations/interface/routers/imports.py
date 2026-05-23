@@ -9,10 +9,6 @@ Two-stage flow per upload:
   2. `POST /imports/customer-excel/commit` — JSON body with confirmed
      rows. Hands rows to `CreateBookedTripFromImport`. Idempotent on
      `(client_id, trip_date, container_number)`.
-
-The `customer-pricing` (bảng giá) preview/commit + `apply-pricing`
-endpoints share this router for now — they belong to customer_pricing
-context but the import-pipeline layer hosts the file-handling.
 """
 
 from __future__ import annotations
