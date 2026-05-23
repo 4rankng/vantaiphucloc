@@ -550,6 +550,8 @@ async def get_trip_daily_stats(
     total = 0
     matched = 0
     pending = 0
+    internal_count = 0
+    vendor_count = 0
     total_revenue = 0
     for trip_date, is_matched, cnt, rev in rows:
         day = trip_date.day if hasattr(trip_date, 'day') else trip_date
@@ -570,12 +572,32 @@ async def get_trip_daily_stats(
         for d in range(1, days_in_month + 1)
     ]
 
+    # Distinct vehicle counts (not trip counts)
+    base_where = [
+        DeliveredTrip.trip_date >= df,
+        DeliveredTrip.trip_date <= dt,
+    ]
+    if client_id is not None:
+        base_where.append(DeliveredTrip.client_id == client_id)
+
+    internal_count = (await db.execute(
+        select(func.count(func.distinct(DeliveredTrip.driver_id)))
+        .where(DeliveredTrip.vendor_id.is_(None), DeliveredTrip.driver_id.isnot(None), *base_where)
+    )).scalar() or 0
+
+    vendor_count = (await db.execute(
+        select(func.count(func.distinct(DeliveredTrip.vendor_id)))
+        .where(DeliveredTrip.vendor_id.isnot(None), *base_where)
+    )).scalar() or 0
+
     return TripDailyStatsOut(
         date_from=df,
         date_to=dt,
         total=total,
         matched=matched,
         pending=pending,
+        internal_count=internal_count,
+        vendor_count=vendor_count,
         total_revenue=total_revenue,
         match_rate=round(matched / total * 100) if total > 0 else None,
         buckets=buckets,
