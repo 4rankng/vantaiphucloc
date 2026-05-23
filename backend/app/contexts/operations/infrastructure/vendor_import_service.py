@@ -182,6 +182,7 @@ class ReconciliationImportService:
                     "error": str(exc),
                 })
 
+        await self._populate_matched_revenue()
         await self.session.commit()
         return result
 
@@ -282,9 +283,41 @@ class ReconciliationImportService:
                     "error": str(exc),
                 })
 
+        await self._populate_matched_revenue()
         await self.session.commit()
         result.errors = all_errors + result.errors
         return result
+
+    async def _populate_matched_revenue(self) -> None:
+        """Batch-lookup RoutePricing for matched DeliveredTrips with revenue=0."""
+        from app.core.pricing_lookup import TripPriceInfo, lookup_client_prices
+
+        rows = (await self.session.execute(
+            select(DeliveredTripORM).where(
+                DeliveredTripORM.booked_trip_id.isnot(None),
+                DeliveredTripORM.revenue == 0,
+            )
+        )).scalars().all()
+
+        if not rows:
+            return
+
+        infos = [
+            TripPriceInfo(
+                id=wo.id,
+                partner_id=wo.client_id,
+                pickup_location_id=wo.pickup_location_id,
+                dropoff_location_id=wo.dropoff_location_id,
+                work_type=wo.work_type,
+                cont_type=wo.cont_type,
+            )
+            for wo in rows
+        ]
+        prices = await lookup_client_prices(self.session, infos)
+        for wo in rows:
+            price = prices.get(wo.id, 0)
+            if price:
+                wo.revenue = price
 
     async def _resolve_locations(self, rows: list[ImportRow]) -> None:
         names: set[str] = set()
