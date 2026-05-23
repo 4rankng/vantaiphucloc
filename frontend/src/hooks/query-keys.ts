@@ -10,7 +10,6 @@ function unwrap<T>(res: ApiResponse<T>): T {
   if (res.success) return res.data
   throw new Error(res.message ?? 'Lỗi hệ thống')
 }
-import type { RouteCreatePayload, RouteUpdatePayload } from '@/services/api/routes.api'
 import type { PricingCreatePayload, PricingUpdatePayload } from '@/services/api/pricings.api'
 import type { DeliveredTripCreatePayload, DeliveredTripUpdatePayload } from '@/services/api/deliveredTrips.api'
 import type { BookedTripCreatePayload, BookedTripUpdatePayload } from '@/services/api/bookedTrips.api'
@@ -19,8 +18,6 @@ import type { PricingFormat, PricingCommitRequest } from '@/services/api/imports
 export type {
   PricingCreatePayload,
   PricingUpdatePayload,
-  RouteCreatePayload,
-  RouteUpdatePayload,
   DeliveredTripCreatePayload,
   DeliveredTripUpdatePayload,
   BookedTripCreatePayload,
@@ -40,7 +37,6 @@ export const queryKeys = {
   client: (id: number) => ['clients', id] as const,
   vendors: ['vendors'] as const,
   vendor: (id: number) => ['vendors', id] as const,
-  routes: ['routes'] as const,
   locations: ['locations'] as const,
   pricings: ['pricings'] as const,
   pricingsFiltered: (filters?: { clientId?: number; workType?: ContType }) =>

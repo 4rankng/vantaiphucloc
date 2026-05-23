@@ -29,6 +29,44 @@ export function useAIParsePreview() {
   })
 }
 
+export function usePreviewCustomerExcel() {
+  return useMutation({
+    mutationFn: (args: {
+      file: File
+      clientId?: number
+      defaultTripDate?: string
+      sheetName?: string
+      headerRowIndex?: number
+    }) => apiClient.previewCustomerExcel(args),
+  })
+}
+
+export function useCommitCustomerExcel() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: Parameters<typeof apiClient.commitCustomerExcel>[0]) =>
+      apiClient.commitCustomerExcel(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+    },
+  })
+}
+
+export function useUploadVendorReconciliation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ file, vendorId }: { file: File; vendorId: number }) =>
+      apiClient.uploadVendorReconciliation(file, vendorId).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+    },
+  })
+}
+
 
 export function useExportDoiSoatExcel() {
   return useMutation({

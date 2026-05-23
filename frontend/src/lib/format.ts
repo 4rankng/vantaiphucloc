@@ -62,19 +62,3 @@ export function formatDate(
       return `${mm}/${yyyy}`
   }
 }
-
-/**
- * Format a date range for display.
- *
- * Returns "DD/MM – DD/MM" or "DD/MM/YYYY – DD/MM/YYYY" depending on format.
- */
-export function formatDateRange(
-  start: string | Date | null | undefined,
-  end: string | Date | null | undefined,
-  format: DateFormat = 'short',
-): string {
-  const s = formatDate(start, format)
-  const e = formatDate(end, format)
-  if (s === '—' || e === '—') return s === '—' ? e : s
-  return `${s} → ${e}`
-}

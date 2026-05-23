@@ -14,12 +14,13 @@ from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import User
-from app.models.domain import Location, Client, Vehicle, VehicleDriver
+from app.models.domain import Location, Client, Vehicle, VehicleDriver, Vendor
 from app.schemas.domain import (
     ClientSummaryOut,
     DriverSummaryOut,
     LocationSummaryOut,
     VehicleSummaryOut,
+    VendorSummaryOut,
 )
 
 
@@ -129,6 +130,31 @@ def get_driver_summary(
     return summaries.get(
         driver_id, DriverSummaryOut(id=driver_id, name="(không rõ)", phone=None, vehicle=None)
     )
+
+
+# ── Deprecated aliases ──
+
+# ── Vendor summaries ──
+
+async def load_vendor_summaries(
+    db: AsyncSession, vendor_ids: set[int | None] | list[int | None]
+) -> dict[int, VendorSummaryOut]:
+    ids = {i for i in vendor_ids if i is not None}
+    if not ids:
+        return {}
+    res = await db.execute(sa_select(Vendor).where(Vendor.id.in_(ids)))
+    return {
+        v.id: VendorSummaryOut(id=v.id, name=v.name)
+        for v in res.scalars().all()
+    }
+
+
+def get_vendor_summary(
+    summaries: dict[int, VendorSummaryOut], vendor_id: int | None
+) -> VendorSummaryOut | None:
+    if vendor_id is None:
+        return None
+    return summaries.get(vendor_id)
 
 
 # ── Deprecated aliases ──

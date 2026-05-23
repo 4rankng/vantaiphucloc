@@ -21,9 +21,3 @@ export const invoiceStatusVariant = (s: string): BadgeVariant =>
 
 export const invoiceStatusLabel = (s: string) =>
   s === 'PAID' ? 'Đã thu' : s === 'ISSUED' ? 'Đã PH' : s === 'OVERDUE' ? 'Quá hạn' : 'Nháp'
-
-export const expenseStatusVariant = (s: string): BadgeVariant =>
-  s === 'APPROVED' ? 'success' : s === 'DRAFT' ? 'warning' : s === 'REJECTED' ? 'danger' : 'neutral'
-
-export const expenseStatusLabel = (s: string) =>
-  s === 'APPROVED' ? 'Đã duyệt' : s === 'DRAFT' ? 'Chờ duyệt' : s === 'REJECTED' ? 'Từ chối' : s

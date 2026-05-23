@@ -167,13 +167,13 @@ export function DeliveredTripDetailDrawer({
               <CriteriaEditRow label="Số xe">
                 <InlineEditable
                   display={
-                    <span style={{ color: trip.vehicle?.plate ? 'var(--ink)' : 'var(--ink-4)' }}>
-                      {trip.vehicle?.plate ?? 'bất kỳ'}
+                    <span style={{ color: trip.vehiclePlate ? 'var(--ink)' : 'var(--ink-4)' }}>
+                      {trip.vehiclePlate ?? 'bất kỳ'}
                     </span>
                   }
-                  value={trip.vehicle?.plate ?? ''}
+                  value={trip.vehiclePlate ?? ''}
                   placeholder="Biển số xe"
-                  onSave={(v) => updateTrip.mutateAsync({ id: trip.id, data: { vehicleExternalPlate: v || null } })}
+                  onSave={(v) => updateTrip.mutateAsync({ id: trip.id, data: { vehiclePlate: v || null } })}
                 />
               </CriteriaEditRow>
 

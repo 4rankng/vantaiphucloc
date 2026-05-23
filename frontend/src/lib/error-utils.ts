@@ -38,17 +38,3 @@ export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
   return 'Đã xảy ra lỗi không xác định'
 }
-
-export function getErrorContext(error: unknown): string | null {
-  return isAppError(error) ? error.component || null : null
-}
-
-export function normalizeApiError(error: unknown, endpoint?: string): ApiError {
-  if (isAppError(error)) {
-    return { type: 'server', message: error.message, statusCode: error.statusCode, endpoint }
-  }
-  if (error instanceof TypeError && error.message.includes('fetch')) {
-    return { type: 'network', message: ERROR_MESSAGES.NETWORK_ERROR, endpoint }
-  }
-  return { type: 'server', message: ERROR_MESSAGES.SERVER_ERROR, endpoint }
-}

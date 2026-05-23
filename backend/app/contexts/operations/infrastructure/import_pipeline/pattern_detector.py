@@ -33,6 +33,7 @@ def detect_pattern(sheets: list[SheetView], filename: str = "") -> DetectedPatte
             "bay_plan": _score_bay_plan(sheet),
             "loading_list": _score_loading_list(sheet),
             "invoice": _score_invoice(sheet),
+            "settlement_list": _score_settlement_list(sheet),
         }
         for name, score in scores.items():
             if score >= DETECTION_THRESHOLD:
@@ -51,6 +52,7 @@ _CONTAINER_SYNONYMS = {
     "CONTAINER", "CONTAINER NO", "CONTAINERNO", "CONTNO",
     "CONT NO", "CONTAINER ID", "CTR NO", "CTNR", "CONTAINER#",
     "SỐ CONTAINER", "SO CONTAINER", "SỐ CONT", "SO CONT",
+    "SỐCONTAINER", "SOCONTAINER",  # no-space variant from SL sheets
     "MÃ CONT", "MA CONT", "MÃ CONTAINER", "MA CONTAINER",
     "หมายเลขตู้", "CONT",
 }
@@ -77,7 +79,8 @@ def is_container_header(cell) -> bool:
     t = _cell_upper(cell)
     if t in _CONTAINER_SYNONYMS:
         return True
-    return t.startswith("CONTAINER") or t.startswith("SỐ CONT") or t.startswith("SO CONT")
+    return (t.startswith("CONTAINER") or t.startswith("SỐ CONT") or t.startswith("SO CONT")
+            or t.startswith("SỐCONT") or t.startswith("SOCONT"))
 
 
 def _score_bay_plan(sheet: SheetView) -> float:

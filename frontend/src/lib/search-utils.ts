@@ -28,11 +28,3 @@ export function fuzzyMatch(haystack: string, needle: string): boolean {
   const n = normalizeVietnamese(needle).replace(/\s+/g, '')
   return h.includes(n)
 }
-
-/**
- * Check if any item in an array contains the needle (diacritics-insensitive, space-tolerant).
- */
-export function fuzzyMatchAny(haystacks: string[], needle: string): boolean {
-  const n = normalizeVietnamese(needle).replace(/\s+/g, '')
-  return haystacks.some(h => normalizeVietnamese(h).replace(/\s+/g, '').includes(n))
-}

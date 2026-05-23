@@ -20,6 +20,8 @@ from app.contexts.operations.interface import (
     booked_trips_router,
     vendors_router,
     delivered_trips_router,
+    vendor_reconciliation_router,
+    auto_match_router,
 )
 from app.contexts.fleet.interface import drivers_router, vehicle_expenses_router, vehicle_drivers_router, vehicles_router
 from app.contexts.billing.interface import reports_router
@@ -57,6 +59,8 @@ router.include_router(audit_router)
 router.include_router(reports_router)
 router.include_router(imports_router)
 router.include_router(vendors_router)
+router.include_router(vendor_reconciliation_router)
+router.include_router(auto_match_router)
 
 
 @router.get("/health")

@@ -273,7 +273,6 @@ class DeliveredTrip(AuditableMixin, Base):
 
     __table_args__ = (
         Index("ix_delivered_trips_matched", "matched"),
-        Index("ix_delivered_trips_vendor_id", "vendor_id"),
         Index("ix_delivered_trips_created_at", "created_at"),
     )
 

@@ -66,6 +66,11 @@ export interface Vendor {
 }
 
 export interface VendorSummary {
+  id: number
+  name: string
+}
+
+export interface VendorSummaryStats {
   vendor: Pick<Vendor, 'id' | 'name' | 'phone' | 'taxCode' | 'address' | 'contactPerson'>
   stats: {
     tripCount: number
@@ -116,6 +121,7 @@ export interface DeliveredTrip {
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
   driver?: DriverSummary | null
+  vendor?: VendorSummary | null
   vendorId?: number | null
   vehiclePlate?: string | null
   vessel?: string | null

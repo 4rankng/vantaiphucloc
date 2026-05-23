@@ -94,6 +94,7 @@ SYNONYMS: dict[str, list[str]] = {
         "container", "container no", "container number", "cont", "contno",
         "contno.", "cont no", "container id", "ctr no", "ctnr", "container#",
         "so container", "số container", "so cont", "số cont",
+        "socontainer", "sốcontainer",  # no-space variant from SL sheets
         "ma cont", "mã cont", "ma container", "mã container",
         "หมายเลขตู้",  # Thai (Glory Shanghai files)
     ],

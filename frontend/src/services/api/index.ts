@@ -11,7 +11,6 @@ export { toCamel, toSnake, ok, fail, isNetworkError } from './utils'
 // Domain modules
 import * as clientsApi from './clients.api'
 import * as vendorsApi from './vendors.api'
-import * as routesApi from './routes.api'
 import * as locationsApi from './locations.api'
 import * as locationAliasesApi from './locationAliases.api'
 import * as pricingsApi from './pricings.api'
@@ -42,12 +41,6 @@ export const apiClient = {
   createVendor: vendorsApi.createVendor,
   updateVendor: vendorsApi.updateVendor,
   deleteVendor: vendorsApi.deleteVendor,
-
-  // Routes (DEPRECATED — returns empty)
-  getRoutes: routesApi.getRoutes,
-  createRoute: routesApi.createRoute,
-  updateRoute: routesApi.updateRoute,
-  deleteRoute: routesApi.deleteRoute,
 
   // Locations
   getLocations: locationsApi.getLocations,
@@ -153,6 +146,7 @@ export const apiClient = {
   previewCustomerExcel: importsApi.previewCustomerExcel,
   commitCustomerExcel: importsApi.commitCustomerExcel,
   applyPricingToTripIds: importsApi.applyPricingToTripIds,
+  uploadVendorReconciliation: importsApi.uploadVendorReconciliation,
 
   // Customer-Pricing imports
   previewCustomerPricing: importsApi.previewCustomerPricing,

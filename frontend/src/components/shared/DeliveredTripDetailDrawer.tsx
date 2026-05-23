@@ -175,25 +175,27 @@ export function DeliveredTripDetailDrawer({
               <CriteriaEditRow label="Số xe">
                 <InlineEditable
                   display={
-                    <span style={{ color: trip.vehicle?.plate ? 'var(--ink)' : 'var(--ink-4)' }}>
-                      {trip.vehicle?.plate ?? 'bất kỳ'}
+                    <span style={{ color: trip.vehiclePlate ? 'var(--ink)' : 'var(--ink-4)' }}>
+                      {trip.vehiclePlate ?? 'bất kỳ'}
                     </span>
                   }
-                  value={trip.vehicle?.plate ?? ''}
+                  value={trip.vehiclePlate ?? ''}
                   placeholder="Biển số xe"
-                  onSave={(v) => updateTrip.mutateAsync({ id: trip.id, data: { vehicleExternalPlate: v || null } })}
+                  onSave={(v) => updateTrip.mutateAsync({ id: trip.id, data: { vehiclePlate: v || null } })}
                 />
               </CriteriaEditRow>
 
               {/* Khách hàng */}
-              <CriteriaEditRow label="Khách hàng">
-                <InlineSelect
-                  value={trip.client?.id ?? null}
-                  displayValue={trip.client?.name}
-                  options={clients.map((c) => ({ value: c.id, label: c.name }))}
-                  onChange={(id) => updateTrip.mutate({ id: trip.id, data: { clientId: id } })}
-                />
-              </CriteriaEditRow>
+              <div className="col-span-2">
+                <CriteriaEditRow label="Khách hàng">
+                  <InlineSelect
+                    value={trip.client?.id ?? null}
+                    displayValue={trip.client?.name}
+                    options={clients.map((c) => ({ value: c.id, label: c.name }))}
+                    onChange={(id) => updateTrip.mutate({ id: trip.id, data: { clientId: id } })}
+                  />
+                </CriteriaEditRow>
+              </div>
             </div>
           </div>
 
@@ -307,14 +309,16 @@ export function DeliveredTripDetailDrawer({
                   </CriteriaEditRow>
 
                   {/* Khách hàng */}
-                  <CriteriaEditRow label="Khách hàng">
-                    <InlineSelect
-                      value={bookedTrip.client?.id ?? null}
-                      displayValue={bookedTrip.client?.name}
-                      options={clients.map((c) => ({ value: c.id, label: c.name }))}
-                      onChange={(id) => updateBookedTrip.mutate({ id: bookedTrip.id, data: { clientId: id as number } })}
-                    />
-                  </CriteriaEditRow>
+                  <div className="col-span-2">
+                    <CriteriaEditRow label="Khách hàng">
+                      <InlineSelect
+                        value={bookedTrip.client?.id ?? null}
+                        displayValue={bookedTrip.client?.name}
+                        options={clients.map((c) => ({ value: c.id, label: c.name }))}
+                        onChange={(id) => updateBookedTrip.mutate({ id: bookedTrip.id, data: { clientId: id as number } })}
+                      />
+                    </CriteriaEditRow>
+                  </div>
 
                   {/* Doanh thu */}
                   <CriteriaEditRow label="Doanh thu">

@@ -54,7 +54,7 @@ async def test_get_trip_daily_stats_revenue(db_session, async_client):
         driver_id=driver.id,
         trip_date=date(2026, 5, 10),
         revenue=1200000,
-        status="MATCHED",
+        matched=True,
         work_type="F20",
     )
     t2 = DeliveredTrip(
@@ -64,20 +64,10 @@ async def test_get_trip_daily_stats_revenue(db_session, async_client):
         driver_id=driver.id,
         trip_date=date(2026, 5, 11),
         revenue=800000,
-        status="PENDING",
+        matched=False,
         work_type="F20",
     )
-    t3 = DeliveredTrip(
-        client_id=partner.id,
-        pickup_location_id=pickup.id,
-        dropoff_location_id=dropoff.id,
-        driver_id=driver.id,
-        trip_date=date(2026, 5, 12),
-        revenue=5000000,
-        status="CANCELLED",
-        work_type="F20",
-    )
-    db_session.add_all([t1, t2, t3])
+    db_session.add_all([t1, t2])
     await db_session.commit()
 
     res = await async_client.get(
@@ -87,10 +77,10 @@ async def test_get_trip_daily_stats_revenue(db_session, async_client):
     )
     assert res.status_code == 200, res.text
     data = res.json()
-    assert data["total"] == 3
+    assert data["total"] == 2
     assert data["matched"] == 1
     assert data["pending"] == 1
-    assert data["total_revenue"] == 2000000  # 1.2M + 800K, t3 is CANCELLED so it is not added
+    assert data["total_revenue"] == 2000000  # 1.2M + 800K
 
     # Test with valid client filter
     res = await async_client.get(
@@ -99,7 +89,7 @@ async def test_get_trip_daily_stats_revenue(db_session, async_client):
         headers=headers,
     )
     assert res.status_code == 200
-    assert res.json()["total"] == 3
+    assert res.json()["total"] == 2
 
     # Test with invalid client filter
     res = await async_client.get(

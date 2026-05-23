@@ -7,7 +7,3 @@ export function hapticTap() {
 export function hapticSuccess() {
   if (canVibrate) navigator.vibrate!([50])
 }
-
-export function hapticError() {
-  if (canVibrate) navigator.vibrate!([100, 50, 100])
-}

@@ -44,10 +44,6 @@ export function isOnline(): boolean {
   return typeof navigator !== 'undefined' ? navigator.onLine : true
 }
 
-export function isBackendOnline(): boolean {
-  return _backendOnline
-}
-
 /** True only when both browser and backend are reachable. */
 export function isFullyOnline(): boolean {
   return isOnline() && _backendOnline
@@ -76,13 +72,6 @@ export function onNetworkChange(callback: (online: boolean) => void): () => void
     window.removeEventListener('offline', goOffline)
     _listeners.delete(callback)
   }
-}
-
-export function onBackendStatusChange(
-  callback: (backendOnline: boolean) => void,
-): () => void {
-  _listeners.add(callback)
-  return () => { _listeners.delete(callback) }
 }
 
 // ── Internal ──────────────────────────────────────────────────────────

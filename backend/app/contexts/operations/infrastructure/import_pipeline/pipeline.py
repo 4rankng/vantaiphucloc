@@ -108,14 +108,8 @@ async def run_preview(
     except ValueError:
         pass
 
-    # Step 3: AI fallback
-    from app.contexts.operations.infrastructure.import_pipeline.ai_extractor import extract_with_ai
-    ai_rows = await extract_with_ai(sheets, filename)
-    if ai_rows:
-        return _build_preview_from_extracted(ai_rows, [], filename, sheets[0].name if sheets else "", "ai_fallback", default_trip_date)
-
-    # Step 4: Complete failure
-    raise ValueError("Không thể đọc tệp. Vui lòng nhập thủ công.")
+    # Step 3: Complete failure (AI fallback disabled)
+    raise ValueError("Không thể đọc tệp Excel. Vui lòng kiểm tra lại cấu trúc cột hoặc nhập thủ công.")
 
 
 def apply_mapping(

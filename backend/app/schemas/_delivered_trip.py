@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, model_validator
 
 from ._client import ClientSummaryOut
 from ._location import DriverSummaryOut, LocationSummaryOut
+from ._vendor import VendorSummaryOut
 
 __all__ = [
     "DeliveredTripCreate",
@@ -61,6 +62,7 @@ class DeliveredTripOut(BaseModel):
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
     driver: DriverSummaryOut | None = None
+    vendor: VendorSummaryOut | None = None
     vendor_id: int | None = None
     vehicle_plate: str = ""
     vessel: str | None = None

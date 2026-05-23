@@ -56,6 +56,9 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Office temp files
+~$*
+
 # Tool / editor / AI config
 .claude/
 .crush/

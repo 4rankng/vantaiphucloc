@@ -1,4 +1,7 @@
 import { api } from './client'
+import { toCamel, ok, fail } from './utils'
+import type { ApiResponse } from '@/data/domain'
+
 
 // ──────────────────────────────────────────────────────────────────────────
 // Types
@@ -253,3 +256,27 @@ export async function commitCustomerPricing(
   const res = await api.post('/imports/customer-pricing/commit', body)
   return res.data as PricingCommitResponse
 }
+
+export interface VendorImportResponse {
+  totalRows: number
+  created: number
+  matched: number
+  fraudSkipped: number
+  errors: string[]
+  details: Record<string, any>[]
+}
+
+export async function uploadVendorReconciliation(file: File, vendorId: number): Promise<ApiResponse<VendorImportResponse>> {
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('vendor_id', String(vendorId))
+    const res = await api.post('/vendor-reconciliation/upload', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return ok(toCamel<VendorImportResponse>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+

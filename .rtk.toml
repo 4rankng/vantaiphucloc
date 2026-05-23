@@ -1,0 +1,46 @@
+# RTK Project Config — vantaiphucloc
+# Token-optimized CLI for Claude Code sessions
+
+[filters]
+ignore_dirs = [
+    ".git",
+    "node_modules",
+    "target",
+    "__pycache__",
+    ".venv",
+    "vendor",
+    ".next",
+    "dist",
+    "build",
+    ".codegraph",
+    "graphify-out",
+    ".claude",
+]
+ignore_files = [
+    "*.lock",
+    "*.min.js",
+    "*.min.css",
+    "*.pyc",
+    "*.pyo",
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "*.db",
+    "*.db-shm",
+    "*.db-wal",
+    "*.sqlite",
+]
+
+[limits]
+grep_max_results = 150
+grep_max_per_file = 20
+status_max_files = 12
+status_max_untracked = 8
+passthrough_max_chars = 3000
+read_max_lines = 500
+
+[hooks]
+transparent_prefixes = [
+    "graphify",
+    "codegraph",
+]

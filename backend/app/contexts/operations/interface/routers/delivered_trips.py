@@ -42,9 +42,11 @@ from app.core.summaries import (
     load_driver_summaries,
     load_location_summaries,
     load_client_summaries,
+    load_vendor_summaries,
     get_driver_summary,
     get_location_summary,
     get_client_summary,
+    get_vendor_summary,
 )
 from app.utils.iso6346 import normalize_container_number as _norm
 
@@ -58,13 +60,14 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-def _wo_to_out(w: DeliveredTrip, partners, drivers, locations) -> DeliveredTripOut:
+def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, vendors) -> DeliveredTripOut:
     return DeliveredTripOut(
         id=int(w.id),  # type: ignore[arg-type]
         client=get_client_summary(partners, w.client_id),
         pickup_location=get_location_summary(locations, w.pickup_location_id),
         dropoff_location=get_location_summary(locations, w.dropoff_location_id),
         driver=get_driver_summary(drivers, w.driver_id),
+        vendor=get_vendor_summary(vendors, w.vendor_id),
         vendor_id=w.vendor_id,
         vehicle_plate=w.vehicle_plate or "",
         vessel=w.vessel,
@@ -90,13 +93,14 @@ async def _load_many(session, wos: list[DeliveredTrip]) -> list[DeliveredTripOut
         return []
     partners = await load_client_summaries(session, {w.client_id for w in wos})
     drivers = await load_driver_summaries(session, {w.driver_id for w in wos})
+    vendors = await load_vendor_summaries(session, {w.vendor_id for w in wos})
     locations = await load_location_summaries(
         session,
         {w.pickup_location_id for w in wos}
         | {w.dropoff_location_id for w in wos},
     )
     return [
-        _wo_to_out(w, partners, drivers, locations)
+        _wo_to_out(w, partners, drivers, locations, vendors)
         for w in wos
     ]
 

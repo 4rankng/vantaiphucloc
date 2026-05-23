@@ -24,13 +24,6 @@ export interface QueuedAction {
   retries: number
 }
 
-export interface CachedData {
-  key: string
-  data: unknown
-  fetchedAt: number
-  expiresAt: number
-}
-
 let dbInstance: IDBPDatabase | null = null
 
 async function getDB(): Promise<IDBPDatabase> {

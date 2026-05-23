@@ -4,6 +4,7 @@ import {
   Loader2,
   DollarSign,
   FileSpreadsheet,
+  Zap,
 } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { MatchProgressBar } from '@/components/shared/MatchProgressBar'
@@ -15,6 +16,7 @@ import { Button } from '@/components/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { ExcelImportDrawer } from '@/components/shared/ExcelImportDrawer'
 import { DeliveredTripDetailDrawer } from '@/components/shared/DeliveredTripDetailDrawer'
+import { AutoMatchDialog, AutoMatchDateDialog } from '@/components/shared/AutoMatchDialog'
 import { FilterTabs } from '@/components/shared/FilterTabs'
 import { StatPill } from '@/components/shared/StatPill'
 import { Pagination } from '@/components/ui/Pagination/Pagination'
@@ -29,6 +31,8 @@ import {
   useExportDoiSoatExcel,
   useClients,
   useTripDailyStats,
+  useAutoMatchPreview,
+  useConfirmAutoMatch,
 } from '@/hooks/use-queries'
 
 // ─── Status filter type ───────────────────────────────────────────────────────
@@ -53,6 +57,38 @@ export function DoiSoatPage() {
 
   const exportDoiSoat = useExportDoiSoatExcel()
   const { data: clients = [] } = useClients()
+
+  // Auto-match
+  const [showAutoMatchDate, setShowAutoMatchDate] = useState(false)
+  const [showAutoMatch, setShowAutoMatch] = useState(false)
+  const autoMatchPreview = useAutoMatchPreview()
+  const confirmMatch = useConfirmAutoMatch()
+
+  const handleAutoMatchConfirm = useCallback(
+    (from: string, to: string) => {
+      autoMatchPreview.mutate(
+        { dateFrom: from, dateTo: to },
+        {
+          onSuccess: () => {
+            setShowAutoMatchDate(false)
+            setShowAutoMatch(true)
+          },
+        }
+      )
+    },
+    [autoMatchPreview]
+  )
+
+  const handleConfirmMatch = useCallback(
+    (pairs: Array<{ deliveredTripId: number; bookedTripId: number }>) => {
+      confirmMatch.mutate(pairs, {
+        onSuccess: () => {
+          setShowAutoMatch(false)
+        },
+      })
+    },
+    [confirmMatch]
+  )
 
   useEffect(() => { setPage(1) }, [statusFilter, dateFrom, dateTo, doiSoatClientId, vendorId, debouncedSearch])
 
@@ -123,6 +159,19 @@ export function DoiSoatPage() {
           {t.client?.code || '—'}
         </span>
       ),
+    },
+    {
+      key: 'vendor',
+      header: 'Nhà thầu',
+      width: 90,
+      render: (t) => {
+        const name = t.vendor?.name || (t.vendorId ? null : 'Phúc Lộc')
+        return (
+          <span className="text-[13px] truncate block" style={{ color: name === 'Phúc Lộc' ? 'var(--ink-2)' : 'var(--ink)' }}>
+            {name || '—'}
+          </span>
+        )
+      },
     },
     {
       key: 'containers',
@@ -288,6 +337,14 @@ export function DoiSoatPage() {
               <FileSpreadsheet className="h-3.5 w-3.5" />
               Nhập Excel
             </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setShowAutoMatchDate(true)}
+              disabled={autoMatchPreview.isPending}
+            >
+              {autoMatchPreview.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+              Tự động ghép
+            </Button>
           </div>
         </div>
 
@@ -357,6 +414,29 @@ export function DoiSoatPage() {
         <DeliveredTripDetailDrawer
           trip={matchTarget}
           onClose={() => setMatchTarget(null)}
+        />
+      )}
+
+      {showAutoMatchDate && (
+        <AutoMatchDateDialog
+          open={showAutoMatchDate}
+          onClose={() => setShowAutoMatchDate(false)}
+          defaultDateFrom={dateFrom}
+          defaultDateTo={dateTo}
+          isPending={autoMatchPreview.isPending}
+          onConfirm={handleAutoMatchConfirm}
+        />
+      )}
+
+      {showAutoMatch && autoMatchPreview.data && (
+        <AutoMatchDialog
+          open={showAutoMatch}
+          onClose={() => setShowAutoMatch(false)}
+          candidates={autoMatchPreview.data.candidates}
+          unmatchedCount={autoMatchPreview.data.unmatchedCount}
+          scannedCount={autoMatchPreview.data.scannedCount}
+          isConfirming={confirmMatch.isPending}
+          onConfirm={handleConfirmMatch}
         />
       )}
     </div>
