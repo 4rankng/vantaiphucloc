@@ -1,4 +1,3 @@
-# Agent Tasks — Apply Expenses Inline Edit Pattern to Transporters
+# Agent Tasks — Replace StatPill with StatsGrid on DoiSoatPage
 
-- [x] (frontend) Refactor `DriverEditRow` to use cell-toggle pattern with `useActiveField`, `editCellStyles`, and floating `FieldActions`
-- [x] (frontend) Run `make test-frontend` to verify — lint + build pass
+- [x] (frontend) Replace StatPill + MatchProgressBar with StatsGrid/StatCard component

@@ -132,6 +132,8 @@ class TripDailyStatsOut(BaseModel):
     total: int = 0
     matched: int = 0
     pending: int = 0
+    internal_count: int = 0
+    vendor_count: int = 0
     total_revenue: int = 0
     match_rate: float | None = None
     buckets: list[TripDayBucket] = []

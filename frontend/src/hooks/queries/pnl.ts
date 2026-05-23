@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
+import { queryKeys } from '../query-keys'
 
 export function useMonthlyPnL(startDate: string, endDate: string) {
   return useQuery({

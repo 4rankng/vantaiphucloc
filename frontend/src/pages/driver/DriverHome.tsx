@@ -303,11 +303,6 @@ function MobileDriverHome() {
 
   // Stat card aggregations use periodJobs (NOT filteredJobs) so the totals
   // reflect the whole month regardless of which list tab the driver is viewing.
-  const matchedCount = useMemo(() =>
-    periodJobs.filter(w => w.matched).length,
-    [periodJobs],
-  )
-
   const totalEarnings = useMemo(() =>
     periodJobs.reduce((sum, w) => sum + w.driverSalary, 0),
     [periodJobs],
@@ -372,7 +367,7 @@ function MobileDriverHome() {
               <AnimatedNumber value={earningsValue} format="currency" duration={700} />
             </p>
             <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-              {matchedCount} chuyến
+              {periodJobs.length} chuyến
             </p>
           </div>
         </div>

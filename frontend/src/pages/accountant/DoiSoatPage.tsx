@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import {
   ClipboardList,
   Loader2,
@@ -18,7 +18,7 @@ import { ExcelImportDrawer } from '@/components/shared/ExcelImportDrawer'
 import { DeliveredTripDetailDrawer } from '@/components/shared/DeliveredTripDetailDrawer'
 import { AutoMatchDialog, AutoMatchDateDialog } from '@/components/shared/AutoMatchDialog'
 import { FilterTabs } from '@/components/shared/FilterTabs'
-import { Pagination } from '@/components/ui/Pagination/Pagination'
+import { useInfiniteScroll, LoadMoreSentinel } from '@/components/shared/ListUtils'
 import { useMonthParams } from './use-month-params'
 import { getWorkTypeLabel } from '@/data/domain'
 import { useDebounce } from '@/hooks/use-debounce'
@@ -26,7 +26,7 @@ import { formatMatchDate as formatDate } from '@/lib/match-utils'
 import type { DeliveredTrip } from '@/data/domain'
 import type { DeliveredTripSortBy, SortOrder } from '@/services/api/deliveredTrips.api'
 import {
-  useDeliveredTrips,
+  useDeliveredTripsInfinite,
   useExportDoiSoatExcel,
   useClients,
   useTripDailyStats,
@@ -49,8 +49,6 @@ export function DoiSoatPage() {
   const [matchTarget, setMatchTarget] = useState<DeliveredTrip | null>(null)
   const [doiSoatClientId, setDoiSoatClientId] = useState<string>('ALL')
   const [vendorId] = useState<string>('ALL')
-  const [page, setPage] = useState(1)
-  const pageSize = 50
   const [sortBy, setSortBy] = useState<DeliveredTripSortBy>('trip_date')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
 
@@ -89,29 +87,34 @@ export function DoiSoatPage() {
     [confirmMatch]
   )
 
-  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
- setPage(1) }, [statusFilter, dateFrom, dateTo, doiSoatClientId, vendorId, debouncedSearch])
-
   const handleSort = useCallback((key: string, order: SortOrder) => {
     setSortBy(key as DeliveredTripSortBy)
     setSortOrder(order)
-    setPage(1)
   }, [])
 
-  const { data, isLoading } = useDeliveredTrips({
+  const {
+    data: infiniteData,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useDeliveredTripsInfinite({
     dateFrom,
     dateTo,
     clientId: doiSoatClientId !== 'ALL' && doiSoatClientId !== '' ? Number(doiSoatClientId) : undefined,
     vendorId: vendorId !== 'ALL' && vendorId !== '' ? Number(vendorId) : undefined,
     matched: statusFilter !== 'ALL' ? (statusFilter === 'MATCHED') : undefined,
     search: debouncedSearch || undefined,
-    page,
-    pageSize,
     sortBy,
     sortOrder,
   })
-  const trips = data?.items ?? []
-  const totalPages = data?.totalPages ?? 0
+
+  const trips = useMemo(() => infiniteData?.pages.flatMap(p => p.items) ?? [], [infiniteData])
+  const hasMore = hasNextPage ?? false
+  const loadMore = useCallback(() => {
+    if (hasMore && !isFetchingNextPage) fetchNextPage()
+  }, [hasMore, isFetchingNextPage, fetchNextPage])
+  const sentinelRef = useInfiniteScroll(loadMore)
 
   // Global stats from trip daily stats endpoint
   const { data: dailyStats } = useTripDailyStats(
@@ -442,11 +445,7 @@ export function DoiSoatPage() {
               </div>
             }
           />
-          {totalPages > 1 && (
-            <div className="flex justify-center py-3" style={{ borderTop: '1px solid var(--line)' }}>
-              <Pagination totalPages={totalPages} currentPage={page} onPageChange={setPage} />
-            </div>
-          )}
+          <LoadMoreSentinel sentinelRef={sentinelRef} hasMore={hasMore} />
         </Panel>
       </section>
 

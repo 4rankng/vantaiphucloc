@@ -1,14 +1,41 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { queryKeys } from '../query-keys'
-import type { ApiResponse } from '@/data/domain'
+import type { ApiResponse, DeliveredTrip, PaginatedResult } from '@/data/domain'
+import type { DeliveredTripSortBy, SortOrder } from '@/services/api/deliveredTrips.api'
 
 function unwrap<T>(res: ApiResponse<T>): T {
   if (res.success) return res.data
   throw new Error(res.message ?? 'Lỗi hệ thống')
 }
 
-export function useDeliveredTrips(filters?: { clientId?: number; driverId?: number; vendorId?: number; dateFrom?: string; dateTo?: string; matched?: boolean; search?: string; page?: number; pageSize?: number; sortBy?: import('@/services/api/deliveredTrips.api').DeliveredTripSortBy; sortOrder?: import('@/services/api/deliveredTrips.api').SortOrder }) {
+const PAGE_SIZE = 10
+
+export function useDeliveredTripsInfinite(filters?: {
+  clientId?: number; driverId?: number; vendorId?: number
+  dateFrom?: string; dateTo?: string; matched?: boolean; search?: string
+  sortBy?: DeliveredTripSortBy; sortOrder?: SortOrder
+}) {
+  return useInfiniteQuery<PaginatedResult<DeliveredTrip>, Error>({
+    queryKey: [
+      'delivered-trips-infinite',
+      filters?.clientId ?? '', filters?.vendorId ?? '',
+      filters?.dateFrom ?? '', filters?.dateTo ?? '',
+      String(filters?.matched ?? ''), filters?.search ?? '',
+      filters?.sortBy ?? '', filters?.sortOrder ?? '',
+    ],
+    queryFn: async ({ pageParam }) => {
+      const res = await apiClient.getDeliveredTrips({ ...filters, page: pageParam as number, pageSize: PAGE_SIZE })
+      return unwrap(res)
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
+  })
+}
+
+
+export function useDeliveredTrips(filters?: { clientId?: number; driverId?: number; vendorId?: number; dateFrom?: string; dateTo?: string; matched?: boolean; search?: string; page?: number; pageSize?: number; sortBy?: DeliveredTripSortBy; sortOrder?: SortOrder }) {
   const flatFilters: Record<string, string> = {}
   if (filters?.clientId) flatFilters.clientId = String(filters.clientId)
   if (filters?.driverId) flatFilters.driverId = String(filters.driverId)
