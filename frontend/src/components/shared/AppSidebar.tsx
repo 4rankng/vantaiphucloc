@@ -9,7 +9,7 @@ import {
 import { useSidebar } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
-import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
+import { useUnreadCount } from '@/components/shared/NotificationPanel/useUnreadCount'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
 import {
   Sidebar,

@@ -1,1 +1,2 @@
-export { NotificationPanel, useUnreadCount } from './NotificationPanel'
+export { NotificationPanel } from './NotificationPanel'
+export { useUnreadCount } from './useUnreadCount'

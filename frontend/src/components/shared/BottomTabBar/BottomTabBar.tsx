@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
+import { useUnreadCount } from '@/components/shared/NotificationPanel/useUnreadCount'
 import type { LucideIcon } from 'lucide-react'
 
 export interface TabItem {

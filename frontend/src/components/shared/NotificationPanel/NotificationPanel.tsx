@@ -48,8 +48,6 @@ function relativeTime(iso: string): string {
   }
 }
 
-// ─── Fetch hook ───────────────────────────────────────────────────────────────
-
 function useNotificationsData() {
   return useQuery({
     queryKey: queryKeys.notifications,
@@ -66,16 +64,8 @@ function useNotificationsData() {
       })) as AppNotification[]
     },
     staleTime: 30_000,
-    refetchInterval: 300_000, // 5 min fallback — SSE handles real-time
+    refetchInterval: 300_000,
   })
-}
-
-// ─── Unread badge count hook (lightweight) ────────────────────────────────────
-
-// eslint-disable-next-line react-refresh/only-export-components
-export function useUnreadCount() {
-  const { data: notifications } = useNotificationsData()
-  return notifications?.filter(n => !n.read).length ?? 0
 }
 
 // ─── NotificationPanel ────────────────────────────────────────────────────────

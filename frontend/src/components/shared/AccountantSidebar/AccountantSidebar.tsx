@@ -18,7 +18,7 @@ import {
   ReceiptText,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
+import { useUnreadCount } from '@/components/shared/NotificationPanel/useUnreadCount'
 import {
   DropdownMenu,
   DropdownMenuContent,

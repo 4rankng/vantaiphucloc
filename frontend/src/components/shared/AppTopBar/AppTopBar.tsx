@@ -1,6 +1,7 @@
 import { type ReactNode, useState, useCallback, useRef } from 'react'
 import { Bell, UserCircle, ArrowLeft, Menu } from 'lucide-react'
-import { NotificationPanel, useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
+import { NotificationPanel } from '@/components/shared/NotificationPanel/NotificationPanel'
+import { useUnreadCount } from '@/components/shared/NotificationPanel/useUnreadCount'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { OfflineTopBarIcon } from '@/components/shared/OfflineIndicator/OfflineIndicator'
 

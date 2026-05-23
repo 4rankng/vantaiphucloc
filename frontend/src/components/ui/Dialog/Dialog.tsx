@@ -28,7 +28,7 @@ const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     hideCloseButton?: boolean
   }
->(({ className, children, hideCloseButton, ...props }, ref) => (
+>(({ className, children, hideCloseButton, style, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -42,6 +42,7 @@ const DialogContent = React.forwardRef<
         background: 'var(--theme-bg-secondary)',
         border: '1px solid var(--theme-border-default)',
         color: 'var(--theme-text-primary)',
+        ...style,
       }}
       {...props}
     >

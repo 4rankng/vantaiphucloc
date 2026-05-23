@@ -1,5 +1,7 @@
 export { AutoMatchDateDialog } from './AutoMatchDateDialog'
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { RobotDialogHero, useTypewriter } from '@/components/shared/RobotHead'
+import { cn } from '@/lib/utils'
 import { Loader2, Zap, CheckCircle2, AlertCircle, XCircle, Check, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   Dialog,
@@ -91,12 +93,88 @@ function getAutoFillFields(c: MatchCandidate): Array<{ key: CriterionKey; label:
     .filter((r): r is NonNullable<typeof r> => r !== null)
 }
 
+/* ── AI Loading state components ────────────────────────── */
+const SCAN_MSGS = [
+  'Đang quét dữ liệu chuyến xe…',
+  'Phân tích tuyến đường & chủ hàng…',
+  'Đối chiếu số container…',
+  'Tìm kiếm các cặp phù hợp…',
+  'Đang hoàn tất kết quả…',
+]
+
+function AILoadingState() {
+  const [idx, setIdx] = useState(0)
+  const [visible, setVisible] = useState(true)
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setVisible(false)
+      setTimeout(() => { setIdx(i => (i + 1) % SCAN_MSGS.length); setVisible(true) }, 350)
+    }, 1800)
+    return () => clearInterval(id)
+  }, [])
+
+  return (
+    <RobotDialogHero title="AI đang quét chuyến xe" thinking>
+      <p style={{
+        color: 'rgba(196,181,253,0.85)', fontSize: 13, fontWeight: 500,
+        margin: '8px 0 0', minHeight: 20,
+        transition: 'opacity 0.3s, transform 0.3s',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(5px)',
+      }}>
+        {SCAN_MSGS[idx]}
+      </p>
+    </RobotDialogHero>
+  )
+}
+
+/* ── No-result state ─────────────────────────────────────── */
+const NO_RESULT_BODY = 'Hệ thống chưa tìm thấy cặp chuyến nào đủ tiêu chí tự động ghép trong khoảng thời gian đã chọn.'
+
+function NoResultState({ onClose }: { onClose: () => void }) {
+  const { displayed, done } = useTypewriter(NO_RESULT_BODY, 28)
+  const isTyping = !!displayed && !done
+
+  return (
+    <div style={{ borderRadius: 20, overflow: 'hidden' }}>
+      {/* ── Hero ── */}
+      <RobotDialogHero title="Không tìm thấy kết quả" _externalTyping={isTyping} />
+
+      {/* ── Body ── */}
+      <div style={{ background: 'white', padding: '20px 24px 4px' }}>
+        <p className="text-sm text-center leading-relaxed" style={{ color: '#4b5563', margin: 0, minHeight: 60 }}>
+          {displayed}
+          {!done && displayed && (
+            <span className="ai-cursor" style={{ color: '#a78bfa', fontWeight: 700 }}>▋</span>
+          )}
+        </p>
+      </div>
+
+      {/* ── Footer ── */}
+      <div style={{
+        background: 'white', borderTop: '1px solid rgba(0,0,0,0.06)',
+        padding: '14px 20px', display: 'flex', justifyContent: 'flex-end',
+      }}>
+        <button
+          onClick={onClose}
+          className="text-sm font-medium px-5 py-2 rounded-full transition-all hover:scale-105 active:scale-95"
+          style={{ background: 'linear-gradient(to right,#6366f1,#a855f7)', color: 'white', border: 'none', cursor: 'pointer' }}
+        >
+          Đóng
+        </button>
+      </div>
+    </div>
+  )
+}
+
 interface Props {
   open: boolean
   onClose: () => void
   candidates: MatchCandidate[]
   unmatchedCount: number
   scannedCount: number
+  isLoading?: boolean
   isConfirming: boolean
   onConfirm: (pairs: Array<{ deliveredTripId: number; bookedTripId: number; syncSource?: string | null }>) => void
 }
@@ -106,6 +184,7 @@ export function AutoMatchDialog({
   onClose,
   candidates,
   unmatchedCount,
+  isLoading = false,
   isConfirming,
   onConfirm,
 }: Props) {
@@ -295,9 +374,26 @@ export function AutoMatchDialog({
     )
   }
 
+  const isEmptyResult = !isLoading && candidates.length === 0
+
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) { setResolving(false); onClose() } }}>
-      <DialogContent className={resolving ? 'max-w-[520px]' : 'max-w-[90vw] lg:max-w-[1100px]'}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v && !isLoading) { setResolving(false); onClose() } }}>
+      <DialogContent
+        hideCloseButton={isLoading || isEmptyResult}
+        className={cn(
+          resolving ? 'max-w-[520px]' : (isLoading || isEmptyResult) ? 'sm:max-w-[440px]' : 'max-w-[90vw] lg:max-w-[1100px]',
+          (isLoading || isEmptyResult) && 'p-0'
+        )}
+        style={(isLoading || isEmptyResult) ? {
+          background: 'linear-gradient(145deg, #1e1b4b 0%, #2d1b69 45%, #4c1d95 80%, #6d28d9 100%)',
+          border: '1px solid rgba(139,92,246,0.3)',
+          overflow: 'hidden',
+        } : undefined}
+      >
+        <DialogTitle style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', borderWidth: 0 }}>
+          Tự động đối chiếu (AI)
+        </DialogTitle>
+        {isLoading ? <AILoadingState /> : isEmptyResult ? <NoResultState onClose={onClose} /> : <>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span
@@ -306,7 +402,7 @@ export function AutoMatchDialog({
             >
               <Zap className="h-4 w-4" style={{ color: 'var(--theme-brand-primary, #059669)' }} />
             </span>
-            AI ghép chuyến
+            Tự động (AI)
             {resolving && (
               <span className="text-[12px] font-normal" style={{ color: 'var(--ink-3)' }}>
                 — Giải quyết khác biệt ({resolveIndex + 1}/{diffPairs.length})
@@ -618,6 +714,7 @@ export function AutoMatchDialog({
             </Button>
           )}
         </DialogFooter>
+        </>}
       </DialogContent>
     </Dialog>
   )
