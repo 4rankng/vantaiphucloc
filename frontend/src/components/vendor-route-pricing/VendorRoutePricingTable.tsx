@@ -1,9 +1,11 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useCallback, useRef } from 'react'
 import { Trash2, MapPin } from 'lucide-react'
 import { compactCurrency, WORK_TYPE_LABELS } from '@/data/domain'
 import type { VendorRoutePricing, WorkType } from '@/data/domain'
 export type { VendorRoutePricingFormData } from './useVendorRoutePricing'
 import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
+import { useActiveField } from '@/components/shared/useActiveField'
+import { tdActive, tdDimmed } from '@/components/shared/editCellStyles'
 import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 import { FieldActions } from '@/components/shared/ListUtils'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -99,11 +101,17 @@ function VendorRoutePricingEditRow({
   locations: Array<{ id: number; name: string }>
   initialFocus?: FocusableField
 }) {
-  const [activeField, setActiveField] = useState<FocusableField>(initialFocus)
   const f20Ref = useRef<HTMLInputElement>(null)
   const f40Ref = useRef<HTMLInputElement>(null)
   const e20Ref = useRef<HTMLInputElement>(null)
   const e40Ref = useRef<HTMLInputElement>(null)
+
+  const { activeField, setActiveField } = useActiveField<FocusableField>(initialFocus, {
+    f20Price: f20Ref,
+    f40Price: f40Ref,
+    e20Price: e20Ref,
+    e40Price: e40Ref,
+  })
 
   const { form, errors, set, handleSave } = useInlineEditForm<VendorRoutePricingFormData>({
     initial,
@@ -119,13 +127,6 @@ function VendorRoutePricingEditRow({
     onSave,
     onCancel,
   })
-
-  useEffect(() => {
-    if (activeField === 'f20Price') f20Ref.current?.focus()
-    else if (activeField === 'f40Price') f40Ref.current?.focus()
-    else if (activeField === 'e20Price') e20Ref.current?.focus()
-    else if (activeField === 'e40Price') e40Ref.current?.focus()
-  }, [activeField])
 
   const isLastPriceCol = activeField === 'e40Price'
   const floatingActions = (
@@ -154,9 +155,6 @@ function VendorRoutePricingEditRow({
     .filter(([key]) => !['E20', 'E40', 'F20', 'F40'].includes(key))
     .map(([key, label]) => ({ value: key, label }))
 
-  const tdActive: React.CSSProperties = { padding: '5px 8px', position: 'relative' }
-  const tdInactive = (): React.CSSProperties => ({ padding: '5px 8px', cursor: 'pointer', opacity: 0.45, transition: 'opacity 0.15s' })
-
   const priceInput = (field: 'f20Price' | 'f40Price' | 'e20Price' | 'e40Price', ref: React.RefObject<HTMLInputElement | null>, color: string) => {
     if (activeField === field) {
       return (
@@ -176,7 +174,7 @@ function VendorRoutePricingEditRow({
       )
     }
     return (
-      <td style={{ ...tdInactive(), textAlign: 'right' }} onClick={() => setActiveField(field)}>
+      <td style={{ ...tdDimmed, textAlign: 'right' }} onClick={() => setActiveField(field)}>
         <span className="tabular-nums text-xs" style={{ color: form[field] ? color : 'var(--ink-4)', fontFamily: 'var(--theme-font-mono)' }}>
           {form[field] ? compactCurrency(Number(form[field])) : '—'}
         </span>
@@ -186,7 +184,7 @@ function VendorRoutePricingEditRow({
 
   return (
     <tr style={{ background: 'var(--accent-soft)' }}>
-      <td style={{ ...tdInactive(), color: 'var(--ink-4)', fontSize: 12 }} />
+      <td style={{ ...tdDimmed, color: 'var(--ink-4)', fontSize: 12 }} />
 
       {activeField === 'vendorId' ? (
         <td style={tdActive}>
@@ -200,7 +198,7 @@ function VendorRoutePricingEditRow({
           {floatingActions}
         </td>
       ) : (
-        <td style={tdInactive()} onClick={() => setActiveField('vendorId')}>
+        <td style={tdDimmed} onClick={() => setActiveField('vendorId')}>
           {vendors.find(v => v.id === form.vendorId)
             ? <span className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}>
                 {vendors.find(v => v.id === form.vendorId)?.name}
@@ -221,7 +219,7 @@ function VendorRoutePricingEditRow({
           {floatingActions}
         </td>
       ) : (
-        <td style={tdInactive()} onClick={() => setActiveField('pickupLocationId')}>
+        <td style={tdDimmed} onClick={() => setActiveField('pickupLocationId')}>
           <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--ink-1)' }}>
             <MapPin className="h-3 w-3 shrink-0" style={{ color: '#16a34a' }} />
             {locations.find(l => l.id === form.pickupLocationId)?.name ?? '—'}
@@ -241,7 +239,7 @@ function VendorRoutePricingEditRow({
           {floatingActions}
         </td>
       ) : (
-        <td style={tdInactive()} onClick={() => setActiveField('dropoffLocationId')}>
+        <td style={tdDimmed} onClick={() => setActiveField('dropoffLocationId')}>
           <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--ink-1)' }}>
             <MapPin className="h-3 w-3 shrink-0" style={{ color: '#ea580c' }} />
             {locations.find(l => l.id === form.dropoffLocationId)?.name ?? '—'}
@@ -265,7 +263,7 @@ function VendorRoutePricingEditRow({
           {floatingActions}
         </td>
       ) : (
-        <td style={tdInactive()} onClick={() => setActiveField('workType')}>
+        <td style={tdDimmed} onClick={() => setActiveField('workType')}>
           <OpBadge type={form.workType} />
         </td>
       )}

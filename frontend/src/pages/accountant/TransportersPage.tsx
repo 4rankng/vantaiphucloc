@@ -1,6 +1,6 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
-  Truck, Plus, User, X, Search, Building2, Check, Trash2, AlertTriangle, Users,
+  Truck, Plus, User, X, Building2, AlertTriangle, Users,
 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -12,8 +12,6 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { Plate } from '@/components/shared/Plate'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
-import { Drawer } from '@/components/shared/Drawer'
-import { InlineSelect } from '@/components/shared/InlineSelect'
 import {
   useDrivers,
   useVehicleDrivers,
@@ -23,22 +21,19 @@ import {
   useCreateDriver,
   useUpdateDriver,
   useVehicles,
-  useVendors,
-  useCreateVendor,
-  useUpdateVendor,
-  useDeleteVendor,
 } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { useQueryClient } from '@tanstack/react-query'
-import type { Driver, Vendor } from '@/data/domain'
+import type { Driver } from '@/data/domain'
 import { api } from '@/services/api/client'
+import { apiClient } from '@/services/api'
 import { fuzzyMatch } from '@/lib/search-utils'
-import { groupByVehicle, type VehicleGroup } from '@/lib/accounting-utils'
+import { groupByVehicle } from '@/lib/accounting-utils'
 import { VendorManagementDrawer } from '@/components/shared/VendorManagementDrawer'
-import { DriverFormDrawer, type DriverFormData } from '@/components/shared/DriverFormDrawer'
+import { DriverFormDrawer } from '@/components/shared/DriverFormDrawer'
 import { DriverRow, DriverEditRow, type DriverRowFormData } from '@/components/shared/DriverTableRows'
 import { StatPill } from '@/components/shared/StatPill'
-import { useInfiniteScroll, LoadMoreSentinel, SearchInput, FieldActions } from '@/components/shared/ListUtils'
+import { useInfiniteScroll, LoadMoreSentinel, SearchInput } from '@/components/shared/ListUtils'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const BATCH = 15
@@ -57,20 +52,12 @@ function FleetSection() {
   const { data: vdRows = [], isLoading: vdLoading } = useVehicleDrivers()
   const { data: driversList = [], isLoading: driversLoading } = useDrivers()
   const { data: vehicles = [] } = useVehicles()
-  const { data: vendors = [] } = useVendors()
 
   const createVehicle = useCreateVehicle()
   const createDriver = useCreateDriver()
   const updateDriver = useUpdateDriver()
   const addVehicleDriver = useAddVehicleDriver()
   const removeVehicleDriver = useRemoveVehicleDriver()
-
-  const vendorMap = useMemo(() => new Map(vendors.map(v => [v.id, v.name])), [vendors])
-  const plateVendorMap = useMemo(() => {
-    const m = new Map<string, number | null>()
-    for (const v of vehicles) m.set(v.plate, v.vendorId ?? null)
-    return m
-  }, [vehicles])
 
   const groups = useMemo(() => groupByVehicle(vdRows, vehicles), [vdRows, vehicles])
 
@@ -89,8 +76,8 @@ function FleetSection() {
   const [driverSearch, setDriverSearch] = useState('')
   const [driverLimit, setDriverLimit] = useState(BATCH)
 
-  useEffect(() => { setFleetLimit(BATCH) }, [fleetSearch])
-  useEffect(() => { setDriverLimit(BATCH) }, [driverSearch])
+  const handleFleetSearch = useCallback((q: string) => { setFleetSearch(q); setFleetLimit(BATCH) }, [])
+  const handleDriverSearch = useCallback((q: string) => { setDriverSearch(q); setDriverLimit(BATCH) }, [])
 
   const [showAddVehicle, setShowAddVehicle] = useState(false)
   const [newPlate, setNewPlate] = useState('')
@@ -103,6 +90,11 @@ function FleetSection() {
   const [editingDriverId, setEditingDriverId] = useState<number | null>(null)
   const [editingDriverField, setEditingDriverField] = useState<DriverFocusableField>(null)
   const [savingDriver, setSavingDriver] = useState(false)
+
+  // Password reset
+  const [resetPwdDriver, setResetPwdDriver] = useState<Driver | null>(null)
+  const [resetPwdSaving, setResetPwdSaving] = useState(false)
+  const [resetPwdValue, setResetPwdValue] = useState('')
 
   const filteredGroups = useMemo(() => {
     const q = fleetSearch.trim()
@@ -138,11 +130,11 @@ function FleetSection() {
     })
   }
 
-  const handleCreateDriver = async (data: { username: string; fullName: string; phone: string; plate: string }) => {
-    createDriver.mutate({ username: data.username, fullName: data.fullName, phone: data.phone }, {
+  const handleCreateDriver = async (data: { username: string; fullName: string; phone: string; plate: string; password?: string }) => {
+    createDriver.mutate({ username: data.username, fullName: data.fullName, phone: data.phone, password: data.password }, {
       onSuccess: async (newDriver) => {
         if (data.plate.trim() && newDriver?.id) {
-          try { await api.put(`/drivers/${newDriver.id}/vehicle`, { plate: data.plate.trim() }) } catch {}
+          try { await api.put(`/drivers/${newDriver.id}/vehicle`, { plate: data.plate.trim() }) } catch { /* non-critical */ }
         }
         toast.success('Đã thêm lái xe')
         setShowCreateDriver(false)
@@ -191,6 +183,21 @@ function FleetSection() {
     })
   }
 
+  const handleResetPassword = async () => {
+    if (!resetPwdDriver || !resetPwdValue.trim()) return
+    setResetPwdSaving(true)
+    try {
+      await apiClient.resetDriverPassword(resetPwdDriver.id, resetPwdValue.trim())
+      toast.success('Đã đổi mật khẩu')
+      setResetPwdDriver(null)
+      setResetPwdValue('')
+    } catch {
+      toast.error('Không thể đổi mật khẩu')
+    } finally {
+      setResetPwdSaving(false)
+    }
+  }
+
   return (
     <div className="space-y-5">
       {/* Stats */}
@@ -208,7 +215,7 @@ function FleetSection() {
         {/* Phương tiện */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <SearchInput value={fleetSearch} onChange={setFleetSearch} placeholder="Tìm biển số, lái xe…" />
+            <SearchInput value={fleetSearch} onChange={handleFleetSearch} placeholder="Tìm biển số, lái xe…" />
             <Button variant="default" onClick={() => setShowAddVehicle(true)}>
               <Plus className="h-4 w-4" /> Thêm xe
             </Button>
@@ -228,7 +235,6 @@ function FleetSection() {
                       <tr>
                         <th className="text-left" style={{ width: 120 }}>Biển số</th>
                         <th className="text-left">Lái xe</th>
-                        <th className="text-left">Công ty</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -260,11 +266,6 @@ function FleetSection() {
                               ><Plus className="h-3 w-3" /></button>
                             </div>
                           </td>
-                          <td>
-                            <span className="text-[13px]" style={{ color: g.vendorId ? 'var(--ink-2)' : 'var(--ink-3)' }}>
-                              {g.vendorId ? (vendorMap.get(g.vendorId) ?? '—') : '—'}
-                            </span>
-                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -279,7 +280,7 @@ function FleetSection() {
         {/* Lái xe */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <SearchInput value={driverSearch} onChange={setDriverSearch} placeholder="Tìm tên, SĐT, biển số…" />
+            <SearchInput value={driverSearch} onChange={handleDriverSearch} placeholder="Tìm tên, SĐT, biển số…" />
             <Button variant="default" onClick={() => setShowCreateDriver(true)}>
               <Plus className="h-4 w-4" /> Thêm lái xe
             </Button>
@@ -298,20 +299,18 @@ function FleetSection() {
                     <thead>
                       <tr>
                         <th className="text-left">Họ tên</th>
+                        <th className="text-left">Tài khoản</th>
                         <th className="text-left">SĐT</th>
                         <th className="text-left">Biển số</th>
-                        <th className="text-left">Công ty</th>
+                        <th className="w-10" />
                       </tr>
                     </thead>
                     <tbody>
                       {visibleDrivers.map((d) => {
-                        const vId = d.vehiclePlate ? (plateVendorMap.get(d.vehiclePlate) ?? null) : null
-                        const vendorName = vId ? (vendorMap.get(vId) ?? undefined) : undefined
                         return editingDriverId === d.id ? (
                           <DriverEditRow
                             key={d.id}
                             driver={d}
-                            vendorName={vendorName}
                             onSave={(data) => handleUpdateDriver(d, data)}
                             onCancel={() => setEditingDriverId(null)}
                             saving={savingDriver}
@@ -322,8 +321,8 @@ function FleetSection() {
                           <DriverRow
                             key={d.id}
                             driver={d}
-                            vendorName={vendorName}
                             onEdit={(field) => { setEditingDriverId(d.id); setEditingDriverField(field) }}
+                            onResetPassword={() => setResetPwdDriver(d)}
                           />
                         )
                       })}
@@ -423,6 +422,29 @@ function FleetSection() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setRemoveDriverTarget(null)} className="flex-1">Huỷ</Button>
             <Button onClick={confirmRemoveDriver} variant="destructive" className="flex-1">Gỡ</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Reset Password Dialog ── */}
+      <Dialog open={!!resetPwdDriver} onOpenChange={() => { setResetPwdDriver(null); setResetPwdValue('') }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Đổi mật khẩu</DialogTitle></DialogHeader>
+          <div className="space-y-3 mt-2">
+            <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
+              Đổi mật khẩu cho <strong style={{ color: 'var(--ink)' }}>{resetPwdDriver?.fullName || resetPwdDriver?.username}</strong>
+            </p>
+            <input
+              className="nepo-input" type="text" placeholder="Mật khẩu mới"
+              value={resetPwdValue} onChange={e => setResetPwdValue(e.target.value)} autoFocus
+              onKeyDown={e => { if (e.key === 'Enter') handleResetPassword() }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setResetPwdDriver(null); setResetPwdValue('') }}>Huỷ</Button>
+            <Button variant="default" onClick={handleResetPassword} disabled={!resetPwdValue.trim() || resetPwdSaving}>
+              {resetPwdSaving ? 'Đang lưu...' : 'Xác nhận'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { useState, useMemo, useRef, useCallback } from 'react'
 import { Fuel, Plus, Trash2, Coins, Wrench } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
@@ -13,6 +13,8 @@ import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/Dan
 import { Button } from '@/components/ui'
 import { FieldActions } from '@/components/shared/ListUtils'
 import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
+import { useActiveField } from '@/components/shared/useActiveField'
+import { tdActive, tdHidden } from '@/components/shared/editCellStyles'
 import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 import {
   useVehicleExpenses,
@@ -69,12 +71,17 @@ function ExpenseEditRow({ initial, onSave, onCancel, saving, vehicles, initialFo
   vehicles: { id: number; plate: string }[]
   initialFocus?: FocusableField
 }) {
-  const [activeField, setActiveField] = useState<FocusableField>(initialFocus)
   const amountRef = useRef<HTMLInputElement>(null)
   const dateRef = useRef<HTMLInputElement>(null)
   const descRef = useRef<HTMLInputElement>(null)
 
-  const { form, errors, set, anyDirty, handleSave } = useInlineEditForm<FormData>({
+  const { activeField, setActiveField } = useActiveField<FocusableField>(initialFocus, {
+    amount: amountRef,
+    expenseDate: dateRef,
+    description: descRef,
+  })
+
+  const { form, errors, set, handleSave } = useInlineEditForm<FormData>({
     initial,
     validate: (f) => {
       const errs: Record<string, string> = {}
@@ -86,13 +93,6 @@ function ExpenseEditRow({ initial, onSave, onCancel, saving, vehicles, initialFo
     onSave,
     onCancel,
   })
-
-  // Auto-focus text inputs when the active field changes
-  useEffect(() => {
-    if (activeField === 'amount') amountRef.current?.focus()
-    else if (activeField === 'expenseDate') dateRef.current?.focus()
-    else if (activeField === 'description') descRef.current?.focus()
-  }, [activeField])
 
   const plateLabel = vehicles.find(v => v.id === form.vehicleId)?.plate
 
@@ -112,11 +112,6 @@ function ExpenseEditRow({ initial, onSave, onCancel, saving, vehicles, initialFo
     </div>
   )
 
-  const tdActive: React.CSSProperties = { padding: '5px 8px', position: 'relative' }
-  const tdInactive = (field: FocusableField): React.CSSProperties => ({
-    padding: '5px 8px', cursor: 'text', opacity: 0, transition: 'opacity 0.15s',
-  })
-
   return (
     <tr style={{ background: 'var(--accent-soft)' }}>
       {/* Ngày */}
@@ -133,7 +128,7 @@ function ExpenseEditRow({ initial, onSave, onCancel, saving, vehicles, initialFo
           {floatingActions}
         </td>
       ) : (
-        <td style={tdInactive('expenseDate')} onClick={() => setActiveField('expenseDate')}>
+        <td style={tdHidden} onClick={() => setActiveField('expenseDate')}>
           <span className="tabular-nums" style={{ color: 'var(--ink-2)', fontFamily: 'var(--theme-font-mono)', fontSize: 12.5 }}>
             {formatDate(form.expenseDate)}
           </span>
@@ -156,7 +151,7 @@ function ExpenseEditRow({ initial, onSave, onCancel, saving, vehicles, initialFo
           {floatingActions}
         </td>
       ) : (
-        <td style={tdInactive('vehicleId')} onClick={() => setActiveField('vehicleId')}>
+        <td style={tdHidden} onClick={() => setActiveField('vehicleId')}>
           {plateLabel
             ? <Plate>{plateLabel}</Plate>
             : <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>— Chọn xe —</span>}
@@ -175,7 +170,7 @@ function ExpenseEditRow({ initial, onSave, onCancel, saving, vehicles, initialFo
           {floatingActions}
         </td>
       ) : (
-        <td style={tdInactive('category')} onClick={() => setActiveField('category')}>
+        <td style={tdHidden} onClick={() => setActiveField('category')}>
           <Pill variant={CATEGORY_VARIANT[form.category]} dot={false}>
             {EXPENSE_CATEGORY_LABELS[form.category]}
           </Pill>
@@ -199,7 +194,7 @@ function ExpenseEditRow({ initial, onSave, onCancel, saving, vehicles, initialFo
           {floatingActions}
         </td>
       ) : (
-        <td style={{ ...tdInactive('amount'), textAlign: 'right' }} onClick={() => setActiveField('amount')}>
+        <td style={{ ...tdHidden, textAlign: 'right' }} onClick={() => setActiveField('amount')}>
           <span className="tabular-nums font-bold" style={{ color: 'var(--ink)', fontFamily: 'var(--theme-font-mono)', fontSize: 12.5 }}>
             {form.amount ? formatCurrency(form.amount) : '—'}
           </span>
@@ -220,7 +215,7 @@ function ExpenseEditRow({ initial, onSave, onCancel, saving, vehicles, initialFo
           {floatingActions}
         </td>
       ) : (
-        <td style={tdInactive('description')} onClick={() => setActiveField('description')}>
+        <td style={tdHidden} onClick={() => setActiveField('description')}>
           <span className="truncate block" style={{ color: 'var(--ink-2)', maxWidth: 320, fontSize: 12.5 }}>
             {form.description || '—'}
           </span>
@@ -448,6 +443,11 @@ export function VehicleExpensesPage() {
           </div>
         ) : (
           <div className="nepo-table-scroll overflow-x-auto">
+            <div className="px-4 py-1.5" style={{ borderBottom: '1px solid var(--line)' }}>
+              <span className="text-[11.5px]" style={{ color: 'var(--ink-4)' }}>
+                Nhấp vào hàng để chỉnh sửa trực tiếp
+              </span>
+            </div>
             <table className="nepo-table w-full" style={{ minWidth: 900, borderCollapse: 'collapse' }}>
               <thead>
                 <tr>

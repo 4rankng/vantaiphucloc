@@ -1,8 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef } from 'react'
+import { Key } from 'lucide-react'
 import type { Driver } from '@/data/domain'
 import { Plate } from '@/components/shared/Plate'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { FieldActions } from '@/components/shared/ListUtils'
+import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
 
 export type DriverFocusableField = 'fullName' | 'phone' | 'plate' | null
 
@@ -14,7 +16,6 @@ export type DriverRowFormData = {
 
 interface DriverEditRowProps {
   driver: Driver
-  vendorName?: string
   onSave: (data: DriverRowFormData) => void
   onCancel: () => void
   saving?: boolean
@@ -24,7 +25,6 @@ interface DriverEditRowProps {
 
 export function DriverEditRow({
   driver,
-  vendorName,
   onSave,
   onCancel,
   saving,
@@ -36,36 +36,15 @@ export function DriverEditRow({
     phone: driver.phone ?? '',
     plate: driver.vehiclePlate ?? '',
   }
-  const [form, setForm] = useState<DriverRowFormData>(initial)
   const [plateInput, setPlateInput] = useState('')
   const fullNameRef = useRef<HTMLInputElement>(null)
-  const phoneRef = useRef<HTMLInputElement>(null)
 
-  const isDirty = (key: keyof DriverRowFormData) => form[key] !== initial[key]
-  const anyDirty = (Object.keys(form) as (keyof DriverRowFormData)[]).some(k => isDirty(k))
-  const set = <K extends keyof DriverRowFormData>(key: K, val: DriverRowFormData[K]) =>
-    setForm(prev => ({ ...prev, [key]: val }))
-
-  const handleSave = useCallback(() => {
-    onSave(form)
-  }, [form, onSave])
-
-  useEffect(() => {
-    if (initialFocus === 'fullName') fullNameRef.current?.focus()
-    else if (initialFocus === 'phone') phoneRef.current?.focus()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel()
-      if (e.key === 'Enter') {
-        e.preventDefault()
-        handleSave()
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [onCancel, handleSave])
+  const { form, set, isDirty, anyDirty, handleSave } = useInlineEditForm<DriverRowFormData>({
+    initial,
+    onSave,
+    onCancel,
+    focusRef: initialFocus === 'fullName' ? fullNameRef : undefined,
+  })
 
   const showCreatePlate =
     plateInput.trim() &&
@@ -90,9 +69,13 @@ export function DriverEditRow({
         </div>
       </td>
       <td style={{ padding: '5px 8px' }}>
+        <span className="text-[12px] font-mono" style={{ color: 'var(--ink-3)' }}>
+          {driver.username}
+        </span>
+      </td>
+      <td style={{ padding: '5px 8px' }}>
         <div className="flex items-center">
           <input
-            ref={phoneRef}
             className="nepo-input text-[12px]"
             style={{ minWidth: 90, flex: 1 }}
             type="tel"
@@ -119,27 +102,27 @@ export function DriverEditRow({
           {isDirty('plate') && actions}
         </div>
       </td>
-      <td style={{ padding: '5px 8px' }}>
-        <span className="text-[13px]" style={{ color: 'var(--ink-3)' }}>
-          {vendorName ?? '—'}
-        </span>
-      </td>
     </tr>
   )
 }
 
 interface DriverRowProps {
   driver: Driver
-  vendorName?: string
   onEdit: (field: DriverFocusableField) => void
+  onResetPassword?: () => void
 }
 
-export function DriverRow({ driver, vendorName, onEdit }: DriverRowProps) {
+export function DriverRow({ driver, onEdit, onResetPassword }: DriverRowProps) {
   return (
     <tr className="cursor-pointer group">
       <td onClick={() => onEdit('fullName')}>
         <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>
           {driver.fullName || driver.username}
+        </span>
+      </td>
+      <td>
+        <span className="text-[12px] font-mono" style={{ color: 'var(--ink-3)' }}>
+          {driver.username}
         </span>
       </td>
       <td onClick={() => onEdit('phone')}>
@@ -156,11 +139,17 @@ export function DriverRow({ driver, vendorName, onEdit }: DriverRowProps) {
           </span>
         )}
       </td>
-      <td>
-        <span className="text-[13px]" style={{ color: vendorName ? 'var(--ink-2)' : 'var(--ink-3)' }}>
-          {vendorName ?? '—'}
-        </span>
-      </td>
+      {onResetPassword && (
+        <td>
+          <button
+            onClick={(e) => { e.stopPropagation(); onResetPassword() }}
+            className="p-1 rounded hover:bg-gray-100 transition-colors"
+            title="Đổi mật khẩu"
+          >
+            <Key className="h-3.5 w-3.5" style={{ color: 'var(--ink-3)' }} />
+          </button>
+        </td>
+      )}
     </tr>
   )
 }

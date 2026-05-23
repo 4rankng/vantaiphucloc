@@ -1,8 +1,10 @@
-# Tasks: Rename operation_type → work_type globally (code + DB)
+# Agent Tasks — Centralize Inline Editing
 
-- [x] (backend) Create Alembic migration to rename DB column `operation_type` → `work_type`
-- [x] (backend) Update ORM model: remove `"operation_type"` column name override
-- [x] (backend) Global rename `operation_type` → `work_type` in all Python source files
-- [x] (backend) Revert debug code in router.py
-- [x] (backend) Run `make test-backend` — 226 passed
-- [x] (backend) Verify API: POST /route-pricings/import-commit returns 200
+- [x] (frontend) Create `useActiveField` hook
+- [x] (frontend) Create `editCellStyles` constants
+- [x] (frontend) Refactor `DriverEditRow` to use `useInlineEditForm`
+- [x] (frontend) Refactor `ExpenseEditRow` to use `useActiveField` + `editCellStyles`
+- [x] (frontend) Refactor `VendorRoutePricingEditRow` to use `useActiveField` + `editCellStyles`
+- [x] (frontend) Add username column to transporters driver table
+- [x] (frontend) Run `make test-frontend` to verify — build passes
+- [ ] (frontend) Fix pre-existing lint issues in changed files
