@@ -211,7 +211,8 @@ function EditableLocationName({
   const [value, setValue] = useState(name)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { setValue(name); setEditing(false) }, [name])
+  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
+ setValue(name); setEditing(false) }, [name])
   useEffect(() => { if (editing) inputRef.current?.focus() }, [editing])
 
   const commit = () => {
@@ -321,7 +322,8 @@ function LocationDetailPanel({
     [location, allLocations, aliasesByLocAll],
   )
 
-  useEffect(() => { setNewAlias(''); setAdding(false) }, [location.id])
+  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
+ setNewAlias(''); setAdding(false) }, [location.id])
   useEffect(() => { if (adding) newAliasRef.current?.focus() }, [adding])
 
   const submitAlias = () => {
@@ -659,6 +661,7 @@ function MergeDialog({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSource(presetSource ?? '')
       setTarget(presetTarget ?? '')
     }
@@ -808,7 +811,10 @@ export function LocationAliasesPage() {
   // Auto-select first location once data loads, or when current selection disappears
   useEffect(() => {
     if (locations.length === 0) {
-      if (selectedId !== null) setSelectedId(null)
+      if (selectedId !== null) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSelectedId(null)
+      }
       return
     }
     if (selectedId === null || !locations.find(l => l.id === selectedId)) {

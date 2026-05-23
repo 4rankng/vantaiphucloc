@@ -1,15 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiClient } from '@/services/api'
-import type { ApiResponse, PaginatedResult, Pricing, DeliveredTrip, BookedTrip, ContType, Client, Vendor, LocationAlias, MergeLocationsResponse } from '@/data/domain'
+import type { ContType } from '@/data/domain'
 import type { DriverEarnings } from '@/services/api/salary.api'
-import type { VehicleExpenseCategory } from '@/services/api/vehicleExpenses.api'
-import type { Vehicle } from '@/services/api/vehicles.api'
-
-/** Reject on failed ApiResponse so React Query onError fires. */
-function unwrap<T>(res: ApiResponse<T>): T {
-  if (res.success) return res.data
-  throw new Error(res.message ?? 'Lỗi hệ thống')
-}
 import type { PricingCreatePayload, PricingUpdatePayload } from '@/services/api/pricings.api'
 import type { DeliveredTripCreatePayload, DeliveredTripUpdatePayload } from '@/services/api/deliveredTrips.api'
 import type { BookedTripCreatePayload, BookedTripUpdatePayload } from '@/services/api/bookedTrips.api'

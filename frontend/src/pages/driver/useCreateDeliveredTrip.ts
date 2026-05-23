@@ -261,9 +261,9 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     }
   }, [selectedTripId])
 
-  // Validation — for edit mode, existing photos are valid
+  // Validation — photo is optional (scan-to-fill only, not stored)
   const canSubmit = useMemo(() => {
-    const hasContainerInfo = containers.every(c => c.containerNumber.trim() && c.photoTaken)
+    const hasContainerInfo = containers.every(c => c.containerNumber.trim())
     return hasContainerInfo && !!clientId && !!pickupLocation && !!dropoffLocation
       && Object.keys(containerErrors).length === 0
   }, [containers, clientId, pickupLocation, dropoffLocation, containerErrors])
@@ -271,10 +271,9 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   const missingFields = useMemo(() => {
     const fields: string[] = []
     if (containers.some(c => !c.containerNumber.trim())) fields.push('số cont')
-    if (containers.some(c => !c.photoTaken)) fields.push('ảnh cont')
     if (!clientId) fields.push('khách hàng')
-    if (!pickupLocation) fields.push('điểm lấy')
-    if (!dropoffLocation) fields.push('điểm trả')
+    if (!pickupLocation) fields.push('điểm đi')
+    if (!dropoffLocation) fields.push('điểm đến')
     return fields
   }, [containers, clientId, pickupLocation, dropoffLocation])
 

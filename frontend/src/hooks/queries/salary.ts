@@ -122,7 +122,7 @@ export function useSetDriverBaseSalary() {
       apiClient
         .setDriverBaseSalary(driverId, { baseSalary, effectiveFrom, note })
         .then(unwrap),
-    onSuccess: (_data, vars) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['driver-base-salary'] })
       qc.invalidateQueries({ queryKey: ['driver-earnings'] })
       qc.invalidateQueries({ queryKey: ['my-earnings'] })

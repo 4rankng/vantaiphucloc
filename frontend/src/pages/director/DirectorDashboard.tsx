@@ -27,7 +27,7 @@ const StatCard = DashboardStatCard
 export function DirectorDashboard() {
   const navigate = useNavigate()
   const { data: _trips, isLoading: loading } = useBookedTrips()
-  const trips = _trips?.items ?? []
+  const trips = useMemo(() => _trips?.items ?? [], [_trips])
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([])
   const [financialLogs, setFinancialLogs] = useState<AuditLogEntry[]>([])
 

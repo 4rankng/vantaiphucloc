@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from 'react'
 import {
   ClipboardList,
   Loader2,
-  DollarSign,
   FileSpreadsheet,
   Zap,
 } from 'lucide-react'
@@ -50,7 +49,7 @@ export function DoiSoatPage() {
   const [showImport, setShowImport] = useState(false)
   const [matchTarget, setMatchTarget] = useState<DeliveredTrip | null>(null)
   const [doiSoatClientId, setDoiSoatClientId] = useState<string>('ALL')
-  const [vendorId, setVendorId] = useState<string>('ALL')
+  const [vendorId] = useState<string>('ALL')
   const [page, setPage] = useState(1)
   const pageSize = 50
   const [sortBy, setSortBy] = useState<DeliveredTripSortBy>('trip_date')
@@ -91,7 +90,8 @@ export function DoiSoatPage() {
     [confirmMatch]
   )
 
-  useEffect(() => { setPage(1) }, [statusFilter, dateFrom, dateTo, doiSoatClientId, vendorId, debouncedSearch])
+  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
+ setPage(1) }, [statusFilter, dateFrom, dateTo, doiSoatClientId, vendorId, debouncedSearch])
 
   const handleSort = useCallback((key: string, order: SortOrder) => {
     setSortBy(key as DeliveredTripSortBy)
@@ -113,7 +113,6 @@ export function DoiSoatPage() {
   })
   const trips = data?.items ?? []
   const totalPages = data?.totalPages ?? 0
-  const totalItems = data?.total ?? 0
 
   // Global stats from trip daily stats endpoint
   const { data: dailyStats } = useTripDailyStats(

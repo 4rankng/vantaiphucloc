@@ -1,25 +1,73 @@
-import { useState } from 'react'
-import { MapPin, Calendar, Building2, Route as RouteIcon, Camera, Pencil } from 'lucide-react'
+import {
+  Calendar, Building2, Ship, Package2, CheckCircle2, Clock,
+  MapPin, ArrowRight, Pencil, Wrench,
+} from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { InfoRow } from '@/components/shared/InfoRow'
-import { PhotoLightbox } from '@/components/shared/PhotoLightbox'
-import { formatCurrencyFull } from '@/data/domain'
+import { formatCurrencyFull, getWorkTypeLabel } from '@/data/domain'
 import { useDeliveredTrip } from '@/hooks/use-queries'
-import { resolveRoute } from '@/lib/route-utils'
+
+// ── Simple label+value row ─────────────────────────────────────────────────────
+function Field({
+  icon: Icon,
+  label,
+  value,
+  mono = false,
+  last = false,
+}: {
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>
+  label: string
+  value: React.ReactNode
+  mono?: boolean
+  last?: boolean
+}) {
+  return (
+    <div
+      className="flex items-start gap-3 px-4 py-3"
+      style={last ? undefined : { borderBottom: '1px solid var(--theme-border-light)' }}
+    >
+      <div
+        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+        style={{ background: 'var(--theme-bg-tertiary)' }}
+      >
+        <Icon className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
+        <p
+          className={`text-sm font-semibold mt-0.5 ${mono ? 'font-mono tracking-wide' : ''}`}
+          style={{ color: value ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}
+        >
+          {value || '—'}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ── Route icon (two map pins with arrow) ──────────────────────────────────────
+function RouteIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <span className={`inline-flex items-center gap-px ${className ?? ''}`} style={style}>
+      <MapPin className="w-3 h-3" />
+      <ArrowRight className="w-2.5 h-2.5" />
+    </span>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function JobDetail() {
   const { jobId: jobIdStr } = useParams<{ jobId: string }>()
   const navigate = useNavigate()
   const jobId = Number(jobIdStr)
   const { data: job = null, isLoading: loading } = useDeliveredTrip(jobId)
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
 
   if (loading) {
     return (
       <div className="animate-pulse space-y-3 p-4">
-        <div className="h-40 rounded-lg" style={{ background: 'var(--theme-bg-tertiary)' }} />
-        <div className="h-6 rounded w-2/3" style={{ background: 'var(--theme-bg-tertiary)' }} />
-        <div className="h-4 rounded w-1/2" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        <div className="h-10 rounded-xl w-1/3" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        <div className="h-64 rounded-xl" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        <div className="h-16 rounded-xl" style={{ background: 'var(--theme-bg-tertiary)' }} />
       </div>
     )
   }
@@ -34,14 +82,16 @@ export function JobDetail() {
 
   const date = new Date(job.tripDate ?? job.createdAt)
   const dateStr = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+  const canEdit = !job.matched
+  const contTypeLabel = job.contType ?? null
+  const workTypeLabel = getWorkTypeLabel(job.workType) ?? job.workType ?? null
 
   return (
     <>
-      {/* Back button — inline in page body */}
+      {/* Back button */}
       <button
         onClick={() => navigate(-1)}
-        className="inline-flex items-center gap-1.5 typo-body-sm mb-3"
+        className="inline-flex items-center gap-1.5 text-sm mb-4"
         style={{ color: 'var(--theme-text-secondary)' }}
       >
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -50,107 +100,113 @@ export function JobDetail() {
         Quay lại
       </button>
 
-      {/* Fullscreen lightbox */}
-      <PhotoLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
+      <div className="space-y-3 pb-24">
 
-    <div className="space-y-4 pb-20">
-      {/* Photos */}
-      <div className={`grid ${job.containers.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
-        {job.containers.map((c, i) => (
-          <div
-            key={i}
-            className="relative rounded-lg overflow-hidden aspect-square"
-            style={{ border: '1px solid var(--theme-border-default)' }}
-          >
-            {c.photoUrl ? (
-              <button
-                className="block w-full h-full touch-manipulation"
-                onClick={() => setLightboxUrl(c.photoUrl!)}
-                aria-label={`Xem ảnh ${c.containerNumber}`}
-              >
-                <img
-                  src={c.photoUrl}
-                  alt={c.containerNumber}
-                  className="w-full h-full object-cover"
-                />
-              </button>
-            ) : (
-              <div
-                className="w-full h-full flex flex-col items-center justify-center"
-                style={{ background: 'var(--theme-bg-tertiary)' }}
-              >
-                <Camera className="w-6 h-6" style={{ color: 'var(--theme-text-muted)' }} />
-              </div>
-            )}
-            {/* Container info overlay at bottom */}
-            <div
-              className="absolute bottom-0 left-0 right-0 px-2 py-1.5 flex items-center justify-between"
-              style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
-            >
-              <p className="text-xs font-mono font-semibold truncate" style={{ color: '#fff' }}>
-                {c.containerNumber}
-              </p>
-              <span
-                className="text-xs font-bold px-1.5 py-0.5 rounded shrink-0 ml-1"
-                style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
-              >
-                {c.workType}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Trip info */}
-      <div className="rounded-lg overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-        <InfoRow icon={Building2} label="Khách hàng" value={job.client.name} />
-        <InfoRow icon={RouteIcon} label="Cung đường" value={resolveRoute(job)} />
-        {(() => {
-          const loc = job.gpsAddress ?? (job.gpsLat && job.gpsLng ? `${job.gpsLat}, ${job.gpsLng}` : null)
-          return loc ? <InfoRow icon={MapPin} label="Vị trí" value={loc} /> : null
-        })()}
-        <InfoRow icon={Calendar} label="Thời gian" value={`${dateStr} ${timeStr}`} noBorder />
-      </div>
-
-      {/* Earning */}
-      <div
-        className="rounded-lg p-4 flex items-center justify-between"
-        style={{
-          background: job.driverSalary > 0
-            ? 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)'
-            : 'var(--theme-status-warning-light)',
-          border: `1px solid ${job.driverSalary > 0
-            ? 'color-mix(in srgb, var(--theme-brand-primary) 20%, transparent)'
-            : 'color-mix(in srgb, var(--theme-status-warning) 20%, transparent)'}`,
-        }}
-      >
-        <p className="text-sm font-semibold" style={{
-          color: job.driverSalary > 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-warning)',
-        }}>
-          Thu nhập
-        </p>
-        {job.driverSalary > 0 ? (
-          <p className="text-xl font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
-            {formatCurrencyFull(job.driverSalary)}
+        {/* ── Status badge row ── */}
+        <div className="flex items-center justify-between px-1">
+          <p className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+            Chi tiết chuyến
           </p>
+          {job.matched ? (
+            <span
+              className="flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full"
+              style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" /> Đã ghép
+            </span>
+          ) : (
+            <span
+              className="flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full"
+              style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}
+            >
+              <Clock className="w-3.5 h-3.5" /> Chờ ghép
+            </span>
+          )}
+        </div>
+
+        {/* ── All trip fields in one card ── */}
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
+        >
+          <Field icon={Calendar}   label="Ngày đi"    value={dateStr} />
+          <Field icon={Building2}  label="Chủ hàng"   value={job.client.name} />
+          <Field icon={Ship}       label="Số tàu"     value={job.vessel ?? null} />
+          <Field icon={Package2}   label="Số Cont"    value={job.contNumber} mono />
+          <Field
+            icon={({ className, style }) => (
+              <span className={className} style={style}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
+                  <rect x="2" y="7" width="20" height="14" rx="2"/>
+                  <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+                </svg>
+              </span>
+            )}
+            label="Loại Cont"
+            value={contTypeLabel}
+          />
+          <Field
+            icon={({ className, style }) => <MapPin className={className} style={style} />}
+            label="Điểm đi"
+            value={job.pickupLocation.name}
+          />
+          <Field
+            icon={({ className, style }) => <RouteIcon className={className} style={style} />}
+            label="Điểm đến"
+            value={job.dropoffLocation.name}
+          />
+          <Field icon={Wrench} label="Tác nghiệp" value={workTypeLabel} last />
+        </div>
+
+        {/* ── Earning card ── */}
+        <div
+          className="rounded-xl p-4 flex items-center justify-between"
+          style={{
+            background: job.driverSalary > 0
+              ? 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)'
+              : 'var(--theme-status-warning-light)',
+            border: `1px solid ${job.driverSalary > 0
+              ? 'color-mix(in srgb, var(--theme-brand-primary) 20%, transparent)'
+              : 'color-mix(in srgb, var(--theme-status-warning) 20%, transparent)'}`,
+          }}
+        >
+          <div>
+            <p
+              className="text-xs font-semibold mb-0.5"
+              style={{ color: job.driverSalary > 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-warning)' }}
+            >
+              Thu nhập chuyến
+            </p>
+            {job.allowance > 0 && (
+              <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+                Phụ cấp: {formatCurrencyFull(job.allowance)}
+              </p>
+            )}
+          </div>
+          {job.driverSalary > 0 ? (
+            <p className="text-2xl font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
+              {formatCurrencyFull(job.driverSalary)}
+            </p>
+          ) : (
+            <span className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa tính</span>
+          )}
+        </div>
+
+        {/* ── Edit button — only while not matched ── */}
+        {canEdit ? (
+          <button
+            onClick={() => navigate(`/driver/delivered-trips/${job.id}/edit`)}
+            className="w-full rounded-xl text-base font-bold flex items-center justify-center gap-2 touch-manipulation transition-all active:scale-[0.98]"
+            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', height: '52px' }}
+          >
+            <Pencil className="w-4 h-4" /> Sửa chuyến
+          </button>
         ) : (
-          <span className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
-            —
-          </span>
+          <p className="text-center text-xs py-1" style={{ color: 'var(--theme-text-muted)' }}>
+            Chuyến đã được ghép — không thể chỉnh sửa
+          </p>
         )}
       </div>
-
-      {/* Edit button for PENDING orders */}
-      {job.status === 'PENDING' && (
-        <button
-          onClick={() => navigate(`/driver/delivered-trips/${job.id}/edit`)}
-          className="w-full h-12 rounded-lg text-base font-bold flex items-center justify-center gap-2 touch-manipulation transition-all active:scale-[0.98]"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-        >
-          <Pencil className="w-4 h-4" /> Sửa chuyến
-        </button>
-      )}
-    </div>
     </>
   )
 }

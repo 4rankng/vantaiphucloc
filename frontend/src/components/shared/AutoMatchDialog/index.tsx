@@ -6,7 +6,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui'
@@ -45,7 +44,6 @@ export function AutoMatchDialog({
   onClose,
   candidates,
   unmatchedCount,
-  scannedCount,
   isConfirming,
   onConfirm,
 }: Props) {

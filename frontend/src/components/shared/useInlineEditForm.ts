@@ -19,12 +19,15 @@ export function useInlineEditForm<T extends Record<string, unknown>>({
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const initialRef = useRef(initial)
+  // eslint-disable-next-line react-hooks/refs
   initialRef.current = initial
 
   const validateRef = useRef(validate)
+  // eslint-disable-next-line react-hooks/refs
   validateRef.current = validate
 
   const isDirty = (key: keyof T) => form[key] !== initialRef.current[key]
+  // eslint-disable-next-line react-hooks/refs
   const anyDirty = (Object.keys(form) as (keyof T)[]).some(k => isDirty(k))
 
   const set = <K extends keyof T>(key: K, val: T[K]) => {

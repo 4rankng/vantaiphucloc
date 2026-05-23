@@ -30,6 +30,7 @@ export function useInView({
 
   useEffect(() => {
     if (disabled) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsInView(true)
       return
     }
@@ -77,7 +78,10 @@ export function useInViewRef<T extends HTMLElement>(
 
   useEffect(() => {
     if (disabled || !ref.current) {
-      if (disabled) setIsInView(true)
+      if (disabled) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setIsInView(true)
+      }
       return
     }
 

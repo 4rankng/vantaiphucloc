@@ -37,6 +37,7 @@ export function InlineEditable({
   }, [editing])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft(value)
   }, [value])
 
@@ -51,7 +52,7 @@ export function InlineEditable({
           setValidating(false)
           return
         }
-      } catch (e) {
+      } catch {
         setError('Lỗi kết nối kiểm tra số container')
         setValidating(false)
         return
@@ -63,7 +64,7 @@ export function InlineEditable({
       await onSave(draft)
       setEditing(false)
       setError(null)
-    } catch (err) {
+    } catch {
       setError('Không thể lưu thay đổi')
     } finally {
       setSaving(false)
@@ -89,7 +90,7 @@ export function InlineEditable({
           setValidating(false)
           return
         }
-      } catch (e) {
+      } catch {
         setError('Lỗi kết nối kiểm tra số container')
         setValidating(false)
         return
@@ -101,7 +102,7 @@ export function InlineEditable({
       await onSave(draft)
       setEditing(false)
       setError(null)
-    } catch (err) {
+    } catch {
       setError('Không thể lưu thay đổi')
     } finally {
       setSaving(false)

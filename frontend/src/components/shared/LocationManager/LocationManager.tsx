@@ -45,12 +45,22 @@ export function LocationManager({ search }: LocationManagerProps) {
       })
     : locations
 
+  const fetchAliases = async (locationId: number) => {
+    try {
+      const res = await api.get('/location-aliases', { params: { location_id: locationId } })
+      const aliases = ((res.data?.items ?? res.data ?? []) as Record<string, unknown>[]).map((r) => toCamel<LocationAlias>(r))
+      setAliasData(prev => ({ ...prev, [locationId]: aliases }))
+    } catch {
+      setAliasData(prev => ({ ...prev, [locationId]: [] }))
+    }
+  }
+
   useEffect(() => {
     filtered.forEach((l: Loc) => {
       if (aliasData[l.id]) return
       fetchAliases(l.id)
     })
-  }, [filtered])
+  }, [filtered, aliasData])
 
   useEffect(() => {
     if (editingKey && editInputRef.current) {
@@ -64,16 +74,6 @@ export function LocationManager({ search }: LocationManagerProps) {
       aliasInputRef.current.focus()
     }
   }, [addingAliasFor])
-
-  const fetchAliases = async (locationId: number) => {
-    try {
-      const res = await api.get('/location-aliases', { params: { location_id: locationId } })
-      const aliases = ((res.data?.items ?? res.data ?? []) as Record<string, unknown>[]).map((r) => toCamel<LocationAlias>(r))
-      setAliasData(prev => ({ ...prev, [locationId]: aliases }))
-    } catch {
-      setAliasData(prev => ({ ...prev, [locationId]: [] }))
-    }
-  }
 
   const getAliases = useCallback((locationId: number) => {
     const loc = locations.find((l: Loc) => l.id === locationId)
@@ -138,8 +138,11 @@ export function LocationManager({ search }: LocationManagerProps) {
       await qc.refetchQueries({ queryKey: ['locations'] })
       await fetchAliases(locationId)
       toast.success(`Đã đặt "${alias.alias}" làm tên chính`)
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail ?? 'Không thể đổi tên chính'
+    } catch (err: unknown) {
+      const detail = typeof err === 'object' && err !== null && 'response' in err
+        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined
+      const msg = detail ?? 'Không thể đổi tên chính'
       toast.error(msg)
     } finally {
       setPendingAction(null)

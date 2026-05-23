@@ -2,8 +2,8 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LogOut, ChevronDown, ChevronUp,
-  Home, Handshake, Route, Plus, Receipt, Settings,
-  Users, Truck, ClipboardList,
+  Home, Plus,
+  Users,
   UserCog, History, Bell as BellIcon,
 } from 'lucide-react'
 import { useSidebar } from '@/components/ui/sidebar'

@@ -307,6 +307,15 @@ function DriverFormDrawer({ open, onClose, onSave, saving }: {
   )
 }
 
+// ─── Sort indicator ────────────────────────────────────────────────────────────
+
+function DriverSortIndicator({ col, sortBy, sortOrder }: { col: DriverSortBy; sortBy: DriverSortBy; sortOrder: 'asc' | 'desc' }) {
+  if (sortBy !== col) return <ChevronsUpDown className="inline-block ml-1 opacity-30" style={{ width: 12, height: 12, verticalAlign: 'middle' }} />
+  return sortOrder === 'asc'
+    ? <ChevronUp className="inline-block ml-1" style={{ width: 12, height: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />
+    : <ChevronDown className="inline-block ml-1" style={{ width: 12, height: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function DriversPage() {
@@ -331,7 +340,8 @@ export function DriversPage() {
 
   // Infinite scroll
   const [limit, setLimit] = useState(BATCH)
-  useEffect(() => { setLimit(BATCH) }, [debouncedSearch, sortBy, sortOrder])
+  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
+ setLimit(BATCH) }, [debouncedSearch, sortBy, sortOrder])
 
   const { data: pagedData, isLoading } = useDriversPaged({
     search: debouncedSearch || undefined,
@@ -354,17 +364,11 @@ export function DriversPage() {
     if (sortBy === col) setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
     else { setSortBy(col); setSortOrder('asc') }
   }
-  const SortIndicator = ({ col }: { col: DriverSortBy }) => {
-    if (sortBy !== col) return <ChevronsUpDown className="inline-block ml-1 opacity-30" style={{ width: 12, height: 12, verticalAlign: 'middle' }} />
-    return sortOrder === 'asc'
-      ? <ChevronUp className="inline-block ml-1" style={{ width: 12, height: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />
-      : <ChevronDown className="inline-block ml-1" style={{ width: 12, height: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />
-  }
 
   const handleCreate = useCallback(async (data: { username: string; fullName: string; phone: string; plate: string; password?: string }) => {
     createDriver.mutate({ username: data.username, fullName: data.fullName, phone: data.phone, password: data.password }, {
       onSuccess: async (newDriver) => {
-        if (data.plate.trim() && newDriver?.id) try { await assignVehicle(newDriver.id, data.plate.trim()) } catch {}
+        if (data.plate.trim() && newDriver?.id) try { await assignVehicle(newDriver.id, data.plate.trim()) } catch { /* non-critical */ }
         toast.success('Đã thêm lái xe')
         setShowCreate(false)
         qc.invalidateQueries({ queryKey: ['drivers'] })
@@ -457,9 +461,9 @@ export function DriversPage() {
                 <table className="nepo-table w-full" style={{ minWidth: 600 }}>
                   <thead>
                     <tr>
-                      <th className="text-left cursor-pointer select-none" style={{ color: sortBy === 'full_name' ? 'var(--accent)' : undefined }} onClick={() => handleSortCol('full_name')}>Họ tên<SortIndicator col="full_name" /></th>
-                      <th className="text-left cursor-pointer select-none" style={{ color: sortBy === 'phone' ? 'var(--accent)' : undefined }} onClick={() => handleSortCol('phone')}>SĐT<SortIndicator col="phone" /></th>
-                      <th className="text-left cursor-pointer select-none" style={{ color: sortBy === 'username' ? 'var(--accent)' : undefined }} onClick={() => handleSortCol('username')}>Biển số<SortIndicator col="username" /></th>
+                      <th className="text-left cursor-pointer select-none" style={{ color: sortBy === 'full_name' ? 'var(--accent)' : undefined }} onClick={() => handleSortCol('full_name')}>Họ tên<DriverSortIndicator col="full_name" sortBy={sortBy} sortOrder={sortOrder} /></th>
+                      <th className="text-left cursor-pointer select-none" style={{ color: sortBy === 'phone' ? 'var(--accent)' : undefined }} onClick={() => handleSortCol('phone')}>SĐT<DriverSortIndicator col="phone" sortBy={sortBy} sortOrder={sortOrder} /></th>
+                      <th className="text-left cursor-pointer select-none" style={{ color: sortBy === 'username' ? 'var(--accent)' : undefined }} onClick={() => handleSortCol('username')}>Biển số<DriverSortIndicator col="username" sortBy={sortBy} sortOrder={sortOrder} /></th>
                       <th className="text-right">Lương cơ bản</th>
                       <th className="text-left">Từ ngày</th>
                       <th className="w-10" />

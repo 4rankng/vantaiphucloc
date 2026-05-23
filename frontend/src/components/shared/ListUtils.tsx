@@ -5,6 +5,7 @@ import { Search, Check, X } from 'lucide-react'
 // Uses a callback ref so the IntersectionObserver is attached whenever the
 // sentinel element mounts — including after async data loads make hasMore=true.
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useInfiniteScroll(onLoadMore: () => void) {
   const onLoadMoreRef = useRef(onLoadMore)
   useEffect(() => { onLoadMoreRef.current = onLoadMore }, [onLoadMore])

@@ -19,7 +19,10 @@ export function PnLPage() {
   const [search, setSearch] = useState('')
   const { data: pnlData, isLoading } = useVehiclePnL(dateFrom, dateTo)
 
-  const allRows: VehiclePnLRow[] = (pnlData as VehiclePnLResponse | undefined)?.rows ?? []
+  const allRows = useMemo<VehiclePnLRow[]>(
+    () => (pnlData as VehiclePnLResponse | undefined)?.rows ?? [],
+    [pnlData],
+  )
   const totalRevenue = (pnlData as VehiclePnLResponse | undefined)?.totalRevenue ?? 0
   const totalProfit = (pnlData as VehiclePnLResponse | undefined)?.totalProfit ?? 0
 

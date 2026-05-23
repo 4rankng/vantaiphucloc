@@ -61,7 +61,7 @@ export function RoutePricingPage() {
       e20Price: rp.e20Price?.toString() ?? '',
       e40Price: rp.e40Price?.toString() ?? '',
     })
-  }, [inlineEditField])
+  }, [])
 
   const handleSaveInline = useCallback((id: number, data: RoutePricingFormData) => {
     const parsePrice = (v: string) => {

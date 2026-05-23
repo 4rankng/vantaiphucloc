@@ -1,12 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { queryKeys } from '../query-keys'
-import type { ApiResponse } from '@/data/domain'
-
-function unwrap<T>(res: ApiResponse<T>): T {
-  if (res.success) return res.data
-  throw new Error(res.message ?? 'Lỗi hệ thống')
-}
 
 export function useDashboardSummary(dateFrom?: string, dateTo?: string) {
   return useQuery({

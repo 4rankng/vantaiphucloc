@@ -40,7 +40,7 @@ export async function getRoutePricings(params?: {
       }),
     })
     return unwrapPaginated(res.data, (raw) => toCamel<RoutePricing>(raw))
-  } catch (err) {
+  } catch {
     return { items: [], total: 0, page: 1, pageSize: 100, totalPages: 0 }
   }
 }

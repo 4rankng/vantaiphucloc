@@ -20,7 +20,6 @@ import type { SortDirection } from '@/components/shared/SortableTableHeader'
 import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull as fmt, type DeliveredTrip } from '@/data/domain'
 import { pad, daysInMonth, sumChiPhi, computeDelta, formatTripDate } from '@/lib/accounting-utils'
-import type { MonthlyPnL } from '@/services/api/pnl.api'
 import {
   CheckCircle2, DollarSign, Clock, TrendingUp,
   TrendingDown, BarChart3, Truck,

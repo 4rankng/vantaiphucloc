@@ -1,6 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { queryKeys } from '../query-keys'
 import type { ApiResponse } from '@/data/domain'
 
 function unwrap<T>(res: ApiResponse<T>): T {

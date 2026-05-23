@@ -36,6 +36,13 @@ const EMPTY_FORM: FormData = {
 
 type FocusableField = 'code' | 'name' | 'phone' | 'address' | 'taxCode' | null
 
+function ClientSortIndicator({ col, sortBy, sortOrder }: { col: ClientSortBy; sortBy: ClientSortBy; sortOrder: 'asc' | 'desc' }) {
+  if (sortBy !== col) return <ChevronsUpDown className="inline-block ml-1 opacity-30" style={{ width: 12, height: 12, verticalAlign: 'middle' }} />
+  return sortOrder === 'asc'
+    ? <ChevronUp className="inline-block ml-1" style={{ width: 12, height: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />
+    : <ChevronDown className="inline-block ml-1" style={{ width: 12, height: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />
+}
+
 function ClientEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name' }: {
   initial: FormData
   onSave: (data: FormData) => void
@@ -73,13 +80,11 @@ function ClientEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       {/* Mã khách */}
       <td style={{ padding: '5px 8px' }}>
         <div className="flex items-center">
-          <input
-            ref={refs.code}
+          <input ref={refs.code}
             className="nepo-input text-[12px]"
             style={{ minWidth: 60, flex: 1 }}
             value={form.code}
             onChange={e => set('code', e.target.value)}
-
             placeholder="Mã KH"
           />
           {isDirty('code') && actions}
@@ -89,13 +94,12 @@ function ClientEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       <td style={{ padding: '5px 8px' }}>
         <div className="flex items-center">
           <div style={{ flex: 1 }}>
-            <input
-              ref={refs.name}
+            {/* eslint-disable-next-line react-hooks/refs */}
+            <input ref={refs.name}
               className="nepo-input text-[12px]"
               style={{ width: '100%', borderColor: errors.name ? 'var(--status-error, #e53)' : undefined }}
               value={form.name}
               onChange={e => set('name', e.target.value)}
-
               placeholder="Tên chủ hàng *"
             />
             {errors.name && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.name}</p>}
@@ -128,14 +132,13 @@ function ClientEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       {/* SĐT */}
       <td style={{ padding: '5px 8px' }}>
         <div className="flex items-center">
-          <input
-            ref={refs.phone}
+          {/* eslint-disable-next-line react-hooks/refs */}
+          <input ref={refs.phone}
             className="nepo-input text-[12px]"
             style={{ minWidth: 90, flex: 1 }}
             type="tel"
             value={form.phone}
             onChange={e => set('phone', e.target.value)}
-
             placeholder="SĐT"
           />
           {isDirty('phone') && actions}
@@ -144,13 +147,12 @@ function ClientEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       {/* Địa chỉ */}
       <td style={{ padding: '5px 8px' }}>
         <div className="flex items-center">
-          <input
-            ref={refs.address}
+          {/* eslint-disable-next-line react-hooks/refs */}
+          <input ref={refs.address}
             className="nepo-input text-[12px]"
             style={{ minWidth: 100, flex: 1 }}
             value={form.address}
             onChange={e => set('address', e.target.value)}
-
             placeholder="Địa chỉ"
           />
           {isDirty('address') && actions}
@@ -160,13 +162,12 @@ function ClientEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       <td style={{ padding: '5px 8px' }}>
         <div className="flex items-center">
           <div style={{ flex: 1 }}>
-            <input
-              ref={refs.taxCode}
+            {/* eslint-disable-next-line react-hooks/refs */}
+            <input ref={refs.taxCode}
               className="nepo-input text-[12px]"
               style={{ width: '100%', borderColor: errors.taxCode ? 'var(--status-error, #e53)' : undefined }}
               value={form.taxCode}
               onChange={e => set('taxCode', e.target.value)}
-
               placeholder="MST"
             />
             {errors.taxCode && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.taxCode}</p>}
@@ -299,13 +300,6 @@ export function ClientsPage() {
     }
   }
 
-  const SortIndicator = ({ col }: { col: ClientSortBy }) => {
-    if (sortBy !== col) return <ChevronsUpDown className="inline-block ml-1 opacity-30" style={{ width: 12, height: 12, verticalAlign: 'middle' }} />
-    return sortOrder === 'asc'
-      ? <ChevronUp className="inline-block ml-1" style={{ width: 12, height: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />
-      : <ChevronDown className="inline-block ml-1" style={{ width: 12, height: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />
-  }
-
   const handleCreate = useCallback((formData: FormData) => {
     createClient.mutate(formData, {
       onSuccess: () => { toast.success('Đã thêm chủ hàng'); setEditingId(null) },
@@ -384,14 +378,14 @@ export function ClientsPage() {
                         style={{ color: sortBy === 'code' ? 'var(--accent)' : undefined }}
                         onClick={() => handleSort('code')}
                       >
-                        Mã khách<SortIndicator col="code" />
+                        Mã khách<ClientSortIndicator col="code" sortBy={sortBy} sortOrder={sortOrder} />
                       </th>
                       <th
                         className="text-left cursor-pointer select-none"
                         style={{ color: sortBy === 'name' ? 'var(--accent)' : undefined }}
                         onClick={() => handleSort('name')}
                       >
-                        Tên chủ hàng<SortIndicator col="name" />
+                        Tên chủ hàng<ClientSortIndicator col="name" sortBy={sortBy} sortOrder={sortOrder} />
                       </th>
                       <th className="text-left">Loại</th>
                       <th className="text-left">SĐT</th>

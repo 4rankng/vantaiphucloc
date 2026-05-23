@@ -8,7 +8,7 @@ export function DriverJobs() {
   const { driverId: driverIdStr } = useParams<{ driverId: string }>()
   const driverId = Number(driverIdStr)
   const { data } = useDeliveredTrips({ driverId })
-  const jobs = data?.items ?? []
+  const jobs = useMemo(() => data?.items ?? [], [data])
 
   const totalEarning = useMemo(() => jobs.reduce((s, j) => s + j.driverSalary, 0), [jobs])
 

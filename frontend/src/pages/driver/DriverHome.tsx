@@ -28,13 +28,13 @@ function DesktopDriverHome() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { data: _deliveredTrips, isLoading: loading } = useDeliveredTrips({ driverId: Number(user!.id) })
-  const deliveredTrips = _deliveredTrips?.items ?? []
+  const deliveredTrips = useMemo(() => _deliveredTrips?.items ?? [], [_deliveredTrips])
 
   const { data: config } = useSalaryConfig()
-  const now = new Date()
+  const now = useMemo(() => new Date(), [])
   const defaultPeriod = useMemo(
     () => getSalaryPeriodDates(now, { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }),
-    [config?.fromDay, config?.toDay],
+    [now, config?.fromDay, config?.toDay],
   )
   const [periodStart, setPeriodStart] = useState<Date>(defaultPeriod.startDate)
 
@@ -65,11 +65,11 @@ function DesktopDriverHome() {
   }, [deliveredTrips, currentPeriod])
 
   const matchedCount = useMemo(() =>
-    periodJobs.filter(w => w.status === 'MATCHED' || w.status === 'COMPLETED').length,
+    periodJobs.filter(w => w.matched).length,
     [periodJobs],
   )
   const pendingCount = useMemo(() =>
-    periodJobs.filter(w => w.status === 'PENDING').length,
+    periodJobs.filter(w => !w.matched).length,
     [periodJobs],
   )
   const totalEarnings = useMemo(() =>
@@ -169,8 +169,8 @@ function DesktopDriverHome() {
             {sortedJobs.map((wo, i) => {
               const date = new Date(wo.tripDate ?? wo.createdAt)
               const dateStr = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
-              const isPending = wo.status === 'PENDING'
-              const isMatched = wo.status === 'MATCHED' || wo.status === 'COMPLETED'
+              const isPending = !wo.matched
+              const isMatched = wo.matched
               return (
                 <Reveal key={wo.id} delay={i * 40} distance={8} threshold={0.05}>
                   <button
@@ -216,7 +216,7 @@ function MobileDriverHome() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { data: _deliveredTrips, isLoading: loading } = useDeliveredTrips({ driverId: Number(user!.id) })
-  const deliveredTrips = _deliveredTrips?.items ?? []
+  const deliveredTrips = useMemo(() => _deliveredTrips?.items ?? [], [_deliveredTrips])
   const [filter, setFilter] = useState<FilterTab>('all')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
@@ -224,11 +224,10 @@ function MobileDriverHome() {
 
   // Salary period config + navigation
   const { data: config } = useSalaryConfig()
-  const now = new Date()
+  const now = useMemo(() => new Date(), [])
   const defaultPeriod = useMemo(
     () => getSalaryPeriodDates(now, { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [config?.fromDay, config?.toDay],
+    [now, config?.fromDay, config?.toDay],
   )
   const [periodStart, setPeriodStart] = useState<Date>(defaultPeriod.startDate)
 
@@ -270,7 +269,7 @@ function MobileDriverHome() {
   // Trips that match BOTH the period and the active list filter — used by the list.
   const filteredJobs = useMemo(() => {
     const byFilter = filter === 'pending'
-      ? periodJobs.filter(w => w.status === 'PENDING')
+      ? periodJobs.filter(w => !w.matched)
       : periodJobs
     return [...byFilter].sort((a, b) => {
       const da = a.tripDate ?? a.createdAt.slice(0, 10)
@@ -305,7 +304,7 @@ function MobileDriverHome() {
   // Stat card aggregations use periodJobs (NOT filteredJobs) so the totals
   // reflect the whole month regardless of which list tab the driver is viewing.
   const matchedCount = useMemo(() =>
-    periodJobs.filter(w => w.status === 'MATCHED' || w.status === 'COMPLETED').length,
+    periodJobs.filter(w => w.matched).length,
     [periodJobs],
   )
 

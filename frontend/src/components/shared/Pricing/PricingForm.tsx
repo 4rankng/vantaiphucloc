@@ -270,19 +270,19 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
           <div className="typo-label mb-4">CUNG ĐƯỜNG</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="typo-form-label">Điểm lấy hàng</Label>
+              <Label className="typo-form-label">Điểm đi</Label>
               <LocationSelect
                 value={pickupLocationName}
                 onChange={v => { setPickupLocationName(v); setDropoffLocationName('') }}
-                placeholder="Chọn điểm lấy"
+                placeholder="Chọn điểm đi"
               />
             </div>
             <div className="space-y-2">
-              <Label className="typo-form-label">Điểm trả hàng</Label>
+              <Label className="typo-form-label">Điểm đến</Label>
               <LocationSelect
                 value={dropoffLocationName}
                 onChange={setDropoffLocationName}
-                placeholder="Chọn điểm trả"
+                placeholder="Chọn điểm đến"
               />
             </div>
           </div>

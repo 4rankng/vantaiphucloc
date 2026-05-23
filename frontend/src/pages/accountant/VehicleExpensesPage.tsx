@@ -300,7 +300,7 @@ export function VehicleExpensesPage() {
   const updateMutation = useUpdateVehicleExpense()
   const deleteMutation = useDeleteVehicleExpense()
 
-  const expenses = expensePage?.items ?? []
+  const expenses = useMemo(() => expensePage?.items ?? [], [expensePage])
 
   const filteredExpenses = useMemo(() => {
     if (!search.trim()) return expenses

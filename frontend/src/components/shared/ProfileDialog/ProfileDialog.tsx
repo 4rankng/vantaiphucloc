@@ -31,7 +31,12 @@ function EditableField({ label, value, onSave, placeholder }: {
   const [draft, setDraft] = useState(value)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { if (!editing) setDraft(value) }, [value, editing])
+  useEffect(() => {
+    if (!editing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDraft(value)
+    }
+  }, [value, editing])
 
   const handleSave = async () => {
     if (draft.trim() === value) { setEditing(false); return }

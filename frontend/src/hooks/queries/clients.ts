@@ -2,7 +2,7 @@ import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tansta
 import { apiClient } from '@/services/api'
 import { queryKeys } from '../query-keys'
 import type { ApiResponse, Client, PaginatedResult } from '@/data/domain'
-import type { ClientFilters, ClientSortBy, SortOrder } from '@/services/api/clients.api'
+import type { ClientSortBy, SortOrder } from '@/services/api/clients.api'
 
 function unwrap<T>(res: ApiResponse<T>): T {
   if (res.success) return res.data

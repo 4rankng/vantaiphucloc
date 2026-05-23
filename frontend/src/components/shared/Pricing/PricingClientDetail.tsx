@@ -25,12 +25,6 @@ import { Plus, Pencil, Trash2, ChevronLeft, X, Check } from 'lucide-react'
 
 /** Column order for the table */
 const COL_ORDER: ContType[] = ['F20', 'F40', 'E20', 'E40']
-const COL_LABELS: Record<ContType, string> = {
-  F20: 'Hàng 20ft',
-  F40: 'Hàng 40ft',
-  E20: 'Rỗng 20ft',
-  E40: 'Rỗng 40ft',
-}
 
 interface Props {
   clientId: number
@@ -44,12 +38,6 @@ function cellPrice(pricing: Pricing | undefined): string {
   if (!pricing || pricing.lines.length === 0) return '—'
   const first = pricing.lines[0]
   return formatCurrencyFull(first.unitPrice)
-}
-
-/** Extract unit price number */
-function cellUnitPrice(pricing: Pricing | undefined): number {
-  if (!pricing || pricing.lines.length === 0) return 0
-  return pricing.lines[0].unitPrice
 }
 
 export function PricingClientDetail({ clientId, basePath }: Props) {
@@ -254,7 +242,6 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
               {filteredGroups.map(([groupKey, { pickup, dropoff, workTypeMap }], rowIdx) => {
                 // Collect all pricings for actions
                 const allPricings = Array.from(workTypeMap.values())
-                const hasAny = allPricings.length > 0
 
                 // Check if ANY pricing in this row is being edited
                 const editingPricing = allPricings.find(p => p.id === editingId)

@@ -1,17 +1,17 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Button
 } from '@/components/ui'
 import {
-  Upload, FileSpreadsheet, AlertCircle, CheckCircle2,
+  Upload, FileSpreadsheet, CheckCircle2,
   ArrowRight, ChevronRight, Loader2, Info
 } from 'lucide-react'
 import { usePreviewPricing, useCommitPricing } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { formatCurrencyShort } from '@/data/domain'
 import type { Client } from '@/data/domain'
-import type { PricingPreviewResponse, PricingPreviewRow, PricingFormat } from '@/services/api/imports.api'
+import type { PricingFormat } from '@/services/api/imports.api'
 import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 
 interface PricingImportDialogProps {
@@ -56,8 +56,8 @@ export function PricingImportDialog({ open, onClose, clients }: PricingImportDia
         )
         onClose()
       },
-      onError: (err: any) => {
-        toast.error('Lỗi', err.message || 'Không thể nạp bảng giá')
+      onError: (err: unknown) => {
+        const msg = err instanceof Error ? err.message : 'Không thể nạp bảng giá'; toast.error('Lỗi', msg)
       }
     })
   }

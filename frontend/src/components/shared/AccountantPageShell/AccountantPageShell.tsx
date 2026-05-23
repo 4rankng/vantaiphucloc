@@ -1,5 +1,4 @@
 import type { ElementType, ReactNode } from 'react'
-import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
 import { SearchBar } from '@/components/shared/SearchBar'
 import { PulseHint } from '@/components/shared/PulseHint'
 import { Decoration } from '@/components/shared/Decoration'
@@ -12,7 +11,6 @@ interface AccountantPageShellProps {
   searchValue?: string
   onSearchChange?: (v: string) => void
   searchPlaceholder?: string
-  count?: number
   countLabel?: string
   onAdd?: () => void
   addLabel?: string
@@ -22,21 +20,20 @@ interface AccountantPageShellProps {
   children: ReactNode
 }
 
-export function AccountantPageShell({
-  title,
-  subtitle,
-  icon: Icon,
-  searchValue,
-  onSearchChange,
-  searchPlaceholder = 'Tìm kiếm...',
-  count,
-  countLabel,
-  onAdd,
-  addLabel = 'Thêm',
-  addIcon: AddIcon,
-  addHintKey,
-  children,
-}: AccountantPageShellProps) {
+export function AccountantPageShell(props: AccountantPageShellProps) {
+  const {
+    title,
+    subtitle,
+    searchValue,
+    onSearchChange,
+    searchPlaceholder = 'Tìm kiếm...',
+    countLabel,
+    onAdd,
+    addLabel = 'Thêm',
+    addIcon: AddIcon,
+    addHintKey,
+    children,
+  } = props
   return (
     <div className="space-y-4 animate-page-enter">
       {/* `relative` keeps the Decoration anchored; `overflow-hidden` is intentionally

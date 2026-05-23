@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, type ReactNode } from 'react'
-import { Truck, CircleDollarSign, LayoutDashboard, Phone, Pencil, Trash2, ChevronRight, Plus, UserCog } from 'lucide-react'
+import { Phone, Pencil, Trash2, ChevronRight, Plus, UserCog } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -49,7 +49,7 @@ function UserManagementInner() {
     search: debouncedSearch || undefined,
     pageSize: 500,
   })
-  const allUsers = pagedData?.items ?? []
+  const allUsers = useMemo(() => pagedData?.items ?? [], [pagedData])
   const users = useMemo(() => allUsers.filter(u => u.isActive !== false), [allUsers])
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()

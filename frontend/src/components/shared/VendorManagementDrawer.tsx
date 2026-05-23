@@ -45,7 +45,8 @@ export function VendorManagementDrawer({ open, onClose }: { open: boolean; onClo
   const [deleteTarget, setDeleteTarget] = useState<Vendor | null>(null)
 
   const [limit, setLimit] = useState(BATCH)
-  useEffect(() => { setLimit(BATCH) }, [search])
+  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
+ setLimit(BATCH) }, [search])
 
   const filtered = useMemo(() => {
     const q = search.trim()
@@ -258,6 +259,7 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       </td>
       <td style={{ padding: '5px 8px' }}>
         <div className="flex items-center">
+          {/* eslint-disable-next-line react-hooks/refs */}
           <input ref={refs.phone} className="nepo-input text-[12px]" style={{ minWidth: 90, flex: 1 }}
             type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="SĐT"
             {...inputProps} />
@@ -266,6 +268,7 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       </td>
       <td style={{ padding: '5px 8px' }}>
         <div className="flex items-center">
+          {/* eslint-disable-next-line react-hooks/refs */}
           <input ref={refs.address} className="nepo-input text-[12px]" style={{ minWidth: 100, flex: 1 }}
             value={form.address} onChange={e => set('address', e.target.value)} placeholder="Địa chỉ"
             {...inputProps} />
@@ -274,6 +277,7 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       </td>
       <td style={{ padding: '5px 8px' }}>
         <div className="flex items-center">
+          {/* eslint-disable-next-line react-hooks/refs */}
           <input ref={refs.contactPerson} className="nepo-input text-[12px]" style={{ minWidth: 80, flex: 1 }}
             value={form.contactPerson} onChange={e => set('contactPerson', e.target.value)} placeholder="Người liên hệ"
             {...inputProps} />
@@ -283,6 +287,7 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       <td style={{ padding: '5px 8px' }}>
         <div className="flex items-center">
           <div style={{ flex: 1 }}>
+            {/* eslint-disable-next-line react-hooks/refs */}
             <input ref={refs.taxCode} className="nepo-input text-[12px]"
               style={{ width: '100%', borderColor: errors.taxCode ? 'var(--status-error, #e53)' : undefined }}
               value={form.taxCode} onChange={e => set('taxCode', e.target.value)} placeholder="MST"

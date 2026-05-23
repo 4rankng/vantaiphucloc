@@ -267,7 +267,7 @@ export interface VendorImportResponse {
   matched: number
   fraudSkipped: number
   errors: string[]
-  details: Record<string, any>[]
+  details: Record<string, unknown>[]
 }
 
 export async function uploadVendorReconciliation(file: File, vendorId: number): Promise<ApiResponse<VendorImportResponse>> {
@@ -290,7 +290,7 @@ export interface DriverImportResponse {
   matched: number
   fraudSkipped: number
   errors: string[]
-  details: Record<string, any>[]
+  details: Record<string, unknown>[]
 }
 
 export async function uploadDriverReconciliation(file: File): Promise<ApiResponse<DriverImportResponse>> {

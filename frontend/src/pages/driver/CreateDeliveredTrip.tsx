@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Camera, RotateCcw, Trash2, AlertCircle, Loader2, Plus, ChevronLeft } from 'lucide-react'
+import { Camera, ScanLine, RotateCcw, Trash2, AlertCircle, Loader2, Plus, ChevronLeft, CheckCircle2 } from 'lucide-react'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import { ContainerTypeGrid } from '@/components/shared/ContainerTypeGrid'
 import { TripSummaryDialog } from '@/components/shared/TripSummaryDialog'
@@ -57,105 +57,98 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
         {containers.map((cont, idx) => (
           <div
             key={idx}
-            className="rounded-lg p-3 flex gap-3"
+            className="rounded-xl p-4 flex flex-col gap-3"
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
           >
-            {/* ── Left: square photo / capture placeholder ── */}
-            <div className="shrink-0 self-stretch flex flex-col w-[120px] lg:w-[148px]">
-              {cont.photoTaken && cont.photoDataUrl ? (
-                <>
-                  <button
-                    onClick={openScanner(idx)}
-                    className="rounded-xl overflow-hidden touch-manipulation flex-1"
-                    style={{ border: '2px solid var(--theme-brand-primary)', minHeight: 120 }}
-                  >
-                    <img src={cont.photoDataUrl} alt="Container" className="w-full h-full object-cover" />
-                  </button>
-                  <button
-                    onClick={openScanner(idx)}
-                    className="flex items-center justify-center gap-1 text-[10px] font-medium touch-manipulation w-full mt-1"
-                    style={{ color: 'var(--theme-text-muted)' }}
-                  >
-                    <RotateCcw className="w-2.5 h-2.5" /> Chụp lại
-                  </button>
-                </>
-              ) : (
-                /* ── No photo: square placeholder fills card height ── */
+            {/* ── Header row: label + scan button + delete ── */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold flex-1" style={{ color: 'var(--theme-text-primary)' }}>
+                Cont {idx + 1}
+              </span>
+
+              {/* Scan button — optional, fills container number via OCR */}
+              <button
+                onClick={openScanner(idx)}
+                aria-label="Quét số container bằng camera"
+                className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold touch-manipulation transition-all active:scale-[0.96]"
+                style={{
+                  background: cont.photoTaken && !cont.ocrError
+                    ? 'var(--theme-status-success-light)'
+                    : 'var(--theme-brand-secondary)',
+                  color: cont.photoTaken && !cont.ocrError
+                    ? 'var(--theme-status-success)'
+                    : 'var(--theme-brand-primary)',
+                }}
+              >
+                {cont.ocrLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : cont.photoTaken && !cont.ocrError ? (
+                  <><CheckCircle2 className="w-3.5 h-3.5" /> Đã quét</>
+                ) : cont.photoTaken && cont.ocrError ? (
+                  <><RotateCcw className="w-3.5 h-3.5" /> Quét lại</>
+                ) : (
+                  <><ScanLine className="w-3.5 h-3.5" /><Camera className="w-3 h-3" /> Quét</>
+                )}
+              </button>
+
+              {containers.length > 1 && (
                 <button
-                  onClick={openScanner(idx)}
-                  aria-label="Chụp ảnh container"
-                  className="rounded-xl border-2 border-dashed flex items-center justify-center touch-manipulation transition-colors flex-1"
-                  style={{ borderColor: 'var(--theme-border-default)', minHeight: 120 }}
+                  onClick={() => removeContainer(idx)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg touch-manipulation"
+                  style={{ background: 'var(--theme-status-error-light)' }}
                 >
-                  <Camera className="w-8 h-8" style={{ color: 'var(--theme-brand-primary)' }} />
+                  <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--theme-status-error)' }} />
                 </button>
               )}
             </div>
 
-            {/* ── Right: label + delete + number input + type grid + status ── */}
-            <div className="flex-1 min-w-0 flex flex-col gap-2">
-              {/* Row: "Cont N" label + delete */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-                  Cont {idx + 1}
-                </span>
-                {containers.length > 1 && (
-                  <button
-                    onClick={() => removeContainer(idx)}
-                    className="w-9 h-9 flex items-center justify-center rounded-full touch-manipulation"
-                    style={{ background: 'var(--theme-status-error-light)' }}
-                  >
-                    <Trash2 className="w-4 h-4" style={{ color: 'var(--theme-status-error)' }} />
-                  </button>
-                )}
-              </div>
-
-              {/* Container number input */}
-              <div className="relative">
-                <input
-                  value={cont.containerNumber}
-                  onChange={e => updateContainer(idx, 'containerNumber', e.target.value)}
-                  onBlur={() => validateContainerOnBlur(idx)}
-                  className="w-full h-11 rounded-xl px-3.5 text-sm font-mono font-semibold [&::placeholder]:opacity-50"
-                  style={{
-                    background: 'var(--theme-bg-tertiary)',
-                    border: `1.5px solid ${containerErrors[idx] ? 'var(--theme-status-error)' : cont.ocrError ? 'var(--theme-status-warning)' : 'transparent'}`,
-                    color: 'var(--theme-text-primary)',
-                    paddingRight: cont.ocrLoading ? '40px' : undefined,
-                  }}
-                  placeholder={cont.ocrLoading ? 'Nhận diện...' : 'MSKU1234567'}
-                  readOnly={cont.ocrLoading}
-                />
-                {cont.ocrLoading && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin" style={{ color: 'var(--theme-brand-primary)' }} />
-                )}
-              </div>
-
-              {/* Container type grid */}
-              <ContainerTypeGrid
-                value={cont.workType}
-                onChange={(wt) => updateContainer(idx, 'workType', wt)}
-                layout="grid2x2"
+            {/* ── Container number input ── */}
+            <div className="relative">
+              <input
+                value={cont.containerNumber}
+                onChange={e => updateContainer(idx, 'containerNumber', e.target.value)}
+                onBlur={() => validateContainerOnBlur(idx)}
+                className="w-full h-12 rounded-xl px-4 text-base font-mono font-semibold tracking-wide [&::placeholder]:opacity-40 [&::placeholder]:font-normal [&::placeholder]:tracking-normal"
+                style={{
+                  background: 'var(--theme-bg-tertiary)',
+                  border: `1.5px solid ${containerErrors[idx] ? 'var(--theme-status-error)' : cont.containerNumber ? 'var(--theme-brand-primary)' : 'transparent'}`,
+                  color: 'var(--theme-text-primary)',
+                  paddingRight: cont.ocrLoading ? '44px' : undefined,
+                }}
+                placeholder={cont.ocrLoading ? 'Đang nhận diện...' : 'MSKU1234567'}
+                readOnly={cont.ocrLoading}
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
               />
-
-              {/* Status messages */}
-              {forceManualEntry && !cont.ocrLoading && (
-                <p className="text-[10px] font-semibold flex items-center gap-1" style={{ color: 'var(--theme-status-warning)' }}>
-                  <AlertCircle className="w-3 h-3 shrink-0" /> Vui lòng nhập tay số cont
-                </p>
-              )}
-              {containerErrors[idx] && (
-                <p className="text-[10px] font-semibold flex items-center gap-1" style={{ color: 'var(--theme-status-error)' }}>
-                  <AlertCircle className="w-3 h-3 shrink-0" /> {containerErrors[idx]}
-                </p>
-              )}
-              {!forceManualEntry && !containerErrors[idx] && (
-                <p className="text-[10px] flex items-center gap-1" style={{ color: cont.ocrError ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)' }}>
-                  <AlertCircle className="w-3 h-3 shrink-0" />
-                  {cont.ocrError ?? (isOnline ? 'Sửa nếu nhận diện sai' : 'Nhập số cont thủ công')}
-                </p>
+              {cont.ocrLoading && (
+                <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin" style={{ color: 'var(--theme-brand-primary)' }} />
               )}
             </div>
+
+            {/* ── Container type grid ── */}
+            <ContainerTypeGrid
+              value={cont.workType}
+              onChange={(wt) => updateContainer(idx, 'workType', wt)}
+              layout="grid2x2"
+            />
+
+            {/* ── Status messages ── */}
+            {forceManualEntry && !cont.ocrLoading && (
+              <p className="text-[11px] font-semibold flex items-center gap-1.5" style={{ color: 'var(--theme-status-warning)' }}>
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" /> Vui lòng nhập tay số cont
+              </p>
+            )}
+            {containerErrors[idx] && (
+              <p className="text-[11px] font-semibold flex items-center gap-1.5" style={{ color: 'var(--theme-status-error)' }}>
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {containerErrors[idx]}
+              </p>
+            )}
+            {cont.ocrError && !containerErrors[idx] && (
+              <p className="text-[11px] flex items-center gap-1.5" style={{ color: 'var(--theme-status-warning)' }}>
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {cont.ocrError} — nhập tay hoặc quét lại
+              </p>
+            )}
           </div>
         ))}
       </div>
@@ -226,9 +219,9 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
 
           <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm lấy</label>
+              <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm đi</label>
               <LocationSelect
-                placeholder="Chọn điểm lấy"
+                placeholder="Chọn điểm đi"
                 value={pickupLocation}
                 onChange={(val: string) => {
                   setPickupLocation(val)
@@ -238,9 +231,9 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm trả</label>
+              <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm đến</label>
               <LocationSelect
-                placeholder="Chọn điểm trả"
+                placeholder="Chọn điểm đến"
                 value={dropoffLocation}
                 onChange={setDropoffLocation}
               />

@@ -24,10 +24,10 @@ export function EditDeliveredTrip() {
     )
   }
 
-  if (deliveredTrip.status !== 'PENDING') {
+  if (deliveredTrip.matched) {
     return (
       <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>
-        <p className="text-sm">Chỉ có thể sửa chuyến chưa đối soát</p>
+        <p className="text-sm">Chuyến đã được ghép — không thể chỉnh sửa</p>
       </div>
     )
   }

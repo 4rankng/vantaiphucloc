@@ -42,30 +42,30 @@ function fmtDate(iso: string): string {
   return `${day} · ${time}`
 }
 
-function ContainerList({ wo }: { wo: DeliveredTrip }) {
+/** Single cont chip — shows contNumber + contType badge */
+function ContainerChip({ wo }: { wo: DeliveredTrip }) {
+  if (!wo.contNumber && !wo.contType) return null
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {wo.containers.map((c, i) => (
-        <div key={i} className="flex items-center gap-1.5">
-          <span className="text-sm font-bold font-mono" style={{ color: 'var(--theme-text-primary)' }}>
-            {c.containerNumber || '—'}
-          </span>
-          <span
-            className="text-xs font-bold px-1.5 py-0.5 rounded-md shrink-0"
-            style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}
-          >
-            {getWorkTypeLabel(c.workType) ?? c.workType}
-          </span>
-        </div>
-      ))}
+    <div className="flex items-center gap-1.5">
+      <span className="text-sm font-bold font-mono" style={{ color: 'var(--theme-text-primary)' }}>
+        {wo.contNumber || '—'}
+      </span>
+      {wo.contType && (
+        <span
+          className="text-xs font-bold px-1.5 py-0.5 rounded-md shrink-0"
+          style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}
+        >
+          {getWorkTypeLabel(wo.contType) ?? wo.contType}
+        </span>
+      )}
     </div>
   )
 }
 
-function StatusPill({ status, variant, compact = false }: { status: DeliveredTrip['status']; variant: 'driver' | 'accountant'; compact?: boolean }) {
+function StatusPill({ matched, variant, compact = false }: { matched: boolean; variant: 'driver' | 'accountant'; compact?: boolean }) {
   const padding = compact ? 'px-2 py-0.5' : 'px-2.5 py-1'
   const iconSize = compact ? 'w-2.5 h-2.5' : 'w-3 h-3'
-  if (status === 'PENDING') {
+  if (!matched) {
     return (
       <span
         className={`flex items-center gap-1 text-[11px] font-semibold ${padding} rounded-full shrink-0`}
@@ -75,27 +75,24 @@ function StatusPill({ status, variant, compact = false }: { status: DeliveredTri
         }}
       >
         <Clock className={iconSize} />
-        {variant === 'driver' ? 'Chờ ghép' : 'Chờ ghép'}
+        Chờ ghép
       </span>
     )
   }
-  if (status === 'MATCHED' || status === 'COMPLETED') {
-    return (
-      <span
-        className={`flex items-center gap-1 text-[11px] font-semibold ${padding} rounded-full shrink-0`}
-        style={{
-          background: 'color-mix(in srgb, var(--theme-status-success, #16a34a) 12%, transparent)',
-          color: 'var(--theme-status-success, #16a34a)',
-        }}
-      >
-        {variant === 'driver'
-          ? <CheckCircle className={iconSize} />
-          : <><Lock className={iconSize} /> Đã khớp</>
-        }
-      </span>
-    )
-  }
-  return null
+  return (
+    <span
+      className={`flex items-center gap-1 text-[11px] font-semibold ${padding} rounded-full shrink-0`}
+      style={{
+        background: 'color-mix(in srgb, var(--theme-status-success, #16a34a) 12%, transparent)',
+        color: 'var(--theme-status-success, #16a34a)',
+      }}
+    >
+      {variant === 'driver'
+        ? <CheckCircle className={iconSize} />
+        : <><Lock className={iconSize} /> Đã khớp</>
+      }
+    </span>
+  )
 }
 
 /**
@@ -103,8 +100,8 @@ function StatusPill({ status, variant, compact = false }: { status: DeliveredTri
  *
  *   ┌────────────────────────────────────────────────────────┐
  *   │ Hapag-Lloyd Việt Nam                  +450.000 đ       │  ← line 1
- *   │ Điểm lấy:  Cát Lái                   09-05 · 08:30     │  ← line 2
- *   │ Điểm trả:  Đồng Nai                       [Đã ghép]    │  ← line 3
+ *   │ Điểm đi:  Cát Lái                   09-05 · 08:30     │  ← line 2
+ *   │ Điểm đến:  Đồng Nai                       [Đã ghép]    │  ← line 3
  *   └────────────────────────────────────────────────────────┘
  *
  * Container info is intentionally omitted — it only appears on the detail
@@ -143,15 +140,15 @@ function DriverCard({ wo, onClick }: { wo: DeliveredTrip; onClick: () => void })
           </span>
         ) : (
           <span className="text-[11px] font-medium whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
-            {wo.status === 'PENDING' ? 'Chờ ghép' : '—'}
+            {!wo.matched ? 'Chờ ghép' : '—'}
           </span>
         )}
       </div>
 
-      {/* Row 2 — Điểm lấy (left) + timestamp (right) */}
+      {/* Row 2 — Điểm đi (left) + timestamp (right) */}
       <div className="mt-1.5 flex items-baseline justify-between gap-3">
         <p className="text-[12px] truncate flex-1 min-w-0" style={{ color: 'var(--theme-text-secondary)' }}>
-          <span style={{ color: 'var(--theme-text-muted)' }}>Điểm lấy:&nbsp;</span>
+          <span style={{ color: 'var(--theme-text-muted)' }}>Điểm đi:&nbsp;</span>
           {pickup}
         </p>
         <span className="text-[11px] tabular-nums whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
@@ -159,14 +156,14 @@ function DriverCard({ wo, onClick }: { wo: DeliveredTrip; onClick: () => void })
         </span>
       </div>
 
-      {/* Row 3 — Điểm trả (left) + status chip (right) */}
+      {/* Row 3 — Điểm đến (left) + status chip (right) */}
       <div className="mt-0.5 flex items-baseline justify-between gap-3">
         <p className="text-[12px] truncate flex-1 min-w-0" style={{ color: 'var(--theme-text-secondary)' }}>
-          <span style={{ color: 'var(--theme-text-muted)' }}>Điểm trả:&nbsp;</span>
+          <span style={{ color: 'var(--theme-text-muted)' }}>Điểm đến:&nbsp;</span>
           {dropoff || '—'}
         </p>
         <div className="shrink-0 relative z-10">
-          <StatusPill status={wo.status} variant="driver" compact />
+          <StatusPill matched={wo.matched} variant="driver" compact />
         </div>
       </div>
     </button>
@@ -183,8 +180,8 @@ function AccountantCard({ wo }: { wo: DeliveredTrip }) {
       }}
     >
       <div className="flex items-start justify-between gap-3 mb-2">
-        <ContainerList wo={wo} />
-        <StatusPill status={wo.status} variant="accountant" />
+        <ContainerChip wo={wo} />
+        <StatusPill matched={wo.matched} variant="accountant" />
       </div>
 
       <p className="text-sm font-bold leading-snug" style={{ color: 'var(--theme-text-primary)' }}>

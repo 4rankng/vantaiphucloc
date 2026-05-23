@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
 const STORAGE_PREFIX = 'tth-hint-dismissed-'
 
@@ -13,21 +13,19 @@ export function PulseHint({
   hintKey: string
   className?: string
 }) {
-  const [dismissed, setDismissed] = useState(true)
-
-  useEffect(() => {
+  const [dismissed, setDismissed] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_PREFIX + hintKey)
-      setDismissed(stored === '1')
+      return stored === '1'
     } catch {
-      setDismissed(false)
+      return false
     }
-  }, [hintKey])
+  })
 
   const handleClick = () => {
     if (!dismissed) {
       setDismissed(true)
-      try { localStorage.setItem(STORAGE_PREFIX + hintKey, '1') } catch {}
+      try { localStorage.setItem(STORAGE_PREFIX + hintKey, '1') } catch { /* ignore write failure */ }
     }
   }
 

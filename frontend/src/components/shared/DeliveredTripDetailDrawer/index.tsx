@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import {
-  User,
   Sparkles,
 } from 'lucide-react'
 import { Drawer } from '@/components/shared/Drawer'
@@ -47,8 +46,11 @@ export function DeliveredTripDetailDrawer({
   const [bookedTrip, setBookedTrip] = useState<BookedTrip | null>(null)
 
   useEffect(() => {
-    if (fetchedBookedTrip && !bookedTrip) setBookedTrip(fetchedBookedTrip)
-  }, [fetchedBookedTrip])
+    if (fetchedBookedTrip && !bookedTrip) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBookedTrip(fetchedBookedTrip)
+    }
+  }, [fetchedBookedTrip, bookedTrip])
 
   const updateTrip = {
     ...(_updateTrip),

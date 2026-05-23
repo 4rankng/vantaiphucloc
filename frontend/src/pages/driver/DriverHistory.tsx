@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera } from 'lucide-react'
+import { Truck } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatCurrencyFull } from '@/data/domain'
 import { FilterPills } from '@/components/shared/FilterPills'
@@ -12,17 +12,17 @@ export function DriverHistory() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { data: _deliveredTrips, isLoading: loading } = useDeliveredTrips({ driverId: user!.id })
-  const deliveredTrips = _deliveredTrips?.items ?? []
+  const deliveredTrips = useMemo(() => _deliveredTrips?.items ?? [], [_deliveredTrips])
   const [filter, setFilter] = useState<FilterValue>('ALL')
 
   const filtered = useMemo(() =>
-    filter === 'ALL' ? deliveredTrips : deliveredTrips.filter(w => w.status === filter),
+    filter === 'ALL' ? deliveredTrips : deliveredTrips.filter(w => !w.matched),
     [deliveredTrips, filter],
   )
 
   const counts: Record<FilterValue, number> = useMemo(() => ({
     ALL: deliveredTrips.length,
-    PENDING: deliveredTrips.filter(w => w.status === 'PENDING').length,
+    PENDING: deliveredTrips.filter(w => !w.matched).length,
   }), [deliveredTrips])
 
   const totalEarnings = useMemo(() =>
@@ -69,8 +69,8 @@ export function DriverHistory() {
           </>
         ) : filtered.length === 0 ? (
           <div className="col-span-full rounded-lg p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
-            <Camera className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)' }} />
-            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có số cont nào</p>
+            <Truck className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)' }} />
+            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có chuyến nào</p>
           </div>
         ) : (
           filtered.map(wo => (

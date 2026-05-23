@@ -17,11 +17,10 @@ export interface SidebarNavItem {
 
 interface SidebarProps {
   items: SidebarNavItem[]
-  title: string
   basePath: string
 }
 
-export function Sidebar({ items, title, basePath }: SidebarProps) {
+export function Sidebar({ items, basePath }: SidebarProps) {
   const { role, logout } = useAuth()
   const navigate = useNavigate()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)

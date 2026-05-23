@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Truck, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
@@ -80,8 +80,7 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       <td style={{ padding: '5px 8px' }}>
         <div className="flex items-center">
           <div style={{ flex: 1 }}>
-            <input
-              ref={refs.name}
+            <input ref={refs.name}
               className="nepo-input text-[12px]"
               style={{ width: '100%', borderColor: errors.name ? 'var(--status-error, #e53)' : undefined }}
               value={form.name}
@@ -115,8 +114,8 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       {/* SĐT */}
       <td style={{ padding: '5px 8px' }}>
         <div className="flex items-center">
-          <input
-            ref={refs.phone}
+          {/* eslint-disable-next-line react-hooks/refs */}
+          <input ref={refs.phone}
             className="nepo-input text-[12px]"
             style={{ minWidth: 90, flex: 1 }}
             type="tel"
@@ -131,8 +130,8 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       {/* Địa chỉ */}
       <td style={{ padding: '5px 8px' }}>
         <div className="flex items-center">
-          <input
-            ref={refs.address}
+          {/* eslint-disable-next-line react-hooks/refs */}
+          <input ref={refs.address}
             className="nepo-input text-[12px]"
             style={{ minWidth: 100, flex: 1 }}
             value={form.address}
@@ -146,8 +145,8 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       {/* Liên hệ */}
       <td style={{ padding: '5px 8px' }}>
         <div className="flex items-center">
-          <input
-            ref={refs.contactPerson}
+          {/* eslint-disable-next-line react-hooks/refs */}
+          <input ref={refs.contactPerson}
             className="nepo-input text-[12px]"
             style={{ minWidth: 80, flex: 1 }}
             value={form.contactPerson}
@@ -162,8 +161,8 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       <td style={{ padding: '5px 8px' }}>
         <div className="flex items-center">
           <div style={{ flex: 1 }}>
-            <input
-              ref={refs.taxCode}
+            {/* eslint-disable-next-line react-hooks/refs */}
+            <input ref={refs.taxCode}
               className="nepo-input text-[12px]"
               style={{ width: '100%', borderColor: errors.taxCode ? 'var(--status-error, #e53)' : undefined }}
               value={form.taxCode}
@@ -249,7 +248,8 @@ export function VendorsPage() {
   const [editingField, setEditingField] = useState<FocusableField>(null)
   const [deleteTarget, setDeleteTarget] = useState<Vendor | null>(null)
 
-  useEffect(() => { setLimit(BATCH) }, [debouncedSearch])
+  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
+ setLimit(BATCH) }, [debouncedSearch])
 
   const visible = vendors.slice(0, limit)
   const hasMore = limit < vendors.length

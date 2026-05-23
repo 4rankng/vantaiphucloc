@@ -27,6 +27,7 @@ import {
   useVendors,
 } from '@/hooks/use-queries'
 import type { DuplicateGroup } from '@/services/api/deliveredTrips.api'
+import type { PreviewResultDto, VendorImportResponse, DriverImportResponse } from '@/services/api/imports.api'
 import { getWorkTypeLabel, type Client } from '@/data/domain'
 
 type ClientFormData = Omit<Client, 'id'>
@@ -76,8 +77,8 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
   const [creatingClient, setCreatingClient] = useState(false)
   const [clientForm, setClientForm] = useState<ClientFormData>(EMPTY_CLIENT_FORM)
   const [clientFormErrors, setClientFormErrors] = useState<{ name?: string; phone?: string; taxCode?: string }>({})
-  const [previewResult, setPreviewResult] = useState<any>(null)
-  const [reconResult, setReconResult] = useState<any>(null)
+  const [previewResult, setPreviewResult] = useState<PreviewResultDto | null>(null)
+  const [reconResult, setReconResult] = useState<VendorImportResponse | DriverImportResponse | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
 
@@ -198,7 +199,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
       commitClientExcel.mutate(
         {
           client_id: Number(clientId),
-          rows: (previewResult?.accepted ?? []).map((r: any) => r.values)
+          rows: (previewResult?.accepted ?? []).map(r => r.values)
         },
         {
           onSuccess: () => setStep('done'),
@@ -306,6 +307,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     if (step === 'preview' && !clientId && excelClientName && !creatingClient) {
       // Don't auto-open — let user choose. Just pre-fill if they open.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setClientForm(prev => prev.name ? prev : { ...EMPTY_CLIENT_FORM, name: excelClientName })
     }
   }, [step, clientId, excelClientName, creatingClient])

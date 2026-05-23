@@ -11,7 +11,7 @@ export function ClientJobs() {
   const [showPricing, setShowPricing] = useState(false)
 
   const { data: _deliveredTrips } = useDeliveredTrips()
-  const allDeliveredTrips = _deliveredTrips?.items ?? []
+  const allDeliveredTrips = useMemo(() => _deliveredTrips?.items ?? [], [_deliveredTrips])
   const { data: clients = [] } = useClients()
   const { data: pricings = [] } = usePricings({ clientId })
 
