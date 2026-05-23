@@ -43,7 +43,7 @@ CANONICAL_FIELDS: tuple[CanonicalField, ...] = (
     CanonicalField("consignee",           "Khách hàng / chủ hàng", False, ""),
     CanonicalField("commodity",           "Mặt hàng",              False, ""),
     CanonicalField("driver_name",         "Tài xế",                False, ""),
-    CanonicalField("tractor_plate",       "Biển số xe",            False, ""),
+    CanonicalField("vehicle_plate",       "Biển số xe",            False, ""),
     CanonicalField("remarks",             "Ghi chú",               False, ""),
 )
 
@@ -177,7 +177,7 @@ SYNONYMS: dict[str, list[str]] = {
         # Glory Shanghai oddly translates this — keep it
         "nguoi ban hat nhan", "người bán hạt nhân",
     ],
-    "tractor_plate": [
+    "vehicle_plate": [
         "plate", "license plate", "bks", "bien so", "biển số",
         "so xe", "số xe", "dau keo", "đầu kéo", "tractor",
         "truck", "truck plate",

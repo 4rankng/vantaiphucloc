@@ -33,7 +33,7 @@ from app.contexts.operations.infrastructure.import_pipeline.header_finder import
 )
 from app.contexts.operations.infrastructure.import_pipeline.llm import HeaderClassifier
 from app.contexts.operations.infrastructure.import_pipeline.pattern_detector import DetectedPattern, detect_pattern
-from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import ExtractedRow, extract_bay_plan, extract_invoice, extract_loading_list
+from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import ExtractedRow, extract_bay_plan, extract_invoice, extract_loading_list, extract_settlement_list
 from app.contexts.operations.infrastructure.import_pipeline.sheet_picker import SheetScore, score_sheets
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
     parse_container_no,
@@ -229,7 +229,7 @@ def _parse_row(
     consignee = parse_string(raw_dict.get("consignee"), max_len=255) if "consignee" in raw_dict else ""
     commodity = parse_string(raw_dict.get("commodity"), max_len=500) if "commodity" in raw_dict else ""
     driver_name = parse_string(raw_dict.get("driver_name"), max_len=255) if "driver_name" in raw_dict else ""
-    plate = parse_plate(raw_dict.get("tractor_plate")) if "tractor_plate" in raw_dict else ""
+    plate = parse_plate(raw_dict.get("vehicle_plate")) if "vehicle_plate" in raw_dict else ""
     remarks = parse_string(raw_dict.get("remarks"), max_len=500) if "remarks" in raw_dict else ""
 
     work_type = f"{kind}{size}"  # F20 / F40 / E20 / E40
@@ -251,7 +251,7 @@ def _parse_row(
         "consignee": consignee,
         "commodity": commodity,
         "driver_name": driver_name,
-        "tractor_plate": plate,
+        "vehicle_plate": plate,
         "remarks": remarks,
     }
     return raw_dict, parsed
@@ -419,6 +419,7 @@ def _run_pattern_preview(
         "bay_plan": extract_bay_plan,
         "loading_list": extract_loading_list,
         "invoice": extract_invoice,
+        "settlement_list": extract_settlement_list,
     }
     extractor = extractors.get(pattern.pattern_name)
     if extractor is None:
@@ -465,7 +466,7 @@ def _build_preview_from_extracted(
                 "consignee": "",
                 "commodity": "",
                 "driver_name": "",
-                "tractor_plate": "",
+                "vehicle_plate": "",
                 "remarks": "",
             },
         })
@@ -521,7 +522,7 @@ class TripGroup:
     trip_date: str
     pickup_location: str
     dropoff_location: str
-    tractor_plate: str
+    vehicle_plate: str
     driver_name: str
     customer_ref: str
     rows: list[dict[str, Any]]            # the underlying ParsedRow.values dicts
@@ -532,7 +533,7 @@ def group_rows_into_trips(
 ) -> list[TripGroup]:
     """Apply the grouping rule documented in `IMPORT_GENERIC_DESIGN.md`:
 
-    - When a row carries a strong grouping signal — `tractor_plate` and/or
+    - When a row carries a strong grouping signal — `vehicle_plate` and/or
       `customer_ref` — group rows that share that signal **plus** trip_date
       and dropoff_location into one trip.
     - Otherwise: 1 row = 1 trip (current default).
@@ -545,7 +546,7 @@ def group_rows_into_trips(
 
     for row in accepted_rows:
         v = row["values"] if "values" in row else row
-        plate = (v.get("tractor_plate") or "").strip().upper()
+        plate = (v.get("vehicle_plate") or "").strip().upper()
         ref = (v.get("customer_ref") or "").strip()
         trip_date = v.get("trip_date") or ""
         pickup = (v.get("pickup_location") or "").strip()
@@ -556,7 +557,7 @@ def group_rows_into_trips(
             # No grouping signal → singleton trip
             singletons.append(TripGroup(
                 trip_date=trip_date, pickup_location=pickup, dropoff_location=dropoff,
-                tractor_plate=plate, driver_name=v.get("driver_name", ""),
+                vehicle_plate=plate, driver_name=v.get("driver_name", ""),
                 customer_ref=ref, rows=[v],
             ))
             continue
@@ -566,7 +567,7 @@ def group_rows_into_trips(
         if existing is None:
             groups[key] = TripGroup(
                 trip_date=trip_date, pickup_location=pickup, dropoff_location=dropoff,
-                tractor_plate=plate, driver_name=v.get("driver_name", ""),
+                vehicle_plate=plate, driver_name=v.get("driver_name", ""),
                 customer_ref=ref, rows=[v],
             )
         else:

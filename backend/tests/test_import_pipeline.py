@@ -25,6 +25,7 @@ from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors i
     extract_bay_plan,
     extract_invoice,
     extract_loading_list,
+    extract_settlement_list,
 )
 from app.contexts.operations.infrastructure.import_pipeline.pipeline import run_preview
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
@@ -50,6 +51,7 @@ GLORY_NEW = DOCS / "2.GLORY SHANGHAI- 2612N.xlsx"
 CONSCIENCE = DOCS / "8.CONSCIENCE 2615N.xlsx"
 HAIAN_BETA = DOCS / "Loading list of HAIAN BETA 062S.xls"
 PHUC_LOC = DOCS / "Phúc Lộc - Shipside T4.26 HAP.xlsx"
+SAMPLE_IO = DOCS / "templates" / "sample-input-output.xlsx"
 
 
 # ---------------------------------------------------------------------------
@@ -71,6 +73,8 @@ PHUC_LOC = DOCS / "Phúc Lộc - Shipside T4.26 HAP.xlsx"
         ("CY", "pickup_location"),
         ("Del Port", "dropoff_location"),
         ("Booking No", "customer_ref"),
+        ("SỐCONTAINER", "container_no"),
+        ("SOCONTAINER", "container_no"),
     ],
 )
 def test_synonym_dictionary_matches_known_headers(header: str, expected_field: str):
@@ -219,7 +223,7 @@ async def test_glory_shanghai_skips_stowage_picks_sheet1(files_present):
     assert res.sheet_name == "Sheet1"
     assert res.stats["accepted_count"] >= 100
     # Tractor plate + driver name extracted from the Vietnamese-headed columns
-    assert res.accepted[0]["values"]["tractor_plate"] != ""
+    assert res.accepted[0]["values"]["vehicle_plate"] != ""
 
 
 @pytest.mark.asyncio
@@ -463,3 +467,62 @@ async def test_phucloc_pattern_preview(pattern_files_present):
     first = res.accepted[0]["values"]
     assert first["pickup_location"] != ""
     assert first["dropoff_location"] != ""
+
+
+# ---------------------------------------------------------------------------
+# Settlement List (BẢNG KÊ QUYẾT TOÁN — Vietnamese reconciliation)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def sample_io_sheets():
+    if not SAMPLE_IO.exists():
+        pytest.skip("sample-input-output.xlsx missing")
+    sheets = load_workbook(SAMPLE_IO.read_bytes(), SAMPLE_IO.name)
+    return sheets
+
+
+def test_detect_settlement_list(sample_io_sheets):
+    pattern = detect_pattern(sample_io_sheets, "sample-input-output.xlsx")
+    assert pattern is not None
+    assert pattern.pattern_name == "settlement_list"
+    assert pattern.confidence >= 0.6
+
+
+def test_extract_settlement_list(sample_io_sheets):
+    accepted, rejected = extract_settlement_list(sample_io_sheets, "sample-input-output.xlsx")
+    assert len(accepted) > 0
+    for row in accepted:
+        assert len(row.container_number) == 11
+        assert row.work_type in ("E20", "E40", "F20", "F40")
+        assert row.pickup != ""
+        assert row.dropoff != ""
+
+
+def test_settlement_list_work_types(sample_io_sheets):
+    accepted, _ = extract_settlement_list(sample_io_sheets, "sample-input-output.xlsx")
+    work_types = {r.work_type for r in accepted}
+    assert len(work_types) >= 2
+    assert all(wt in ("E20", "E40", "F20", "F40") for wt in work_types)
+
+
+def test_settlement_list_locations(sample_io_sheets):
+    accepted, _ = extract_settlement_list(sample_io_sheets, "sample-input-output.xlsx")
+    pickups = {r.pickup for r in accepted if r.pickup}
+    dropoffs = {r.dropoff for r in accepted if r.dropoff}
+    assert len(pickups) >= 1
+    assert len(dropoffs) >= 1
+
+
+@pytest.mark.asyncio
+async def test_settlement_list_e2e_preview():
+    if not SAMPLE_IO.exists():
+        pytest.skip("sample-input-output.xlsx missing")
+    res = await run_preview(SAMPLE_IO.read_bytes(), SAMPLE_IO.name, default_trip_date=date(2026, 4, 1))
+    assert res.stats["accepted_count"] > 0
+    first = res.accepted[0]["values"]
+    assert "container_no" in first
+    assert first["work_type"] in ("E20", "E40", "F20", "F40")
+    assert first["pickup_location"] != ""
+    assert first["dropoff_location"] != ""
+    for w in res.warnings:
+        assert "Thiếu cột bắt buộc" not in w

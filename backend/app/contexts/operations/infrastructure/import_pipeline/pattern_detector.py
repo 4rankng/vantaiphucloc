@@ -18,7 +18,7 @@ DETECTION_THRESHOLD = 0.6
 
 @dataclass
 class DetectedPattern:
-    pattern_name: str   # "bay_plan" | "loading_list" | "invoice"
+    pattern_name: str   # "bay_plan" | "loading_list" | "invoice" | "settlement_list"
     confidence: float
     sheet_index: int
 
@@ -176,6 +176,53 @@ def _score_invoice(sheet: SheetView) -> float:
         row_text = " ".join(_cell_text(c) for c in sheet.rows[r]).upper()
         if "NƠI LẤY" in row_text or "NOI LAY" in row_text:
             score += 0.15
+            break
+
+    return min(1.0, score)
+
+
+# ---------------------------------------------------------------------------
+# Settlement List  (BẢNG KÊ QUYẾT TOÁN — Vietnamese reconciliation)
+# ---------------------------------------------------------------------------
+
+_SETTLEMENT_WT_HEADERS = {"F20", "F40", "E20", "E40"}
+
+
+def _score_settlement_list(sheet: SheetView) -> float:
+    """Settlement List (BẢNG KÊ QUYẾT TOÁN): pivoted F20'/F40'/E20'/E40' columns.
+
+    This is the standard Vietnamese logistics reconciliation format where each
+    row has 1 in one work-type column and None in the others.
+    """
+    has_socont = False
+    wt_cols = 0
+    header_found = False
+
+    for r in range(min(15, len(sheet.rows))):
+        row = sheet.rows[r]
+        for cell in row:
+            t = _cell_text(cell).upper()
+            if "SỐCONT" in t or "SOCONT" in t or "SO CONT" in t:
+                has_socont = True
+                header_found = True
+
+        if header_found:
+            # Count work-type columns in the same row
+            for cell in row:
+                t = _cell_text(cell).upper().strip().rstrip("'\"")
+                if t in _SETTLEMENT_WT_HEADERS:
+                    wt_cols += 1
+
+    if not has_socont or wt_cols < 2:
+        return 0.0
+
+    score = 0.7 + min(wt_cols * 0.05, 0.2)
+
+    # Boost: title row with BẢNG KÊ
+    for r in range(min(10, len(sheet.rows))):
+        row_text = " ".join(_cell_text(c) for c in sheet.rows[r]).upper()
+        if "BẢNG KÊ" in row_text or "BANG KE" in row_text:
+            score += 0.1
             break
 
     return min(1.0, score)
