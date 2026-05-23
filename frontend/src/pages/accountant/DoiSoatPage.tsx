@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { MatchProgressBar } from '@/components/shared/MatchProgressBar'
+import { StatBreakdownCard } from '@/components/shared/StatBreakdownCard'
 import { Panel } from '@/components/shared/Panel'
 import { DataTable, type Column } from '@/components/shared/DataTable'
 import { Toolbar, ToolbarSearch, ToolbarSpacer } from '@/components/shared/Toolbar'
@@ -18,10 +18,9 @@ import { ExcelImportDrawer } from '@/components/shared/ExcelImportDrawer'
 import { DeliveredTripDetailDrawer } from '@/components/shared/DeliveredTripDetailDrawer'
 import { AutoMatchDialog, AutoMatchDateDialog } from '@/components/shared/AutoMatchDialog'
 import { FilterTabs } from '@/components/shared/FilterTabs'
-import { StatPill } from '@/components/shared/StatPill'
 import { Pagination } from '@/components/ui/Pagination/Pagination'
 import { useMonthParams } from './use-month-params'
-import { compactCurrency, getWorkTypeLabel } from '@/data/domain'
+import { getWorkTypeLabel } from '@/data/domain'
 import { useDebounce } from '@/hooks/use-debounce'
 import { formatMatchDate as formatDate } from '@/lib/match-utils'
 import type { DeliveredTrip } from '@/data/domain'
@@ -123,7 +122,8 @@ export function DoiSoatPage() {
   const globalTotal = dailyStats?.total ?? 0
   const globalMatched = dailyStats?.matched ?? 0
   const globalPending = dailyStats?.pending ?? 0
-  const globalRevenue = dailyStats?.totalRevenue ?? 0
+  const globalInternal = dailyStats?.internalCount ?? 0
+  const globalVendor = dailyStats?.vendorCount ?? 0
   const globalMatchedPct = globalTotal > 0 ? Math.round((globalMatched / globalTotal) * 100) : 0
 
   const statusCounts: Record<StatusFilter, number> = {
@@ -302,14 +302,25 @@ export function DoiSoatPage() {
         }
       />
 
-      {/* ── Match progress summary ── */}
+      {/* ── Stats ── */}
       {!isLoading && globalTotal > 0 && (
-        <div className="flex flex-wrap items-center gap-3 px-1">
-          <StatPill count={globalTotal} label="chuyến" />
-          <StatPill count={globalMatched} label="đã ghép" accent />
-          <StatPill count={globalPending} label="chờ ghép" />
-          <StatPill count={`${compactCurrency(globalRevenue)}`} label="doanh thu" />
-          <MatchProgressBar pct={globalMatchedPct} />
+        <div className="grid grid-cols-2 gap-2.5">
+          <StatBreakdownCard
+            label="Tổng chuyến"
+            total={globalTotal.toLocaleString('vi-VN')}
+            items={[
+              { label: 'Đã ghép', value: `${globalMatched.toLocaleString('vi-VN')} (${globalMatchedPct}%)` },
+              { label: 'Chờ ghép', value: globalPending.toLocaleString('vi-VN') },
+            ]}
+          />
+          <StatBreakdownCard
+            label="Tổng xe"
+            total={(globalInternal + globalVendor).toLocaleString('vi-VN')}
+            items={[
+              { label: 'Xe nội bộ', value: globalInternal.toLocaleString('vi-VN') },
+              { label: 'Xe ngoài', value: globalVendor.toLocaleString('vi-VN') },
+            ]}
+          />
         </div>
       )}
 
