@@ -284,6 +284,38 @@ export async function uploadVendorReconciliation(file: File, vendorId: number): 
   }
 }
 
+export async function previewVendorReconciliation(
+  file: File,
+  vendorId: number,
+): Promise<ApiResponse<PreviewResultDto>> {
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('vendor_id', String(vendorId))
+    const res = await api.post('/vendor-reconciliation/preview', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return ok(toCamel<PreviewResultDto>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function commitVendorReconciliation(
+  vendorId: number,
+  rows: Record<string, unknown>[],
+): Promise<ApiResponse<VendorImportResponse>> {
+  try {
+    const res = await api.post('/vendor-reconciliation/commit', {
+      vendor_id: vendorId,
+      rows,
+    })
+    return ok(toCamel<VendorImportResponse>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
 export interface DriverImportResponse {
   totalRows: number
   created: number

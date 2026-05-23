@@ -22,15 +22,15 @@ import {
   useCreateClient,
   usePreviewCustomerExcel,
   useCommitCustomerExcel,
-  useUploadVendorReconciliation,
-  useUploadDriverReconciliation,
+  usePreviewVendorReconciliation,
+  useCommitVendorReconciliation,
   usePreviewDriverReconciliation,
   useCommitDriverReconciliation,
   useVendors,
 } from '@/hooks/use-queries'
 import type { DuplicateGroup } from '@/services/api/deliveredTrips.api'
 import type { PreviewResultDto, VendorImportResponse, DriverImportResponse, DriverCommitResponse } from '@/services/api/imports.api'
-import { getWorkTypeLabel, type Client } from '@/data/domain'
+import { type Client } from '@/data/domain'
 
 type ClientFormData = Omit<Client, 'id'>
 
@@ -90,10 +90,10 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
   const createClient = useCreateClient()
   const previewClientExcel = usePreviewCustomerExcel()
   const commitClientExcel = useCommitCustomerExcel()
-  const uploadVendorRecon = useUploadVendorReconciliation()
-  const uploadDriverRecon = useUploadDriverReconciliation()
   const previewDriverRecon = usePreviewDriverReconciliation()
   const commitDriverRecon = useCommitDriverReconciliation()
+  const previewVendorRecon = usePreviewVendorReconciliation()
+  const commitVendorRecon = useCommitVendorReconciliation()
 
   const excelClientName = useMemo<string | null>(() => {
     if (!previewData.length) return null
@@ -111,7 +111,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
         {
           onSuccess: (data) => {
             setPreviewResult(data)
-            const cols = ['Ngày đi', 'Chủ hàng', 'Số Cont', 'Loại Cont', 'Số xe chạy', 'Điểm đi', 'Điểm đến', 'Cước', 'Tác nghiệp']
+            const cols = ['Ngày đi', 'Chủ hàng', 'Số Cont', 'Loại Cont', 'Số xe chạy', 'Điểm đi', 'Điểm đến', 'Cước']
             const rows = (data.accepted ?? []).map(r => ({
               'Ngày đi': r.values.trip_date,
               'Chủ hàng': r.values.consignee,
@@ -121,7 +121,6 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
               'Điểm đi': r.values.pickup_location,
               'Điểm đến': r.values.dropoff_location,
               'Cước': r.values.freight_charge,
-              'Tác nghiệp': getWorkTypeLabel(r.values.work_type) ?? r.values.work_type,
             }))
             const containerKey = Object.keys((data.rejected?.[0]?.raw ?? {}) as Record<string, unknown>).find(k => /container/i.test(k))
             const dups = (data.rejected ?? [])
@@ -171,7 +170,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
         {
           onSuccess: (data) => {
             setPreviewResult(data)
-            const cols = ['Ngày đi', 'Chủ hàng', 'Số Cont', 'Loại Cont', 'Số xe chạy', 'Điểm đi', 'Điểm đến', 'Cước', 'Ghi chú']
+            const cols = ['Ngày đi', 'Chủ hàng', 'Số Cont', 'Loại Cont', 'Số xe chạy', 'Điểm đi', 'Điểm đến', 'Cước']
             const rows = (data.accepted ?? []).map(r => ({
               'Ngày đi': r.values.trip_date,
               'Chủ hàng': r.values.consignee,
@@ -181,7 +180,46 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
               'Điểm đi': r.values.pickup_location,
               'Điểm đến': r.values.dropoff_location,
               'Cước': r.values.freight_charge,
-              'Ghi chú': r.values.remarks,
+            }))
+            const dups = (data.rejected ?? [])
+              .filter(r => r.reasons?.includes('duplicate_in_file') || r.reasons?.some(reason => reason.includes('duplicate')))
+              .map((r) => ({
+                type: 'exact' as const,
+                rowIndices: [r.source_row_index],
+                containers: [String((r.raw as Record<string, unknown>)?.container_no ?? '')],
+                message: `Dòng ${r.source_row_index + 1}: Trùng dòng`
+              }))
+            const warns = data.warnings ?? []
+
+            setPreviewColumns(cols)
+            setPreviewData(rows)
+            setDuplicateGroups(dups)
+            setPreviewWarnings(warns)
+            setStep('preview')
+          },
+          onError: (err) => setError(err instanceof Error ? err.message : 'Lỗi khi phân tích file'),
+        }
+      )
+    } else if (importType === 'vendor') {
+      if (!vendorId) {
+        setError('Vui lòng chọn nhà thầu trước khi phân tích file.')
+        return
+      }
+      previewVendorRecon.mutate(
+        { file: f, vendorId: Number(vendorId) },
+        {
+          onSuccess: (data) => {
+            setPreviewResult(data)
+            const cols = ['Ngày đi', 'Chủ hàng', 'Số Cont', 'Loại Cont', 'Số xe chạy', 'Điểm đi', 'Điểm đến', 'Cước']
+            const rows = (data.accepted ?? []).map(r => ({
+              'Ngày đi': r.values.trip_date,
+              'Chủ hàng': r.values.consignee,
+              'Số Cont': r.values.container_no,
+              'Loại Cont': r.values.cont_type ?? `${r.values.freight_kind ?? ''}${r.values.container_size ?? ''}`,
+              'Số xe chạy': r.values.vehicle_plate,
+              'Điểm đi': r.values.pickup_location,
+              'Điểm đến': r.values.dropoff_location,
+              'Cước': r.values.freight_charge,
             }))
             const dups = (data.rejected ?? [])
               .filter(r => r.reasons?.includes('duplicate_in_file') || r.reasons?.some(reason => reason.includes('duplicate')))
@@ -203,16 +241,14 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
         }
       )
     }
-  }, [importType, previewClientExcel, previewDriverRecon, clientId, clients])
+  }, [importType, previewClientExcel, previewDriverRecon, previewVendorRecon, clientId, vendorId, clients])
 
   const handleFileSelect = useCallback((f: File | null) => {
     if (!f) return
     setFile(f)
     setError(null)
-    if (importType === 'client' || importType === 'driver') {
-      startPreview(f)
-    }
-  }, [startPreview, importType])
+    startPreview(f)
+  }, [startPreview])
 
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault()
@@ -249,18 +285,14 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
         }
       )
     } else if (importType === 'vendor') {
-      if (!vendorId) {
-        setError('Vui lòng chọn nhà thầu để lưu.')
-        return
-      }
-      uploadVendorRecon.mutate(
-        { file, vendorId: Number(vendorId) },
+      commitVendorRecon.mutate(
+        { vendorId: Number(vendorId), rows: (previewResult?.accepted ?? []).map(r => r.values as Record<string, unknown>) },
         {
           onSuccess: (data) => {
             setReconResult(data)
             setStep('done')
           },
-          onError: (err) => setError(err instanceof Error ? err.message : 'Lỗi khi tải đối soát thầu'),
+          onError: (err) => setError(err instanceof Error ? err.message : 'Lỗi khi lưu dữ liệu'),
         }
       )
     } else if (importType === 'driver') {
@@ -374,21 +406,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
         <Button variant="ghost" onClick={onClose}>
           Huỷ
         </Button>
-        {importType === 'vendor' && file && (
-          <Button
-            variant="default"
-            onClick={handleImport}
-            disabled={uploadVendorRecon.isPending || !vendorId}
-          >
-            {uploadVendorRecon.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <CheckCircle className="h-4 w-4" strokeWidth={2.25} />
-            )}
-            {uploadVendorRecon.isPending ? 'Đang đối soát...' : 'Bắt đầu đối soát'}
-          </Button>
-        )}
-        {(previewClientExcel.isPending || previewDriverRecon.isPending) && (
+        {(previewClientExcel.isPending || previewDriverRecon.isPending || previewVendorRecon.isPending) && (
           <div className="flex items-center gap-2" style={{ color: 'var(--ink-2)', fontSize: 13 }}>
             <Loader2 className="h-4 w-4 animate-spin" />
             Đang phân tích tệp...
@@ -427,14 +445,14 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
           Quay lại
         </Button>
         <Button variant="default" onClick={handleImport}
-          disabled={importType === 'client' ? (commitClientExcel.isPending || !clientId) : commitDriverRecon.isPending}
+          disabled={importType === 'client' ? (commitClientExcel.isPending || !clientId) : (commitDriverRecon.isPending || commitVendorRecon.isPending)}
         >
-          {commitClientExcel.isPending || commitDriverRecon.isPending ? (
+          {commitClientExcel.isPending || commitDriverRecon.isPending || commitVendorRecon.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <CheckCircle className="h-4 w-4" />
           )}
-          {commitClientExcel.isPending || commitDriverRecon.isPending ? 'Đang lưu...' : 'Lưu dữ liệu'}
+          {commitClientExcel.isPending || commitDriverRecon.isPending || commitVendorRecon.isPending ? 'Đang lưu...' : 'Lưu dữ liệu'}
         </Button>
       </>
     ) : (
@@ -1084,7 +1102,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                 </div>
                 <div className="col-span-2 p-2.5 rounded-lg border border-solid" style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}>
                   <p className="text-[14px] font-semibold m-0" style={{ color: 'var(--ink)' }}>
-                    Tổng số dòng xử lý: {reconResult?.totalRows ?? 0}
+                    Tổng số dòng xử lý: {(previewResult?.accepted?.length ?? 0) + (previewResult?.rejected?.length ?? 0)}
                   </p>
                 </div>
               </>

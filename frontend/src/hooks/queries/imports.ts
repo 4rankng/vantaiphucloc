@@ -72,6 +72,28 @@ export function useUploadVendorReconciliation() {
   })
 }
 
+export function usePreviewVendorReconciliation() {
+  return useMutation({
+    mutationFn: ({ file, vendorId }: { file: File; vendorId: number }) =>
+      apiClient.previewVendorReconciliation(file, vendorId).then(unwrap),
+  })
+}
+
+export function useCommitVendorReconciliation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { vendorId: number; rows: Record<string, unknown>[] }) =>
+      apiClient.commitVendorReconciliation(body.vendorId, body.rows).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+    },
+  })
+}
+
 export function useUploadDriverReconciliation() {
   const qc = useQueryClient()
   return useMutation({
