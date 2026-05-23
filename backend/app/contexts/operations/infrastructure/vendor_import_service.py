@@ -5,10 +5,14 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import date
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.contexts.customer_pricing.infrastructure.location_resolver import (
+    LocationResolverService,
+)
 from app.contexts.operations.application.bulk_import_types import ImportRow
 from app.contexts.operations.infrastructure.import_pipeline.pipeline import run_preview
 from app.models.domain import (
@@ -55,6 +59,136 @@ class ReconciliationImportService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
+    # ------------------------------------------------------------------
+    # Preview — parse only, no DB writes
+    # ------------------------------------------------------------------
+
+    async def preview_reconciliation_excel(
+        self,
+        content: bytes,
+        filename: str,
+    ) -> dict[str, Any]:
+        """Parse Excel and return preview data. No DB writes."""
+        try:
+            preview = await run_preview(
+                content, filename, default_trip_date=date.today(),
+            )
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
+
+        location_resolutions = await self._resolve_preview_locations(
+            preview.accepted,
+        )
+
+        payload = preview.to_dict()
+        payload["location_resolutions"] = location_resolutions
+        return payload
+
+    async def _resolve_preview_locations(
+        self, accepted: list[dict],
+    ) -> dict[str, dict]:
+        resolver = LocationResolverService(self.session)
+        seen: set[str] = set()
+        for r in accepted:
+            v = r.get("values") or {}
+            for key in ("pickup_location", "dropoff_location"):
+                s = (v.get(key) or "").strip()
+                if s:
+                    seen.add(s)
+
+        out: dict[str, dict] = {}
+        for raw in seen:
+            result = await resolver.find_match(raw)
+            out[raw] = {
+                "raw": raw,
+                "match_kind": result.match_kind.value,
+                "location_id": result.location.id if result.location else None,
+                "location_name": result.location.name if result.location else None,
+                "review_needed": result.review_needed,
+                "suggestions": [
+                    {"location_id": s.location_id, "name": s.name, "score": s.score}
+                    for s in result.suggestions
+                ],
+            }
+        return out
+
+    # ------------------------------------------------------------------
+    # Commit — take confirmed rows, create DeliveredTrips + auto-match
+    # ------------------------------------------------------------------
+
+    async def commit_reconciliation_rows(
+        self,
+        rows: list[dict],
+        vendor_id: int | None = None,
+        driver_id: int | None = None,
+    ) -> ReconciliationImportResult:
+        """Take confirmed rows from preview, create DeliveredTrips, auto-match."""
+        import_rows: list[ImportRow] = []
+        for i, v in enumerate(rows):
+            import_rows.append(ImportRow(
+                row_number=i + 1,
+                container_number=v.get("container_no"),
+                trip_date=_parse_iso_date(v.get("trip_date")),
+                client_name=v.get("consignee") or v.get("customer_ref"),
+                pickup_location=v.get("pickup_location"),
+                dropoff_location=v.get("dropoff_location"),
+                amount=_parse_revenue(v.get("freight_charge")),
+                cont_type=v.get("cont_type") or "E20",
+                vehicle_plate=v.get("vehicle_plate"),
+            ))
+
+        valid = [r for r in import_rows if r.container_number]
+        if not valid:
+            return ReconciliationImportResult(
+                total_rows=len(rows),
+                errors=["Không tìm thấy dữ liệu hợp lệ"],
+            )
+
+        await self._resolve_locations(valid)
+        unmatched_booked = await self._load_unmatched_booked_trips(valid)
+
+        result = ReconciliationImportResult(total_rows=len(rows))
+
+        for row in valid:
+            try:
+                trip_id = await self._create_reconciliation_trip(
+                    row, vendor_id, driver_id,
+                )
+                result.created += 1
+
+                match_info = await self._try_auto_match(
+                    trip_id, row.container_number, unmatched_booked,
+                )
+                detail = {
+                    "row": row.row_number,
+                    "container": row.container_number,
+                    "delivered_trip_id": trip_id,
+                    "match_status": match_info,
+                }
+
+                if match_info == "matched":
+                    result.matched += 1
+                elif match_info == "fraud_skipped":
+                    result.fraud_skipped += 1
+
+                result.details.append(detail)
+            except Exception as exc:
+                msg = f"Dòng {row.row_number}: {exc}"
+                result.errors.append(msg)
+                result.details.append({
+                    "row": row.row_number,
+                    "container": row.container_number,
+                    "match_status": "error",
+                    "error": str(exc),
+                })
+
+        await self.session.commit()
+        return result
+
+    # ------------------------------------------------------------------
+    # Legacy one-shot import (kept for backward compat)
+    # ------------------------------------------------------------------
+
     async def import_reconciliation_excel(
         self,
         content: bytes,
@@ -93,8 +227,9 @@ class ReconciliationImportService:
         # Collect rejected rows as errors
         error_msgs: list[str] = []
         for r in preview.rejected:
-            raw_desc = r.get("raw", {})
             reasons = r.get("reasons", [])
+            if not reasons:
+                continue
             row_idx = r.get("source_row_index", 0) + 1
             error_msgs.append(f"Dòng {row_idx}: {', '.join(reasons)}")
 
@@ -190,12 +325,21 @@ class ReconciliationImportService:
     async def _resolve_client(self, client_name: str | None) -> int:
         if not client_name:
             raise ValueError("Không có tên khách hàng trong file")
-        client = (await self.session.execute(
+        clients = (await self.session.execute(
             select(Client).where(Client.name.ilike(f"%{client_name.strip()}%"))
-        )).scalar_one_or_none()
-        if client is None:
+            .order_by(Client.name)
+            .limit(2)
+        )).scalars().all()
+        if not clients:
             raise ValueError(f"Không tìm thấy khách hàng '{client_name}'")
-        return client.id
+        if len(clients) > 1:
+            # Multiple matches — pick exact match if exists, else first
+            exact = next(
+                (c for c in clients if c.name.strip().lower() == client_name.strip().lower()),
+                clients[0],
+            )
+            return exact.id
+        return clients[0].id
 
     async def _load_unmatched_booked_trips(
         self, rows: list[ImportRow],

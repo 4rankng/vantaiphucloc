@@ -122,6 +122,7 @@ class VehiclePnLResponse(BaseModel):
 
 class TripDayBucket(BaseModel):
     day: int
+    date: str = ""
     matched: int = 0
     pending: int = 0
 

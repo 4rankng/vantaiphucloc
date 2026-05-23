@@ -517,11 +517,9 @@ async def get_trip_daily_stats(
 ):
     """Lightweight daily trip aggregation for the dashboard bar chart.
 
-    Returns matched/pending counts per day of month without fetching
+    Returns matched/pending counts per day without fetching
     full booked-trip objects.  ~10x faster than fetching all trips.
     """
-    import calendar as _cal
-
     try:
         df = datetime.strptime(date_from, "%Y-%m-%d").date()
         dt = datetime.strptime(date_to, "%Y-%m-%d").date()
@@ -546,7 +544,7 @@ async def get_trip_daily_stats(
         stmt.group_by(DeliveredTrip.trip_date, DeliveredTrip.matched)
     )).all()
 
-    day_map: dict[int, dict[str, int]] = {}
+    date_map: dict[str, dict[str, int]] = {}
     total = 0
     matched = 0
     pending = 0
@@ -554,8 +552,8 @@ async def get_trip_daily_stats(
     vendor_count = 0
     total_revenue = 0
     for trip_date, is_matched, cnt, rev in rows:
-        day = trip_date.day if hasattr(trip_date, 'day') else trip_date
-        bucket = day_map.setdefault(day, {"matched": 0, "pending": 0})
+        ds = str(trip_date) if not hasattr(trip_date, 'isoformat') else trip_date.isoformat()
+        bucket = date_map.setdefault(ds, {"matched": 0, "pending": 0})
         total += cnt
         if is_matched:
             bucket["matched"] += cnt
@@ -566,11 +564,22 @@ async def get_trip_daily_stats(
             pending += cnt
             total_revenue += int(rev)
 
-    days_in_month = _cal.monthrange(df.year, df.month)[1]
-    buckets = [
-        {"day": d, **day_map.get(d, {"matched": 0, "pending": 0})}
-        for d in range(1, days_in_month + 1)
-    ]
+    # Build one bucket per day across the full date range
+    from datetime import timedelta as _td
+    buckets = []
+    cur = df
+    idx = 0
+    while cur <= dt:
+        ds = cur.isoformat()
+        b = date_map.get(ds, {"matched": 0, "pending": 0})
+        buckets.append({
+            "day": idx + 1,
+            "date": ds,
+            "matched": b["matched"],
+            "pending": b["pending"],
+        })
+        cur += _td(days=1)
+        idx += 1
 
     # Distinct vehicle counts (not trip counts)
     base_where = [

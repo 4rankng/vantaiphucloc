@@ -78,6 +78,7 @@ export async function getVehiclePnL(
 
 export interface TripDayBucket {
   day: number
+  date: string
   matched: number
   pending: number
 }

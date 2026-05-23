@@ -121,12 +121,12 @@ def apply_mapping(
 ) -> tuple[list[ParsedRow], list[RejectedRow]]:
     """Slice the sheet into accepted/rejected rows based on the mapping.
 
-    De-duplicates by container_number within the file (keeps the first
-    occurrence; later duplicates rejected with reason `duplicate_in_file`).
+    De-duplicates by composite key (container_no + trip_date + pickup + dropoff)
+    within the file. Same container on different date/route is a different trip.
     """
     accepted: list[ParsedRow] = []
     rejected: list[RejectedRow] = []
-    seen_containers: set[str] = set()
+    seen_rows: set[tuple[str, ...]] = set()
 
     # Index mappings by canonical field for fast lookup
     by_field: dict[str, ColumnMapping] = {}
@@ -157,16 +157,20 @@ def apply_mapping(
             rejected.append(RejectedRow(source_row_index=r, reasons=parsed_or_reasons, raw=raw_dict))
             continue
 
-        cont_key = parsed_or_reasons.get("container_no", "")
-        if cont_key and cont_key in seen_containers:
+        row_key = (
+            parsed_or_reasons.get("container_no", ""),
+            (parsed_or_reasons.get("trip_date") or "").strip(),
+            (parsed_or_reasons.get("pickup_location") or "").strip().lower(),
+            (parsed_or_reasons.get("dropoff_location") or "").strip().lower(),
+        )
+        if row_key in seen_rows:
             rejected.append(RejectedRow(
                 source_row_index=r,
                 reasons=["duplicate_in_file"],
                 raw=raw_dict,
             ))
             continue
-        if cont_key:
-            seen_containers.add(cont_key)
+        seen_rows.add(row_key)
 
         accepted.append(ParsedRow(source_row_index=r, values=parsed_or_reasons))
 
@@ -494,20 +498,26 @@ def _build_preview_from_extracted(
             },
         })
 
-    # Deduplicate
-    seen: set[str] = set()
+    # Deduplicate by composite key (container + trip_date + pickup + dropoff)
+    seen: set[tuple[str, ...]] = set()
     deduped: list[dict[str, Any]] = []
     deduped_rejected: list[dict[str, Any]] = list(rejected_rows)
     for item in accepted:
-        cont = item["values"]["container_no"]
-        if cont in seen:
+        v = item["values"]
+        key = (
+            v.get("container_no", ""),
+            (v.get("trip_date") or "").strip(),
+            (v.get("pickup_location") or "").strip().lower(),
+            (v.get("dropoff_location") or "").strip().lower(),
+        )
+        if key in seen:
             deduped_rejected.append({
                 "source_row_index": item["source_row_index"],
                 "reasons": ["duplicate_in_file"],
                 "raw": item["values"],
             })
             continue
-        seen.add(cont)
+        seen.add(key)
         deduped.append(item)
 
     stats = {

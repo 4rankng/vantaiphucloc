@@ -151,6 +151,8 @@ export const apiClient = {
   applyPricingToTripIds: importsApi.applyPricingToTripIds,
   uploadVendorReconciliation: importsApi.uploadVendorReconciliation,
   uploadDriverReconciliation: importsApi.uploadDriverReconciliation,
+  previewDriverReconciliation: importsApi.previewDriverReconciliation,
+  commitDriverReconciliation: importsApi.commitDriverReconciliation,
 
   // Customer-Pricing imports
   previewCustomerPricing: importsApi.previewCustomerPricing,

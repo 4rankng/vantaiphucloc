@@ -24,14 +24,23 @@ from app.models.domain import Vendor
 from app.models.domain import VendorRoutePricing as VendorRoutePricingORM
 
 
+_VENDOR_HEADER_NAMES = {
+    "nhà thầu", "nha thau", "nhà xe", "nha xe",
+    "nhà xe ngoài", "nha xe ngoai", "nhà thầu/nhà xe",
+    "nhà vận chuyển", "nha van chuyen", "vendor", "nhà tc",
+}
+_LOCATION_PICKUP_NAMES = {"điểm đi", "diem di", "đi", "nơi đi", "noi di", "from", "bến đi", "ben di"}
+_LOCATION_DROPOFF_NAMES = {"điểm đến", "diem den", "đến", "nơi đến", "noi den", "to", "bến đến", "ben den"}
+_PRICE_COLS = {"f20", "f40", "e20", "e40", "20ft", "40ft", "cont 20", "cont 40"}
+
+
 def _find_header_row(rows: list[list], max_scan: int = 10) -> int | None:
-    required = {"nhà thầu", "nha thau", "điểm đi", "điểm đến"}
-    price_cols = {"f20", "f40", "e20", "e40"}
     for idx, row in enumerate(rows[:max_scan]):
         cells = {str(c).strip().lower() if c is not None else "" for c in row}
-        has_vendor = bool(cells & {"nhà thầu", "nha thau"})
-        has_locations = {"điểm đi", "điểm đến"}.issubset(cells)
-        if has_vendor and has_locations and cells & price_cols:
+        has_vendor = bool(cells & _VENDOR_HEADER_NAMES)
+        has_pickup = bool(cells & _LOCATION_PICKUP_NAMES)
+        has_dropoff = bool(cells & _LOCATION_DROPOFF_NAMES)
+        if has_vendor and has_pickup and has_dropoff and cells & _PRICE_COLS:
             return idx
     return None
 
@@ -75,11 +84,39 @@ def _normalize_work_type(raw: str) -> str | None:
     return None
 
 
+def _find_col(header: list, candidates: set[str]) -> int | None:
+    for i, cell in enumerate(header):
+        if cell is not None and str(cell).strip().lower() in candidates:
+            return i
+    return None
+
+
 def _find_vendor_col(header: list) -> int | None:
-    for name in ("nhà thầu", "nha thau"):
+    return _find_col(header, _VENDOR_HEADER_NAMES)
+
+
+def _find_pickup_col(header: list) -> int | None:
+    return _find_col(header, _LOCATION_PICKUP_NAMES)
+
+
+def _find_dropoff_col(header: list) -> int | None:
+    return _find_col(header, _LOCATION_DROPOFF_NAMES)
+
+
+def _find_work_type_col(header: list) -> int | None:
+    for name in ("tác nghiệp", "tac nghiep", "loại", "loai", "work type", "type"):
         idx = _col_index(header, name)
         if idx is not None:
             return idx
+    return None
+
+
+def _find_price_col(header: list, base_names: set[str]) -> int | None:
+    for i, cell in enumerate(header):
+        val = str(cell).strip().lower() if cell is not None else ""
+        for name in base_names:
+            if val == name or val.startswith(name):
+                return i
     return None
 
 
@@ -94,15 +131,18 @@ def parse_vendor_route_pricing_bytes(content: bytes) -> dict:
             continue
 
         header = list(all_rows[header_idx])
-        col: dict[str, int] = {}
-        for cell in header:
-            idx = _col_index(header, str(cell)) if cell is not None else None
-            if idx is not None:
-                col[str(cell).strip().lower()] = idx
 
         vendor_col = _find_vendor_col(header)
         if vendor_col is None:
             continue
+
+        pickup_col = _find_pickup_col(header)
+        dropoff_col = _find_dropoff_col(header)
+        wt_col = _find_work_type_col(header)
+        f20_col = _find_price_col(header, {"f20", "20ft", "cont 20"})
+        f40_col = _find_price_col(header, {"f40", "40ft", "cont 40"})
+        e20_col = _find_price_col(header, {"e20"})
+        e40_col = _find_price_col(header, {"e40"})
 
         parsed: list[dict] = []
         has_wt = 0
@@ -116,14 +156,14 @@ def parse_vendor_route_pricing_bytes(content: bytes) -> dict:
             if _is_aggregate_row(row):
                 continue
 
-            vendor_raw = str(row[vendor_col] or "").strip()
-            pickup_raw = str(row[col["điểm đi"]] or "").strip() if "điểm đi" in col else ""
-            dropoff_raw = str(row[col["điểm đến"]] or "").strip() if "điểm đến" in col else ""
+            vendor_raw = str(row[vendor_col] or "").strip() if vendor_col is not None else ""
+            pickup_raw = str(row[pickup_col] or "").strip() if pickup_col is not None else ""
+            dropoff_raw = str(row[dropoff_col] or "").strip() if dropoff_col is not None else ""
 
             if not vendor_raw or not pickup_raw:
                 continue
 
-            wt_raw = str(row[col["tác nghiệp"]] or "").strip() if "tác nghiệp" in col else ""
+            wt_raw = str(row[wt_col] or "").strip() if wt_col is not None else ""
             work_type = _normalize_work_type(wt_raw) if wt_raw else None
 
             if wt_raw:
@@ -137,10 +177,10 @@ def parse_vendor_route_pricing_bytes(content: bytes) -> dict:
                 "pickup_raw": pickup_raw,
                 "dropoff_raw": dropoff_raw,
                 "work_type": work_type,
-                "f20_price": _parse_int_price(row[col["f20"]] if "f20" in col else None),
-                "f40_price": _parse_int_price(row[col["f40"]] if "f40" in col else None),
-                "e20_price": _parse_int_price(row[col["e20"]] if "e20" in col else None),
-                "e40_price": _parse_int_price(row[col["e40"]] if "e40" in col else None),
+                "f20_price": _parse_int_price(row[f20_col] if f20_col is not None else None),
+                "f40_price": _parse_int_price(row[f40_col] if f40_col is not None else None),
+                "e20_price": _parse_int_price(row[e20_col] if e20_col is not None else None),
+                "e40_price": _parse_int_price(row[e40_col] if e40_col is not None else None),
                 "row_index": ridx,
             })
 

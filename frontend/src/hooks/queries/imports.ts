@@ -87,6 +87,28 @@ export function useUploadDriverReconciliation() {
   })
 }
 
+export function usePreviewDriverReconciliation() {
+  return useMutation({
+    mutationFn: ({ file }: { file: File }) =>
+      apiClient.previewDriverReconciliation(file).then(unwrap),
+  })
+}
+
+export function useCommitDriverReconciliation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { rows: Record<string, unknown>[] }) =>
+      apiClient.commitDriverReconciliation(body.rows).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+    },
+  })
+}
+
 
 export function useExportDoiSoatExcel() {
   return useMutation({

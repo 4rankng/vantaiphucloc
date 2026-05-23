@@ -293,6 +293,14 @@ export interface DriverImportResponse {
   details: Record<string, unknown>[]
 }
 
+export interface DriverCommitResponse {
+  created: number
+  matched: number
+  fraudSkipped: number
+  errors: string[]
+  details: Record<string, unknown>[]
+}
+
 export async function uploadDriverReconciliation(file: File): Promise<ApiResponse<DriverImportResponse>> {
   try {
     const fd = new FormData()
@@ -301,6 +309,30 @@ export async function uploadDriverReconciliation(file: File): Promise<ApiRespons
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return ok(toCamel<DriverImportResponse>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function previewDriverReconciliation(file: File): Promise<ApiResponse<PreviewResultDto>> {
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await api.post('/driver-reconciliation/preview', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return ok(toCamel<PreviewResultDto>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function commitDriverReconciliation(
+  rows: Record<string, unknown>[],
+): Promise<ApiResponse<DriverCommitResponse>> {
+  try {
+    const res = await api.post('/driver-reconciliation/commit', { rows })
+    return ok(toCamel<DriverCommitResponse>(res.data))
   } catch (err) {
     return fail(err)
   }

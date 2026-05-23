@@ -59,6 +59,9 @@ Thumbs.db
 # Office temp files
 ~$*
 
+# Session handoff state
+HANDOFF.md
+
 # Tool / editor / AI config
 .claude/
 .crush/

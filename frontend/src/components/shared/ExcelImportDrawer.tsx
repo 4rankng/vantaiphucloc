@@ -24,10 +24,12 @@ import {
   useCommitCustomerExcel,
   useUploadVendorReconciliation,
   useUploadDriverReconciliation,
+  usePreviewDriverReconciliation,
+  useCommitDriverReconciliation,
   useVendors,
 } from '@/hooks/use-queries'
 import type { DuplicateGroup } from '@/services/api/deliveredTrips.api'
-import type { PreviewResultDto, VendorImportResponse, DriverImportResponse } from '@/services/api/imports.api'
+import type { PreviewResultDto, VendorImportResponse, DriverImportResponse, DriverCommitResponse } from '@/services/api/imports.api'
 import { getWorkTypeLabel, type Client } from '@/data/domain'
 
 type ClientFormData = Omit<Client, 'id'>
@@ -79,6 +81,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
   const [clientFormErrors, setClientFormErrors] = useState<{ name?: string; phone?: string; taxCode?: string }>({})
   const [previewResult, setPreviewResult] = useState<PreviewResultDto | null>(null)
   const [reconResult, setReconResult] = useState<VendorImportResponse | DriverImportResponse | null>(null)
+  const [driverCommitResult, setDriverCommitResult] = useState<DriverCommitResponse | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
 
@@ -89,6 +92,8 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
   const commitClientExcel = useCommitCustomerExcel()
   const uploadVendorRecon = useUploadVendorReconciliation()
   const uploadDriverRecon = useUploadDriverReconciliation()
+  const previewDriverRecon = usePreviewDriverReconciliation()
+  const commitDriverRecon = useCommitDriverReconciliation()
 
   const excelClientName = useMemo<string | null>(() => {
     if (!previewData.length) return null
@@ -160,28 +165,54 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
           onError: (err) => setError(err instanceof Error ? err.message : 'Lỗi khi phân tích file'),
         }
       )
+    } else if (importType === 'driver') {
+      previewDriverRecon.mutate(
+        { file: f },
+        {
+          onSuccess: (data) => {
+            setPreviewResult(data)
+            const cols = ['Ngày đi', 'Chủ hàng', 'Số Cont', 'Loại Cont', 'Số xe chạy', 'Điểm đi', 'Điểm đến', 'Cước', 'Ghi chú']
+            const rows = (data.accepted ?? []).map(r => ({
+              'Ngày đi': r.values.trip_date,
+              'Chủ hàng': r.values.consignee,
+              'Số Cont': r.values.container_no,
+              'Loại Cont': r.values.cont_type ?? `${r.values.freight_kind ?? ''}${r.values.container_size ?? ''}`,
+              'Số xe chạy': r.values.vehicle_plate,
+              'Điểm đi': r.values.pickup_location,
+              'Điểm đến': r.values.dropoff_location,
+              'Cước': r.values.freight_charge,
+              'Ghi chú': r.values.remarks,
+            }))
+            const dups = (data.rejected ?? [])
+              .filter(r => r.reasons?.includes('duplicate_in_file') || r.reasons?.some(reason => reason.includes('duplicate')))
+              .map((r) => ({
+                type: 'exact' as const,
+                rowIndices: [r.source_row_index],
+                containers: [String((r.raw as Record<string, unknown>)?.container_no ?? '')],
+                message: `Dòng ${r.source_row_index + 1}: Trùng dòng`
+              }))
+            const warns = data.warnings ?? []
+
+            setPreviewColumns(cols)
+            setPreviewData(rows)
+            setDuplicateGroups(dups)
+            setPreviewWarnings(warns)
+            setStep('preview')
+          },
+          onError: (err) => setError(err instanceof Error ? err.message : 'Lỗi khi phân tích file'),
+        }
+      )
     }
-  }, [importType, previewClientExcel, clientId, clients])
+  }, [importType, previewClientExcel, previewDriverRecon, clientId, clients])
 
   const handleFileSelect = useCallback((f: File | null) => {
     if (!f) return
     setFile(f)
     setError(null)
-    if (importType === 'client') {
+    if (importType === 'client' || importType === 'driver') {
       startPreview(f)
-    } else if (importType === 'driver') {
-      uploadDriverRecon.mutate(
-        { file: f },
-        {
-          onSuccess: (data) => {
-            setReconResult(data)
-            setStep('done')
-          },
-          onError: (err) => setError(err instanceof Error ? err.message : 'Lỗi khi tải đối soát lái xe'),
-        },
-      )
     }
-  }, [startPreview, importType, uploadDriverRecon])
+  }, [startPreview, importType])
 
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault()
@@ -233,14 +264,14 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
         }
       )
     } else if (importType === 'driver') {
-      uploadDriverRecon.mutate(
-        { file },
+      commitDriverRecon.mutate(
+        { rows: (previewResult?.accepted ?? []).map(r => r.values as Record<string, unknown>) },
         {
           onSuccess: (data) => {
-            setReconResult(data)
+            setDriverCommitResult(data)
             setStep('done')
           },
-          onError: (err) => setError(err instanceof Error ? err.message : 'Lỗi khi tải đối soát lái xe'),
+          onError: (err) => setError(err instanceof Error ? err.message : 'Lỗi khi lưu dữ liệu'),
         }
       )
     }
@@ -257,6 +288,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
     setPreviewWarnings([])
     setPreviewResult(null)
     setReconResult(null)
+    setDriverCommitResult(null)
     setError(null)
     setCreatingClient(false)
     setClientForm(EMPTY_CLIENT_FORM)
@@ -342,21 +374,21 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
         <Button variant="ghost" onClick={onClose}>
           Huỷ
         </Button>
-        {['vendor', 'driver'].includes(importType) && file && (
+        {importType === 'vendor' && file && (
           <Button
             variant="default"
             onClick={handleImport}
-            disabled={(importType === 'vendor' ? (uploadVendorRecon.isPending || !vendorId) : uploadDriverRecon.isPending)}
+            disabled={uploadVendorRecon.isPending || !vendorId}
           >
-            {uploadVendorRecon.isPending || uploadDriverRecon.isPending ? (
+            {uploadVendorRecon.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <CheckCircle className="h-4 w-4" strokeWidth={2.25} />
             )}
-            {uploadVendorRecon.isPending || uploadDriverRecon.isPending ? 'Đang đối soát...' : 'Bắt đầu đối soát'}
+            {uploadVendorRecon.isPending ? 'Đang đối soát...' : 'Bắt đầu đối soát'}
           </Button>
         )}
-        {previewClientExcel.isPending && (
+        {(previewClientExcel.isPending || previewDriverRecon.isPending) && (
           <div className="flex items-center gap-2" style={{ color: 'var(--ink-2)', fontSize: 13 }}>
             <Loader2 className="h-4 w-4 animate-spin" />
             Đang phân tích tệp...
@@ -365,22 +397,24 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
       </>
     ) : step === 'preview' ? (
       <>
-        {clientId ? (
-          <span
-            className="text-[12px] font-medium px-2.5 py-1 rounded-full mr-auto"
-            style={{ background: 'var(--success-soft)', color: 'var(--success)' }}
-          >
-            {clients.find((c) => String(c.id) === clientId)?.name ?? 'Chủ hàng'} ✓
-          </span>
-        ) : (
-          <InlineSelect
-            placeholder="Chọn chủ hàng"
-            value={clientId}
-            options={clients.map((c) => ({ value: String(c.id), label: c.name }))}
-            onChange={setClientId}
-            className="mr-auto"
-            style={{ minWidth: 180, borderColor: 'var(--warning)' }}
-          />
+        {importType === 'client' && (
+          clientId ? (
+            <span
+              className="text-[12px] font-medium px-2.5 py-1 rounded-full mr-auto"
+              style={{ background: 'var(--success-soft)', color: 'var(--success)' }}
+            >
+              {clients.find((c) => String(c.id) === clientId)?.name ?? 'Chủ hàng'} ✓
+            </span>
+          ) : (
+            <InlineSelect
+              placeholder="Chọn chủ hàng"
+              value={clientId}
+              options={clients.map((c) => ({ value: String(c.id), label: c.name }))}
+              onChange={setClientId}
+              className="mr-auto"
+              style={{ minWidth: 180, borderColor: 'var(--warning)' }}
+            />
+          )
         )}
         <Button
           variant="ghost"
@@ -392,13 +426,15 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
         >
           Quay lại
         </Button>
-        <Button variant="default" onClick={handleImport} disabled={commitClientExcel.isPending || !clientId}>
-          {commitClientExcel.isPending ? (
+        <Button variant="default" onClick={handleImport}
+          disabled={importType === 'client' ? (commitClientExcel.isPending || !clientId) : commitDriverRecon.isPending}
+        >
+          {commitClientExcel.isPending || commitDriverRecon.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <CheckCircle className="h-4 w-4" />
           )}
-          {commitClientExcel.isPending ? 'Đang lưu...' : 'Lưu dữ liệu'}
+          {commitClientExcel.isPending || commitDriverRecon.isPending ? 'Đang lưu...' : 'Lưu dữ liệu'}
         </Button>
       </>
     ) : (
@@ -621,8 +657,8 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* Client resolution card */}
-          {!clientId && excelClientName && (
+          {/* Client resolution card — only for client import type */}
+          {importType === 'client' && !clientId && excelClientName && (
             <div
               className="overflow-hidden"
               style={{
@@ -1017,13 +1053,28 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                   <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Địa điểm mới</p>
                 </div>
               </>
+            ) : importType === 'driver' ? (
+              <>
+                <div className="p-3 rounded-lg border border-solid" style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}>
+                  <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color: 'var(--success)' }}>
+                    {driverCommitResult?.created ?? 0}
+                  </p>
+                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Chuyến nội bộ tạo mới (Delivered)</p>
+                </div>
+                <div className="p-3 rounded-lg border border-solid" style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}>
+                  <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color: 'var(--accent)' }}>
+                    {driverCommitResult?.matched ?? 0}
+                  </p>
+                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Chuyến tự động so khớp</p>
+                </div>
+              </>
             ) : (
               <>
                 <div className="p-3 rounded-lg border border-solid" style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}>
                   <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color: 'var(--success)' }}>
                     {reconResult?.created ?? 0}
                   </p>
-                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Chuyến {importType === 'driver' ? 'nội bộ' : 'thầu'} tạo mới (Delivered)</p>
+                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Chuyến thầu tạo mới (Delivered)</p>
                 </div>
                 <div className="p-3 rounded-lg border border-solid" style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}>
                   <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color: 'var(--accent)' }}>
@@ -1041,16 +1092,16 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Errors list if any */}
-          {((importType === 'client' ? commitClientExcel.data?.errors : reconResult?.errors) ?? []).length > 0 && (
+          {((importType === 'client' ? commitClientExcel.data?.errors : importType === 'driver' ? driverCommitResult?.errors : reconResult?.errors) ?? []).length > 0 && (
             <div className="w-full text-left mt-5 space-y-1.5">
               <h4 className="text-[12.5px] font-bold m-0 text-red-600" style={{ color: 'var(--danger)' }}>
-                Một số dòng gặp lỗi khi xử lý ({importType === 'client' ? commitClientExcel.data?.errors?.length : reconResult?.errors?.length}):
+                Một số dòng gặp lỗi khi xử lý ({importType === 'client' ? commitClientExcel.data?.errors?.length : importType === 'driver' ? driverCommitResult?.errors?.length : reconResult?.errors?.length}):
               </h4>
               <div
                 className="p-3 rounded border border-solid max-h-40 overflow-y-auto"
                 style={{ borderColor: 'var(--line)', background: 'var(--surface-2)', fontSize: 11.5 }}
               >
-                {((importType === 'client' ? commitClientExcel.data?.errors : reconResult?.errors) ?? []).map((err: string, idx: number) => (
+                {((importType === 'client' ? commitClientExcel.data?.errors : importType === 'driver' ? driverCommitResult?.errors : reconResult?.errors) ?? []).map((err: string, idx: number) => (
                   <p key={idx} className="m-0 mt-1 font-mono text-red-500" style={{ color: 'var(--danger)' }}>
                     {err}
                   </p>
