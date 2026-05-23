@@ -55,7 +55,7 @@ export function AutoMatchDateDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5" style={{ color: 'var(--theme-accent)' }} />
-            Tự động ghép
+            AI ghép chuyến
           </DialogTitle>
           <DialogDescription>
             Chọn khoảng thời gian để quét các chuyến chưa ghép.

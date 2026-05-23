@@ -1,11 +1,9 @@
-## Tool Priority
+## Tool Priority (follows global Tool-First Rule in ~/.claude/CLAUDE.md)
 
-1. **codegraph MCP tools** — `codegraph_search`, `codegraph_context`, `codegraph_callers/callees`, `codegraph_impact` (instant, indexed; 6,916 nodes)
-2. **graphify CLI** — `graphify query`, `graphify path`, `graphify explain` (cross-file relationships from graphify-out/)
-3. **rtk-filtered Bash** — `rg`, `grep`, `find` auto-rewritten by rtk hook (93%+ token savings)
-4. **Raw Read/Edit** — only when you know the exact file path
+**Indexed:** 7,734 nodes (codegraph) | 177.6 MB graph (graphify)
+**Rule:** codegraph → graphify → rtk-filtered bash → Read (only when path known)
 
-Before making changes to a symbol, run `codegraph_impact` to understand blast radius.
+Before changing any symbol → `codegraph_impact` to understand blast radius.
 
 ### claude-mem
 

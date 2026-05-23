@@ -305,6 +305,26 @@ async def auto_match_preview(
                 "score": round(score, 4),
                 "confidence": _confidence(score),
                 "matched_fields": matched_fields,
+                "delivered": {
+                    "trip_date": wo.trip_date.isoformat() if wo.trip_date else None,
+                    "cont_number": wo.cont_number,
+                    "client_id": wo.client_id,
+                    "pickup_location_id": wo.pickup_location_id,
+                    "dropoff_location_id": wo.dropoff_location_id,
+                    "work_type": wo.work_type,
+                    "vessel": wo.vessel,
+                    "vehicle_plate": wo.vehicle_plate,
+                },
+                "booked": {
+                    "trip_date": to.trip_date.isoformat() if to.trip_date else None,
+                    "cont_number": to.cont_number,
+                    "client_id": to.client_id,
+                    "pickup_location_id": to.pickup_location_id,
+                    "dropoff_location_id": to.dropoff_location_id,
+                    "work_type": to.work_type,
+                    "vessel": to.vessel,
+                    "vehicle_plate": to.vehicle_plate,
+                },
             })
 
             if score >= FULL_MATCH_THRESHOLD:
@@ -321,11 +341,18 @@ async def auto_match_preview(
     }
 
 
+SYNCABLE_FIELDS = ["vessel", "vehicle_plate", "work_type"]
+
+
 async def confirm_matches(
     db: AsyncSession,
-    pairs: list[tuple[int, int]],
+    pairs: list[tuple[int, int, str | None]],
 ) -> dict:
-    """Commit matched pairs: set matched=True on both sides.
+    """Commit matched pairs: set matched=True on both sides and sync fields.
+
+    Each pair is (wo_id, to_id, sync_source).
+    sync_source: "delivered" | "booked" | None.
+    When sync_source is set, copy SYNCABLE_FIELDS from the source to the target.
 
     Returns {matched_count, errors}.
     """
@@ -334,7 +361,7 @@ async def confirm_matches(
     matched_count = 0
     errors: list[str] = []
 
-    for wo_id, to_id in pairs:
+    for wo_id, to_id, sync_source in pairs:
         wo = (await db.execute(
             select(WO).where(WO.id == wo_id)
         )).scalar_one_or_none()
@@ -354,6 +381,22 @@ async def confirm_matches(
         if to.matched:
             errors.append(f"BookedTrip#{to_id} already matched")
             continue
+
+        if sync_source == "delivered":
+            for field in SYNCABLE_FIELDS:
+                setattr(to, field, getattr(wo, field))
+        elif sync_source == "booked":
+            for field in SYNCABLE_FIELDS:
+                setattr(wo, field, getattr(to, field))
+        else:
+            # Auto-fill: copy from whichever side has a value
+            for field in SYNCABLE_FIELDS:
+                wo_val = getattr(wo, field)
+                to_val = getattr(to, field)
+                if wo_val and not to_val:
+                    setattr(to, field, wo_val)
+                elif to_val and not wo_val:
+                    setattr(wo, field, to_val)
 
         wo.matched = True
         to.matched = True

@@ -57,7 +57,7 @@ export function InlineSelect({ placeholder, value, options, onChange, onInputCha
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={`w-full flex items-center justify-between h-11 rounded-xl px-4 text-sm touch-manipulation ${className ?? ''}`}
+          className={`w-full flex items-center justify-between h-11 rounded-xl px-4 text-sm touch-manipulation overflow-hidden ${className ?? ''}`}
           style={{
             background: 'var(--theme-bg-secondary)',
             border: '1px solid var(--theme-border-default)',
@@ -65,7 +65,7 @@ export function InlineSelect({ placeholder, value, options, onChange, onInputCha
             ...style,
           }}
         >
-          <span className={`${selected || value ? 'font-medium' : ''}`}>
+          <span className={`truncate min-w-0 ${selected || value ? 'font-medium' : ''}`}>
             {selected?.label ?? (value || placeholder)}
           </span>
           <ChevronDown className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />

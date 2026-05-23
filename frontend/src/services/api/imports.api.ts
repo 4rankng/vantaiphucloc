@@ -35,6 +35,7 @@ export interface ParsedRowDto {
     container_no: string
     container_size: string
     freight_kind: string
+    cont_type?: string
     work_type: string
     container_type_iso?: string
     gross_weight_kg?: number | null
@@ -48,6 +49,7 @@ export interface ParsedRowDto {
     consignee?: string
     commodity?: string
     driver_name?: string
+    vehicle_plate?: string
     vessel?: string
     freight_charge?: number | null
     remarks?: string
@@ -295,7 +297,7 @@ export async function previewVendorReconciliation(
     const res = await api.post('/vendor-reconciliation/preview', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    return ok(toCamel<PreviewResultDto>(res.data))
+    return ok(res.data as PreviewResultDto)
   } catch (err) {
     return fail(err)
   }
@@ -353,7 +355,7 @@ export async function previewDriverReconciliation(file: File): Promise<ApiRespon
     const res = await api.post('/driver-reconciliation/preview', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    return ok(toCamel<PreviewResultDto>(res.data))
+    return ok(res.data as PreviewResultDto)
   } catch (err) {
     return fail(err)
   }

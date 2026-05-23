@@ -36,8 +36,8 @@ export function FilterTabs<T extends string>({
             onClick={() => onChange(tab.value)}
             className="flex items-center gap-1.5 text-[12.5px] font-medium px-3 py-1.5 transition-colors"
             style={{
-              background: active ? 'var(--accent)' : 'transparent',
-              color: active ? '#fff' : 'var(--ink-2)',
+              background: active ? 'var(--accent)' : 'var(--surface-2)',
+              color: active ? '#fff' : 'var(--ink-3)',
               borderRight: i < tabs.length - 1 ? '1px solid var(--line)' : 'none',
               whiteSpace: 'nowrap',
             }}

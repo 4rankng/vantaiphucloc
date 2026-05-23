@@ -245,10 +245,17 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
 
   const handleFileSelect = useCallback((f: File | null) => {
     if (!f) return
-    setFile(f)
     setError(null)
+    // For vendor imports, the vendor must be selected first — otherwise the
+    // drop zone would disappear (file chip shown) but preview can't start,
+    // leaving the user stuck with no way to re-try without removing the chip.
+    if (importType === 'vendor' && !vendorId) {
+      setError('Vui lòng chọn nhà thầu trước khi chọn file.')
+      return
+    }
+    setFile(f)
     startPreview(f)
-  }, [startPreview])
+  }, [startPreview, importType, vendorId])
 
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault()

@@ -1,12 +1,25 @@
 import { api } from './client'
 import { toCamel, ok, fail } from './utils'
 
+export interface TripSummary {
+  tripDate: string | null
+  contNumber: string | null
+  clientName: string | null
+  pickupName: string | null
+  dropoffName: string | null
+  workType: string | null
+  vessel: string | null
+  vehiclePlate: string | null
+}
+
 export interface MatchCandidate {
   deliveredTripId: number
   bookedTripId: number
   score: number
   confidence: 'full' | 'partial' | 'none'
   matchedFields: string[]
+  delivered: TripSummary
+  booked: TripSummary
 }
 
 export interface AutoMatchPreviewResponse {
@@ -43,13 +56,14 @@ export async function autoMatchPreview(params: {
 }
 
 export async function confirmAutoMatch(
-  pairs: Array<{ deliveredTripId: number; bookedTripId: number }>
+  pairs: Array<{ deliveredTripId: number; bookedTripId: number; syncSource?: string | null }>
 ) {
   try {
     const res = await api.post('/auto-match/confirm', {
       pairs: pairs.map((p) => ({
         delivered_trip_id: p.deliveredTripId,
         booked_trip_id: p.bookedTripId,
+        sync_source: p.syncSource || null,
       })),
     })
     return ok<ConfirmMatchResponse>(toCamel(res.data))

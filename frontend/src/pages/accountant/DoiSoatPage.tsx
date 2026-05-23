@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { StatBreakdownCard } from '@/components/shared/StatBreakdownCard'
 import { Panel } from '@/components/shared/Panel'
 import { DataTable, type Column } from '@/components/shared/DataTable'
-import { Toolbar, ToolbarSearch, ToolbarSpacer } from '@/components/shared/Toolbar'
+import { ToolbarSearch } from '@/components/shared/Toolbar'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
@@ -77,7 +77,7 @@ export function DoiSoatPage() {
   )
 
   const handleConfirmMatch = useCallback(
-    (pairs: Array<{ deliveredTripId: number; bookedTripId: number }>) => {
+    (pairs: Array<{ deliveredTripId: number; bookedTripId: number; syncSource?: string | null }>) => {
       confirmMatch.mutate(pairs, {
         onSuccess: () => {
           setShowAutoMatch(false)
@@ -329,8 +329,8 @@ export function DoiSoatPage() {
 
       {/* ── Table section ── */}
       <section>
-        {/* Section header + action buttons */}
-        <div className="flex items-center justify-between mb-3">
+        {/* Row 1: title + action buttons */}
+        <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-2">
             <span style={{ color: 'var(--ink-2)' }}><ClipboardList className="h-4 w-4" /></span>
             <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>
@@ -345,7 +345,10 @@ export function DoiSoatPage() {
                 { value: 'ALL', label: 'Tất cả chủ hàng' },
                 ...clients.map((c) => ({ value: String(c.id), label: c.code ? `${c.code} — ${c.name}` : c.name })),
               ]}
-              onChange={setDoiSoatClientId}
+              onChange={(val) => {
+                setDoiSoatClientId(val)
+                setStatusFilter('ALL')
+              }}
               style={{ width: 185, height: 32, fontSize: 12.5 }}
             />
             <Button
@@ -379,25 +382,26 @@ export function DoiSoatPage() {
             </Button>
             <Button
               variant="ghost"
-              title="Tự động ghép tất cả chuyến khớp hoàn toàn (số cont, tuyến, chủ hàng). Bạn sẽ được xem trước trước khi xác nhận."
+              title="AI ghép tất cả chuyến khớp hoàn toàn (số cont, tuyến, chủ hàng). Bạn sẽ được xem trước trước khi xác nhận."
               onClick={() => setShowAutoMatchDate(true)}
               disabled={autoMatchPreview.isPending}
             >
               {autoMatchPreview.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-              Tự động ghép
+              AI ghép chuyến
             </Button>
           </div>
         </div>
 
-        <Panel flush>
-          <Toolbar bordered>
+        {/* Row 2: search + filter tabs in a card */}
+        <Panel flush className="mb-2">
+          <div className="flex items-center gap-3 px-4 py-2.5">
             <ToolbarSearch
               value={search}
               onChange={setSearch}
               placeholder="Tìm chủ hàng, tàu, tuyến, cont…"
               width={320}
             />
-            <ToolbarSpacer />
+            <div className="flex-1" />
             <FilterTabs<StatusFilter>
               tabs={[
                 { value: 'ALL', label: 'Tất cả' },
@@ -408,15 +412,17 @@ export function DoiSoatPage() {
               onChange={setStatusFilter}
               counts={statusCounts}
             />
-          </Toolbar>
+          </div>
+        </Panel>
 
-          {!isLoading && filtered.length > 0 && (
-            <div className="px-4 py-1.5" style={{ borderBottom: '1px solid var(--line)' }}>
-              <span className="text-[11.5px]" style={{ color: 'var(--ink-4)' }}>
-                Nhấp vào hàng để xem chi tiết và ghép nối chuyến
-              </span>
-            </div>
-          )}
+        {/* Hint text — above the table, outside the Panel */}
+        {!isLoading && filtered.length > 0 && (
+          <p className="text-[11.5px] mb-1.5" style={{ color: 'var(--ink-4)' }}>
+            Nhấp vào hàng để xem chi tiết và ghép nối chuyến
+          </p>
+        )}
+
+        <Panel flush>
 
           <DataTable
             columns={columns}
