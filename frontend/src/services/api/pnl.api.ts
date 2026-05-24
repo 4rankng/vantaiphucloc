@@ -117,6 +117,14 @@ export async function getTripDailyStats(
   }
 }
 
+export interface VehiclePnLGroup {
+  rows: VehiclePnLRow[]
+  totalRevenue: number
+  totalCost: number
+  totalProfit: number
+  tripCount: number
+}
+
 export interface DirectorDashboard {
   total: number
   matched: number
@@ -124,13 +132,19 @@ export interface DirectorDashboard {
   matchRate: number | null
   revenue: number
   avgRevenuePerTrip: number
+  totalCost: number
+  profit: number
   totalDelta: number | null
   matchedDelta: number | null
   pendingDelta: number | null
   revenueDelta: number | null
+  costDelta: number | null
+  profitDelta: number | null
   buckets: TripDayBucket[]
   topRoutes: { name: string; count: number }[]
   topDrivers: { name: string; tripCount: number }[]
+  ownFleetPnl: VehiclePnLGroup
+  vendorPnl: VehiclePnLGroup
 }
 
 export async function getDirectorDashboard(

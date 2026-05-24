@@ -24,6 +24,7 @@ function formatDate(date?: string, day?: number): string {
 export function TripBarChart({ bars, height = 140 }: TripBarChartProps) {
   const [hoveredDay, setHoveredDay] = useState<number | null>(null)
   const tipRef = useRef<HTMLDivElement>(null)
+  const lastMousePos = useRef({ x: 0, y: 0 })
   const CHART_H = height
   const Y_AXIS_W = 28
   const X_AXIS_H = 20
@@ -33,19 +34,24 @@ export function TripBarChart({ bars, height = 140 }: TripBarChartProps) {
   const niceMax = Math.ceil(maxTotal / 4) * 4 || 4
   const ticks = Array.from({ length: 5 }, (_, i) => Math.round((niceMax / 4) * (4 - i)))
 
-  const moveTooltip = useCallback((e: React.MouseEvent) => {
-    const tip = tipRef.current
-    if (!tip) return
+  const positionTip = useCallback((tip: HTMLDivElement, x: number, y: number) => {
     const GAP = 10
     const vw = window.innerWidth
     const vh = window.innerHeight
     const tw = tip.offsetWidth
     const th = tip.offsetHeight
-    const placeLeft = e.clientX + GAP + tw > vw
-    const placeUp = e.clientY + GAP + th > vh
-    tip.style.left = placeLeft ? `${e.clientX - tw - GAP}px` : `${e.clientX + GAP}px`
-    tip.style.top = placeUp ? `${e.clientY - th - GAP}px` : `${e.clientY + GAP}px`
+    const placeLeft = x + GAP + tw > vw
+    const placeUp = y + GAP + th > vh
+    tip.style.left = placeLeft ? `${x - tw - GAP}px` : `${x + GAP}px`
+    tip.style.top = placeUp ? `${y - th - GAP}px` : `${y + GAP}px`
   }, [])
+
+  const moveTooltip = useCallback((e: React.MouseEvent) => {
+    lastMousePos.current = { x: e.clientX, y: e.clientY }
+    const tip = tipRef.current
+    if (!tip) return
+    positionTip(tip, e.clientX, e.clientY)
+  }, [positionTip])
 
   const onLeave = useCallback(() => {
     setHoveredDay(null)
@@ -56,12 +62,18 @@ export function TripBarChart({ bars, height = 140 }: TripBarChartProps) {
 
   const hoveredBar = hoveredDay != null ? bars.find(b => b.day === hoveredDay) : null
 
-  // Sync display on hoveredBar change
+  // Sync display on hoveredBar change, then re-position with real dimensions
   useEffect(() => {
     const tip = tipRef.current
     if (!tip) return
-    tip.style.display = hoveredBar ? 'block' : 'none'
-  }, [hoveredBar])
+    if (hoveredBar) {
+      tip.style.display = 'block'
+      // Re-position now that content is rendered and offsetWidth/Height are accurate
+      positionTip(tip, lastMousePos.current.x, lastMousePos.current.y)
+    } else {
+      tip.style.display = 'none'
+    }
+  }, [hoveredBar, positionTip])
 
   return (
     <div className="relative select-none">

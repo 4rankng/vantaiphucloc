@@ -59,7 +59,7 @@ async def list_audit_logs(
         count_q = count_q.where(AuditLog.created_at >= created_after)
 
     if is_financial:
-        financial_tables = ["booked_trips", "pricing_lines", "delivered_trips"]
+        financial_tables = ["booked_trips", "pricing_lines", "delivered_trips", "driver_salaries"]
         q = q.where(AuditLog.table_name.in_(financial_tables))
         count_q = count_q.where(AuditLog.table_name.in_(financial_tables))
 
@@ -72,59 +72,113 @@ async def list_audit_logs(
     )
     rows = result.scalars().all()
 
-    # Collect user ids for batch lookup
+    # ── Batch user lookup ─────────────────────────────────────────────────────
     user_ids = {row.user_id for row in rows if row.user_id}
-    user_map: dict[int, tuple[str, str]] = {}
+    user_map: dict[int, tuple[str, str, str]] = {}
     if user_ids:
         user_rows = (await db.execute(
-            select(User.id, User.username, User.role).where(User.id.in_(user_ids))
+            select(User.id, User.full_name, User.role, User.username).where(User.id.in_(user_ids))
         )).all()
-        user_map = {r.id: (r.username, r.role) for r in user_rows}
+        user_map = {r.id: (r.full_name or r.username, r.role, r.username) for r in user_rows}
 
-    # Batch-resolve driver names from driver_salaries records
-    driver_ids: set[int] = set()
-    for row in rows:
-        if row.table_name == "driver_salaries":
-            val = row.new_value or row.old_value
-            if val:
-                try:
-                    did = json.loads(val).get("driver_id")
-                    if did:
-                        driver_ids.add(did)
-                except (json.JSONDecodeError, TypeError):
-                    pass
+    # ── Batch resolve: driver names, vendor names, client names ────────────────
+    def _collect_ids(table: str, key: str) -> set[int]:
+        ids: set[int] = set()
+        for row in rows:
+            if row.table_name == table:
+                for val in (row.new_value, row.old_value):
+                    if val:
+                        try:
+                            v = json.loads(val).get(key)
+                            if isinstance(v, int):
+                                ids.add(v)
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+        return ids
+
+    driver_ids = _collect_ids("driver_salaries", "driver_id") | _collect_ids("driver_salary_configs", "driver_id")
+    client_ids = _collect_ids("delivered_trips", "client_id") | _collect_ids("booked_trips", "client_id")
+    vendor_ids = _collect_ids("vehicles", "vendor_id")
+
     driver_name_map: dict[int, str] = {}
     if driver_ids:
-        d_rows = (await db.execute(
-            select(User.id, User.username).where(User.id.in_(driver_ids))
-        )).all()
-        driver_name_map = {r.id: r.username for r in d_rows}
+        for r in (await db.execute(select(User.id, User.full_name, User.username).where(User.id.in_(driver_ids)))).all():
+            driver_name_map[r.id] = r.full_name or r.username
 
-    # Table-specific subject name extraction from new_value JSON
-    def _extract_subject(table_name: str, new_value: str | None, old_value: str | None) -> str | None:
-        val = new_value or old_value
+    from app.models.domain import Client, Vendor
+    client_name_map: dict[int, str] = {}
+    if client_ids:
+        for r in (await db.execute(select(Client.id, Client.name).where(Client.id.in_(client_ids)))).all():
+            client_name_map[r.id] = r.name
+
+    vendor_name_map: dict[int, str] = {}
+    if vendor_ids:
+        for r in (await db.execute(select(Vendor.id, Vendor.name).where(Vendor.id.in_(vendor_ids)))).all():
+            vendor_name_map[r.id] = r.name
+
+    # ── Subject extraction ────────────────────────────────────────────────────
+    def _j(val: str | None) -> dict | None:
         if not val:
             return None
         try:
-            data = json.loads(val)
+            return json.loads(val)
         except (json.JSONDecodeError, TypeError):
+            return None
+
+    def _extract_subject(table_name: str, nv: str | None, ov: str | None) -> str | None:
+        data = _j(nv) or _j(ov)
+        if not data:
             return None
 
         if table_name == "driver_salaries":
             did = data.get("driver_id")
-            if did and did in driver_name_map:
-                return driver_name_map[did]
+            return driver_name_map.get(did) if did else None
+
+        if table_name == "driver_salary_configs":
+            did = data.get("driver_id")
+            return driver_name_map.get(did) if did else None
+
         if table_name == "clients":
             return data.get("name")
+
+        if table_name == "vendors":
+            return data.get("name")
+
         if table_name == "locations":
             return data.get("name")
+
+        if table_name == "location_aliases":
+            return data.get("alias")
+
         if table_name == "users":
             return data.get("username")
+
+        if table_name == "vehicles":
+            plate = data.get("plate")
+            vid = data.get("vendor_id")
+            if plate:
+                vname = vendor_name_map.get(vid, "")
+                return f"{plate}" + (f" ({vname})" if vname else "")
+            return None
+
+        if table_name == "delivered_trips":
+            cid = data.get("client_id")
+            return client_name_map.get(cid) if cid else None
+
+        if table_name == "booked_trips":
+            cid = data.get("client_id")
+            return client_name_map.get(cid) if cid else None
+
+        if table_name == "vehicle_expenses":
+            plate = data.get("vehicle_plate")
+            return plate or data.get("description")
+
         return None
 
+    # ── Build response ────────────────────────────────────────────────────────
     items = []
     for row in rows:
-        uname, urole = (user_map.get(row.user_id, (None, None))) if row.user_id else (None, None)
+        uname, urole, _ = (user_map.get(row.user_id, (None, None, None))) if row.user_id else (None, None, None)
         items.append(AuditLogOut(
             id=row.id,
             user_id=row.user_id,

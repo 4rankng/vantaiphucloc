@@ -18,6 +18,7 @@ __all__ = [
     "TripDayBucket",
     "TripDailyStatsOut",
     "DirectorDashboardOut",
+    "VehiclePnLGroup",
 ]
 
 
@@ -159,6 +160,15 @@ class DirectorDriverStat(BaseModel):
     name: str
     trip_count: int
 
+class VehiclePnLGroup(BaseModel):
+    """A PnL group (own fleet or from-vendor) bundling the rows and totals."""
+    rows: list[VehiclePnLRow] = []
+    total_revenue: int = 0
+    total_cost: int = 0
+    total_profit: int = 0
+    trip_count: int = 0
+
+
 class DirectorDashboardOut(BaseModel):
     total: int = 0
     matched: int = 0
@@ -166,10 +176,16 @@ class DirectorDashboardOut(BaseModel):
     match_rate: float | None = None
     revenue: int = 0
     avg_revenue_per_trip: int = 0
+    total_cost: int = 0
+    profit: int = 0
     total_delta: float | None = None
     matched_delta: float | None = None
     pending_delta: float | None = None
     revenue_delta: float | None = None
+    cost_delta: float | None = None
+    profit_delta: float | None = None
     buckets: list[TripDayBucket] = []
     top_routes: list[DirectorRouteStat] = []
     top_drivers: list[DirectorDriverStat] = []
+    own_fleet_pnl: VehiclePnLGroup = Field(default_factory=lambda: VehiclePnLGroup())
+    vendor_pnl: VehiclePnLGroup = Field(default_factory=lambda: VehiclePnLGroup())

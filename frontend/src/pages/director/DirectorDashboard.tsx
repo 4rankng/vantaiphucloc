@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   TrendingUp, TrendingDown, ChevronLeft, ChevronRight,
   Activity, ArrowUpRight,
 } from 'lucide-react'
 import { useDirectorDashboard } from '@/hooks/queries/pnl'
+import type { VehiclePnLGroup, VehiclePnLRow } from '@/services/api/pnl.api'
 import type { AuditLogEntry } from '@/services/api/audit.api'
 import { getAuditLogs } from '@/services/api/audit.api'
 import { compact, formatActivityEntry, formatFinancialChange } from '@/lib/activity-utils'
@@ -103,6 +105,40 @@ function KpiCard({
 
 function BarChart({ buckets, maxValue }: { buckets: { day: number; matched: number; pending: number }[]; maxValue: number }) {
   const [hovered, setHovered] = useState<number | null>(null)
+  const tipRef = useRef<HTMLDivElement>(null)
+  const lastMouse = useRef({ x: 0, y: 0 })
+
+  const positionTip = useCallback((tip: HTMLDivElement, x: number, y: number) => {
+    const GAP = 10
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    const tw = tip.offsetWidth
+    const th = tip.offsetHeight
+    const placeLeft = x + GAP + tw > vw
+    const placeUp = y + GAP + th > vh
+    tip.style.left = placeLeft ? `${x - tw - GAP}px` : `${x + GAP}px`
+    tip.style.top = placeUp ? `${y - th - GAP}px` : `${y + GAP}px`
+  }, [])
+
+  const moveTooltip = useCallback((e: React.MouseEvent) => {
+    lastMouse.current = { x: e.clientX, y: e.clientY }
+    const tip = tipRef.current
+    if (!tip) return
+    positionTip(tip, e.clientX, e.clientY)
+  }, [positionTip])
+
+  useEffect(() => {
+    const tip = tipRef.current
+    if (!tip) return
+    if (hovered != null) {
+      tip.style.display = 'block'
+      positionTip(tip, lastMouse.current.x, lastMouse.current.y)
+    } else {
+      tip.style.display = 'none'
+    }
+  }, [hovered, positionTip])
+
+  const hoveredBar = hovered != null ? buckets[hovered] : null
 
   return (
     <div style={{ position: 'relative', height: 280 }}>
@@ -126,19 +162,10 @@ function BarChart({ buckets, maxValue }: { buckets: { day: number; matched: numb
               <div
                 key={i}
                 className="flex-1 flex flex-col-reverse h-full relative cursor-pointer"
-                onMouseEnter={() => setHovered(i)}
+                onMouseEnter={(e) => { setHovered(i); moveTooltip(e) }}
+                onMouseMove={moveTooltip}
                 onMouseLeave={() => setHovered(null)}
               >
-                {hovered === i && (
-                  <div style={{
-                    position: 'absolute', bottom: '100%', left: '50%', transform: 'translate(-50%, -8px)',
-                    background: T.ink, color: '#fff', padding: '7px 10px', borderRadius: 8, fontSize: 11,
-                    whiteSpace: 'nowrap', fontFamily: fontMono, letterSpacing: '-0.01em', zIndex: 5,
-                  }}>
-                    {b.date} · Khớp {b.matched} · Chờ {b.pending}
-                    <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', border: '4px solid transparent', borderTopColor: T.ink }} />
-                  </div>
-                )}
                 <div style={{ width: '100%', height: `${mH}%`, borderRadius: '4px 4px 0 0', background: T.brand, transition: 'opacity 0.15s', opacity: hovered === i ? 0.78 : 1 }} />
                 <div style={{ width: '100%', height: `${wH}%`, background: T.accent, marginTop: 1 }} />
               </div>
@@ -155,6 +182,39 @@ function BarChart({ buckets, maxValue }: { buckets: { day: number; matched: numb
           </span>
         ))}
       </div>
+
+      {/* Tooltip — portaled to body, tracks mouse position */}
+      {createPortal(
+        <div
+          ref={tipRef}
+          className="fixed pointer-events-none z-50"
+          style={{ display: 'none' }}
+        >
+          {hoveredBar && (
+            <div
+              style={{
+                background: T.ink, color: '#fff', padding: '7px 10px', borderRadius: 8, fontSize: 11,
+                whiteSpace: 'nowrap', fontFamily: fontMono, letterSpacing: '-0.01em',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+              }}
+            >
+              <div className="font-semibold">{hoveredBar.date}</div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="inline-block h-1.5 w-1.5 rounded-sm" style={{ background: T.brand }} />
+                Khớp: {hoveredBar.matched}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block h-1.5 w-1.5 rounded-sm" style={{ background: T.accent }} />
+                Chờ: {hoveredBar.pending}
+              </div>
+              <div className="mt-0.5 pt-0.5 font-semibold" style={{ borderTop: `1px solid rgba(255,255,255,0.2)` }}>
+                Tổng: {hoveredBar.matched + hoveredBar.pending}
+              </div>
+            </div>
+          )}
+        </div>,
+        document.body,
+      )}
     </div>
   )
 }
@@ -166,16 +226,96 @@ const ROLE_INITIALS: Record<string, string> = {
   superadmin: 'SA',
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  accountant: 'Kế toán',
+  director: 'Giám đốc',
+  driver: 'Lái xe',
+  superadmin: 'Quản trị',
+}
+
+function VehiclePnLTable({ group, emptyHint }: { group: VehiclePnLGroup; emptyHint: string }) {
+  const rows = group.rows ?? []
+
+  if (rows.length === 0) {
+    return (
+      <p className="text-xs py-6 text-center" style={{ color: T.muted }}>{emptyHint}</p>
+    )
+  }
+
+  // Sort rows by lợi nhuận desc so the highest contributors are most visible.
+  const sorted: VehiclePnLRow[] = [...rows].sort((a, b) => b.loiNhuan - a.loiNhuan)
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ borderBottom: `1px solid ${T.line}` }}>
+            <th style={{ textAlign: 'left',  padding: '8px 10px', color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Biển số</th>
+            <th style={{ textAlign: 'right', padding: '8px 10px', color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Doanh thu</th>
+            <th style={{ textAlign: 'right', padding: '8px 10px', color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Chi phí</th>
+            <th style={{ textAlign: 'right', padding: '8px 10px', color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Lợi nhuận</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((row) => {
+            const cost = row.cpXe.total + row.cpLuongSanLuong + row.cpLuongCoBan + row.cpVendor
+            const positive = row.loiNhuan >= 0
+            return (
+              <tr key={row.vehicleId} style={{ borderBottom: `1px solid ${T.lineSoft}` }}>
+                <td style={{ padding: '8px 10px', color: T.ink, fontSize: 13, fontWeight: 600 }}>
+                  {row.plate}
+                  {row.isVendor && row.vendorName && (
+                    <span className="ml-1.5 inline-block rounded px-1.5 py-0.5" style={{ fontSize: 10, color: T.muted, background: T.lineSoft, fontWeight: 500 }}>
+                      {row.vendorName}
+                    </span>
+                  )}
+                </td>
+                <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: fontMono, fontSize: 12.5, color: T.ink }}>{compact(row.revenue)}</td>
+                <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: fontMono, fontSize: 12.5, color: T.ink2 }}>{compact(cost)}</td>
+                <td style={{
+                  padding: '8px 10px', textAlign: 'right',
+                  fontFamily: fontMono, fontSize: 12.5, fontWeight: 600,
+                  color: positive ? T.brand : T.rose,
+                }}>
+                  {compact(row.loiNhuan)}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+        <tfoot>
+          <tr style={{ borderTop: `1px solid ${T.line}` }}>
+            <td style={{ padding: '10px', color: T.ink, fontWeight: 700, fontSize: 12 }}>Tổng</td>
+            <td style={{ padding: '10px', textAlign: 'right', fontFamily: fontMono, fontWeight: 700, fontSize: 12.5, color: T.ink }}>{compact(group.totalRevenue)}</td>
+            <td style={{ padding: '10px', textAlign: 'right', fontFamily: fontMono, fontWeight: 700, fontSize: 12.5, color: T.ink2 }}>{compact(group.totalCost)}</td>
+            <td style={{
+              padding: '10px', textAlign: 'right',
+              fontFamily: fontMono, fontWeight: 700, fontSize: 12.5,
+              color: group.totalProfit >= 0 ? T.brand : T.rose,
+            }}>
+              {compact(group.totalProfit)}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  )
+}
+
 function ActivityItem({ log, isFirst }: { log: AuditLogEntry; isFirst: boolean }) {
   const time = new Date(log.createdAt)
   const timeStr = time.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
   const dateStr = time.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+
+  const roleLabel = ROLE_LABELS[log.userRole ?? ''] ?? ''
+  const rawName = log.userName || ''
   const actorLabel = log.userId
-    ? log.userName || 'Người dùng'
+    ? [roleLabel, rawName].filter(Boolean).join(' ') || 'Người dùng'
     : 'Hệ thống'
+
   const activityText = formatActivityEntry(log.action, log.tableName)
   const changes = formatFinancialChange(log)
-  const initials = ROLE_INITIALS[log.userRole ?? ''] ?? actorLabel.slice(0, 2).toUpperCase()
+  const initials = ROLE_INITIALS[log.userRole ?? ''] ?? rawName.slice(0, 2).toUpperCase()
   const isCreate = log.action?.toLowerCase().includes('create')
 
   return (
@@ -202,7 +342,11 @@ function ActivityItem({ log, isFirst }: { log: AuditLogEntry; isFirst: boolean }
         <p className="text-[13px] leading-snug" style={{ color: T.ink2 }}>
           <span className="font-semibold" style={{ color: T.ink }}>{actorLabel}</span>{' '}
           <span className="font-semibold" style={{ color: isCreate ? '#8C6420' : T.brand }}>đã {activityText}</span>
-          {log.subjectName && <span className="font-semibold" style={{ color: T.ink }}> {log.subjectName}</span>}
+          {log.subjectName && (
+            <span className="font-semibold" style={{ color: T.ink }}>
+              {' '}{log.tableName === 'driver_salaries' ? 'lái xe ' : ''}{log.subjectName}
+            </span>
+          )}
         </p>
         <p className="mt-1" style={{ fontFamily: fontMono, fontSize: 10, color: T.muted2, letterSpacing: '0.02em' }}>
           {timeStr} · {dateStr}
@@ -234,17 +378,21 @@ export function DirectorDashboard() {
   const total       = stats?.total       ?? 0
   const matched     = stats?.matched     ?? 0
   const pending     = stats?.pending     ?? 0
-  const matchRate   = stats?.matchRate   ?? null
   const revenue     = stats?.revenue     ?? 0
   const avgRev      = stats?.avgRevenuePerTrip ?? 0
+  const totalCost   = stats?.totalCost   ?? 0
+  const profit      = stats?.profit      ?? 0
   const buckets     = stats?.buckets     ?? []
   const topRoutes   = stats?.topRoutes   ?? []
   const topDrivers  = stats?.topDrivers  ?? []
 
   const totalDelta     = stats?.totalDelta     ?? null
-  const matchedDelta   = stats?.matchedDelta   ?? null
-  const pendingDelta   = stats?.pendingDelta   ?? null
   const revenueDelta   = stats?.revenueDelta   ?? null
+  const costDelta      = stats?.costDelta      ?? null
+  const profitDelta    = stats?.profitDelta    ?? null
+
+  const ownFleetPnl: VehiclePnLGroup = stats?.ownFleetPnl ?? { rows: [], totalRevenue: 0, totalCost: 0, totalProfit: 0, tripCount: 0 }
+  const vendorPnl: VehiclePnLGroup   = stats?.vendorPnl   ?? { rows: [], totalRevenue: 0, totalCost: 0, totalProfit: 0, tripCount: 0 }
 
   const prevMonth = month === 1 ? 12 : month - 1
 
@@ -336,22 +484,6 @@ export function DirectorDashboard() {
             delay={60}
           />
           <KpiCard
-            label="Đã khớp"
-            value={matched.toLocaleString('vi-VN')}
-            unit={`/ ${total.toLocaleString('vi-VN')}`}
-            context={matchRate != null ? `Tỷ lệ ghép · ${matchRate}%` : undefined}
-            trend={matchedDelta != null ? { value: `${Math.abs(matchedDelta)}%`, positive: matchedDelta >= 0 } : undefined}
-            delay={120}
-          />
-          <KpiCard
-            label="Chờ xử lý"
-            value={pending.toLocaleString('vi-VN')}
-            unit={`/ ${total.toLocaleString('vi-VN')}`}
-            context={total > 0 ? `Chiếm ${Math.round((pending / total) * 100)}% tổng chuyến` : undefined}
-            trend={pendingDelta != null ? { value: `${Math.abs(pendingDelta)}%`, positive: pendingDelta <= 0 } : undefined}
-            delay={180}
-          />
-          <KpiCard
             label="Doanh thu"
             value={revenue.toLocaleString('vi-VN')}
             unit="VNĐ"
@@ -359,6 +491,26 @@ export function DirectorDashboard() {
             trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta >= 0 } : undefined}
             accentColor={T.accent}
             accentTint={T.accentTint}
+            delay={120}
+          />
+          <KpiCard
+            label="Chi phí"
+            value={totalCost.toLocaleString('vi-VN')}
+            unit="VNĐ"
+            context={revenue > 0 ? `Tỷ lệ ${Math.round((totalCost / revenue) * 100)}% doanh thu` : undefined}
+            trend={costDelta != null ? { value: `${Math.abs(costDelta)}%`, positive: costDelta <= 0 } : undefined}
+            accentColor={T.rose}
+            accentTint={T.roseTint}
+            delay={180}
+          />
+          <KpiCard
+            label="Lợi nhuận"
+            value={profit.toLocaleString('vi-VN')}
+            unit="VNĐ"
+            context={revenue > 0 ? `Biên ${Math.round((profit / revenue) * 100)}%` : undefined}
+            trend={profitDelta != null ? { value: `${Math.abs(profitDelta)}%`, positive: profitDelta >= 0 } : undefined}
+            accentColor={profit >= 0 ? T.brand : T.rose}
+            accentTint={profit >= 0 ? T.brandTint : T.roseTint}
             delay={240}
           />
         </section>
@@ -470,6 +622,58 @@ export function DirectorDashboard() {
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* PnL per vehicle — split between own fleet and from-vendor */}
+        <section className="grid grid-cols-1 xl:grid-cols-2 gap-4 mt-4" style={{ animation: 'fadeIn 0.5s ease both', animationDelay: '300ms' }}>
+
+          {/* Own fleet */}
+          <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 18, padding: '22px 24px', boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)' }}>
+            <div className="flex items-baseline justify-between mb-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase" style={{ color: T.muted, letterSpacing: '0.1em' }}>Lợi nhuận theo xe · Xe nhà</p>
+                <p className="text-xs mt-1" style={{ color: T.muted }}>
+                  {ownFleetPnl.rows.length} xe · Doanh thu {compact(ownFleetPnl.totalRevenue)} · Chi phí {compact(ownFleetPnl.totalCost)}
+                </p>
+              </div>
+              <span
+                className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                style={{
+                  fontFamily: fontMono,
+                  letterSpacing: '-0.01em',
+                  background: ownFleetPnl.totalProfit >= 0 ? T.brandTint : T.roseTint,
+                  color:      ownFleetPnl.totalProfit >= 0 ? T.brand    : T.rose,
+                }}
+              >
+                LN {compact(ownFleetPnl.totalProfit)}
+              </span>
+            </div>
+            <VehiclePnLTable group={ownFleetPnl} emptyHint="Chưa có dữ liệu xe nhà" />
+          </div>
+
+          {/* Vendor */}
+          <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 18, padding: '22px 24px', boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)' }}>
+            <div className="flex items-baseline justify-between mb-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase" style={{ color: T.muted, letterSpacing: '0.1em' }}>Lợi nhuận theo xe · Xe ngoài</p>
+                <p className="text-xs mt-1" style={{ color: T.muted }}>
+                  {vendorPnl.rows.length} xe · Doanh thu {compact(vendorPnl.totalRevenue)} · Chi phí {compact(vendorPnl.totalCost)}
+                </p>
+              </div>
+              <span
+                className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                style={{
+                  fontFamily: fontMono,
+                  letterSpacing: '-0.01em',
+                  background: vendorPnl.totalProfit >= 0 ? T.brandTint : T.roseTint,
+                  color:      vendorPnl.totalProfit >= 0 ? T.brand    : T.rose,
+                }}
+              >
+                LN {compact(vendorPnl.totalProfit)}
+              </span>
+            </div>
+            <VehiclePnLTable group={vendorPnl} emptyHint="Chưa có dữ liệu xe ngoài" />
           </div>
         </section>
       </div>
