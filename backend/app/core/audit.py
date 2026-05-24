@@ -46,6 +46,7 @@ def _serialize(obj: object) -> dict:
 def _capture_dirty(obj: object) -> tuple[dict | None, dict | None]:
     """Return (old, new) dicts of changed fields for a dirty object."""
     exclude = getattr(obj, '__audit_exclude_fields__', set())
+    context = getattr(obj, '__audit_context_fields__', set())
     mapper = obj.__class__.__mapper__
     old: dict = {}
     new: dict = {}
@@ -57,6 +58,8 @@ def _capture_dirty(obj: object) -> tuple[dict | None, dict | None]:
         if hist.deleted:
             old[key] = hist.deleted[0]
             new[key] = hist.added[0] if hist.added else None
+        elif key in context:
+            new[key] = getattr(obj, key)
     return (old, new) if old else (None, None)
 
 

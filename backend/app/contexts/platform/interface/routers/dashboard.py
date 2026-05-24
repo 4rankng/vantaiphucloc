@@ -1132,10 +1132,10 @@ async def get_director_dashboard(
             ds = trip_date.isoformat()
             bucket = date_map.setdefault(ds, {"matched": 0, "pending": 0})
             total += cnt
-            revenue += int(rev)
             if booked_id is not None:
                 bucket["matched"] += cnt
                 matched += cnt
+                revenue += int(rev)
             else:
                 bucket["pending"] += cnt
                 pending += cnt
@@ -1170,16 +1170,17 @@ async def get_director_dashboard(
         # Top drivers
         driver_rows = (await db.execute(
             select(
-                User.username.label("name"),
+                User.full_name.label("name"),
+                DeliveredTrip.vehicle_plate.label("plate"),
                 func.count(DeliveredTrip.id).label("cnt"),
             )
             .join(User, User.id == DeliveredTrip.driver_id)
             .where(DeliveredTrip.trip_date >= start, DeliveredTrip.trip_date <= end)
-            .group_by(User.username)
+            .group_by(User.full_name, DeliveredTrip.vehicle_plate)
             .order_by(func.count(DeliveredTrip.id).desc())
             .limit(3)
         )).all()
-        top_drivers = [{"name": r.name, "trip_count": r.cnt} for r in driver_rows]
+        top_drivers = [{"name": r.name, "plate": r.plate or "", "trip_count": r.cnt} for r in driver_rows]
 
         return total, matched, pending, revenue, buckets, top_routes, top_drivers
 
@@ -1205,10 +1206,13 @@ async def get_director_dashboard(
     own_group = _group(own_rows)
     vendor_group = _group(vendor_rows)
 
-    # Aggregate totals — cost & profit derived from PnL rows (so cards stay
-    # consistent with the per-vehicle breakdown below them).
+    # Aggregate totals — revenue, cost & profit all derived from PnL rows
+    # (matched DeliveredTrips) so the KPI cards stay consistent with the
+    # per-vehicle breakdown tables below them.
+    pnl_revenue = sum(r.revenue for r in pnl_rows)
     total_cost = sum(_row_cost(r) for r in pnl_rows)
     profit = sum(r.loi_nhuan for r in pnl_rows)
+    prev_pnl_revenue = sum(r.revenue for r in prev_pnl_rows)
     prev_total_cost = sum(_row_cost(r) for r in prev_pnl_rows)
     prev_profit = sum(r.loi_nhuan for r in prev_pnl_rows)
 
@@ -1222,14 +1226,14 @@ async def get_director_dashboard(
         matched=matched,
         pending=pending,
         match_rate=round(matched / total * 100) if total > 0 else None,
-        revenue=revenue,
-        avg_revenue_per_trip=round(revenue / total) if total > 0 else 0,
+        revenue=pnl_revenue,
+        avg_revenue_per_trip=round(pnl_revenue / matched) if matched > 0 else 0,
         total_cost=total_cost,
         profit=profit,
         total_delta=delta(total, prev_total),
         matched_delta=delta(matched, prev_matched),
         pending_delta=delta(pending, prev_pending),
-        revenue_delta=delta(revenue, prev_revenue),
+        revenue_delta=delta(pnl_revenue, prev_pnl_revenue),
         cost_delta=delta(total_cost, prev_total_cost),
         profit_delta=delta(profit, prev_profit),
         buckets=buckets,

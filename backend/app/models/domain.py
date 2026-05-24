@@ -42,6 +42,7 @@ def _utcnow() -> datetime:
 
 class Vehicle(AuditableMixin, Base):
     __tablename__ = "vehicles"
+    __audit_context_fields__ = {"driver_id", "vendor_id"}
 
     id = Column(Integer, primary_key=True, index=True)
     plate = Column(String(20), nullable=False, unique=True, index=True)
@@ -59,7 +60,7 @@ class Vehicle(AuditableMixin, Base):
 # ---------------------------------------------------------------------------
 
 
-class VehicleDriver(Base):
+class VehicleDriver(AuditableMixin, Base):
     """Associates a driver with a vehicle for a date range.
 
     ``effective_to=NULL`` means currently active.
@@ -70,6 +71,7 @@ class VehicleDriver(Base):
     """
 
     __tablename__ = "vehicle_drivers"
+    __audit_context_fields__ = {"vehicle_id", "driver_id"}
 
     id = Column(Integer, primary_key=True, index=True)
     vehicle_id = Column(
@@ -102,6 +104,7 @@ class VehicleExpense(AuditableMixin, Base):
     """
 
     __tablename__ = "vehicle_expenses"
+    __audit_context_fields__ = {"vehicle_id", "category"}
 
     id = Column(Integer, primary_key=True, index=True)
     vehicle_id = Column(
@@ -226,6 +229,7 @@ class LocationAlias(Base):
 
 class Pricing(AuditableMixin, Base):
     __tablename__ = "pricings"
+    __audit_context_fields__ = {"client_id", "work_type", "pickup_location_id", "dropoff_location_id"}
 
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
@@ -275,6 +279,7 @@ class PricingLine(Base):
 
 class RoutePricing(AuditableMixin, Base):
     __tablename__ = "route_pricings"
+    __audit_context_fields__ = {"client_id", "work_type", "pickup_location_id", "dropoff_location_id"}
 
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
@@ -312,6 +317,7 @@ class RoutePricing(AuditableMixin, Base):
 
 class VendorRoutePricing(AuditableMixin, Base):
     __tablename__ = "vendor_route_pricings"
+    __audit_context_fields__ = {"vendor_id", "work_type", "pickup_location_id", "dropoff_location_id"}
 
     id = Column(Integer, primary_key=True, index=True)
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False, index=True)
@@ -350,6 +356,7 @@ class VendorRoutePricing(AuditableMixin, Base):
 
 class DeliveredTrip(AuditableMixin, Base):
     __tablename__ = "delivered_trips"
+    __audit_context_fields__ = {"client_id", "driver_id", "vendor_id", "work_type"}
 
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
@@ -387,6 +394,7 @@ class DeliveredTrip(AuditableMixin, Base):
 
 class BookedTrip(AuditableMixin, Base):
     __tablename__ = "booked_trips"
+    __audit_context_fields__ = {"client_id", "work_type", "pickup_location_id", "dropoff_location_id"}
 
     id = Column(Integer, primary_key=True, index=True)
     trip_date = Column(Date, nullable=False)
@@ -433,7 +441,7 @@ class Setting(Base):
 # ---------------------------------------------------------------------------
 
 
-class DriverSalaryConfig(Base):
+class DriverSalaryConfig(AuditableMixin, Base):
     """Effective base salary for a driver, valid from ``effective_from``.
 
     Append-only: each rate change inserts a new row. The "current" base
@@ -442,6 +450,7 @@ class DriverSalaryConfig(Base):
     """
 
     __tablename__ = "driver_salary_configs"
+    __audit_context_fields__ = {"driver_id"}
 
     id = Column(Integer, primary_key=True, index=True)
     driver_id = Column(
@@ -484,6 +493,7 @@ class DriverSalary(AuditableMixin, Base):
     """
 
     __tablename__ = "driver_salaries"
+    __audit_context_fields__ = {"driver_id"}
 
     id = Column(Integer, primary_key=True, index=True)
     driver_id = Column(

@@ -19,14 +19,10 @@ export function monogram(name: string): string {
 
 export const ACTIVITY_LABELS: Record<string, Record<string, string>> = {
   CREATE: {
-    work_orders: 'tạo phiếu chuyến',
     delivered_trips: 'tạo chuyến giao',
-    trip_orders: 'tạo đơn hàng',
-    trip_order_work_orders: 'ghép chuyến',
     clients: 'tạo khách hàng',
     locations: 'tạo địa điểm',
     location_aliases: 'tạo alias địa điểm',
-    routes: 'tạo cung đường',
     pricings: 'tạo bảng giá',
     pricing_lines: 'tạo dòng giá',
     route_pricings: 'tạo giá tuyến',
@@ -38,17 +34,14 @@ export const ACTIVITY_LABELS: Record<string, Record<string, string>> = {
     vehicle_expenses: 'tạo chi phí xe',
     driver_salaries: 'tạo lương',
     driver_salary_configs: 'tạo cấu hình lương',
-    settings: 'cập nhật cấu hình',
     booked_trips: 'tạo lệnh vận chuyển',
+    settings: 'cập nhật cấu hình',
   },
   UPDATE: {
-    work_orders: 'cập nhật phiếu chuyến',
     delivered_trips: 'cập nhật chuyến giao',
-    trip_orders: 'cập nhật đơn hàng',
     clients: 'cập nhật khách hàng',
     locations: 'cập nhật địa điểm',
     location_aliases: 'cập nhật alias địa điểm',
-    routes: 'cập nhật cung đường',
     pricings: 'cập nhật bảng giá',
     pricing_lines: 'cập nhật dòng giá',
     route_pricings: 'cập nhật giá tuyến',
@@ -60,17 +53,14 @@ export const ACTIVITY_LABELS: Record<string, Record<string, string>> = {
     vehicle_expenses: 'cập nhật chi phí xe',
     driver_salaries: 'cập nhật lương',
     driver_salary_configs: 'cập nhật cấu hình lương',
-    settings: 'cập nhật cấu hình',
     booked_trips: 'cập nhật lệnh vận chuyển',
+    settings: 'cập nhật cấu hình',
   },
   DELETE: {
-    work_orders: 'xoá phiếu chuyến',
     delivered_trips: 'xoá chuyến giao',
-    trip_orders: 'xoá đơn hàng',
     clients: 'xoá khách hàng',
     locations: 'xoá địa điểm',
     location_aliases: 'xoá alias địa điểm',
-    routes: 'xoá cung đường',
     pricings: 'xoá bảng giá',
     pricing_lines: 'xoá dòng giá',
     route_pricings: 'xoá giá tuyến',
@@ -82,14 +72,10 @@ export const ACTIVITY_LABELS: Record<string, Record<string, string>> = {
     vehicle_expenses: 'xoá chi phí xe',
     driver_salaries: 'xoá lương',
     driver_salary_configs: 'xoá cấu hình lương',
-    settings: 'xoá cấu hình',
     booked_trips: 'xoá lệnh vận chuyển',
+    settings: 'xoá cấu hình',
   },
   MATCH: {
-    trip_order_work_orders: 'ghép chuyến',
-    work_orders: 'ghép chuyến',
-    delivered_trips: 'ghép chuyến',
-    trip_orders: 'ghép chuyến',
     _default: 'ghép chuyến',
   },
   AUTO_MATCH: {
@@ -102,14 +88,29 @@ export const ACTIVITY_LABELS: Record<string, Record<string, string>> = {
     _default: 'bỏ ghép chuyến',
   },
   CANCEL: {
-    work_orders: 'huỷ phiếu chuyến',
-    delivered_trips: 'huỷ chuyến giao',
-    trip_orders: 'huỷ đơn hàng',
     _default: 'huỷ',
   },
   CONFIRM: {
     _default: 'xác nhận',
   },
+}
+
+/** Subject type prefix displayed before subjectName in audit messages. */
+export const SUBJECT_PREFIX: Record<string, string> = {
+  driver_salaries: 'lái xe',
+  driver_salary_configs: 'lái xe',
+  vehicles: 'xe',
+  vehicle_drivers: '',
+  vehicle_expenses: '',
+  clients: 'khách hàng',
+  vendors: 'nhà xe',
+  locations: 'địa điểm',
+  users: '',
+  delivered_trips: '',
+  booked_trips: '',
+  pricings: '',
+  route_pricings: '',
+  vendor_route_pricings: '',
 }
 
 export function formatActivityEntry(action: string, tableName: string): string {
@@ -130,13 +131,9 @@ export function formatFinancialChange(log: AuditLogEntry): { label: string; old:
     const fieldMap: Record<string, string> = {
       revenue: 'Doanh thu',
       unit_price: 'Đơn giá',
-      unitPrice: 'Đơn giá',
       driver_salary: 'Lương LX',
-      driverSalary: 'Lương LX',
       basic_salary: 'Lương cơ bản',
-      basicSalary: 'Lương cơ bản',
       bonus_salary: 'Thưởng',
-      bonusSalary: 'Thưởng',
       allowance: 'Phụ cấp',
       base_salary: 'Lương cơ bản',
       amount: 'Số tiền',

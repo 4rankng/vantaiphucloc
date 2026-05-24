@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vận Tải Phúc Lộc — Bảng điều khiển</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:           #F6F7F5;
+    --surface:      #FFFFFF;
+    --ink:          #0F1A14;
+    --ink-2:        #2A332D;
+    --muted:        #6B7771;
+    --muted-2:      #9AA39E;
+    --line:         #E6EAE6;
+    --line-soft:    #EEF1ED;
+
+    --brand:        #005A2D;
+    --brand-deep:   #003D1F;
+    --brand-tint:   #E5EFE9;
+    --brand-soft:   #F1F7F3;
+
+    --accent:       #B8893A;        /* warm brass for "chờ" — more refined than amber */
+    --accent-tint:  #F5EEDF;
+
+    --rose:         #B23A48;
+    --rose-tint:    #FBE9EB;
+
+    --radius:       18px;
+    --radius-sm:    12px;
+    --shadow-card:  0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03);
+
+    --font-sans:    'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); }
+  body {
+    font-family: var(--font-sans);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ============ TOP BAR ============ */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 40px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .brand-mark {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: var(--brand);
+    display: grid; place-items: center;
+    box-shadow: inset 0 -8px 16px rgba(0,0,0,0.15);
+  }
+  .brand-mark svg { width: 22px; height: 22px; }
+  .brand-text .name {
+    font-size: 15px; font-weight: 700; color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .brand-text .role {
+    font-size: 11px; font-weight: 500; color: var(--muted);
+    letter-spacing: 0.06em; text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
+  .icon-btn {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    display: grid; place-items: center;
+    cursor: pointer; position: relative;
+    transition: all 0.15s ease;
+  }
+  .icon-btn:hover { background: var(--brand-soft); }
+  .icon-btn svg { width: 18px; height: 18px; stroke: var(--ink-2); }
+  .icon-btn .dot {
+    position: absolute; top: 9px; right: 10px;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--rose); border: 2px solid var(--surface);
+  }
+  .user-chip {
+    display: flex; align-items: center; gap: 10px;
+    padding: 5px 14px 5px 5px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .user-chip:hover { border-color: var(--brand); }
+  .user-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--brand);
+    color: #fff;
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .user-chip .label { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .user-chip svg { width: 14px; height: 14px; stroke: var(--muted); }
+
+  /* ============ PAGE ============ */
+  .page { padding: 32px 40px 48px; max-width: 1480px; margin: 0 auto; }
+
+  .page-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .page-title {
+    font-size: 32px; font-weight: 700; color: var(--ink);
+    letter-spacing: -0.025em; line-height: 1.1;
+  }
+  .page-subtitle {
+    font-size: 13px; color: var(--muted); margin-top: 8px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--brand);
+    box-shadow: 0 0 0 4px var(--brand-tint);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--brand-tint); }
+    50%      { box-shadow: 0 0 0 7px rgba(0,90,45,0.08); }
+  }
+
+  .month-picker {
+    display: flex; align-items: center; gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 4px;
+  }
+  .month-picker button {
+    width: 32px; height: 32px;
+    border: none; background: transparent; cursor: pointer;
+    border-radius: 8px;
+    display: grid; place-items: center;
+    transition: background 0.15s ease;
+  }
+  .month-picker button:hover { background: var(--brand-soft); }
+  .month-picker button svg { width: 14px; height: 14px; stroke: var(--ink-2); }
+  .month-picker .current {
+    padding: 0 14px; text-align: center;
+  }
+  .month-picker .current .m {
+    font-size: 13px; font-weight: 700; color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  .month-picker .current .r {
+    font-size: 10px; color: var(--muted);
+    font-family: var(--font-mono); letter-spacing: 0.02em;
+    margin-top: 1px;
+  }
+
+  /* ============ KPI ROW ============ */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 24px 20px;
+    box-shadow: var(--shadow-card);
+    position: relative;
+    transition: all 0.2s ease;
+  }
+  .kpi:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(15,26,20,0.04);
+    border-color: #DDE4DE;
+  }
+  .kpi-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .kpi-value {
+    font-family: var(--font-mono);
+    font-size: 34px;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    margin-top: 14px;
+    line-height: 1;
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  .kpi-value .unit {
+    font-family: var(--font-sans);
+    font-size: 12px; font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .kpi-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--line-soft);
+  }
+  .kpi-foot .ctx {
+    font-size: 12px; color: var(--muted);
+  }
+  .trend {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 600;
+    font-family: var(--font-mono);
+    padding: 3px 8px;
+    border-radius: 999px;
+    letter-spacing: -0.01em;
+  }
+  .trend.up   { color: var(--brand); background: var(--brand-tint); }
+  .trend.down { color: var(--rose);  background: var(--rose-tint); }
+  .trend svg  { width: 10px; height: 10px; }
+
+  /* KPI accent — a tiny vertical bar at the corner, refined not chunky */
+  .kpi::before {
+    content: '';
+    position: absolute;
+    top: 24px; left: 0;
+    width: 3px; height: 18px;
+    border-radius: 0 3px 3px 0;
+    background: var(--brand);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .kpi:hover::before { opacity: 1; }
+  .kpi.is-revenue::before { background: var(--accent); }
+
+  /* ============ MAIN GRID ============ */
+  .main-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+  }
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 26px 16px;
+  }
+  .card-head .title {
+    font-size: 15px; font-weight: 700; color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .card-head .meta {
+    font-size: 12px; color: var(--muted); margin-top: 3px;
+  }
+  .legend {
+    display: flex; align-items: center; gap: 16px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; color: var(--muted-2);
+    font-weight: 500;
+  }
+  .legend-swatch {
+    width: 10px; height: 10px; border-radius: 3px;
+  }
+  .legend-swatch.matched { background: var(--brand); }
+  .legend-swatch.waiting { background: var(--accent); }
+  .legend-item .v {
+    font-family: var(--font-mono); font-weight: 600;
+    color: var(--ink); font-size: 11px;
+    margin-left: 2px;
+  }
+
+  /* ============ CHART ============ */
+  .chart-wrap {
+    padding: 8px 26px 24px;
+  }
+  .chart {
+    position: relative;
+    height: 280px;
+  }
+  .y-axis {
+    position: absolute;
+    top: 0; left: 0; bottom: 24px;
+    width: 32px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .y-tick {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted-2);
+    letter-spacing: 0.02em;
+  }
+  .plot {
+    position: absolute;
+    top: 0; left: 40px; right: 0; bottom: 24px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .grid-line {
+    position: absolute; left: 0; right: 0; height: 1px;
+    background: var(--line-soft);
+  }
+  .bars {
+    position: absolute; inset: 0;
+    display: flex; align-items: flex-end;
+    gap: 6px; padding: 0 2px;
+  }
+  .bar-col {
+    flex: 1;
+    display: flex; flex-direction: column-reverse;
+    height: 100%;
+    position: relative;
+    cursor: pointer;
+  }
+  .bar {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .bar.matched { background: var(--brand); }
+  .bar.waiting { background: var(--accent); margin-top: 1px; border-radius: 0; }
+  .bar-col:hover .bar { opacity: 0.78; }
+  .bar-col.today .bar.matched {
+    box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--brand-deep);
+  }
+  .bar-col:hover .tip { opacity: 1; transform: translate(-50%, -8px); }
+  .tip {
+    position: absolute;
+    bottom: 100%; left: 50%;
+    transform: translate(-50%, -2px);
+    background: var(--ink);
+    color: #fff;
+    padding: 7px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.15s ease;
+    font-family: var(--font-mono);
+    letter-spacing: -0.01em;
+    z-index: 5;
+  }
+  .tip::after {
+    content: '';
+    position: absolute;
+    top: 100%; left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: var(--ink);
+  }
+  .x-axis {
+    position: absolute;
+    left: 40px; right: 0; bottom: 0;
+    height: 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2px;
+  }
+  .x-tick {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted-2);
+    letter-spacing: 0.02em;
+  }
+
+  /* ============ ACTIVITY ============ */
+  .activity-list {
+    padding: 4px 12px 14px;
+    max-height: 380px;
+    overflow-y: auto;
+  }
+  .activity-list::-webkit-scrollbar { width: 4px; }
+  .activity-list::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+
+  .activity-item {
+    display: flex; gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    position: relative;
+    transition: background 0.15s ease;
+  }
+  .activity-item:hover { background: var(--brand-soft); }
+  .activity-item + .activity-item::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 28px;
+    width: 1px; height: 12px;
+    background: var(--line);
+  }
+  .act-avatar {
+    flex: 0 0 32px; height: 32px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.02em;
+    position: relative;
+  }
+  .act-avatar.update  { background: var(--brand-tint); color: var(--brand-deep); }
+  .act-avatar.create  { background: var(--accent-tint); color: #7B5A1F; }
+  .act-avatar .ic {
+    position: absolute;
+    bottom: -2px; right: -2px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--surface);
+    display: grid; place-items: center;
+  }
+  .act-avatar .ic svg { width: 8px; height: 8px; }
+  .act-avatar.update .ic { color: var(--brand); }
+  .act-avatar.create .ic { color: var(--accent); }
+
+  .act-body { flex: 1; min-width: 0; }
+  .act-line {
+    font-size: 13px; color: var(--ink-2);
+    line-height: 1.45;
+  }
+  .act-line .actor { font-weight: 600; color: var(--ink); }
+  .act-line .verb-update { color: var(--brand); font-weight: 600; }
+  .act-line .verb-create { color: #8C6420; font-weight: 600; }
+  .act-line .target { font-weight: 600; color: var(--ink); }
+  .act-time {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted-2);
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ============ FOOTER GRID ============ */
+  .foot-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .stat-card { padding: 22px 24px; }
+  .stat-card .h {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .stat-card .vrow {
+    display: flex; align-items: baseline; gap: 10px;
+    margin-top: 12px;
+  }
+  .stat-card .v {
+    font-family: var(--font-mono);
+    font-size: 26px; font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .stat-card .v-sub {
+    font-size: 12px; color: var(--muted);
+    font-weight: 500;
+  }
+  .progress {
+    height: 6px;
+    background: var(--line-soft);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 14px;
+    position: relative;
+  }
+  .progress-bar {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--brand);
+  }
+  .progress-bar.waiting { background: var(--accent); }
+  .progress-meta {
+    display: flex; justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted-2);
+    margin-top: 6px;
+    letter-spacing: 0.02em;
+  }
+
+  /* Route list */
+  .route-list { margin-top: 10px; display: flex; flex-direction: column; gap: 12px; }
+  .route-row {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .route-rank {
+    font-family: var(--font-mono);
+    font-size: 10px; font-weight: 600;
+    color: var(--muted-2);
+    width: 14px;
+  }
+  .route-name {
+    flex: 1;
+    font-size: 12.5px; font-weight: 600;
+    color: var(--ink-2);
+    white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .route-bar-wrap {
+    flex: 1.3;
+    height: 5px;
+    background: var(--line-soft);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .route-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--brand-deep), var(--brand));
+    border-radius: 99px;
+  }
+  .route-count {
+    font-family: var(--font-mono);
+    font-size: 11px; font-weight: 600;
+    color: var(--ink);
+    width: 28px; text-align: right;
+  }
+
+  /* Driver insight */
+  .driver-list { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+  .driver-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 0;
+  }
+  .driver-row + .driver-row { border-top: 1px solid var(--line-soft); padding-top: 14px;}
+  .driver-av {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--brand);
+    color: #fff;
+    display: grid; place-items: center;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .driver-info { flex: 1; min-width: 0; }
+  .driver-name {
+    font-size: 13px; font-weight: 600; color: var(--ink);
+    line-height: 1.2;
+  }
+  .driver-sub {
+    font-size: 11px; color: var(--muted);
+    margin-top: 2px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.01em;
+  }
+  .driver-trips {
+    font-family: var(--font-mono);
+    font-size: 13px; font-weight: 600; color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+
+  /* ============ SUBTLE PAGE LOAD ============ */
+  .fade-in { animation: fadeIn 0.5s ease both; }
+  .fade-in.d1 { animation-delay: 0.06s; }
+  .fade-in.d2 { animation-delay: 0.12s; }
+  .fade-in.d3 { animation-delay: 0.18s; }
+  .fade-in.d4 { animation-delay: 0.24s; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .foot-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <div class="name">Vận Tải Phúc Lộc</div>
+      <div class="role">Ban Giám Đốc</div>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <button class="icon-btn" aria-label="Tìm kiếm">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    </button>
+    <button class="icon-btn" aria-label="Thông báo">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="dot"></span>
+    </button>
+    <div class="user-chip">
+      <div class="user-avatar">ĐT</div>
+      <div class="label">Giám Đốc Test</div>
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </div>
+  </div>
+</header>
+
+<!-- ============ PAGE ============ -->
+<main class="page">
+
+  <!-- Page header -->
+  <div class="page-header fade-in">
+    <div>
+      <h1 class="page-title">Tổng quan điều hành</h1>
+      <div class="page-subtitle">
+        <span class="live-dot"></span>
+        Cập nhật trực tiếp · Phiên hiện tại 16:36
+      </div>
+    </div>
+    <div class="month-picker">
+      <button aria-label="Tháng trước">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <div class="current">
+        <div class="m">Tháng 05 · 2026</div>
+        <div class="r">01/05 → 31/05</div>
+      </div>
+      <button aria-label="Tháng sau">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <section class="kpi-grid">
+    <div class="kpi fade-in d1">
+      <div class="kpi-label">Tổng chuyến</div>
+      <div class="kpi-value">1.350</div>
+      <div class="kpi-foot">
+        <span class="ctx">So với tháng 04</span>
+        <span class="trend down">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          13%
+        </span>
+      </div>
+    </div>
+
+    <div class="kpi fade-in d2">
+      <div class="kpi-label">Đã khớp</div>
+      <div class="kpi-value">877 <span class="unit">/ 1.350</span></div>
+      <div class="kpi-foot">
+        <span class="ctx">Tỷ lệ ghép · 65%</span>
+        <span class="trend up">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg>
+          64%
+        </span>
+      </div>
+    </div>
+
+    <div class="kpi fade-in d3">
+      <div class="kpi-label">Chờ xử lý</div>
+      <div class="kpi-value">473 <span class="unit">/ 1.350</span></div>
+      <div class="kpi-foot">
+        <span class="ctx">Chiếm 35% tổng chuyến</span>
+        <span class="trend up">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg>
+          53%
+        </span>
+      </div>
+    </div>
+
+    <div class="kpi is-revenue fade-in d4">
+      <div class="kpi-label">Doanh thu</div>
+      <div class="kpi-value">22.764.500 <span class="unit">VNĐ</span></div>
+      <div class="kpi-foot">
+        <span class="ctx">Trung bình 16.860đ / chuyến</span>
+        <span class="trend up">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg>
+          8%
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chart + Activity -->
+  <section class="main-grid">
+
+    <!-- Chart -->
+    <div class="card fade-in d2">
+      <div class="card-head">
+        <div>
+          <div class="title">Chuyến theo ngày</div>
+          <div class="meta">Tháng 05 · 2026</div>
+        </div>
+        <div class="legend">
+          <span class="legend-item"><span class="legend-swatch matched"></span>Đã khớp <span class="v">877</span></span>
+          <span class="legend-item"><span class="legend-swatch waiting"></span>Chờ xử lý <span class="v">473</span></span>
+        </div>
+      </div>
+
+      <div class="chart-wrap">
+        <div class="chart" id="chart">
+          <div class="y-axis">
+            <span class="y-tick">60</span>
+            <span class="y-tick">45</span>
+            <span class="y-tick">30</span>
+            <span class="y-tick">15</span>
+            <span class="y-tick">0</span>
+          </div>
+          <div class="plot">
+            <div class="grid-line" style="top: 0;"></div>
+            <div class="grid-line" style="top: 25%;"></div>
+            <div class="grid-line" style="top: 50%;"></div>
+            <div class="grid-line" style="top: 75%;"></div>
+            <div class="bars" id="bars"></div>
+          </div>
+          <div class="x-axis">
+            <span class="x-tick">01/05</span>
+            <span class="x-tick">06/05</span>
+            <span class="x-tick">11/05</span>
+            <span class="x-tick">16/05</span>
+            <span class="x-tick">21/05</span>
+            <span class="x-tick">26/05</span>
+            <span class="x-tick">31/05</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity -->
+    <div class="card fade-in d3">
+      <div class="card-head">
+        <div>
+          <div class="title">Hoạt động gần đây</div>
+          <div class="meta">6 thao tác mới · hôm nay</div>
+        </div>
+      </div>
+      <div class="activity-list">
+
+        <div class="activity-item">
+          <div class="act-avatar update">KT
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+          </div>
+          <div class="act-body">
+            <div class="act-line"><span class="actor">Kế Toán Test</span> <span class="verb-update">cập nhật lương</span> · <span class="target">Trần Minh Đức</span></div>
+            <div class="act-time">16:36 · hôm nay</div>
+          </div>
+        </div>
+
+        <div class="activity-item">
+          <div class="act-avatar update">KT
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+          </div>
+          <div class="act-body">
+            <div class="act-line"><span class="actor">Kế Toán Test</span> <span class="verb-update">cập nhật lương</span> · <span class="target">Phạm Văn Hùng</span></div>
+            <div class="act-time">16:33 · hôm nay</div>
+          </div>
+        </div>
+
+        <div class="activity-item">
+          <div class="act-avatar update">KT
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+          </div>
+          <div class="act-body">
+            <div class="act-line"><span class="actor">Kế Toán Test</span> <span class="verb-update">cập nhật lương</span> · <span class="target">Trần Minh Đức</span></div>
+            <div class="act-time">16:33 · hôm nay</div>
+          </div>
+        </div>
+
+        <div class="activity-item">
+          <div class="act-avatar create">KT
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
+          </div>
+          <div class="act-body">
+            <div class="act-line"><span class="actor">Kế Toán Test</span> <span class="verb-create">tạo lương</span> · <span class="target">Phạm Văn Hùng</span></div>
+            <div class="act-time">16:32 · hôm nay</div>
+          </div>
+        </div>
+
+        <div class="activity-item">
+          <div class="act-avatar create">KT
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
+          </div>
+          <div class="act-body">
+            <div class="act-line"><span class="actor">Kế Toán Test</span> <span class="verb-create">tạo lương</span> · <span class="target">Lê Quang Anh</span></div>
+            <div class="act-time">16:32 · hôm nay</div>
+          </div>
+        </div>
+
+        <div class="activity-item">
+          <div class="act-avatar create">KT
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
+          </div>
+          <div class="act-body">
+            <div class="act-line"><span class="actor">Kế Toán Test</span> <span class="verb-create">tạo lương</span> · <span class="target">Trần Minh Đức</span></div>
+            <div class="act-time">16:32 · hôm nay</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom row: 3 supplementary insights -->
+  <section class="foot-grid">
+
+    <!-- Reconciliation -->
+    <div class="card stat-card fade-in">
+      <div class="h">Tiến độ đối soát</div>
+      <div class="vrow">
+        <div class="v">877</div>
+        <div class="v-sub">/ 1.350 chuyến đã khớp</div>
+      </div>
+      <div class="progress"><div class="progress-bar" style="width: 65%;"></div></div>
+      <div class="progress-meta">
+        <span>Đã khớp · 65%</span>
+        <span>Còn lại · 473</span>
+      </div>
+    </div>
+
+    <!-- Top routes -->
+    <div class="card stat-card fade-in">
+      <div class="h">Tuyến đường nổi bật</div>
+      <div class="route-list">
+        <div class="route-row">
+          <span class="route-rank">01</span>
+          <span class="route-name">Hà Nội → Hải Phòng</span>
+          <span class="route-bar-wrap"><span class="route-bar" style="width: 88%;"></span></span>
+          <span class="route-count">312</span>
+        </div>
+        <div class="route-row">
+          <span class="route-rank">02</span>
+          <span class="route-name">Hà Nội → Lào Cai</span>
+          <span class="route-bar-wrap"><span class="route-bar" style="width: 64%;"></span></span>
+          <span class="route-count">226</span>
+        </div>
+        <div class="route-row">
+          <span class="route-rank">03</span>
+          <span class="route-name">Hà Nội → Lạng Sơn</span>
+          <span class="route-bar-wrap"><span class="route-bar" style="width: 51%;"></span></span>
+          <span class="route-count">181</span>
+        </div>
+        <div class="route-row">
+          <span class="route-rank">04</span>
+          <span class="route-name">Hà Nội → Quảng Ninh</span>
+          <span class="route-bar-wrap"><span class="route-bar" style="width: 38%;"></span></span>
+          <span class="route-count">134</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top drivers -->
+    <div class="card stat-card fade-in">
+      <div class="h">Lái xe dẫn đầu</div>
+      <div class="driver-list">
+        <div class="driver-row">
+          <div class="driver-av">TĐ</div>
+          <div class="driver-info">
+            <div class="driver-name">Trần Minh Đức</div>
+            <div class="driver-sub">98% đúng giờ · 12 tuyến</div>
+          </div>
+          <div class="driver-trips">87</div>
+        </div>
+        <div class="driver-row">
+          <div class="driver-av">PH</div>
+          <div class="driver-info">
+            <div class="driver-name">Phạm Văn Hùng</div>
+            <div class="driver-sub">96% đúng giờ · 10 tuyến</div>
+          </div>
+          <div class="driver-trips">74</div>
+        </div>
+        <div class="driver-row">
+          <div class="driver-av">LA</div>
+          <div class="driver-info">
+            <div class="driver-name">Lê Quang Anh</div>
+            <div class="driver-sub">94% đúng giờ · 9 tuyến</div>
+          </div>
+          <div class="driver-trips">68</div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<script>
+  // Chart data: 31 days, each with matched + waiting trips
+  // Designed so that totals reflect the KPIs (877 matched, 473 waiting ≈ 1350)
+  const data = [
+    {d:'01/05', m:32, w:11}, {d:'02/05', m:34, w:13}, {d:'03/05', m:21, w:8},
+    {d:'04/05', m:38, w:14}, {d:'05/05', m:30, w:12}, {d:'06/05', m:27, w:10},
+    {d:'07/05', m:36, w:15}, {d:'08/05', m:33, w:14}, {d:'09/05', m:25, w:9},
+    {d:'10/05', m:30, w:13}, {d:'11/05', m:38, w:15}, {d:'12/05', m:36, w:14},
+    {d:'13/05', m:42, w:18}, {d:'14/05', m:40, w:17}, {d:'15/05', m:32, w:14},
+    {d:'16/05', m:31, w:13}, {d:'17/05', m:35, w:15}, {d:'18/05', m:38, w:16},
+    {d:'19/05', m:32, w:13}, {d:'20/05', m:22, w:11}, {d:'21/05', m:34, w:18},
+    {d:'22/05', m:29, w:16}, {d:'23/05', m:30, w:18}, {d:'24/05', m:36, w:20},
+    {d:'25/05', m:35, w:19}, {d:'26/05', m:23, w:13}, {d:'27/05', m:33, w:19},
+    {d:'28/05', m:36, w:21}, {d:'29/05', m:30, w:17}, {d:'30/05', m:42, w:24},
+    {d:'31/05', m:25, w:15}
+  ];
+
+  const maxValue = 60; // y-axis top
+  const bars = document.getElementById('bars');
+  const today = '24/05';
+
+  data.forEach(d => {
+    const col = document.createElement('div');
+    col.className = 'bar-col' + (d.d === today ? ' today' : '');
+    const total = d.m + d.w;
+
+    const tip = document.createElement('div');
+    tip.className = 'tip';
+    tip.textContent = `${d.d}  ·  Khớp ${d.m}  ·  Chờ ${d.w}`;
+    col.appendChild(tip);
+
+    const matchedH = (d.m / maxValue) * 100;
+    const waitingH = (d.w / maxValue) * 100;
+
+    const bm = document.createElement('div');
+    bm.className = 'bar matched';
+    bm.style.height = matchedH + '%';
+
+    const bw = document.createElement('div');
+    bw.className = 'bar waiting';
+    bw.style.height = waitingH + '%';
+
+    // column-reverse: bottom-up = matched then waiting
+    col.appendChild(bm);
+    col.appendChild(bw);
+    bars.appendChild(col);
+  });
+</script>
+</body>
+</html>

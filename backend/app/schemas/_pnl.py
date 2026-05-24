@@ -158,6 +158,7 @@ class DirectorRouteStat(BaseModel):
 
 class DirectorDriverStat(BaseModel):
     name: str
+    plate: str = ""
     trip_count: int
 
 class VehiclePnLGroup(BaseModel):

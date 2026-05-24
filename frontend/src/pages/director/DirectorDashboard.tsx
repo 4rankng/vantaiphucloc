@@ -8,7 +8,7 @@ import { useDirectorDashboard } from '@/hooks/queries/pnl'
 import type { VehiclePnLGroup, VehiclePnLRow } from '@/services/api/pnl.api'
 import type { AuditLogEntry } from '@/services/api/audit.api'
 import { getAuditLogs } from '@/services/api/audit.api'
-import { compact, formatActivityEntry, formatFinancialChange } from '@/lib/activity-utils'
+import { formatActivityEntry, formatFinancialChange, SUBJECT_PREFIX } from '@/lib/activity-utils'
 import { pad } from '@/lib/accounting-utils'
 import { useMonthParams } from '@/pages/accountant/use-month-params'
 
@@ -52,7 +52,7 @@ function KpiCard({
 }) {
   return (
     <div
-      className="group relative transition-all duration-200 hover:-translate-y-px"
+      className="group relative transition-all duration-200 hover:-translate-y-px dir-kpi-card"
       style={{
         background: T.surface,
         border: `1px solid ${T.line}`,
@@ -61,6 +61,7 @@ function KpiCard({
         boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)',
         animation: `fadeIn 0.5s ease both`,
         animationDelay: delay ? `${delay}ms` : undefined,
+        containerType: 'inline-size',
       }}
     >
       {/* Hover accent bar */}
@@ -73,10 +74,10 @@ function KpiCard({
         {label}
       </p>
 
-      <div className="mt-3.5 flex items-baseline gap-2.5 leading-none" style={{ fontFamily: fontMono, fontSize: 34, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em' }}>
+      <div className="mt-3.5 flex items-baseline gap-2.5 leading-none dir-kpi-value" style={{ fontFamily: fontMono, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em' }}>
         <span>{value}</span>
         {unit && (
-          <span style={{ fontFamily: fontSans, fontSize: 12, fontWeight: 600, color: T.muted, letterSpacing: '0.04em' }}>
+          <span className="dir-kpi-unit" style={{ fontFamily: fontSans, fontWeight: 600, color: T.muted, letterSpacing: '0.04em' }}>
             {unit}
           </span>
         )}
@@ -176,11 +177,15 @@ function BarChart({ buckets, maxValue }: { buckets: { day: number; matched: numb
 
       {/* X-axis */}
       <div style={{ position: 'absolute', left: 40, right: 0, bottom: 0, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
-        {buckets.filter((_, i) => i % 5 === 0 || i === buckets.length - 1).map((b, i) => (
-          <span key={i} style={{ fontFamily: fontMono, fontSize: 10, color: T.muted2, letterSpacing: '0.02em' }}>
-            {b.date ? b.date.slice(0, 5) : ''}
-          </span>
-        ))}
+        {buckets.filter((_, i) => i % 5 === 0 || i === buckets.length - 1).map((b, i) => {
+          const parts = b.date?.split('-')
+          const label = parts?.length === 3 ? `${parts[2]}/${parts[1]}` : ''
+          return (
+            <span key={i} style={{ fontFamily: fontMono, fontSize: 10, color: T.muted2, letterSpacing: '0.02em' }}>
+              {label}
+            </span>
+          )
+        })}
       </div>
 
       {/* Tooltip — portaled to body, tracks mouse position */}
@@ -270,14 +275,14 @@ function VehiclePnLTable({ group, emptyHint }: { group: VehiclePnLGroup; emptyHi
                     </span>
                   )}
                 </td>
-                <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: fontMono, fontSize: 12.5, color: T.ink }}>{compact(row.revenue)}</td>
-                <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: fontMono, fontSize: 12.5, color: T.ink2 }}>{compact(cost)}</td>
+                <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: fontMono, fontSize: 12.5, color: T.ink }}>{row.revenue.toLocaleString('vi-VN')}</td>
+                <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: fontMono, fontSize: 12.5, color: T.ink2 }}>{cost.toLocaleString('vi-VN')}</td>
                 <td style={{
                   padding: '8px 10px', textAlign: 'right',
                   fontFamily: fontMono, fontSize: 12.5, fontWeight: 600,
                   color: positive ? T.brand : T.rose,
                 }}>
-                  {compact(row.loiNhuan)}
+                  {row.loiNhuan.toLocaleString('vi-VN')}
                 </td>
               </tr>
             )
@@ -286,14 +291,14 @@ function VehiclePnLTable({ group, emptyHint }: { group: VehiclePnLGroup; emptyHi
         <tfoot>
           <tr style={{ borderTop: `1px solid ${T.line}` }}>
             <td style={{ padding: '10px', color: T.ink, fontWeight: 700, fontSize: 12 }}>Tổng</td>
-            <td style={{ padding: '10px', textAlign: 'right', fontFamily: fontMono, fontWeight: 700, fontSize: 12.5, color: T.ink }}>{compact(group.totalRevenue)}</td>
-            <td style={{ padding: '10px', textAlign: 'right', fontFamily: fontMono, fontWeight: 700, fontSize: 12.5, color: T.ink2 }}>{compact(group.totalCost)}</td>
+            <td style={{ padding: '10px', textAlign: 'right', fontFamily: fontMono, fontWeight: 700, fontSize: 12.5, color: T.ink }}>{group.totalRevenue.toLocaleString('vi-VN')}</td>
+            <td style={{ padding: '10px', textAlign: 'right', fontFamily: fontMono, fontWeight: 700, fontSize: 12.5, color: T.ink2 }}>{group.totalCost.toLocaleString('vi-VN')}</td>
             <td style={{
               padding: '10px', textAlign: 'right',
               fontFamily: fontMono, fontWeight: 700, fontSize: 12.5,
               color: group.totalProfit >= 0 ? T.brand : T.rose,
             }}>
-              {compact(group.totalProfit)}
+              {group.totalProfit.toLocaleString('vi-VN')}
             </td>
           </tr>
         </tfoot>
@@ -344,7 +349,7 @@ function ActivityItem({ log, isFirst }: { log: AuditLogEntry; isFirst: boolean }
           <span className="font-semibold" style={{ color: isCreate ? '#8C6420' : T.brand }}>đã {activityText}</span>
           {log.subjectName && (
             <span className="font-semibold" style={{ color: T.ink }}>
-              {' '}{log.tableName === 'driver_salaries' ? 'lái xe ' : ''}{log.subjectName}
+              {(() => { const pfx = SUBJECT_PREFIX[log.tableName]; return pfx ? ` ${pfx} ` : ' ' })()}{log.subjectName}
             </span>
           )}
         </p>
@@ -356,9 +361,9 @@ function ActivityItem({ log, isFirst }: { log: AuditLogEntry; isFirst: boolean }
             {changes.map((c, ci) => (
               <span key={ci} className="inline-flex items-center gap-1 text-[11px] rounded-md px-2 py-0.5" style={{ background: T.lineSoft, border: `1px solid ${T.line}` }}>
                 <span className="font-medium" style={{ color: T.muted }}>{c.label}:</span>
-                <span className="line-through" style={{ color: T.muted }}>{compact(c.old)}</span>
+                <span className="line-through" style={{ color: T.muted }}>{c.old.toLocaleString('vi-VN')}</span>
                 <ArrowUpRight className="h-2.5 w-2.5" style={{ color: T.muted }} />
-                <span className="font-bold" style={{ color: T.brand }}>{compact(c.new)}</span>
+                <span className="font-bold" style={{ color: T.brand }}>{c.new.toLocaleString('vi-VN')}</span>
               </span>
             ))}
           </div>
@@ -475,7 +480,7 @@ export function DirectorDashboard() {
         </div>
 
         {/* KPIs */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <section className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
           <KpiCard
             label="Tổng chuyến"
             value={total.toLocaleString('vi-VN')}
@@ -487,7 +492,7 @@ export function DirectorDashboard() {
             label="Doanh thu"
             value={revenue.toLocaleString('vi-VN')}
             unit="VNĐ"
-            context={avgRev > 0 ? `Trung bình ${compact(avgRev)} / chuyến` : undefined}
+            context={avgRev > 0 ? `Trung bình ${avgRev.toLocaleString('vi-VN')} / chuyến` : undefined}
             trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta >= 0 } : undefined}
             accentColor={T.accent}
             accentTint={T.accentTint}
@@ -515,9 +520,8 @@ export function DirectorDashboard() {
           />
         </section>
 
-        {/* Chart + Activity */}
-        <section className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-4 mb-4">
-          {/* Chart */}
+        {/* Chart */}
+        <section className="mb-4">
           <div
             style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 18, boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)', animation: 'fadeIn 0.5s ease both', animationDelay: '120ms' }}
           >
@@ -543,45 +547,12 @@ export function DirectorDashboard() {
               <BarChart buckets={buckets} maxValue={Math.ceil(maxBarValue / 15) * 15 || 60} />
             </div>
           </div>
-
-          {/* Activity */}
-          <div
-            style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 18, boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)', animation: 'fadeIn 0.5s ease both', animationDelay: '180ms' }}
-          >
-            <div className="px-6 pt-[22px] pb-4">
-              <div className="text-[15px] font-bold" style={{ color: T.ink, letterSpacing: '-0.01em' }}>Hoạt động gần đây</div>
-            </div>
-            <div className="overflow-y-auto px-3 pb-3.5 custom-scrollbar" style={{ maxHeight: 380 }}>
-              {auditLogs.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-2">
-                  <Activity className="w-8 h-8" style={{ color: T.line }} />
-                  <p className="text-sm" style={{ color: T.muted }}>Chưa có hoạt động nào</p>
-                </div>
-              ) : (
-                auditLogs.map((log, i) => <ActivityItem key={log.id} log={log} isFirst={i === 0} />)
-              )}
-            </div>
-          </div>
         </section>
 
         {/* Bottom insights */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ animation: 'fadeIn 0.5s ease both', animationDelay: '240ms' }}>
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ animation: 'fadeIn 0.5s ease both', animationDelay: '240ms' }}>
 
-          {/* Reconciliation */}
-          <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 18, padding: '22px 24px', boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)' }}>
-            <p className="text-[11px] font-semibold uppercase" style={{ color: T.muted, letterSpacing: '0.1em' }}>Tiến độ đối soát</p>
-            <div className="flex items-baseline gap-2.5 mt-3">
-              <span style={{ fontFamily: fontMono, fontSize: 26, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em' }}>{matched.toLocaleString('vi-VN')}</span>
-              <span className="text-xs font-medium" style={{ color: T.muted }}>/ {total.toLocaleString('vi-VN')} chuyến đã khớp</span>
-            </div>
-            <div className="mt-3.5 h-1.5 rounded-full overflow-hidden" style={{ background: T.lineSoft }}>
-              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: T.brand }} />
-            </div>
-            <div className="flex justify-between mt-1.5" style={{ fontFamily: fontMono, fontSize: 10, color: T.muted2, letterSpacing: '0.02em' }}>
-              <span>Đã khớp · {pct}%</span>
-              <span>Còn lại · {pending.toLocaleString('vi-VN')}</span>
-            </div>
-          </div>
+
 
           {/* Top routes */}
           <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 18, padding: '22px 24px', boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)' }}>
@@ -611,12 +582,10 @@ export function DirectorDashboard() {
                 <p className="text-xs py-4 text-center" style={{ color: T.muted }}>Chưa có dữ liệu</p>
               )}
               {topDrivers.map((d, i) => (
-                <div key={d.name} className="flex items-center gap-3" style={{ paddingTop: i > 0 ? 14 : undefined, borderTop: i > 0 ? `1px solid ${T.lineSoft}` : undefined }}>
-                  <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold" style={{ background: T.brand, color: '#fff', letterSpacing: '0.02em' }}>
-                    {getInitials(d.name)}
-                  </div>
+                <div key={d.name + d.plate} className="flex items-center gap-3" style={{ paddingTop: i > 0 ? 14 : undefined, borderTop: i > 0 ? `1px solid ${T.lineSoft}` : undefined }}>
                   <div className="flex-1 min-w-0">
                     <p className="truncate text-[13px] font-semibold leading-tight" style={{ color: T.ink }}>{d.name}</p>
+                    <p className="truncate text-[11px] leading-tight mt-0.5" style={{ color: T.muted }}>{d.plate}</p>
                   </div>
                   <span className="text-[13px] font-semibold" style={{ fontFamily: fontMono, color: T.ink, letterSpacing: '-0.01em' }}>{d.tripCount}</span>
                 </div>
@@ -634,7 +603,7 @@ export function DirectorDashboard() {
               <div>
                 <p className="text-[11px] font-semibold uppercase" style={{ color: T.muted, letterSpacing: '0.1em' }}>Lợi nhuận theo xe · Xe nhà</p>
                 <p className="text-xs mt-1" style={{ color: T.muted }}>
-                  {ownFleetPnl.rows.length} xe · Doanh thu {compact(ownFleetPnl.totalRevenue)} · Chi phí {compact(ownFleetPnl.totalCost)}
+                  {ownFleetPnl.rows.length} xe · Doanh thu {ownFleetPnl.totalRevenue.toLocaleString('vi-VN')} · Chi phí {ownFleetPnl.totalCost.toLocaleString('vi-VN')}
                 </p>
               </div>
               <span
@@ -646,7 +615,7 @@ export function DirectorDashboard() {
                   color:      ownFleetPnl.totalProfit >= 0 ? T.brand    : T.rose,
                 }}
               >
-                LN {compact(ownFleetPnl.totalProfit)}
+                LN {ownFleetPnl.totalProfit.toLocaleString('vi-VN')}
               </span>
             </div>
             <VehiclePnLTable group={ownFleetPnl} emptyHint="Chưa có dữ liệu xe nhà" />
@@ -658,7 +627,7 @@ export function DirectorDashboard() {
               <div>
                 <p className="text-[11px] font-semibold uppercase" style={{ color: T.muted, letterSpacing: '0.1em' }}>Lợi nhuận theo xe · Xe ngoài</p>
                 <p className="text-xs mt-1" style={{ color: T.muted }}>
-                  {vendorPnl.rows.length} xe · Doanh thu {compact(vendorPnl.totalRevenue)} · Chi phí {compact(vendorPnl.totalCost)}
+                  {vendorPnl.rows.length} xe · Doanh thu {vendorPnl.totalRevenue.toLocaleString('vi-VN')} · Chi phí {vendorPnl.totalCost.toLocaleString('vi-VN')}
                 </p>
               </div>
               <span
@@ -670,10 +639,31 @@ export function DirectorDashboard() {
                   color:      vendorPnl.totalProfit >= 0 ? T.brand    : T.rose,
                 }}
               >
-                LN {compact(vendorPnl.totalProfit)}
+                LN {vendorPnl.totalProfit.toLocaleString('vi-VN')}
               </span>
             </div>
             <VehiclePnLTable group={vendorPnl} emptyHint="Chưa có dữ liệu xe ngoài" />
+          </div>
+        </section>
+
+        {/* Activity */}
+        <section className="mt-4 mb-4">
+          <div
+            style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 18, boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)', animation: 'fadeIn 0.5s ease both', animationDelay: '180ms' }}
+          >
+            <div className="px-6 pt-[22px] pb-4">
+              <div className="text-[15px] font-bold" style={{ color: T.ink, letterSpacing: '-0.01em' }}>Hoạt động gần đây</div>
+            </div>
+            <div className="overflow-y-auto px-3 pb-3.5 custom-scrollbar" style={{ maxHeight: 380 }}>
+              {auditLogs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-2">
+                  <Activity className="w-8 h-8" style={{ color: T.line }} />
+                  <p className="text-sm" style={{ color: T.muted }}>Chưa có hoạt động nào</p>
+                </div>
+              ) : (
+                auditLogs.map((log, i) => <ActivityItem key={log.id} log={log} isFirst={i === 0} />)
+              )}
+            </div>
           </div>
         </section>
       </div>

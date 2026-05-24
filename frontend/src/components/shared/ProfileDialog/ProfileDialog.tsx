@@ -129,7 +129,7 @@ export function UserInfoDialog({ open, onClose }: { open: boolean; onClose: () =
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-sm p-0 overflow-hidden gap-0">
+        <DialogContent hideCloseButton className="max-w-sm p-0 overflow-hidden gap-0">
           {/* Header */}
           <div className="px-5 pt-5 pb-4" style={{ background: 'var(--theme-brand-primary)' }}>
             <div className="flex items-start justify-between mb-3">
@@ -370,7 +370,7 @@ export function SidebarProfileDialog({ open, onClose }: { open: boolean; onClose
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-sm p-0 overflow-hidden gap-0">
+        <DialogContent hideCloseButton className="max-w-sm p-0 overflow-hidden gap-0">
           {/* Green header with avatar */}
           <div
             className="px-5 pt-5 pb-4 relative"

@@ -54,10 +54,7 @@ export function KpiCard({
       }}
     >
       <div className="flex items-center justify-between mb-3">
-        <span
-          className="font-semibold uppercase"
-          style={{ fontSize: '12px', letterSpacing: '0.06em', color: 'var(--ink-2)' }}
-        >
+        <span className="nepo-kpi__label">
           {label}
         </span>
         {Icon && (
@@ -69,33 +66,16 @@ export function KpiCard({
           </span>
         )}
       </div>
-      <div
-        className="tabular-nums"
-        style={{
-          fontFamily: 'var(--theme-font-display)',
-          fontSize: '32px',
-          fontWeight: 600,
-          letterSpacing: '-0.03em',
-          lineHeight: 1,
-          marginBottom: 6,
-          color: 'var(--ink)',
-        }}
-      >
+      <div className="nepo-kpi__value tabular-nums">
         {value}
         {unit && (
-          <span
-            className="ml-0.5"
-            style={{ fontSize: '16px', fontWeight: 500, color: 'var(--ink-3)' }}
-          >
+          <span className="nepo-kpi__unit">
             {unit}
           </span>
         )}
       </div>
       {meta && (
-        <div
-          className="flex items-center gap-1.5"
-          style={{ fontSize: '11.5px', color: 'var(--ink-3)' }}
-        >
+        <div className="nepo-kpi__meta flex items-center gap-1.5">
           {meta}
         </div>
       )}

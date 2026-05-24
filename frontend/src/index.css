@@ -1368,6 +1368,66 @@ textarea {
   box-shadow: var(--sh);
 }
 
+/* ─── NEPO KPI card — responsive typography via container queries ── */
+.nepo-kpi { container-type: inline-size; }
+
+.nepo-kpi__label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+}
+.nepo-kpi__value {
+  font-family: var(--theme-font-display);
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-bottom: 6px;
+  color: var(--ink);
+}
+.nepo-kpi__unit {
+  margin-left: 2px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.nepo-kpi__meta {
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+/* Card ≤ 260px wide — e.g. 4-col on a 1100px viewport */
+@container (max-width: 260px) {
+  .nepo-kpi__value { font-size: 26px; }
+  .nepo-kpi__unit  { font-size: 13px; }
+  .nepo-kpi__label { font-size: 11px; }
+  .nepo-kpi__meta  { font-size: 10.5px; }
+}
+/* Card ≤ 200px wide — narrow 4-col or compact layout */
+@container (max-width: 200px) {
+  .nepo-kpi__value { font-size: 20px; letter-spacing: -0.02em; }
+  .nepo-kpi__unit  { font-size: 11px; }
+  .nepo-kpi__label { font-size: 10px; }
+  .nepo-kpi__meta  { font-size: 10px; }
+}
+
+/* ─── Director Dashboard KPI card — container-query font scaling ── */
+.dir-kpi-value { font-size: 34px; }
+.dir-kpi-unit  { font-size: 12px; }
+
+/* 4-col at xl (≥1280px): cards ~270px — slightly tighter */
+@container (max-width: 300px) {
+  .dir-kpi-value { font-size: 26px; }
+  .dir-kpi-unit  { font-size: 11px; }
+}
+/* Very narrow cards */
+@container (max-width: 220px) {
+  .dir-kpi-value { font-size: 20px; letter-spacing: -0.015em; }
+  .dir-kpi-unit  { font-size: 10px; }
+}
+
 /* ─── NEPO Sidebar (dark green) ───────────────���───────── */
 .nepo-sidebar-section-label {
   /* Body font — mono was wrong here; labels are navigation text, not code */

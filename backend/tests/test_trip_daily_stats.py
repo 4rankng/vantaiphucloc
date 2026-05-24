@@ -98,3 +98,82 @@ async def test_get_trip_daily_stats_revenue(db_session, async_client):
     )
     assert res.status_code == 200
     assert res.json()["total"] == 0
+
+
+async def _director_headers(db_session, async_client):
+    phone = "09000000003"
+    user = User(
+        phone=phone,
+        username="Director Test",
+        hashed_password=hash_password("p"),
+        role="director",
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    res = await async_client.post(
+        "/api/v1/auth/login",
+        json={"username": phone, "password": "p"},
+    )
+    assert res.status_code == 200
+    return {"Authorization": f"Bearer {res.json()['access_token']}"}
+
+
+@pytest.mark.asyncio
+async def test_get_director_dashboard_revenue(db_session, async_client):
+    from app.models.domain import Vehicle
+    partner, pickup, dropoff, driver = await _seed_partner_locations_driver(db_session)
+    headers = await _director_headers(db_session, async_client)
+
+    driver.full_name = "Driver Test"
+    db_session.add(driver)
+    await db_session.commit()
+
+    # Active vehicle to ensure _compute_vehicle_pnl_rows handles it
+    veh = Vehicle(plate="15C12345", is_active=True)
+    db_session.add(veh)
+    await db_session.commit()
+
+    # Create test trips with statuses and revenues:
+    # 1. Unmatched (booked_trip_id is None)
+    t1 = DeliveredTrip(
+        client_id=partner.id,
+        pickup_location_id=pickup.id,
+        dropoff_location_id=dropoff.id,
+        driver_id=driver.id,
+        trip_date=date(2026, 5, 10),
+        revenue=1200000,
+        vehicle_plate="15C12345",
+        work_type="F20",
+    )
+    # 2. Matched (booked_trip_id is not None)
+    t2 = DeliveredTrip(
+        client_id=partner.id,
+        pickup_location_id=pickup.id,
+        dropoff_location_id=dropoff.id,
+        driver_id=driver.id,
+        trip_date=date(2026, 5, 11),
+        revenue=800000,
+        vehicle_plate="15C12345",
+        booked_trip_id=1,
+        work_type="F20",
+    )
+    db_session.add_all([t1, t2])
+    await db_session.commit()
+
+    res = await async_client.get(
+        "/api/v1/dashboard/director",
+        params={"date_from": "2026-05-01", "date_to": "2026-05-31"},
+        headers=headers,
+    )
+    assert res.status_code == 200, res.text
+    data = res.json()
+    # High-level counters
+    assert data["total"] == 2
+    assert data["matched"] == 1
+    assert data["pending"] == 1
+    # Only matched trips should contribute to revenue!
+    assert data["revenue"] == 800000
+    # Average revenue per matched trip should be 800000 / 1 = 800000
+    assert data["avg_revenue_per_trip"] == 800000
+
