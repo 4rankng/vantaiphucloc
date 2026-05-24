@@ -30,7 +30,7 @@ import re
 from collections import defaultdict
 from datetime import date, timedelta
 
-from sqlalchemy import or_, select, func
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
@@ -52,6 +52,18 @@ WEIGHTS = {
     "vehicle_plate": 0.10,
     "client": 0.06,
 }
+
+_WORK_TYPE_ALIASES = {
+    "CHUYỂN BÃI": "CHUYEN_BAI",
+    "CHUYỂN BÃI ".strip(): "CHUYEN_BAI",
+}
+
+
+def _normalize_work_type(wt: str | None) -> str | None:
+    if not wt:
+        return wt
+    return _WORK_TYPE_ALIASES.get(wt, wt)
+
 
 _CONTAINER_EXACT = 1.0
 _CONTAINER_1CHAR = 0.8
@@ -136,7 +148,7 @@ def _score_pair(
 
     vessel_missing = not (to.vessel or wo.vessel)
     vehicle_missing = not (to.vehicle_plate or wo.vehicle_plate)
-    work_type_missing = not (to.work_type or wo.work_type)
+    work_type_missing = not (_normalize_work_type(to.work_type) or _normalize_work_type(wo.work_type))
 
     w = _effective_weights(
         vessel_missing=vessel_missing,
@@ -178,9 +190,11 @@ def _score_pair(
         matched_fields.append("dropoff_location")
         score += w.get("dropoff_location", 0)
 
-    # 4. Container type (work_type)
+    # 4. Container type (work_type) — normalized comparison
     if not work_type_missing:
-        if to.work_type and wo.work_type and to.work_type == wo.work_type:
+        to_wt = _normalize_work_type(to.work_type)
+        wo_wt = _normalize_work_type(wo.work_type)
+        if to_wt and wo_wt and to_wt == wo_wt:
             matched_fields.append("work_type")
             score += w.get("work_type", 0)
 
@@ -250,8 +264,8 @@ async def auto_match_preview(
     if not delivered_trips:
         return {"candidates": [], "unmatched_count": 0, "scanned_count": 0}
 
-    # Load unmatched booked trips in date range
-    to_query = select(BookedTripORM).where(BookedTripORM.matched == False)  # noqa: E712
+    # Load booked trips in date range
+    to_query = select(BookedTripORM)
     if date_from:
         to_query = to_query.where(BookedTripORM.trip_date >= date_from - timedelta(days=30))
     if date_to:
@@ -387,9 +401,6 @@ async def confirm_matches(
         if wo.booked_trip_id is not None:
             errors.append(f"DeliveredTrip#{wo_id} already matched")
             continue
-        if to.matched:
-            errors.append(f"BookedTrip#{to_id} already matched")
-            continue
 
         if sync_source == "delivered":
             for field in SYNCABLE_FIELDS:
@@ -407,7 +418,6 @@ async def confirm_matches(
                     setattr(wo, field, to_val)
 
         wo.booked_trip_id = to.id
-        to.matched = True
         matched_count += 1
         matched_pairs.append((wo, to))
 

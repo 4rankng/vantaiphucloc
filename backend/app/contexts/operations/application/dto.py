@@ -31,7 +31,6 @@ class BookedTripUpdateInput:
     work_type: str | None = None
     cont_number: str | None = None
     cont_type: str | None = None
-    matched: bool | None = None
 
 
 @dataclass
@@ -39,7 +38,6 @@ class BookedTripListFilters:
     page: int = 1
     page_size: int = 50
     client_id: int | None = None
-    matched: bool | None = None
     date_from: date | None = None
     date_to: date | None = None
 

@@ -74,7 +74,6 @@ def _trip_to_out(t: BookedTrip, clients, locations) -> BookedTripOut:
         vessel=t.vessel,
         vehicle_plate=t.vehicle_plate,
         work_type=t.work_type,
-        matched=t.matched,
         created_at=t.created_at,
         updated_at=t.updated_at,
     )
@@ -127,7 +126,6 @@ async def create_booked_trip(
 @router.get("/booked-trips", response_model=PaginatedResponse[BookedTripOut])
 async def list_booked_trips(
     client_id: int | None = None,
-    matched: bool | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
     page: int = Query(1, ge=1),
@@ -137,7 +135,7 @@ async def list_booked_trips(
 ):
     items, total = await use_case(BookedTripListFilters(
         page=page, page_size=page_size,
-        client_id=client_id, matched=matched,
+        client_id=client_id,
         date_from=date_from, date_to=date_to,
     ))
     out = await _load_many(use_case.repo.session, items)  # type: ignore[attr-defined]
@@ -187,7 +185,6 @@ async def import_booked_trips_excel(
 async def export_booked_trips_excel(
     date_from: date | None = None,
     date_to: date | None = None,
-    matched: bool | None = None,
     client_id: int | None = None,
     current_user: User = Depends(require_permission("create", "BookedTrip")),
     use_case: GetBookedTrip = Depends(get_get_booked_trip),
@@ -198,7 +195,6 @@ async def export_booked_trips_excel(
         session,
         date_from=date_from.isoformat() if date_from else None,
         date_to=date_to.isoformat() if date_to else None,
-        matched=matched,
         client_id=client_id,
     )
     if client_id and client_name:
@@ -302,7 +298,6 @@ async def update_booked_trip(
             vessel=body.vessel,
             vehicle_plate=body.vehicle_plate,
             work_type=body.work_type,
-            matched=body.matched,
         ))
     except Exception as exc:
         raise translate(exc)

@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react'
-import { TrendingUp, DollarSign, Coins, Search } from 'lucide-react'
+import { TrendingUp, DollarSign, Coins, Download } from 'lucide-react'
+import { Button } from '@/components/ui/Button/Button'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
+import { SearchBar } from '@/components/shared/SearchBar/SearchBar'
 import { NepoTable } from '@/components/shared/NepoTable'
 import type { NepoColumn, NepoFooterCell } from '@/components/shared/NepoTable'
 import { Plate } from '@/components/shared/Plate'
@@ -10,36 +12,32 @@ import { useVehiclePnL } from '@/hooks/use-queries'
 import { useMonthParams } from './use-month-params'
 import { compactCurrency } from '@/data/domain'
 import type { VehiclePnLRow, VehiclePnLResponse } from '@/services/api/pnl.api'
+import { exportVehiclePnL } from '@/services/api/pnl.api'
 import { AnimatedNumber } from '@/components/shared'
 
 const monoStyle = { fontFamily: 'var(--theme-font-mono)' } as React.CSSProperties
 
-export function PnLPage() {
-  const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
-  const [search, setSearch] = useState('')
-  const { data: pnlData, isLoading } = useVehiclePnL(dateFrom, dateTo)
+function profitColor(v: number) {
+  return v >= 0 ? 'var(--accent-2)' : 'var(--danger)'
+}
 
-  const allRows = useMemo<VehiclePnLRow[]>(
-    () => (pnlData as VehiclePnLResponse | undefined)?.rows ?? [],
-    [pnlData],
+function MoneyCell({ value, bold }: { value: number; bold?: boolean }) {
+  return (
+    <span
+      className={`tabular-nums${bold ? ' font-bold' : ''}`}
+      style={{ color: bold ? profitColor(value) : 'var(--ink)', ...monoStyle }}
+    >
+      {compactCurrency(value)}
+    </span>
   )
-  const totalRevenue = (pnlData as VehiclePnLResponse | undefined)?.totalRevenue ?? 0
-  const totalProfit = (pnlData as VehiclePnLResponse | undefined)?.totalProfit ?? 0
+}
 
-  const rows = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return allRows
-    return allRows.filter(r => r.plate.toLowerCase().includes(q))
-  }, [allRows, search])
+// ─── Xe nội bộ table ────────────────────────────────────────────────────────
 
-  const totalCpXangDau = rows.reduce((s, r) => s + r.cpXe.xangDau, 0)
-  const totalCpSuaChua = rows.reduce((s, r) => s + r.cpXe.suaChua, 0)
-  const totalCpTienLuat = rows.reduce((s, r) => s + r.cpXe.tienLuat, 0)
-  const totalCpKhac = rows.reduce((s, r) => s + r.cpXe.khac, 0)
-  const totalCpXe = rows.reduce((s, r) => s + r.cpXe.total, 0)
-  const totalLuongLX = rows.reduce((s, r) => s + r.cpLuongSanLuong + r.cpLuongCoBan, 0)
-  const totalCost = totalCpXe + totalLuongLX
-  const marginPct = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : null
+function NoiBoTable({ rows, isLoading }: { rows: VehiclePnLRow[]; isLoading: boolean }) {
+  const totalRevenue  = rows.reduce((s, r) => s + r.revenue, 0)
+  const totalCost     = rows.reduce((s, r) => s + r.cpXe.total + r.cpLuongSanLuong + r.cpLuongCoBan, 0)
+  const totalProfit   = rows.reduce((s, r) => s + r.loiNhuan, 0)
 
   const columns: NepoColumn<VehiclePnLRow>[] = [
     {
@@ -53,94 +51,165 @@ export function PnLPage() {
       header: 'Doanh thu',
       align: 'right',
       width: 130,
-      render: (r) => (
-        <span className="tabular-nums font-semibold" style={{ color: 'var(--ink)', ...monoStyle }}>
-          {compactCurrency(r.revenue)}
-        </span>
-      ),
+      render: (r) => <MoneyCell value={r.revenue} />,
     },
     {
-      key: 'xangDau',
-      header: 'CP Xăng dầu',
+      key: 'chiPhi',
+      header: 'Chi phí',
       align: 'right',
-      width: 120,
-      hideBelow: 'lg',
-      render: (r) => <span className="tabular-nums" style={monoStyle}>{compactCurrency(r.cpXe.xangDau)}</span>,
-    },
-    {
-      key: 'suaChua',
-      header: 'CP Sửa chữa',
-      align: 'right',
-      width: 120,
-      hideBelow: 'lg',
-      render: (r) => <span className="tabular-nums" style={monoStyle}>{compactCurrency(r.cpXe.suaChua)}</span>,
-    },
-    {
-      key: 'tienLuat',
-      header: 'CP Tiền luật',
-      align: 'right',
-      width: 120,
-      hideBelow: 'lg',
-      render: (r) => <span className="tabular-nums" style={monoStyle}>{compactCurrency(r.cpXe.tienLuat)}</span>,
-    },
-    {
-      key: 'khac',
-      header: 'CP Khác',
-      align: 'right',
-      width: 100,
-      hideBelow: 'lg',
-      render: (r) => <span className="tabular-nums" style={monoStyle}>{compactCurrency(r.cpXe.khac)}</span>,
-    },
-    {
-      key: 'luongLX',
-      header: 'Lương LX',
-      align: 'right',
-      width: 120,
-      render: (r) => (
-        <span className="tabular-nums font-semibold" style={{ color: 'var(--ink)', ...monoStyle }}>
-          {compactCurrency(r.cpLuongSanLuong + r.cpLuongCoBan)}
-        </span>
-      ),
+      width: 130,
+      render: (r) => <MoneyCell value={r.cpXe.total + r.cpLuongSanLuong + r.cpLuongCoBan} />,
     },
     {
       key: 'profit',
       header: 'Lợi nhuận',
       align: 'right',
-      width: 120,
+      width: 130,
       headerClass: 'nepo-col-net',
       cellClass: 'nepo-col-net',
-      render: (r) => (
-        <span
-          className="tabular-nums font-bold"
-          style={{ color: r.loiNhuan >= 0 ? 'var(--accent-2)' : 'var(--danger)', fontFamily: 'var(--theme-font-mono)' }}
-        >
-          {compactCurrency(r.loiNhuan)}
-        </span>
-      ),
+      render: (r) => <MoneyCell value={r.loiNhuan} bold />,
     },
   ]
 
   const footerCells: NepoFooterCell[] = [
     { content: 'Tổng', sticky: true },
-    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalRevenue)}</span>, align: 'right' },
-    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpXangDau)}</span>, align: 'right' },
-    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpSuaChua)}</span>, align: 'right' },
-    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpTienLuat)}</span>, align: 'right' },
-    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpKhac)}</span>, align: 'right' },
-    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalLuongLX)}</span>, align: 'right' },
+    { content: <MoneyCell value={totalRevenue} />, align: 'right' },
+    { content: <MoneyCell value={totalCost} />, align: 'right' },
     {
-      content: (
-        <span
-          className="tabular-nums font-bold"
-          style={{ color: totalProfit >= 0 ? 'var(--accent-2)' : 'var(--danger)', fontFamily: 'var(--theme-font-mono)' }}
-        >
-          {compactCurrency(totalProfit)}
-        </span>
-      ),
+      content: <MoneyCell value={totalProfit} bold />,
       align: 'right',
       className: 'nepo-col-net',
     },
   ]
+
+  return (
+    <NepoTable
+      columns={columns}
+      data={rows}
+      rowKey={(r) => r.vehicleId}
+      isLoading={isLoading}
+      emptyText="Không có xe nội bộ trong kỳ này"
+      minWidth={520}
+      footerCells={footerCells}
+    />
+  )
+}
+
+// ─── Xe ngoài table ──────────────────────────────────────────────────────────
+
+function NgoaiTable({ rows, isLoading }: { rows: VehiclePnLRow[]; isLoading: boolean }) {
+  const totalRevenue  = rows.reduce((s, r) => s + r.revenue, 0)
+  const totalCost     = rows.reduce((s, r) => s + r.cpVendor, 0)
+  const totalProfit   = rows.reduce((s, r) => s + r.loiNhuan, 0)
+
+  const columns: NepoColumn<VehiclePnLRow>[] = [
+    {
+      key: 'plate',
+      header: 'Biển số',
+      sticky: true,
+      render: (r) => <Plate>{r.plate}</Plate>,
+    },
+    {
+      key: 'vendorName',
+      header: 'Nhà xe',
+      width: 160,
+      render: (r) => (
+        <span className="text-sm text-[var(--ink-2)]">{r.vendorName ?? '—'}</span>
+      ),
+    },
+    {
+      key: 'revenue',
+      header: 'Doanh thu',
+      align: 'right',
+      width: 130,
+      render: (r) => <MoneyCell value={r.revenue} />,
+    },
+    {
+      key: 'chiPhi',
+      header: 'Chi phí',
+      align: 'right',
+      width: 130,
+      render: (r) => <MoneyCell value={r.cpVendor} />,
+    },
+    {
+      key: 'profit',
+      header: 'Lợi nhuận',
+      align: 'right',
+      width: 130,
+      headerClass: 'nepo-col-net',
+      cellClass: 'nepo-col-net',
+      render: (r) => <MoneyCell value={r.loiNhuan} bold />,
+    },
+  ]
+
+  const footerCells: NepoFooterCell[] = [
+    { content: 'Tổng', sticky: true },
+    { content: null, align: 'right' },   // Nhà xe — no total
+    { content: <MoneyCell value={totalRevenue} />, align: 'right' },
+    { content: <MoneyCell value={totalCost} />, align: 'right' },
+    {
+      content: <MoneyCell value={totalProfit} bold />,
+      align: 'right',
+      className: 'nepo-col-net',
+    },
+  ]
+
+  return (
+    <NepoTable
+      columns={columns}
+      data={rows}
+      rowKey={(r) => r.vehicleId}
+      isLoading={isLoading}
+      emptyText="Không có xe ngoài trong kỳ này"
+      minWidth={620}
+      footerCells={footerCells}
+    />
+  )
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
+export function PnLPage() {
+  const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
+  const [search, setSearch] = useState('')
+  const [isExporting, setIsExporting] = useState(false)
+  const { data: pnlData, isLoading } = useVehiclePnL(dateFrom, dateTo)
+
+  async function handleExport() {
+    setIsExporting(true)
+    try {
+      await exportVehiclePnL(dateFrom, dateTo)
+    } catch (err) {
+      console.error('Export failed', err)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const allRows = useMemo<VehiclePnLRow[]>(
+    () => (pnlData as VehiclePnLResponse | undefined)?.rows ?? [],
+    [pnlData],
+  )
+  const totalRevenue = (pnlData as VehiclePnLResponse | undefined)?.totalRevenue ?? 0
+  const totalProfit  = (pnlData as VehiclePnLResponse | undefined)?.totalProfit ?? 0
+  const totalCost    = allRows.reduce(
+    (s, r) => s + r.cpXe.total + r.cpLuongSanLuong + r.cpLuongCoBan + r.cpVendor,
+    0,
+  )
+  const marginPct = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : null
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return allRows
+    return allRows.filter(
+      (r) =>
+        r.plate.toLowerCase().includes(q) ||
+        (r.vendorName ?? '').toLowerCase().includes(q),
+    )
+  }, [allRows, search])
+
+  const noiBoRows = useMemo(() => filteredRows.filter((r) => !r.isVendor), [filteredRows])
+  const ngoaiRows = useMemo(() => filteredRows.filter((r) => r.isVendor), [filteredRows])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -167,7 +236,7 @@ export function PnLPage() {
           value={totalCost}
           icon={Coins}
           color="blue"
-          sublabel={`Xe + Lương`}
+          sublabel="Xe + Lương + Nhà xe"
           className="card-hover-lift"
         />
         <KpiHeroCard
@@ -182,27 +251,37 @@ export function PnLPage() {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="relative" style={{ width: 220 }}>
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tìm biển số..."
-            className="w-full h-9 pl-8 pr-3 rounded-md border border-input bg-background text-sm outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
+        <SearchBar
+          value={search}
+          onChange={setSearch}
+          placeholder="Tìm biển số / nhà xe..."
+          className="w-[240px]"
+        />
+        <Button
+          variant="outline"
+          onClick={handleExport}
+          disabled={isExporting || isLoading}
+        >
+          <Download size={14} className={isExporting ? 'animate-bounce' : ''} />
+          {isExporting ? 'Đang xuất...' : 'Xuất báo cáo'}
+        </Button>
       </div>
 
-      <NepoTable
-        columns={columns}
-        data={rows}
-        rowKey={(r) => r.vehicleId}
-        isLoading={isLoading}
-        emptyText="Không có dữ liệu P&L cho tháng này"
-        minWidth={800}
-        footerCells={footerCells}
-      />
+      {/* Xe nội bộ */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold text-[var(--ink)] tracking-wide uppercase opacity-60">
+          Xe nội bộ
+        </h2>
+        <NoiBoTable rows={noiBoRows} isLoading={isLoading} />
+      </section>
+
+      {/* Xe ngoài */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold text-[var(--ink)] tracking-wide uppercase opacity-60">
+          Xe ngoài
+        </h2>
+        <NgoaiTable rows={ngoaiRows} isLoading={isLoading} />
+      </section>
     </div>
   )
 }

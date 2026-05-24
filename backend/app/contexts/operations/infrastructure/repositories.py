@@ -51,15 +51,12 @@ class SqlBookedTripRepository(BookedTripRepository):
         offset: int,
         limit: int,
         client_id: int | None = None,
-        matched: bool | None = None,
         trip_date_from: date | None = None,
         trip_date_to: date | None = None,
     ) -> tuple[Sequence[BookedTrip], int]:
         q = select(BookedTripORM)
         if client_id is not None:
             q = q.where(BookedTripORM.client_id == client_id)
-        if matched is not None:
-            q = q.where(BookedTripORM.matched == matched)
         if trip_date_from is not None:
             q = q.where(BookedTripORM.trip_date >= trip_date_from)
         if trip_date_to is not None:

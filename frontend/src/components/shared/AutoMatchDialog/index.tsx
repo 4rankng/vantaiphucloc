@@ -321,21 +321,23 @@ export function AutoMatchDialog({
       <div
         key={key}
         onClick={() => togglePair(c.deliveredTripId, c.bookedTripId)}
-        className="rounded-lg cursor-pointer transition-colors border p-2.5"
+        className="rounded-lg cursor-pointer transition-all border p-2.5"
         style={{
-          background: isSelected ? 'var(--surface-2)' : 'transparent',
-          borderColor: isSelected ? 'var(--line)' : 'transparent',
-          opacity: isSelected ? 1 : 0.45,
+          background: isSelected ? 'rgba(99,102,241,0.05)' : 'transparent',
+          borderColor: isSelected ? 'rgba(99,102,241,0.2)' : 'rgba(0,0,0,0.04)',
+          opacity: isSelected ? 1 : 0.38,
+          boxShadow: isSelected ? '0 1px 6px rgba(99,102,241,0.08)' : 'none',
         }}
       >
         <div className="flex items-center gap-1.5 mb-1.5">
           {isSelected ? (
-            <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" style={{ color: conf.color }} />
+            <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#6366f1' }} />
           ) : (
             <div className="h-3.5 w-3.5 rounded-full border-2 flex-shrink-0" style={{ borderColor: 'var(--ink-4)' }} />
           )}
-          <ConfIcon className="h-3 w-3" style={{ color: conf.color }} />
-          <span className="text-[11px] font-medium" style={{ color: conf.color }}>
+          <span className="inline-flex items-center gap-1 text-[10.5px] font-bold px-1.5 py-0.5 rounded-full"
+            style={{ background: `${conf.color}1a`, color: conf.color }}>
+            <ConfIcon className="h-2.5 w-2.5" />
             {Math.round(c.score * 100)}%
           </span>
         </div>
@@ -351,7 +353,7 @@ export function AutoMatchDialog({
 
             return (
               <div key={cKey} className="flex items-center gap-1.5 text-[11px] leading-tight">
-                {isMatch ? (
+                {(isMatch || same) ? (
                   <Check className="h-2.5 w-2.5 flex-shrink-0" style={{ color: '#16a34a' }} />
                 ) : (
                   <span className="w-2.5 h-2.5 flex-shrink-0 rounded-sm border" style={{ borderColor: 'var(--ink-4)' }} />
@@ -394,17 +396,26 @@ export function AutoMatchDialog({
           Tự động đối chiếu (AI)
         </DialogTitle>
         {isLoading ? <AILoadingState /> : isEmptyResult ? <NoResultState onClose={onClose} /> : <>
+        {/* Gradient accent strip */}
+        <div style={{
+          margin: '-24px -24px 20px -24px',
+          height: 3,
+          background: 'linear-gradient(to right, #6366f1, #a855f7, #ec4899)',
+          borderRadius: '12px 12px 0 0',
+        }} />
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span
               className="inline-flex items-center justify-center w-7 h-7 rounded-lg"
-              style={{ background: 'color-mix(in srgb, var(--theme-brand-primary, #059669) 12%, transparent)' }}
+              style={{ background: 'rgba(99,102,241,0.1)' }}
             >
-              <Zap className="h-4 w-4" style={{ color: 'var(--theme-brand-primary, #059669)' }} />
+              <Zap className="h-4 w-4" style={{ color: '#6366f1' }} />
             </span>
-            Tự động (AI)
+            <span style={{ background: 'linear-gradient(to right,#6366f1,#a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              Tự động (AI)
+            </span>
             {resolving && (
-              <span className="text-[12px] font-normal" style={{ color: 'var(--ink-3)' }}>
+              <span className="text-[12px] font-normal" style={{ color: 'var(--ink-3)', WebkitTextFillColor: 'var(--ink-3)' }}>
                 — Giải quyết khác biệt ({resolveIndex + 1}/{diffPairs.length})
               </span>
             )}
@@ -426,7 +437,7 @@ export function AutoMatchDialog({
             <div className="space-y-2">
               {/* Compact header: badge + inline hint */}
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[11px] px-1.5 py-0.5 rounded font-medium" style={{ color: '#d97706', background: 'rgba(217,119,6,0.1)' }}>
+                <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold" style={{ color: '#b45309', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)' }}>
                   {diffRows.length} xung đột
                 </span>
                 <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>
@@ -437,22 +448,22 @@ export function AutoMatchDialog({
               {/* Matched + auto-fill — single compact row strip */}
               {(matchedRows.length > 0 || autoFillRows.length > 0) && (
                 <div
-                  className="rounded-md px-3 py-2"
-                  style={{ background: 'var(--surface-2)', border: '0.5px solid var(--line)' }}
+                  className="rounded-lg px-3 py-2"
+                  style={{ background: 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.12)' }}
                 >
                   <div className="flex flex-wrap gap-x-5 gap-y-0.5">
                     {matchedRows.map(({ key, label }) => (
                       <span key={key} className="flex items-center gap-1 text-[11px]">
-                        <Check className="h-2.5 w-2.5 flex-shrink-0" style={{ color: 'var(--ink-4)' }} />
+                        <Check className="h-2.5 w-2.5 flex-shrink-0" style={{ color: '#6366f1' }} />
                         <span style={{ color: 'var(--ink-4)' }}>{label}</span>
-                        <span style={{ color: 'var(--ink-2)' }}>{fmtVal(key, currentResolveCard.delivered[key] as string | null)}</span>
+                        <span style={{ color: 'var(--ink-2)', fontWeight: 500 }}>{fmtVal(key, currentResolveCard.delivered[key] as string | null)}</span>
                       </span>
                     ))}
                     {autoFillRows.map(({ label, value }) => (
                       <span key={label} className="flex items-center gap-1 text-[11px]">
                         <ArrowRight className="h-2.5 w-2.5 flex-shrink-0" style={{ color: 'var(--ink-4)' }} />
                         <span style={{ color: 'var(--ink-4)' }}>{label}</span>
-                        <span style={{ color: 'var(--ink-2)' }}>{value}</span>
+                        <span style={{ color: 'var(--ink-2)', fontWeight: 500 }}>{value}</span>
                       </span>
                     ))}
                   </div>
@@ -463,59 +474,59 @@ export function AutoMatchDialog({
               {diffRows.map(({ label, delivered, booked }) => (
                 <div
                   key={label}
-                  className="rounded-md overflow-hidden"
-                  style={{ border: '0.5px solid var(--line)' }}
+                  className="overflow-hidden"
+                  style={{ border: '1px solid rgba(99,102,241,0.15)', borderRadius: 10 }}
                 >
                   {/* Field label header */}
                   <div
                     className="flex items-center gap-1.5 px-3 py-1.5"
-                    style={{ background: 'var(--surface-2)', borderBottom: '0.5px solid var(--line)' }}
+                    style={{ background: 'rgba(99,102,241,0.04)', borderBottom: '1px solid rgba(99,102,241,0.1)' }}
                   >
-                    <AlertCircle className="h-3 w-3" style={{ color: '#d97706' }} />
+                    <AlertCircle className="h-3 w-3" style={{ color: '#f59e0b' }} />
                     <span className="text-[11px] font-medium" style={{ color: 'var(--ink-3)' }}>
                       {label}
                     </span>
                   </div>
 
                   {/* Split pane */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.5px 1fr' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr' }}>
                     {/* Left: Dữ liệu đã đi */}
                     <div
                       onClick={() => setLocalChoice('delivered')}
-                      className="cursor-pointer"
+                      className="cursor-pointer transition-colors"
                       style={{
-                        padding: '10px 14px',
-                        background: localChoice === 'delivered' ? 'var(--surface-2)' : 'transparent',
-                        outline: localChoice === 'delivered' ? '2px solid var(--ink)' : 'none',
+                        padding: '12px 16px',
+                        background: localChoice === 'delivered' ? 'rgba(99,102,241,0.07)' : 'transparent',
+                        outline: localChoice === 'delivered' ? '2px solid #6366f1' : 'none',
                         outlineOffset: -2,
                       }}
                     >
-                      <p className="text-[10px] font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--ink-4)' }}>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: localChoice === 'delivered' ? '#6366f1' : 'var(--ink-4)' }}>
                         Dữ liệu đã đi
                       </p>
-                      <p className="font-mono text-[14px] font-medium" style={{ color: 'var(--ink)' }}>
+                      <p className="font-mono text-[15px] font-semibold" style={{ color: 'var(--ink)' }}>
                         {delivered}
                       </p>
                     </div>
 
                     {/* Divider */}
-                    <div style={{ background: 'var(--line)' }} />
+                    <div style={{ background: 'rgba(99,102,241,0.12)' }} />
 
                     {/* Right: Dữ liệu chủ hàng */}
                     <div
                       onClick={() => setLocalChoice('booked')}
-                      className="cursor-pointer"
+                      className="cursor-pointer transition-colors"
                       style={{
-                        padding: '10px 14px',
-                        background: localChoice === 'booked' ? 'var(--surface-2)' : 'transparent',
-                        outline: localChoice === 'booked' ? '2px solid var(--ink)' : 'none',
+                        padding: '12px 16px',
+                        background: localChoice === 'booked' ? 'rgba(99,102,241,0.07)' : 'transparent',
+                        outline: localChoice === 'booked' ? '2px solid #6366f1' : 'none',
                         outlineOffset: -2,
                       }}
                     >
-                      <p className="text-[10px] font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--ink-4)' }}>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: localChoice === 'booked' ? '#6366f1' : 'var(--ink-4)' }}>
                         Dữ liệu chủ hàng
                       </p>
-                      <p className="font-mono text-[14px] font-medium" style={{ color: 'var(--ink)' }}>
+                      <p className="font-mono text-[15px] font-semibold" style={{ color: 'var(--ink)' }}>
                         {booked}
                       </p>
                     </div>
@@ -523,12 +534,12 @@ export function AutoMatchDialog({
 
                   {/* Result row */}
                   <div
-                    className="flex items-center gap-2 px-3 py-1.5"
-                    style={{ borderTop: '0.5px solid var(--line)', background: 'var(--surface-2)' }}
+                    className="flex items-center gap-2 px-3 py-2"
+                    style={{ borderTop: '1px solid rgba(99,102,241,0.1)', background: 'rgba(99,102,241,0.03)' }}
                   >
                     <span className="text-[11px]" style={{ color: 'var(--ink-4)' }}>Kết quả:</span>
                     {localChoice ? (
-                      <span className="font-mono text-[12px] font-medium" style={{ color: 'var(--ink)' }}>
+                      <span className="font-mono text-[12px] font-bold" style={{ color: '#6366f1' }}>
                         {localChoice === 'delivered' ? delivered : booked}
                         <span className="font-sans font-normal text-[10px] ml-1.5" style={{ color: 'var(--ink-4)' }}>
                           ({localChoice === 'delivered' ? 'đã đi' : 'chủ hàng'})
@@ -546,36 +557,34 @@ export function AutoMatchDialog({
           <>
             {/* Legend */}
             {candidates.length > 0 && (
-              <div className="flex items-center gap-4 pb-2 mb-1" style={{ borderBottom: '1px solid var(--line)' }}>
+              <div className="flex items-center gap-3 pb-2.5 mb-1" style={{ borderBottom: '1px solid rgba(99,102,241,0.1)' }}>
                 <span className="flex items-center gap-1.5 text-[10.5px]">
-                  <span className="inline-block w-3 h-2 rounded-sm" style={{ background: 'var(--ink-2)' }} />
+                  <span className="inline-block w-3 h-2 rounded-sm" style={{ background: 'rgba(99,102,241,0.5)' }} />
                   <span style={{ color: 'var(--ink-3)' }}>Đã đi</span>
                 </span>
+                <ArrowRight className="h-2.5 w-2.5" style={{ color: 'var(--ink-4)' }} />
                 <span className="flex items-center gap-1.5 text-[10.5px]">
-                  <ArrowRight className="h-2.5 w-2.5" style={{ color: 'var(--ink-4)' }} />
-                </span>
-                <span className="flex items-center gap-1.5 text-[10.5px]">
-                  <span className="inline-block w-3 h-2 rounded-sm" style={{ background: '#d97706' }} />
+                  <span className="inline-block w-3 h-2 rounded-sm" style={{ background: '#f59e0b' }} />
                   <span style={{ color: 'var(--ink-3)' }}>Chủ hàng</span>
                 </span>
-                <span className="ml-auto flex items-center gap-1.5">
+                <span className="ml-auto flex items-center gap-1">
                   <button
-                    className="text-[10.5px] font-medium px-2.5 py-1 rounded-md transition-all duration-150 hover:scale-105 active:scale-95"
+                    className="text-[10.5px] font-medium px-3 py-1 rounded-full transition-all duration-150 hover:scale-105 active:scale-95"
                     style={{
-                      color: 'var(--ink)',
-                      background: allSelected ? 'var(--surface-4)' : 'transparent',
-                      boxShadow: allSelected ? 'inset 0 0 0 1px var(--ink-3)' : 'none',
+                      color: allSelected ? '#6366f1' : 'var(--ink-3)',
+                      background: allSelected ? 'rgba(99,102,241,0.08)' : 'transparent',
+                      border: `1px solid ${allSelected ? 'rgba(99,102,241,0.25)' : 'transparent'}`,
                     }}
                     onClick={() => { setDeselected(new Set()); setAllSelected(true) }}
                   >
                     Chọn tất cả
                   </button>
                   <button
-                    className="text-[10.5px] font-medium px-2.5 py-1 rounded-md transition-all duration-150 hover:scale-105 active:scale-95"
+                    className="text-[10.5px] font-medium px-3 py-1 rounded-full transition-all duration-150 hover:scale-105 active:scale-95"
                     style={{
-                      color: 'var(--ink)',
-                      background: !allSelected ? 'var(--surface-4)' : 'transparent',
-                      boxShadow: !allSelected ? 'inset 0 0 0 1px var(--ink-3)' : 'none',
+                      color: !allSelected ? '#6366f1' : 'var(--ink-3)',
+                      background: !allSelected ? 'rgba(99,102,241,0.08)' : 'transparent',
+                      border: `1px solid ${!allSelected ? 'rgba(99,102,241,0.25)' : 'transparent'}`,
                     }}
                     onClick={() => { setDeselected(new Set(allKeys)); setAllSelected(false) }}
                   >
@@ -626,7 +635,8 @@ export function AutoMatchDialog({
                 <>
                   {fullMatches.length > 0 && (
                     <div className="mb-4">
-                      <h3 className="text-[12px] font-semibold mb-2" style={{ color: 'var(--ink-2)' }}>
+                      <h3 className="text-[12px] font-semibold mb-2 flex items-center gap-2" style={{ color: 'var(--ink-2)' }}>
+                        <span style={{ display: 'inline-block', width: 3, height: 11, borderRadius: 2, background: 'linear-gradient(to bottom,#6366f1,#a855f7)', flexShrink: 0 }} />
                         Khớp đầy đủ ({fullMatches.length})
                       </h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5">
@@ -636,7 +646,8 @@ export function AutoMatchDialog({
                   )}
                   {partialMatches.length > 0 && (
                     <div>
-                      <h3 className="text-[12px] font-semibold mb-2" style={{ color: 'var(--ink-2)' }}>
+                      <h3 className="text-[12px] font-semibold mb-2 flex items-center gap-2" style={{ color: 'var(--ink-2)' }}>
+                        <span style={{ display: 'inline-block', width: 3, height: 11, borderRadius: 2, background: 'linear-gradient(to bottom,#f59e0b,#f97316)', flexShrink: 0 }} />
                         Khớp một phần ({partialMatches.length})
                       </h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5">
@@ -658,24 +669,24 @@ export function AutoMatchDialog({
                 <button
                   onClick={handleNavPrev}
                   disabled={resolveIndex === 0}
-                  className="flex items-center justify-center w-7 h-7 rounded-md transition-colors disabled:opacity-30"
-                  style={{ color: 'var(--ink-2)' }}
-                  onMouseEnter={(e) => { if (resolveIndex > 0) (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-3)' }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+                  className="flex items-center justify-center w-7 h-7 rounded-full transition-all disabled:opacity-30 hover:scale-110 active:scale-95"
+                  style={{ color: 'var(--ink-3)', border: '1px solid var(--line)' }}
+                  onMouseEnter={(e) => { if (resolveIndex > 0) { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'rgba(99,102,241,0.08)'; b.style.borderColor = 'rgba(99,102,241,0.3)'; b.style.color = '#6366f1' } }}
+                  onMouseLeave={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'transparent'; b.style.borderColor = 'var(--line)'; b.style.color = 'var(--ink-3)' }}
                   aria-label="Trường trước"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
-                <span className="text-[12px] tabular-nums px-1" style={{ color: 'var(--ink-3)', minWidth: 36, textAlign: 'center' }}>
+                <span className="text-[12px] tabular-nums px-2 font-medium" style={{ color: 'var(--ink-3)', minWidth: 40, textAlign: 'center' }}>
                   {resolveIndex + 1} / {diffPairs.length}
                 </span>
                 <button
                   onClick={handleNavNext}
                   disabled={resolveIndex >= diffPairs.length - 1}
-                  className="flex items-center justify-center w-7 h-7 rounded-md transition-colors disabled:opacity-30"
-                  style={{ color: 'var(--ink-2)' }}
-                  onMouseEnter={(e) => { if (resolveIndex < diffPairs.length - 1) (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-3)' }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+                  className="flex items-center justify-center w-7 h-7 rounded-full transition-all disabled:opacity-30 hover:scale-110 active:scale-95"
+                  style={{ color: 'var(--ink-3)', border: '1px solid var(--line)' }}
+                  onMouseEnter={(e) => { if (resolveIndex < diffPairs.length - 1) { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'rgba(99,102,241,0.08)'; b.style.borderColor = 'rgba(99,102,241,0.3)'; b.style.color = '#6366f1' } }}
+                  onMouseLeave={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'transparent'; b.style.borderColor = 'var(--line)'; b.style.color = 'var(--ink-3)' }}
                   aria-label="Trường tiếp theo"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -684,34 +695,36 @@ export function AutoMatchDialog({
 
               {/* Right: back to grid + apply */}
               <div className="flex items-center gap-3">
-                <Button variant="ghost" onClick={() => { setResolving(false); setLocalChoice(null) }} disabled={isConfirming}>
+                <button
+                  onClick={() => { setResolving(false); setLocalChoice(null) }}
+                  disabled={isConfirming}
+                  className="text-sm font-medium px-4 py-2 rounded-full transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                  style={{ color: 'var(--ink-3)', background: 'var(--surface-2)', border: '1px solid var(--line)' }}
+                >
                   Quay lại
-                </Button>
-                <Button
+                </button>
+                <button
                   onClick={handleApplyChoice}
                   disabled={!localChoice || isConfirming}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-white text-sm font-semibold tracking-wide transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus:outline-none"
+                  style={{ background: 'linear-gradient(to right, #6366f1, #a855f7)' }}
                 >
-                  {isConfirming ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ArrowRight className="h-4 w-4" />
-                  )}
+                  {isConfirming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
                   Áp dụng
-                </Button>
+                </button>
               </div>
             </>
           ) : (
-            <Button
+            <button
               onClick={handleConfirm}
               disabled={selectedPairs.length === 0 || isConfirming}
+              className="ai-btn-glow inline-flex items-center gap-2 px-5 py-2 rounded-full text-white text-sm font-semibold tracking-wide transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus:outline-none"
+              style={{ background: 'linear-gradient(to right, #6366f1, #a855f7, #ec4899)' }}
             >
-              {isConfirming ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4" />
-              )}
+              {isConfirming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
               Ghép {selectedPairs.length} cặp
-            </Button>
+              <span className="absolute inset-0 rounded-full border border-white/20 pointer-events-none" />
+            </button>
           )}
         </DialogFooter>
         </>}

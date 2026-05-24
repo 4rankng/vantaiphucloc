@@ -29,7 +29,6 @@ def booked_trip_to_domain(orm: BookedTripORM) -> BookedTrip:
         work_type=orm.work_type,
         cont_number=orm.cont_number,
         cont_type=orm.cont_type,
-        matched=orm.matched,
         vessel=orm.vessel,
         vehicle_plate=orm.vehicle_plate,
         created_at=orm.created_at,
@@ -51,7 +50,6 @@ def booked_trip_to_orm(
     orm.work_type = t.work_type
     orm.cont_number = t.cont_number
     orm.cont_type = t.cont_type
-    orm.matched = t.matched
     orm.vessel = t.vessel
     orm.vehicle_plate = t.vehicle_plate
     return orm

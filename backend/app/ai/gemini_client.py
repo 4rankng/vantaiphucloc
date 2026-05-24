@@ -14,7 +14,7 @@ import httpx
 _logger = logging.getLogger(__name__)
 
 # Default model
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-3.1-flash-lite-preview"
 
 # API endpoint
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -30,7 +30,7 @@ async def call_gemini(
 
     Args:
         prompt: Text prompt
-        model: Model name (default: gemini-2.5-flash)
+        model: Model name (default: gemini-3.1-flash-lite-preview)
         max_tokens: Max output tokens
         temperature: Sampling temperature (low = more deterministic)
 

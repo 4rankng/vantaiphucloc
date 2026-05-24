@@ -400,14 +400,12 @@ class BookedTrip(AuditableMixin, Base):
     work_type = Column(String(30), nullable=False)
     cont_number = Column(String(50), nullable=True, index=True)
     cont_type = Column(String(10), nullable=True)
-    matched = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
 
     __table_args__ = (
-        Index("ix_booked_trips_matched", "matched"),
         Index("ix_booked_trips_trip_date", "trip_date"),
         Index("ix_booked_trips_client_id_trip_date", "client_id", "trip_date"),
     )

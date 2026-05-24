@@ -43,7 +43,7 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
     try:
         from app.config import settings
         api_key = getattr(settings, "GEMINI_API_KEY", None)
-        model = getattr(settings, "GEMINI_MODEL", "gemini-2.5-flash")
+        model = getattr(settings, "GEMINI_MODEL", "gemini-3.1-flash-lite-preview")
     except Exception:
         return []
 

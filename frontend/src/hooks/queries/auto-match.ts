@@ -35,6 +35,7 @@ export function useConfirmAutoMatch() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
+      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
       qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
       qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
@@ -63,6 +64,7 @@ export function useUnmatchTrip() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
+      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
       qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
       qc.invalidateQueries({ queryKey: ['dashboard-summary'] })

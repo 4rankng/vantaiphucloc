@@ -385,7 +385,6 @@ class ReconciliationImportService:
             return {}
 
         q = select(BookedTripORM).where(
-            BookedTripORM.matched == False,  # noqa: E712
             BookedTripORM.cont_number.isnot(None),
         )
         booked = (await self.session.execute(q)).scalars().all()
@@ -445,13 +444,6 @@ class ReconciliationImportService:
         booked_orm = unmatched_booked.get(key)
         if booked_orm is None:
             return "no_match"
-
-        # Fraud check: booked trip already matched by another process
-        if booked_orm.matched:
-            return "fraud_skipped"
-
-        # Match both sides
-        booked_orm.matched = True
 
         delivered_orm = (await self.session.execute(
             select(DeliveredTripORM).where(DeliveredTripORM.id == delivered_trip_id)

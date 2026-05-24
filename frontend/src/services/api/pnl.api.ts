@@ -5,7 +5,7 @@
  * Profit  = revenue − (productivity + allowance + base salary + vehicle expenses)
  */
 
-import { api } from './client'
+import { api, getAccessToken } from './client'
 import { toCamel, ok, fail } from './utils'
 import type { ApiResponse } from '@/data/domain'
 
@@ -41,6 +41,8 @@ export interface VehicleExpenseSummary {
 export interface VehiclePnLRow {
   vehicleId: number
   plate: string
+  isVendor: boolean
+  vendorName: string | null
   revenue: number
   cpXe: VehicleExpenseSummary
   cpLuongSanLuong: number
@@ -113,6 +115,34 @@ export async function getTripDailyStats(
   } catch (err) {
     return fail(err)
   }
+}
+
+/**
+ * Download the vehicle P&L report as an Excel file.
+ * Uses a native fetch so we get a Blob back; triggers browser download.
+ */
+export async function exportVehiclePnL(dateFrom: string, dateTo: string): Promise<void> {
+  const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1'
+  const token = getAccessToken()
+  const url = `${API_BASE}/dashboard/vehicle-pnl/export?date_from=${dateFrom}&date_to=${dateTo}`
+
+  const res = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+
+  if (!res.ok) {
+    throw new Error(`Export thất bại (${res.status})`)
+  }
+
+  const blob = await res.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = objectUrl
+  a.download = `PnL_${dateFrom}_to_${dateTo}.xlsx`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(objectUrl)
 }
 
 export async function getMonthlyPnL(

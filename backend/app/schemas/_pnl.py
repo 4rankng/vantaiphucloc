@@ -104,6 +104,8 @@ class VehiclePnLRow(BaseModel):
     """P&L breakdown for a single vehicle in a period."""
     vehicle_id: int
     plate: str
+    is_vendor: bool = False
+    vendor_name: str | None = None
     revenue: int
     cp_xe: VehicleExpenseSummary
     cp_luong_san_luong: int

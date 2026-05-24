@@ -82,8 +82,19 @@ class UnmatchResponse(BaseModel):
     booked_trip_id: int | None = None
 
 
+class BookedTripSummary(BaseModel):
+    cont_number: str | None = None
+    trip_date: str | None = None
+    client_name: str | None = None
+    pickup_name: str | None = None
+    dropoff_name: str | None = None
+    vessel: str | None = None
+    work_type: str | None = None
+
+
 class AISuggestionResponse(BaseModel):
     suggested_booked_trip_id: int | None = None
+    booked_trip_summary: BookedTripSummary | None = None
     reasoning: str
     confidence: str
     error: str | None = None
@@ -188,13 +199,6 @@ async def unmatch_endpoint(
     booked_id = wo.booked_trip_id
     wo.booked_trip_id = None
 
-    if booked_id:
-        to = (await db.execute(
-            select(BookedTrip).where(BookedTrip.id == booked_id)
-        )).scalar_one_or_none()
-        if to:
-            to.matched = False
-
     await db.flush()
     return UnmatchResponse(ok=True, booked_trip_id=booked_id)
 
@@ -205,6 +209,9 @@ async def ai_suggest_endpoint(
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     db: AsyncSession = Depends(get_db),
 ):
+    from sqlalchemy import select
+    from app.models.domain import BookedTrip
+
     result = await get_ai_match_suggestion(db, delivered_trip_id)
     if "error" in result:
         return AISuggestionResponse(
@@ -212,8 +219,50 @@ async def ai_suggest_endpoint(
             confidence="none",
             error=result["error"],
         )
+
+    suggested_id = result.get("suggested_booked_trip_id")
+    booked_summary: BookedTripSummary | None = None
+
+    if suggested_id:
+        bt = (await db.execute(
+            select(BookedTrip).where(BookedTrip.id == suggested_id)
+        )).scalar_one_or_none()
+
+        if bt:
+            # Resolve location and client names
+            client_name: str | None = None
+            pickup_name: str | None = None
+            dropoff_name: str | None = None
+
+            loc_ids = {bt.pickup_location_id, bt.dropoff_location_id} - {None}
+            client_ids = {bt.client_id} - {None}
+
+            if loc_ids:
+                locs = dict((await db.execute(
+                    select(Location.id, Location.name).where(Location.id.in_(loc_ids))
+                )).all())
+                pickup_name = locs.get(bt.pickup_location_id)
+                dropoff_name = locs.get(bt.dropoff_location_id)
+
+            if client_ids:
+                clients_res = dict((await db.execute(
+                    select(Client.id, Client.name).where(Client.id.in_(client_ids))
+                )).all())
+                client_name = clients_res.get(bt.client_id)
+
+            booked_summary = BookedTripSummary(
+                cont_number=bt.cont_number,
+                trip_date=str(bt.trip_date) if bt.trip_date else None,
+                client_name=client_name,
+                pickup_name=pickup_name,
+                dropoff_name=dropoff_name,
+                vessel=bt.vessel,
+                work_type=bt.work_type,
+            )
+
     return AISuggestionResponse(
-        suggested_booked_trip_id=result.get("suggested_booked_trip_id"),
+        suggested_booked_trip_id=suggested_id,
+        booked_trip_summary=booked_summary,
         reasoning=result.get("reasoning", ""),
         confidence=result.get("confidence", "low"),
     )

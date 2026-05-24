@@ -207,7 +207,7 @@ export function DeliveredTripDetailDrawer({
                 className="text-[12px] m-0 font-medium"
                 style={{ color: 'var(--ink-3)' }}
               >
-                Chuyến đặt trước (TO #{bookedTrip.id})
+                Chuyến khách gửi
               </p>
               <div className="rounded-xl border border-[var(--line)] overflow-hidden shadow-sm bg-[var(--surface)]">
                 <div className="grid grid-cols-2">
@@ -233,6 +233,19 @@ export function DeliveredTripDetailDrawer({
                       displayValue={bookedTrip.contType}
                       options={CONT_TYPES.map((t) => ({ value: t, label: t }))}
                       onChange={(v) => updateBookedTrip.mutate({ id: bookedTrip.id, data: { contType: v as ContType } })}
+                    />
+                  </CriteriaEditRow>
+
+                  <CriteriaEditRow label="Số xe" className="col-span-1 border-b border-r border-[var(--line)]">
+                    <InlineEditable
+                      display={
+                        <span style={{ color: bookedTrip.vehiclePlate ? 'var(--ink)' : 'var(--ink-4)' }}>
+                          {bookedTrip.vehiclePlate ?? 'bất kỳ'}
+                        </span>
+                      }
+                      value={bookedTrip.vehiclePlate ?? ''}
+                      placeholder="Biển số xe"
+                      onSave={(v) => updateBookedTrip.mutateAsync({ id: bookedTrip.id, data: { vehiclePlate: v || null } })}
                     />
                   </CriteriaEditRow>
 

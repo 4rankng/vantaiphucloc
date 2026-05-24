@@ -62,7 +62,6 @@ class ListBookedTrips:
             offset=offset,
             limit=filters.page_size,
             client_id=filters.client_id,
-            matched=filters.matched,
             trip_date_from=filters.date_from,
             trip_date_to=filters.date_to,
         )
@@ -93,7 +92,6 @@ class CreateBookedTrip:
             work_type=data.work_type,
             cont_number=data.cont_number,
             cont_type=data.cont_type,
-            matched=False,
         )
 
         saved = await self.repo.add(t)
@@ -138,8 +136,6 @@ class UpdateBookedTrip:
             t.cont_number = data.cont_number
         if data.cont_type is not None:
             t.cont_type = data.cont_type
-        if data.matched is not None:
-            t.matched = data.matched
         t.updated_at = _utcnow()
 
         await self.repo.save(t)
@@ -267,7 +263,6 @@ class CreateBookedTripFromImport:
                     work_type=work_type_val,
                     cont_number=cn,
                     cont_type=cont_type,
-                    matched=False,
                 )
                 if review_needed:
                     locations_review_flagged += 1

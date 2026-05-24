@@ -21,7 +21,7 @@ from app.contexts.payroll.domain.repositories import (
     DriverSalaryConfigRepository,
     SettingsRepository,
 )
-from app.models.domain import BookedTrip, DeliveredTrip
+from app.models.domain import DeliveredTrip
 from app.models.base import User
 
 _logger = logging.getLogger(__name__)
@@ -230,9 +230,9 @@ class MonthlyPnLDTO:
 class GetMonthlyPnL:
     """Compute revenue, total wages, and profit for an accounting period.
 
-    Revenue counts every MATCHED ``BookedTrip`` whose ``trip_date`` falls
-    within ``[start_date, end_date]``. Each trip contributes
-    its ``revenue`` field.
+    Revenue = SUM(DeliveredTrip.revenue) for all MATCHED DeliveredTrips
+    (booked_trip_id IS NOT NULL) whose trip_date falls within
+    [start_date, end_date].
 
     Costs are summed across all DeliveredTrips matched in the period:
       * productivity salary (``DeliveredTrip.driver_salary``)
@@ -255,56 +255,37 @@ class GetMonthlyPnL:
     async def __call__(
         self, *, start_date: date, end_date: date
     ) -> MonthlyPnLDTO:
-        # ---- Revenue: lookup client route pricing per MATCHED TO ----
-        per_to_rows = (
+        # ---- Revenue: sum DeliveredTrip.revenue for MATCHED trips in period ----
+        from app.models.domain import Client
+
+        dt_revenue_rows = (
             await self.session.execute(
                 select(
-                    BookedTrip.id,
-                    BookedTrip.client_id,
-                    BookedTrip.pickup_location_id,
-                    BookedTrip.dropoff_location_id,
-                    BookedTrip.work_type,
-                    BookedTrip.cont_type,
+                    DeliveredTrip.client_id,
+                    func.count(DeliveredTrip.id),
+                    func.coalesce(func.sum(DeliveredTrip.revenue), 0),
                 )
                 .where(
-                    BookedTrip.matched == True,
-                    BookedTrip.trip_date >= start_date,
-                    BookedTrip.trip_date <= end_date,
+                    DeliveredTrip.booked_trip_id.isnot(None),
+                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+                    >= start_date,
+                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+                    <= end_date,
                 )
+                .group_by(DeliveredTrip.client_id)
             )
         ).all()
 
-        from app.core.pricing_lookup import TripPriceInfo, lookup_client_prices
-        client_trips = [
-            TripPriceInfo(
-                id=r[0],
-                partner_id=r[1],
-                pickup_location_id=r[2],
-                dropoff_location_id=r[3],
-                work_type=r[4],
-                cont_type=r[5],
-            )
-            for r in per_to_rows
-        ]
-        client_prices = await lookup_client_prices(self.session, client_trips)
-
         revenue = 0
+        matched_trip_count = 0
         per_client: dict[int, dict] = {}
-        for row in per_to_rows:
-            to_id, client_id = row[0], row[1]
-            line = client_prices.get(to_id, 0)
-            revenue += line
-            slot = per_client.setdefault(
-                client_id,
-                {"trip_count": 0, "revenue": 0},
-            )
-            slot["trip_count"] += 1
-            slot["revenue"] += line
-
-        matched_trip_count = len(per_to_rows)
-
-        # Resolve partner names for the breakdown.
-        from app.models.domain import Client
+        for client_id, trip_count, client_rev in dt_revenue_rows:
+            revenue += int(client_rev or 0)
+            matched_trip_count += int(trip_count or 0)
+            per_client[client_id] = {
+                "trip_count": int(trip_count or 0),
+                "revenue": int(client_rev or 0),
+            }
 
         client_rows = []
         if per_client:

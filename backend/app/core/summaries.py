@@ -125,8 +125,10 @@ def get_vehicle_summary(
 
 
 def get_driver_summary(
-    summaries: dict[int, DriverSummaryOut], driver_id: int
-) -> DriverSummaryOut:
+    summaries: dict[int, DriverSummaryOut], driver_id: int | None
+) -> DriverSummaryOut | None:
+    if driver_id is None:
+        return None
     return summaries.get(
         driver_id, DriverSummaryOut(id=driver_id, name="(không rõ)", phone=None, vehicle=None)
     )

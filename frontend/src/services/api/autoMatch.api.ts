@@ -33,8 +33,19 @@ export interface ConfirmMatchResponse {
   errors: string[]
 }
 
+export interface BookedTripSummary {
+  contNumber: string | null
+  tripDate: string | null
+  clientName: string | null
+  pickupName: string | null
+  dropoffName: string | null
+  vessel: string | null
+  workType: string | null
+}
+
 export interface AISuggestionResponse {
   suggestedBookedTripId: number | null
+  bookedTripSummary: BookedTripSummary | null
   reasoning: string
   confidence: 'high' | 'medium' | 'low' | 'none'
   error?: string

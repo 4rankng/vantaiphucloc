@@ -3,12 +3,13 @@
 import logging
 from io import BytesIO
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
     BookedTrip,
     Client,
+    DeliveredTrip,
     Location,
 )
 from app.utils.excel_utils import add_template_version
@@ -20,7 +21,6 @@ async def generate_booked_trips_excel(
     db: AsyncSession,
     date_from: str | None = None,
     date_to: str | None = None,
-    matched: bool | None = None,
     client_id: int | None = None,
 ) -> bytes:
     """Export trip orders to Excel.
@@ -38,8 +38,6 @@ async def generate_booked_trips_excel(
         query = query.where(BookedTrip.trip_date >= date_from)
     if date_to:
         query = query.where(BookedTrip.trip_date <= date_to)
-    if matched is not None:
-        query = query.where(BookedTrip.matched == matched)
 
     result = await db.execute(query)
     booked_trips = result.scalars().all()
@@ -80,6 +78,17 @@ async def generate_booked_trips_excel(
 
     match_labels = {True: "Đã khớp", False: "Chưa khớp"}
 
+    # Build match status lookup: BookedTrip.id -> bool
+    bt_ids = [to.id for to in booked_trips]
+    matched_bt_ids: set[int] = set()
+    if bt_ids:
+        rows = (await db.execute(
+            select(DeliveredTrip.booked_trip_id).where(
+                DeliveredTrip.booked_trip_id.in_(bt_ids)
+            )
+        )).scalars().all()
+        matched_bt_ids = set(rows)
+
     if client_id:
         stt = 0
         for to in booked_trips:
@@ -87,7 +96,7 @@ async def generate_booked_trips_excel(
             dropoff = loc_name_by_id.get(to.dropoff_location_id, "")
             route = f"{pickup} → {dropoff}" if pickup and dropoff else ""
             plate = to.vehicle_plate or ""
-            match_status = "Đã khớp" if to.matched else "Chưa khớp"
+            match_status = match_labels.get(to.id in matched_bt_ids, "Chưa khớp")
             vessel = to.vessel or ""
             stt += 1
             ws.append([
@@ -107,7 +116,7 @@ async def generate_booked_trips_excel(
                 loc_name_by_id.get(to.pickup_location_id, ""),
                 loc_name_by_id.get(to.dropoff_location_id, ""),
                 to.cont_number or "", to.cont_type or "",
-                "Đã đối soát" if to.matched else "Chờ ghép",
+                match_labels.get(to.id in matched_bt_ids, "Chờ ghép"),
             ])
 
     from app.utils.excel_utils import add_template_version as _add_ver
@@ -151,12 +160,11 @@ async def generate_doi_soat_excel(
     df = date_type.fromisoformat(date_from)
     dt = date_type.fromisoformat(date_to)
 
-    # -- 2. Load MATCHED trip orders --
+    # -- 2. Load trip orders --
     to_query = select(BookedTrip).where(
         BookedTrip.client_id == client_id,
         BookedTrip.trip_date >= df,
         BookedTrip.trip_date <= dt,
-        BookedTrip.matched == True,
     ).order_by(BookedTrip.trip_date, BookedTrip.id)
     to_result = await db.execute(to_query)
     booked_trips = to_result.scalars().all()

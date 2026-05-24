@@ -101,7 +101,7 @@ class GeminiHeaderClassifier:
         from app.config import settings
         self._enabled = bool(getattr(settings, "IMPORT_LLM_FALLBACK_ENABLED", False))
         self._api_key = getattr(settings, "GEMINI_API_KEY", None)
-        self._model = getattr(settings, "GEMINI_MODEL", "gemini-2.5-flash")
+        self._model = getattr(settings, "GEMINI_MODEL", "gemini-3.1-flash-lite-preview")
 
     async def classify(
         self,

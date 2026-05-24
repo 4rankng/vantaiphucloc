@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   ClipboardList,
   Loader2,
@@ -39,58 +39,11 @@ type StatusFilter = 'ALL' | 'PENDING' | 'MATCHED'
 
 const AI_ANIMATION_TIME = 1800 // ms — minimum loading animation duration before showing results
 
-// ─── AI button label: collapses "Ghép chuyến" only when text would wrap ───────
-//
-// Strategy: a hidden probe span always renders the full text so we can measure
-// its natural width. A ResizeObserver watches the parent button. When the
-// button's available content area is narrower than the probe, switch to "AI".
-// No fixed-pixel threshold — works for any font/zoom level.
-
 function AIMatchButtonLabel({ isPending }: { isPending: boolean }) {
-  const probeRef = useRef<HTMLSpanElement>(null)
-  const [compact, setCompact] = useState(false)
-
-  useEffect(() => {
-    const probe = probeRef.current
-    if (!probe) return
-    const btn = probe.closest('button')
-    if (!btn) return
-
-    const check = () => {
-      const style = getComputedStyle(btn)
-      const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
-      const available = btn.clientWidth - padding          // usable inner width
-      const needed    = probe.offsetWidth                  // full text natural width
-      setCompact(needed > available + 2)                   // +2px rounding tolerance
-    }
-
-    const observer = new ResizeObserver(check)
-    observer.observe(btn)
-    check() // run once immediately on mount
-    return () => observer.disconnect()
-  }, [])
-
   return (
     <span className="inline-flex items-center gap-1.5 group-hover:translate-x-2.5 transition-transform duration-300">
       {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-      {compact ? 'AI' : 'AI Ghép chuyến'}
-
-      {/* Hidden probe — always full text, position:absolute so it never affects layout */}
-      <span
-        ref={probeRef}
-        aria-hidden
-        style={{
-          position: 'absolute',
-          visibility: 'hidden',
-          whiteSpace: 'nowrap',
-          pointerEvents: 'none',
-          fontWeight: 'inherit',
-          fontSize: 'inherit',
-          letterSpacing: 'inherit',
-        }}
-      >
-        AI Ghép chuyến
-      </span>
+      AI Ghép chuyến
     </span>
   )
 }

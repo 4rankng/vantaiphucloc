@@ -36,7 +36,6 @@ class BookedTrip:
     work_type: str = ""
     cont_number: str | None = None
     cont_type: str | None = None
-    matched: bool = False
     vessel: str | None = None
     vehicle_plate: str | None = None
     created_at: datetime = field(default_factory=_utcnow)

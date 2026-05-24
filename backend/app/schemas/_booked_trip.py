@@ -36,7 +36,6 @@ class BookedTripUpdate(BaseModel):
     vessel: str | None = None
     vehicle_plate: str | None = None
     work_type: str | None = None
-    matched: bool | None = None
 
 
 class BookedTripOut(BaseModel):
@@ -50,7 +49,6 @@ class BookedTripOut(BaseModel):
     vessel: str | None = None
     vehicle_plate: str | None = None
     work_type: str = ""
-    matched: bool
     created_at: datetime
     updated_at: datetime
 
