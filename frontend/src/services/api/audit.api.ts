@@ -4,6 +4,8 @@ import { toCamel } from './utils'
 export interface AuditLogEntry {
   id: number
   userId: number | null
+  userName: string | null
+  userRole: string | null
   action: string
   tableName: string
   recordId: number
@@ -11,6 +13,7 @@ export interface AuditLogEntry {
   newValue: string | null
   reason: string | null
   createdAt: string
+  subjectName: string | null
 }
 
 export async function getAuditLogs(params?: { 

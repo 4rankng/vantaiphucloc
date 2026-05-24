@@ -27,6 +27,7 @@ export const ACTIVITY_LABELS: Record<string, Record<string, string>> = {
     routes: 'tạo cung đường',
     pricings: 'tạo bảng giá',
     users: 'tạo tài khoản',
+    driver_salaries: 'tạo lương',
   },
   UPDATE: {
     work_orders: 'cập nhật phiếu chuyến',
@@ -36,6 +37,7 @@ export const ACTIVITY_LABELS: Record<string, Record<string, string>> = {
     routes: 'cập nhật cung đường',
     pricings: 'cập nhật bảng giá',
     users: 'cập nhật tài khoản',
+    driver_salaries: 'cập nhật lương',
   },
   DELETE: {
     work_orders: 'xoá phiếu chuyến',

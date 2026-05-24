@@ -159,16 +159,23 @@ function BarChart({ buckets, maxValue }: { buckets: { day: number; matched: numb
   )
 }
 
+const ROLE_INITIALS: Record<string, string> = {
+  accountant: 'KT',
+  director: 'ĐT',
+  driver: 'LX',
+  superadmin: 'SA',
+}
+
 function ActivityItem({ log, isFirst }: { log: AuditLogEntry; isFirst: boolean }) {
   const time = new Date(log.createdAt)
   const timeStr = time.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
   const dateStr = time.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
   const actorLabel = log.userId
-    ? [log.userRole, log.userName].filter(Boolean).join(' ') || 'Người dùng'
+    ? log.userName || 'Người dùng'
     : 'Hệ thống'
   const activityText = formatActivityEntry(log.action, log.tableName)
   const changes = formatFinancialChange(log)
-  const initials = actorLabel.slice(0, 2).toUpperCase()
+  const initials = ROLE_INITIALS[log.userRole ?? ''] ?? actorLabel.slice(0, 2).toUpperCase()
   const isCreate = log.action?.toLowerCase().includes('create')
 
   return (
