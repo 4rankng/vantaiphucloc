@@ -72,7 +72,7 @@ function EditableField({ label, value, onSave, placeholder }: {
             onClick={handleSave}
             disabled={saving}
             className="w-7 h-7 flex items-center justify-center rounded-full"
-            style={{ background: 'var(--theme-brand-primary)', color: 'white' }}
+            style={{ background: 'var(--sb-bg)', color: 'white' }}
             aria-label="Lưu"
           >
             <Check className="w-3.5 h-3.5" />
@@ -131,7 +131,7 @@ export function UserInfoDialog({ open, onClose }: { open: boolean; onClose: () =
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent hideCloseButton className="max-w-sm p-0 overflow-hidden gap-0">
           {/* Header */}
-          <div className="px-5 pt-5 pb-4" style={{ background: 'var(--theme-brand-primary)' }}>
+          <div className="px-5 pt-5 pb-4" style={{ background: 'var(--sb-bg)' }}>
             <div className="flex items-start justify-between mb-3">
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold text-white shrink-0"
@@ -172,7 +172,7 @@ export function UserInfoDialog({ open, onClose }: { open: boolean; onClose: () =
             <button
               onClick={() => setShowPwDialog(true)}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold"
-              style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
+              style={{ background: 'var(--sb-bg)', color: 'white' }}
             >
               <KeyRound className="w-4 h-4" />
               Đổi mật khẩu
@@ -244,7 +244,7 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
         <DialogFooter>
           <Button variant="outline" onClick={handleClose} className="flex-1">Huỷ</Button>
           <Button onClick={handleSubmit} disabled={!currentPw || !newPw || newPw !== confirmPw || saving} className="flex-1"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+            style={{ background: 'var(--sb-bg)', color: 'white' }}
           >
             {saving ? 'Đang lưu...' : 'Xác nhận'}
           </Button>
@@ -371,10 +371,10 @@ export function SidebarProfileDialog({ open, onClose }: { open: boolean; onClose
     <>
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent hideCloseButton className="max-w-sm p-0 overflow-hidden gap-0">
-          {/* Green header with avatar */}
+          {/* Dark green header with avatar */}
           <div
             className="px-5 pt-5 pb-4 relative"
-            style={{ background: 'var(--theme-brand-primary)' }}
+            style={{ background: 'var(--sb-bg)' }}
           >
             <div className="flex items-start justify-between mb-3">
               <div
@@ -415,7 +415,7 @@ export function SidebarProfileDialog({ open, onClose }: { open: boolean; onClose
                   style={{ color: 'var(--theme-text-primary)' }}
                 >
                   {pushEnabled ? (
-                    <Bell className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-brand-primary)' }} />
+                    <Bell className="w-4 h-4 shrink-0" style={{ color: 'var(--sb-bg)' }} />
                   ) : (
                     <BellOff className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
                   )}

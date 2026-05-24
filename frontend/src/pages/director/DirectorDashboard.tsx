@@ -124,7 +124,10 @@ function VehiclePnLTable({ group, emptyHint }: { group: VehiclePnLGroup; emptyHi
 
   if (rows.length === 0) {
     return (
-      <p className="text-xs py-6 text-center" style={{ color: T.muted }}>{emptyHint}</p>
+      <div className="flex flex-col items-center justify-center gap-3 py-6">
+        <img src="/illustrations/empty-vendors.svg" alt="" className="h-24 w-auto opacity-80" draggable={false} />
+        <p className="text-xs text-center" style={{ color: T.muted }}>{emptyHint}</p>
+      </div>
     )
   }
 
