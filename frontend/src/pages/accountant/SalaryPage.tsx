@@ -203,7 +203,6 @@ export function SalaryPage() {
         <LinkButton
           onClick={handleExport}
           icon={Download}
-          variant="muted"
           disabled={exportMutation.isPending}
         >
           {exportMutation.isPending ? 'Đang xuất...' : 'Xuất Excel'}
