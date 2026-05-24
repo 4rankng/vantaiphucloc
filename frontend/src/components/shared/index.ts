@@ -79,6 +79,30 @@ export { TopNavBar } from './TopNavBar'
 export type { TopNavItem } from './TopNavBar'
 export { StatBreakdownCard } from './StatBreakdownCard'
 
+// ─── Driver components ──────────────────────────────────────────────────────
+export { DriverFormDrawer } from './DriverFormDrawer'
+export type { DriverFormDrawerProps } from './DriverFormDrawer'
+
+// ─── Delivered trip columns ─────────────────────────────────────────────────
+export { getDeliveredTripColumns } from './DeliveredTripColumns'
+export type { DeliveredTripColumnsOptions } from './DeliveredTripColumns'
+
+// ─── Location components ────────────────────────────────────────────────────
+export { HighlightText } from './HighlightText'
+export type { HighlightTextProps } from './HighlightText'
+export { LocationListItem } from './LocationListItem'
+export type { LocationListItemProps } from './LocationListItem'
+export { EditableLocationName } from './EditableLocationName'
+export type { EditableLocationNameProps } from './EditableLocationName'
+export { LocationDetailPanel } from './LocationDetailPanel'
+export type { LocationDetailPanelProps } from './LocationDetailPanel'
+export { AliasChip } from './AliasChip'
+export type { AliasChipProps } from './AliasChip'
+export { NewLocationInput } from './NewLocationInput'
+export type { NewLocationInputProps } from './NewLocationInput'
+export { LocationMergeDialog } from './LocationMergeDialog'
+export type { LocationMergeDialogProps } from './LocationMergeDialog'
+
 // ─── Extracted inline components ─────────────────────────────────────────────
 export { DashboardCard } from './DashboardCard'
 export { DashboardStatCard } from './DashboardStatCard'

@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { Check, X, Pencil } from 'lucide-react'
 
-export function EditableLocationName({
-  name, onSave, saving,
-}: {
+export interface EditableLocationNameProps {
   name: string
   onSave: (newName: string) => void
   saving: boolean
-}) {
+}
+
+export function EditableLocationName({ name, onSave, saving }: EditableLocationNameProps) {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(name)
   const inputRef = useRef<HTMLInputElement>(null)

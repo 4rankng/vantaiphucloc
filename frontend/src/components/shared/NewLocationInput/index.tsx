@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
-import { Check, X } from 'lucide-react'
+import { Plus, Check, X } from 'lucide-react'
 
-export function NewLocationInput({
-  onCreate, onCancel, saving,
-}: {
+export interface NewLocationInputProps {
   onCreate: (name: string) => void
   onCancel: () => void
   saving: boolean
-}) {
+}
+
+export function NewLocationInput({ onCreate, onCancel, saving }: NewLocationInputProps) {
   const [name, setName] = useState('')
   const ref = useRef<HTMLInputElement>(null)
   useEffect(() => { ref.current?.focus() }, [])

@@ -1,12 +1,10 @@
-import { useState, useCallback, useEffect } from 'react'
-import { AlertTriangle, Merge } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { AlertTriangle, Merge, ArrowUpDown } from 'lucide-react'
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 import type { Location } from '@/data/domain'
 
-export function MergeDialog({
-  open, onClose, locations, presetSource, presetTarget, onMerge, merging,
-}: {
+export interface LocationMergeDialogProps {
   open: boolean
   onClose: () => void
   locations: Location[]
@@ -14,7 +12,11 @@ export function MergeDialog({
   presetTarget?: number
   onMerge: (s: number, t: number) => void
   merging: boolean
-}) {
+}
+
+export function LocationMergeDialog({
+  open, onClose, locations, presetSource, presetTarget, onMerge, merging,
+}: LocationMergeDialogProps) {
   const [source, setSource] = useState<number | ''>('')
   const [target, setTarget] = useState<number | ''>('')
 
@@ -43,7 +45,7 @@ export function MergeDialog({
           </p>
         </div>
 
-        <div className="space-y-3 pt-1">
+        <div className="pt-1">
           <div>
             <label className="nepo-field-label">
               Địa điểm nguồn <span style={{ color: 'var(--ink-3)' }}>(sẽ bị gộp)</span>
@@ -58,6 +60,28 @@ export function MergeDialog({
               onChange={v => setSource(v ? Number(v) : '')}
             />
           </div>
+
+          {/* Swap button */}
+          <div className="flex items-center justify-center my-2">
+            <button
+              type="button"
+              onClick={() => { const tmp = source; setSource(target); setTarget(tmp) }}
+              disabled={source === '' && target === ''}
+              title="Hoán đổi nguồn và đích"
+              className="flex items-center justify-center rounded-full transition-colors"
+              style={{
+                width: 32,
+                height: 32,
+                background: 'var(--surface-3)',
+                color: source !== '' || target !== '' ? 'var(--accent)' : 'var(--ink-4)',
+                border: '1px solid var(--line)',
+                opacity: source === '' && target === '' ? 0.5 : 1,
+              }}
+            >
+              <ArrowUpDown className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
           <div>
             <label className="nepo-field-label">
               Địa điểm đích <span style={{ color: 'var(--ink-3)' }}>(giữ lại)</span>

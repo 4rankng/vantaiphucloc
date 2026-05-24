@@ -1,15 +1,14 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import {
   ClipboardList,
   Loader2,
   FileSpreadsheet,
-  Unlink,
 } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatBreakdownCard } from '@/components/shared/StatBreakdownCard'
 import { Panel } from '@/components/shared/Panel'
-import { DataTable, type Column } from '@/components/shared/DataTable'
+import { DataTable } from '@/components/shared/DataTable'
 import { ToolbarSearch } from '@/components/shared/Toolbar'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui'
@@ -19,10 +18,9 @@ import { DeliveredTripDetailDrawer } from '@/components/shared/DeliveredTripDeta
 import { AutoMatchDialog, AutoMatchDateDialog } from '@/components/shared/AutoMatchDialog'
 import { FilterTabs } from '@/components/shared/FilterTabs'
 import { useInfiniteScroll, LoadMoreSentinel } from '@/components/shared/ListUtils'
+import { getDeliveredTripColumns } from '@/components/shared/DeliveredTripColumns'
 import { useMonthParams } from './use-month-params'
-import { getWorkTypeLabel } from '@/data/domain'
 import { useDebounce } from '@/hooks/use-debounce'
-import { formatMatchDate as formatDate } from '@/lib/match-utils'
 import type { DeliveredTrip } from '@/data/domain'
 import type { DeliveredTripSortBy, SortOrder } from '@/services/api/deliveredTrips.api'
 import {
@@ -39,7 +37,63 @@ import {
 
 type StatusFilter = 'ALL' | 'PENDING' | 'MATCHED'
 
-const AI_ANIMATION_TIME = 0 // ms — minimum loading animation duration before showing results
+const AI_ANIMATION_TIME = 1800 // ms — minimum loading animation duration before showing results
+
+// ─── AI button label: collapses "Ghép chuyến" only when text would wrap ───────
+//
+// Strategy: a hidden probe span always renders the full text so we can measure
+// its natural width. A ResizeObserver watches the parent button. When the
+// button's available content area is narrower than the probe, switch to "AI".
+// No fixed-pixel threshold — works for any font/zoom level.
+
+function AIMatchButtonLabel({ isPending }: { isPending: boolean }) {
+  const probeRef = useRef<HTMLSpanElement>(null)
+  const [compact, setCompact] = useState(false)
+
+  useEffect(() => {
+    const probe = probeRef.current
+    if (!probe) return
+    const btn = probe.closest('button')
+    if (!btn) return
+
+    const check = () => {
+      const style = getComputedStyle(btn)
+      const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
+      const available = btn.clientWidth - padding          // usable inner width
+      const needed    = probe.offsetWidth                  // full text natural width
+      setCompact(needed > available + 2)                   // +2px rounding tolerance
+    }
+
+    const observer = new ResizeObserver(check)
+    observer.observe(btn)
+    check() // run once immediately on mount
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <span className="inline-flex items-center gap-1.5 group-hover:translate-x-2.5 transition-transform duration-300">
+      {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+      {compact ? 'AI' : 'AI Ghép chuyến'}
+
+      {/* Hidden probe — always full text, position:absolute so it never affects layout */}
+      <span
+        ref={probeRef}
+        aria-hidden
+        style={{
+          position: 'absolute',
+          visibility: 'hidden',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+          fontWeight: 'inherit',
+          fontSize: 'inherit',
+          letterSpacing: 'inherit',
+        }}
+      >
+        AI Ghép chuyến
+      </span>
+    </span>
+  )
+}
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
@@ -150,198 +204,11 @@ export function DoiSoatPage() {
 
   const filtered = trips
 
-  const columns: Column<DeliveredTrip>[] = [
-    {
-      key: 'date',
-      header: 'Ngày đi',
-      width: 64,
-      sortKey: 'trip_date',
-      render: (t) => (
-        <span
-          className="tabular-nums"
-          style={{ color: 'var(--ink-2)', fontFamily: 'var(--theme-font-mono)', fontSize: 12.5 }}
-        >
-          {formatDate(t.tripDate)}
-        </span>
-      ),
-    },
-    {
-      key: 'vessel',
-      header: 'Số tàu',
-      width: 90,
-      sortKey: 'vessel',
-      render: (t) => (
-        <span className="text-[13px] truncate block" style={{ color: 'var(--ink-2)' }}>
-          {t.vessel || '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'client',
-      header: 'Chủ hàng',
-      width: 100,
-      sortKey: 'client_code',
-      render: (t) => (
-        <span className="text-[13px] font-semibold truncate block" style={{ color: 'var(--ink)' }}>
-          {t.client?.code || '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'vendor',
-      header: 'Nhà thầu',
-      width: 90,
-      render: (t) => {
-        const name = t.vendor?.name || (t.vendorId ? null : 'Phúc Lộc')
-        return (
-          <span className="text-[13px] truncate block" style={{ color: name === 'Phúc Lộc' ? 'var(--ink-2)' : 'var(--ink)' }}>
-            {name || '—'}
-          </span>
-        )
-      },
-    },
-    {
-      key: 'vehicle',
-      header: 'Số xe chạy',
-      width: 90,
-      sortKey: 'vehicle_plate',
-      render: (t) => (
-        <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>
-          {t.vehiclePlate || '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'pickup',
-      header: 'Điểm đi',
-      sortKey: 'pickup_name',
-      render: (t) => (
-        <span className="text-[12.5px] truncate block" style={{ color: 'var(--ink-2)' }}>
-          {t.pickupLocation?.name ?? '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'dropoff',
-      header: 'Điểm đến',
-      sortKey: 'dropoff_name',
-      render: (t) => (
-        <span className="text-[12.5px] truncate block" style={{ color: 'var(--ink-2)' }}>
-          {t.dropoffLocation?.name ?? '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'containers',
-      header: 'Số Cont',
-      width: 150,
-      sortKey: 'cont_number',
-      render: (t) => {
-        if (!t.contNumber) return <span style={{ color: 'var(--ink-4)' }}>—</span>
-        return (
-          <div className="flex items-center gap-1.5">
-            <span
-              className="tabular-nums whitespace-nowrap"
-              style={{ fontFamily: 'var(--theme-font-mono)', fontSize: 12, color: 'var(--ink)', fontWeight: 600 }}
-            >
-              {t.contNumber}
-            </span>
-          </div>
-        )
-      },
-    },
-    {
-      key: 'contType',
-      header: 'Loại Cont',
-      width: 64,
-      sortKey: 'cont_type',
-      render: (t) => {
-        const ct = t.contType
-        return ct ? (
-          <span
-            className="text-[10.5px] uppercase font-semibold whitespace-nowrap"
-            style={{
-              color: 'var(--ink-2)',
-              background: 'var(--surface-3)',
-              padding: '1px 5px',
-              borderRadius: 4,
-              letterSpacing: '0.04em',
-            }}
-          >
-            {ct}
-          </span>
-        ) : (
-          <span style={{ color: 'var(--ink-4)' }}>—</span>
-        )
-      },
-    },
-    {
-      key: 'workType',
-      header: 'Tác nghiệp',
-      width: 100,
-      sortKey: 'work_type',
-      render: (t) => {
-        const wt = t.workType
-        const label = getWorkTypeLabel(wt)
-        return label ? (
-          <span
-            className="text-[11px] font-semibold whitespace-nowrap"
-            style={{
-              color: 'var(--ink-2)',
-              background: 'var(--surface-3)',
-              padding: '1px 5px',
-              borderRadius: 4,
-              letterSpacing: '0.04em',
-            }}
-          >
-            {label}
-          </span>
-        ) : (
-          <span style={{ color: 'var(--ink-4)' }}>—</span>
-        )
-      },
-    },
-    {
-      key: 'actions',
-      header: '',
-      width: 44,
-      render: (t) => {
-        if (!t.bookedTripId) return null
-        return (
-          <button
-            title="Bỏ ghép chuyến này"
-            onClick={(e) => {
-              e.stopPropagation()
-              if (unmatch.isPending) return
-              unmatch.mutate(t.id)
-            }}
-            disabled={unmatch.isPending}
-            className="group relative flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200 ease-out hover:scale-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{
-              color: 'var(--ink-4)',
-              background: 'transparent',
-            }}
-            onMouseEnter={e => {
-              const el = e.currentTarget
-              el.style.color = '#d97706'
-              el.style.background = 'rgba(245,158,11,0.10)'
-              el.style.boxShadow = '0 0 0 1.5px rgba(245,158,11,0.25), 0 2px 8px rgba(245,158,11,0.15)'
-            }}
-            onMouseLeave={e => {
-              const el = e.currentTarget
-              el.style.color = 'var(--ink-4)'
-              el.style.background = 'transparent'
-              el.style.boxShadow = 'none'
-            }}
-          >
-            {unmatch.isPending && unmatch.variables === t.id
-              ? <Loader2 className="h-4 w-4 animate-spin" style={{ color: '#d97706' }} />
-              : <Unlink className="h-4 w-4 transition-transform duration-200 group-hover:rotate-12" />}
-          </button>
-        )
-      },
-    },
-  ]
+  const columns = useMemo(() => getDeliveredTripColumns({
+    onUnmatch: (id) => unmatch.mutate(id),
+    isUnmatchPending: unmatch.isPending,
+    unmatchVariables: unmatch.variables as number | undefined,
+  }), [unmatch])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -450,12 +317,7 @@ export function DoiSoatPage() {
               </span>
 
               {/* text shifts right on hover to make room for sparkle */}
-              <span className="inline-flex items-center gap-1.5 group-hover:translate-x-2.5 transition-transform duration-300">
-                {autoMatchPreview.isPending
-                  ? <Loader2 className="h-3 w-3 animate-spin" />
-                  : null}
-                AI Ghép chuyến
-              </span>
+              <AIMatchButtonLabel isPending={autoMatchPreview.isPending} />
 
               {/* inner white ring for depth */}
               <span className="absolute inset-0 rounded-full border border-white/20 pointer-events-none" />
@@ -565,5 +427,3 @@ export function DoiSoatPage() {
     </div>
   )
 }
-
-
