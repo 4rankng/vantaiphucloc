@@ -17,6 +17,7 @@ __all__ = [
     "VehiclePnLResponse",
     "TripDayBucket",
     "TripDailyStatsOut",
+    "DirectorDashboardOut",
 ]
 
 
@@ -140,3 +141,35 @@ class TripDailyStatsOut(BaseModel):
     total_revenue: int = 0
     match_rate: float | None = None
     buckets: list[TripDayBucket] = []
+
+
+# ---------------------------------------------------------------------------
+# Director dashboard
+# ---------------------------------------------------------------------------
+
+class DirectorKpiTrend(BaseModel):
+    value: str
+    positive: bool
+
+class DirectorRouteStat(BaseModel):
+    name: str
+    count: int
+
+class DirectorDriverStat(BaseModel):
+    name: str
+    trip_count: int
+
+class DirectorDashboardOut(BaseModel):
+    total: int = 0
+    matched: int = 0
+    pending: int = 0
+    match_rate: float | None = None
+    revenue: int = 0
+    avg_revenue_per_trip: int = 0
+    total_delta: float | None = None
+    matched_delta: float | None = None
+    pending_delta: float | None = None
+    revenue_delta: float | None = None
+    buckets: list[TripDayBucket] = []
+    top_routes: list[DirectorRouteStat] = []
+    top_drivers: list[DirectorDriverStat] = []

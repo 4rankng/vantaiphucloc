@@ -117,6 +117,36 @@ export async function getTripDailyStats(
   }
 }
 
+export interface DirectorDashboard {
+  total: number
+  matched: number
+  pending: number
+  matchRate: number | null
+  revenue: number
+  avgRevenuePerTrip: number
+  totalDelta: number | null
+  matchedDelta: number | null
+  pendingDelta: number | null
+  revenueDelta: number | null
+  buckets: TripDayBucket[]
+  topRoutes: { name: string; count: number }[]
+  topDrivers: { name: string; tripCount: number }[]
+}
+
+export async function getDirectorDashboard(
+  dateFrom: string,
+  dateTo: string,
+): Promise<ApiResponse<DirectorDashboard>> {
+  try {
+    const res = await api.get('/dashboard/director', {
+      params: { date_from: dateFrom, date_to: dateTo },
+    })
+    return ok(toCamel<DirectorDashboard>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
 /**
  * Download the vehicle P&L report as an Excel file.
  * Uses a native fetch so we get a Blob back; triggers browser download.
