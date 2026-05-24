@@ -21,6 +21,10 @@ def route_pricing_to_domain(orm: RoutePricingORM) -> RoutePricing:
         f40_price=orm.f40_price,
         e20_price=orm.e20_price,
         e40_price=orm.e40_price,
+        f20_driver_salary=orm.f20_driver_salary,
+        f40_driver_salary=orm.f40_driver_salary,
+        e20_driver_salary=orm.e20_driver_salary,
+        e40_driver_salary=orm.e40_driver_salary,
         is_active=bool(orm.is_active),
         created_at=orm.created_at,
         updated_at=orm.updated_at,
@@ -42,5 +46,9 @@ def route_pricing_to_orm(
     orm.f40_price = rp.f40_price
     orm.e20_price = rp.e20_price
     orm.e40_price = rp.e40_price
+    orm.f20_driver_salary = rp.f20_driver_salary
+    orm.f40_driver_salary = rp.f40_driver_salary
+    orm.e20_driver_salary = rp.e20_driver_salary
+    orm.e40_driver_salary = rp.e40_driver_salary
     orm.is_active = rp.is_active
     return orm

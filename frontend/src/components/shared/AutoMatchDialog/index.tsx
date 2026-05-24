@@ -158,8 +158,7 @@ function NoResultState({ onClose }: { onClose: () => void }) {
       }}>
         <button
           onClick={onClose}
-          className="text-sm font-medium px-5 py-2 rounded-full transition-all hover:scale-105 active:scale-95"
-          style={{ background: 'linear-gradient(to right,#6366f1,#a855f7)', color: 'white', border: 'none', cursor: 'pointer' }}
+          className="text-sm font-medium px-5 py-2 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
         >
           Đóng
         </button>
@@ -706,8 +705,7 @@ export function AutoMatchDialog({
                 <button
                   onClick={handleApplyChoice}
                   disabled={!localChoice || isConfirming}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-white text-sm font-semibold tracking-wide transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus:outline-none"
-                  style={{ background: 'linear-gradient(to right, #6366f1, #a855f7)' }}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-white text-sm font-medium bg-violet-600 hover:bg-violet-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-1"
                 >
                   {isConfirming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
                   Áp dụng
@@ -718,12 +716,10 @@ export function AutoMatchDialog({
             <button
               onClick={handleConfirm}
               disabled={selectedPairs.length === 0 || isConfirming}
-              className="ai-btn-glow inline-flex items-center gap-2 px-5 py-2 rounded-full text-white text-sm font-semibold tracking-wide transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus:outline-none"
-              style={{ background: 'linear-gradient(to right, #6366f1, #a855f7, #ec4899)' }}
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-white text-sm font-medium bg-violet-600 hover:bg-violet-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-1"
             >
               {isConfirming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
               Ghép {selectedPairs.length} cặp
-              <span className="absolute inset-0 rounded-full border border-white/20 pointer-events-none" />
             </button>
           )}
         </DialogFooter>

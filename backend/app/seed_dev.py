@@ -31,6 +31,7 @@ from app.models.domain import (
     Location,
     Pricing,
     PricingLine,
+    RoutePricing,
     Setting,
     BookedTrip,
     Vehicle,
@@ -303,6 +304,7 @@ async def _clear_operational_data(db) -> None:
         "driver_salary_configs",
         "pricing_lines",
         "pricings",
+        "route_pricings",
     ]:
         result = await db.execute(text(f"DELETE FROM {table}"))
         if result.rowcount:
@@ -537,6 +539,39 @@ async def seed_dev() -> None:
                 pricing_map[(client_code, pickup_name, dropoff_name)] = pricing
         await db.commit()
 
+        # ── 7b. RoutePricings (flat per-lane with driver salary) ──────────
+        print("\n=== Seeding RoutePricings ===")
+        rp_count = 0
+        for work_type in ["CHUYỂN BÃI", "XUẤT/NHẬP TÀU"]:
+            for client_code, routes in ALL_PRICING.items():
+                client = org_map[client_code]
+                for (pickup_name, dropoff_name), prices in routes.items():
+                    pickup_loc = loc_map.get(pickup_name)
+                    dropoff_loc = loc_map.get(dropoff_name)
+                    if not pickup_loc or not dropoff_loc:
+                        continue
+                    unit = prices["unit_price"]
+                    drv_sal = prices["driver_salary"]
+                    db.add(RoutePricing(
+                        client_id=client.id,
+                        pickup_location_id=pickup_loc.id,
+                        dropoff_location_id=dropoff_loc.id,
+                        work_type=work_type,
+                        f20_price=unit,
+                        f40_price=int(unit * 1.4),
+                        e20_price=int(unit * 0.6),
+                        e40_price=int(unit * 0.85),
+                        f20_driver_salary=drv_sal,
+                        f40_driver_salary=int(drv_sal * 1.3),
+                        e20_driver_salary=int(drv_sal * 0.7),
+                        e40_driver_salary=int(drv_sal * 0.9),
+                        is_active=True,
+                    ))
+                    rp_count += 1
+        await db.flush()
+        print(f"  Created {rp_count} route pricing records")
+        await db.commit()
+
         # ── 8. DeliveredTrips + BookedTrips ───────────────────────────────
         print("\n=== Creating DeliveredTrips + BookedTrips ===")
         ketoan = user_map["ketoan"]
@@ -576,6 +611,7 @@ async def seed_dev() -> None:
                 pickup_location_id=loc_map[pickup].id,
                 dropoff_location_id=loc_map[dropoff].id,
                 driver_id=drv.id,
+                vehicle_plate=plate,
                 vessel=trip.get("vessel", ""),
                 work_type="CHUYỂN BÃI",
                 cont_number=trip["container"],
@@ -722,7 +758,7 @@ async def seed_dev() -> None:
         print("=" * 60)
         for t in [
             "users", "vehicles", "vehicle_drivers", "locations", "clients", "vendors",
-            "settings", "pricings", "pricing_lines",
+            "settings", "pricings", "pricing_lines", "route_pricings",
             "delivered_trips",
             "booked_trips",
             "vehicle_expenses", "driver_salary_configs",

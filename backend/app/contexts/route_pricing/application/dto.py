@@ -14,6 +14,10 @@ class RoutePricingCreateInput:
     f40_price: int | None = None
     e20_price: int | None = None
     e40_price: int | None = None
+    f20_driver_salary: int | None = None
+    f40_driver_salary: int | None = None
+    e20_driver_salary: int | None = None
+    e40_driver_salary: int | None = None
 
 
 @dataclass
@@ -26,3 +30,7 @@ class RoutePricingUpdateInput:
     f40_price: int | None = None
     e20_price: int | None = None
     e40_price: int | None = None
+    f20_driver_salary: int | None = None
+    f40_driver_salary: int | None = None
+    e20_driver_salary: int | None = None
+    e40_driver_salary: int | None = None

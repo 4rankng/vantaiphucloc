@@ -29,6 +29,10 @@ class RoutePricingCreate(BaseModel):
     f40_price: int | None = None
     e20_price: int | None = None
     e40_price: int | None = None
+    f20_driver_salary: int | None = None
+    f40_driver_salary: int | None = None
+    e20_driver_salary: int | None = None
+    e40_driver_salary: int | None = None
 
 
 class RoutePricingUpdate(BaseModel):
@@ -40,6 +44,10 @@ class RoutePricingUpdate(BaseModel):
     f40_price: int | None = None
     e20_price: int | None = None
     e40_price: int | None = None
+    f20_driver_salary: int | None = None
+    f40_driver_salary: int | None = None
+    e20_driver_salary: int | None = None
+    e40_driver_salary: int | None = None
 
 
 class RoutePricingOut(BaseModel):
@@ -52,6 +60,10 @@ class RoutePricingOut(BaseModel):
     f40_price: int | None = None
     e20_price: int | None = None
     e40_price: int | None = None
+    f20_driver_salary: int | None = None
+    f40_driver_salary: int | None = None
+    e20_driver_salary: int | None = None
+    e40_driver_salary: int | None = None
     is_active: bool = True
     created_at: datetime
     updated_at: datetime
@@ -71,6 +83,10 @@ class RoutePricingImportRow(BaseModel):
     f_40_price: int | None = None
     e_20_price: int | None = None
     e_40_price: int | None = None
+    f_20_driver_salary: int | None = None
+    f_40_driver_salary: int | None = None
+    e_20_driver_salary: int | None = None
+    e_40_driver_salary: int | None = None
 
 
 class RoutePricingImportCommit(BaseModel):

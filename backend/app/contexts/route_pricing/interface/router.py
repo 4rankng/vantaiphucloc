@@ -68,6 +68,10 @@ async def _to_out(db: AsyncSession, items: list[RoutePricing]) -> list[RoutePric
             f40_price=rp.f40_price,
             e20_price=rp.e20_price,
             e40_price=rp.e40_price,
+            f20_driver_salary=rp.f20_driver_salary,
+            f40_driver_salary=rp.f40_driver_salary,
+            e20_driver_salary=rp.e20_driver_salary,
+            e40_driver_salary=rp.e40_driver_salary,
             is_active=rp.is_active,
             created_at=rp.created_at,
             updated_at=rp.updated_at,
@@ -121,6 +125,10 @@ async def create_route_pricing(
                 f40_price=body.f40_price,
                 e20_price=body.e20_price,
                 e40_price=body.e40_price,
+                f20_driver_salary=body.f20_driver_salary,
+                f40_driver_salary=body.f40_driver_salary,
+                e20_driver_salary=body.e20_driver_salary,
+                e40_driver_salary=body.e40_driver_salary,
             )
         )
     except ValueError as e:
@@ -148,6 +156,10 @@ async def update_route_pricing(
                 f40_price=body.f40_price,
                 e20_price=body.e20_price,
                 e40_price=body.e40_price,
+                f20_driver_salary=body.f20_driver_salary,
+                f40_driver_salary=body.f40_driver_salary,
+                e20_driver_salary=body.e20_driver_salary,
+                e40_driver_salary=body.e40_driver_salary,
             ),
         )
     except Exception as e:

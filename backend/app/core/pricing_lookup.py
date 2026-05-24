@@ -38,6 +38,19 @@ def _price_for_cont_type(row, cont_type: str | None) -> int:
     return int(getattr(row, col) or 0)
 
 
+_CONT_TYPE_SALARY_MAP = {
+    "F20": "f20_driver_salary",
+    "F40": "f40_driver_salary",
+    "E20": "e20_driver_salary",
+    "E40": "e40_driver_salary",
+}
+
+
+def _salary_for_cont_type(row, cont_type: str | None) -> int:
+    col = _CONT_TYPE_SALARY_MAP.get(cont_type or "", "f20_driver_salary")
+    return int(getattr(row, col) or 0)
+
+
 async def lookup_client_prices(
     session: AsyncSession,
     trips: Sequence[TripPriceInfo],
@@ -49,10 +62,6 @@ async def lookup_client_prices(
     if not trips:
         return {}
 
-    lanes = {
-        (t.partner_id, t.pickup_location_id, t.dropoff_location_id, t.work_type)
-        for t in trips
-    }
     rows = (await session.execute(
         select(ClientRoutePricingORM).where(
             ClientRoutePricingORM.is_active.is_(True),
@@ -100,5 +109,36 @@ async def lookup_vendor_prices(
         key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id, t.work_type)
         pricing = lane_map.get(key)
         result[t.id] = _price_for_cont_type(pricing, t.cont_type) if pricing else 0
+
+    return result
+
+
+async def lookup_driver_salaries(
+    session: AsyncSession,
+    trips: Sequence[TripPriceInfo],
+) -> dict[int, int]:
+    """Batch-lookup driver salary from RoutePricing for own-driver trips.
+
+    Returns {trip_id: salary}. Trips with no matching pricing get 0.
+    """
+    if not trips:
+        return {}
+
+    rows = (await session.execute(
+        select(ClientRoutePricingORM).where(
+            ClientRoutePricingORM.is_active.is_(True),
+        )
+    )).scalars().all()
+
+    lane_map: dict[tuple, object] = {}
+    for r in rows:
+        key = (r.client_id, r.pickup_location_id, r.dropoff_location_id, r.work_type)
+        lane_map[key] = r
+
+    result: dict[int, int] = {}
+    for t in trips:
+        key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id, t.work_type)
+        pricing = lane_map.get(key)
+        result[t.id] = _salary_for_cont_type(pricing, t.cont_type) if pricing else 0
 
     return result

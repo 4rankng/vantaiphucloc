@@ -19,7 +19,7 @@ export function RoutePricingPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [inlineEditId, setInlineEditId] = useState<number | null>(null)
   const [inlineEditField, setInlineEditField] = useState<
-    'clientId' | 'pickupLocationId' | 'dropoffLocationId' | 'workType' | 'f20Price' | 'f40Price' | 'e20Price' | 'e40Price'
+    'clientId' | 'pickupLocationId' | 'dropoffLocationId' | 'workType' | 'f20Price' | 'f40Price' | 'e20Price' | 'e40Price' | 'f20DriverSalary' | 'f40DriverSalary' | 'e20DriverSalary' | 'e40DriverSalary'
   >('f20Price')
   const [inlineEditInitial, setInlineEditInitial] = useState<RoutePricingFormData | undefined>()
 
@@ -61,6 +61,10 @@ export function RoutePricingPage() {
       f40Price: rp.f40Price?.toString() ?? '',
       e20Price: rp.e20Price?.toString() ?? '',
       e40Price: rp.e40Price?.toString() ?? '',
+      f20DriverSalary: rp.f20DriverSalary?.toString() ?? '',
+      f40DriverSalary: rp.f40DriverSalary?.toString() ?? '',
+      e20DriverSalary: rp.e20DriverSalary?.toString() ?? '',
+      e40DriverSalary: rp.e40DriverSalary?.toString() ?? '',
     })
   }, [])
 
@@ -79,6 +83,10 @@ export function RoutePricingPage() {
       f40Price: parsePrice(data.f40Price),
       e20Price: parsePrice(data.e20Price),
       e40Price: parsePrice(data.e40Price),
+      f20DriverSalary: parsePrice(data.f20DriverSalary),
+      f40DriverSalary: parsePrice(data.f40DriverSalary),
+      e20DriverSalary: parsePrice(data.e20DriverSalary),
+      e40DriverSalary: parsePrice(data.e40DriverSalary),
     }
     updateItem(id, payload, { onSuccess: () => setInlineEditId(null) })
   }, [updateItem])

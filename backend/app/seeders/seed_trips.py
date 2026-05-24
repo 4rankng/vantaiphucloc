@@ -233,6 +233,7 @@ async def seed_trips(
             pickup_location_id=loc_map[pickup].id,
             dropoff_location_id=loc_map[dropoff].id,
             driver_id=drv.id,
+            vehicle_plate=plate,
             vessel=trip.get("vessel", ""),
             work_type=wt,
             cont_number=trip["container"],

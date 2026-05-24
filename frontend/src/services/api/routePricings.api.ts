@@ -11,6 +11,10 @@ export interface RoutePricingCreatePayload {
   f40Price?: number | null
   e20Price?: number | null
   e40Price?: number | null
+  f20DriverSalary?: number | null
+  f40DriverSalary?: number | null
+  e20DriverSalary?: number | null
+  e40DriverSalary?: number | null
 }
 
 export interface RoutePricingUpdatePayload {
@@ -22,6 +26,10 @@ export interface RoutePricingUpdatePayload {
   f40Price?: number | null
   e20Price?: number | null
   e40Price?: number | null
+  f20DriverSalary?: number | null
+  f40DriverSalary?: number | null
+  e20DriverSalary?: number | null
+  e40DriverSalary?: number | null
 }
 
 export async function getRoutePricings(params?: {
@@ -97,6 +105,10 @@ export interface RoutePricingImportPreviewRow {
   f40Price: number | null
   e20Price: number | null
   e40Price: number | null
+  f20DriverSalary: number | null
+  f40DriverSalary: number | null
+  e20DriverSalary: number | null
+  e40DriverSalary: number | null
   rowIndex: number
   canCommit: boolean
 }
@@ -127,6 +139,10 @@ export interface RoutePricingImportCommitRow {
   f40Price?: number | null
   e20Price?: number | null
   e40Price?: number | null
+  f20DriverSalary?: number | null
+  f40DriverSalary?: number | null
+  e20DriverSalary?: number | null
+  e40DriverSalary?: number | null
 }
 
 export interface RoutePricingImportResult {

@@ -127,6 +127,10 @@ def parse_route_pricing_bytes(content: bytes) -> dict:
                 "f40_price": _parse_int_price(row[col["f40"]] if "f40" in col else None),
                 "e20_price": _parse_int_price(row[col["e20"]] if "e20" in col else None),
                 "e40_price": _parse_int_price(row[col["e40"]] if "e40" in col else None),
+                "f20_driver_salary": _parse_int_price(row[col["lf20"]] if "lf20" in col else None),
+                "f40_driver_salary": _parse_int_price(row[col["lf40"]] if "lf40" in col else None),
+                "e20_driver_salary": _parse_int_price(row[col["le20"]] if "le20" in col else None),
+                "e40_driver_salary": _parse_int_price(row[col["le40"]] if "le40" in col else None),
                 "row_index": ridx,
             })
 
@@ -346,6 +350,10 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
                 ("f_40_price", "f40_price"),
                 ("e_20_price", "e20_price"),
                 ("e_40_price", "e40_price"),
+                ("f_20_driver_salary", "f20_driver_salary"),
+                ("f_40_driver_salary", "f40_driver_salary"),
+                ("e_20_driver_salary", "e20_driver_salary"),
+                ("e_40_driver_salary", "e40_driver_salary"),
             ):
                 new_val = r.get(schema_col)
                 if new_val is not None and getattr(existing, orm_col) != new_val:
@@ -363,6 +371,10 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
                 f40_price=r.get("f_40_price"),
                 e20_price=r.get("e_20_price"),
                 e40_price=r.get("e_40_price"),
+                f20_driver_salary=r.get("f_20_driver_salary"),
+                f40_driver_salary=r.get("f_40_driver_salary"),
+                e20_driver_salary=r.get("e_20_driver_salary"),
+                e40_driver_salary=r.get("e_40_driver_salary"),
                 is_active=True,
             ))
             created += 1

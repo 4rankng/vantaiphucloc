@@ -370,6 +370,7 @@ async def confirm_matches(
     After matching, auto-populates:
       - DeliveredTrip.revenue from RoutePricing (client, lane, work_type, cont_type)
       - DeliveredTrip.driver_salary from VendorRoutePricing (if vendor_id is set)
+      - DeliveredTrip.driver_salary from RoutePricing salary columns (own-driver trips)
 
     Returns {matched_count, errors}.
     """
@@ -377,6 +378,7 @@ async def confirm_matches(
     from app.core.pricing_lookup import (
         TripPriceInfo,
         lookup_client_prices,
+        lookup_driver_salaries,
         lookup_vendor_prices,
     )
 
@@ -460,6 +462,26 @@ async def confirm_matches(
                 vprice = vendor_prices.get(wo.id, 0)
                 if vprice and wo.driver_salary == 0:
                     wo.driver_salary = vprice
+
+        # Own-driver salary from RoutePricing driver salary columns
+        driver_infos = [
+            TripPriceInfo(
+                id=wo.id,
+                partner_id=wo.client_id,
+                pickup_location_id=wo.pickup_location_id,
+                dropoff_location_id=wo.dropoff_location_id,
+                work_type=wo.work_type,
+                cont_type=wo.cont_type,
+            )
+            for wo, _ in matched_pairs
+            if not wo.vendor_id and wo.driver_salary == 0
+        ]
+        if driver_infos:
+            driver_salaries = await lookup_driver_salaries(db, driver_infos)
+            for wo, _ in matched_pairs:
+                sal = driver_salaries.get(wo.id, 0)
+                if sal and wo.driver_salary == 0:
+                    wo.driver_salary = sal
 
     await db.flush()
 

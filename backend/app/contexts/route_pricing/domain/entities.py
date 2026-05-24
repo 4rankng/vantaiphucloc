@@ -29,6 +29,10 @@ class RoutePricing:
     f40_price: int | None = None
     e20_price: int | None = None
     e40_price: int | None = None
+    f20_driver_salary: int | None = None
+    f40_driver_salary: int | None = None
+    e20_driver_salary: int | None = None
+    e40_driver_salary: int | None = None
     is_active: bool = True
     created_at: datetime = field(default_factory=_utcnow)
     updated_at: datetime = field(default_factory=_utcnow)

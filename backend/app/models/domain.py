@@ -290,6 +290,10 @@ class RoutePricing(AuditableMixin, Base):
     f40_price = Column(Integer, nullable=True)
     e20_price = Column(Integer, nullable=True)
     e40_price = Column(Integer, nullable=True)
+    f20_driver_salary = Column(Integer, nullable=True)
+    f40_driver_salary = Column(Integer, nullable=True)
+    e20_driver_salary = Column(Integer, nullable=True)
+    e40_driver_salary = Column(Integer, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(

@@ -328,13 +328,20 @@ async def get_ai_match_suggestion(db: AsyncSession, delivered_trip_id: int) -> d
             "confidence": confidence,
         }
 
-    # 6. Gemini fallback: score too low for local confidence
-    if not scored:
+    # 6. No confident match — return best candidate with low confidence
+    if scored:
+        best_score, best_fields, best_bt = scored[0]
+        reasoning, confidence = _generate_local_reasoning(
+            best_fields, best_score, wo, best_bt, loc_map, client_map
+        )
         return {
-            "suggested_booked_trip_id": None,
-            "reasoning": "Hệ thống đã phân tích nhưng không tìm thấy lệnh đặt nào đủ tiêu chí tương đồng.",
-            "confidence": "low",
+            "suggested_booked_trip_id": best_bt.id,
+            "reasoning": reasoning,
+            "confidence": confidence,
         }
 
-    top_candidates = [s[2] for s in scored[:5]]
-    return await _call_gemini(wo, top_candidates, loc_map, client_map)
+    return {
+        "suggested_booked_trip_id": None,
+        "reasoning": "Hệ thống đã phân tích nhưng không tìm thấy lệnh đặt nào đủ tiêu chí tương đồng.",
+        "confidence": "low",
+    }

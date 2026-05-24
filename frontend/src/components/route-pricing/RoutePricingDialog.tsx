@@ -166,6 +166,32 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
               onChange={(v) => updateField('e40Price', v)}
             />
           </div>
+
+          <div className="pt-2">
+            <p className="text-xs font-medium mb-2" style={{ color: '#059669' }}>Lương tài xế</p>
+            <div className="grid grid-cols-2 gap-4">
+              <PriceInput
+                label="Lương F20 (₫)"
+                value={form.f20DriverSalary}
+                onChange={(v) => updateField('f20DriverSalary', v)}
+              />
+              <PriceInput
+                label="Lương F40 (₫)"
+                value={form.f40DriverSalary}
+                onChange={(v) => updateField('f40DriverSalary', v)}
+              />
+              <PriceInput
+                label="Lương E20 (₫)"
+                value={form.e20DriverSalary}
+                onChange={(v) => updateField('e20DriverSalary', v)}
+              />
+              <PriceInput
+                label="Lương E40 (₫)"
+                value={form.e40DriverSalary}
+                onChange={(v) => updateField('e40DriverSalary', v)}
+              />
+            </div>
+          </div>
         </div>
 
         <DialogFooter>

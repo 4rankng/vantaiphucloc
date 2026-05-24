@@ -68,6 +68,10 @@ class CreateRoutePricing:
             f40_price=data.f40_price,
             e20_price=data.e20_price,
             e40_price=data.e40_price,
+            f20_driver_salary=data.f20_driver_salary,
+            f40_driver_salary=data.f40_driver_salary,
+            e20_driver_salary=data.e20_driver_salary,
+            e40_driver_salary=data.e40_driver_salary,
         )
         rp.ensure_has_price()
         existing = await self.repo.find_by_lane(
@@ -121,6 +125,14 @@ class UpdateRoutePricing:
             rp.e20_price = data.e20_price
         if data.e40_price is not None:
             rp.e40_price = data.e40_price
+        if data.f20_driver_salary is not None:
+            rp.f20_driver_salary = data.f20_driver_salary
+        if data.f40_driver_salary is not None:
+            rp.f40_driver_salary = data.f40_driver_salary
+        if data.e20_driver_salary is not None:
+            rp.e20_driver_salary = data.e20_driver_salary
+        if data.e40_driver_salary is not None:
+            rp.e40_driver_salary = data.e40_driver_salary
         saved = await self.repo.save(rp)
         await self.session.commit()
         return saved

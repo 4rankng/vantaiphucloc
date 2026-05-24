@@ -23,6 +23,10 @@ export interface RoutePricingFormData {
   f40Price: string
   e20Price: string
   e40Price: string
+  f20DriverSalary: string
+  f40DriverSalary: string
+  e20DriverSalary: string
+  e40DriverSalary: string
 }
 
 export const EMPTY_FORM: RoutePricingFormData = {
@@ -34,6 +38,10 @@ export const EMPTY_FORM: RoutePricingFormData = {
   f40Price: '',
   e20Price: '',
   e40Price: '',
+  f20DriverSalary: '',
+  f40DriverSalary: '',
+  e20DriverSalary: '',
+  e40DriverSalary: '',
 }
 
 function parsePrice(v: string): number | null {
@@ -71,7 +79,7 @@ export function useRoutePricing() {
   }, [])
 
   const openEdit = useCallback(
-    (rp: { id: number; client: { id: number }; pickupLocation: { id: number }; dropoffLocation: { id: number }; workType: WorkType; f20Price: number | null; f40Price: number | null; e20Price: number | null; e40Price: number | null }) => {
+    (rp: { id: number; client: { id: number }; pickupLocation: { id: number }; dropoffLocation: { id: number }; workType: WorkType; f20Price: number | null; f40Price: number | null; e20Price: number | null; e40Price: number | null; f20DriverSalary: number | null; f40DriverSalary: number | null; e20DriverSalary: number | null; e40DriverSalary: number | null }) => {
       setEditingId(rp.id)
       setForm({
         clientId: rp.client.id,
@@ -82,6 +90,10 @@ export function useRoutePricing() {
         f40Price: rp.f40Price?.toString() ?? '',
         e20Price: rp.e20Price?.toString() ?? '',
         e40Price: rp.e40Price?.toString() ?? '',
+        f20DriverSalary: rp.f20DriverSalary?.toString() ?? '',
+        f40DriverSalary: rp.f40DriverSalary?.toString() ?? '',
+        e20DriverSalary: rp.e20DriverSalary?.toString() ?? '',
+        e40DriverSalary: rp.e40DriverSalary?.toString() ?? '',
       })
       setDialogOpen(true)
     },
@@ -98,6 +110,10 @@ export function useRoutePricing() {
       f40Price: parsePrice(form.f40Price),
       e20Price: parsePrice(form.e20Price),
       e40Price: parsePrice(form.e40Price),
+      f20DriverSalary: parsePrice(form.f20DriverSalary),
+      f40DriverSalary: parsePrice(form.f40DriverSalary),
+      e20DriverSalary: parsePrice(form.e20DriverSalary),
+      e40DriverSalary: parsePrice(form.e40DriverSalary),
     }
 
     if (!payload.clientId || !payload.pickupLocationId || !payload.dropoffLocationId) {

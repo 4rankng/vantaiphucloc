@@ -20,6 +20,10 @@ type FocusableField =
   | 'f40Price'
   | 'e20Price'
   | 'e40Price'
+  | 'f20DriverSalary'
+  | 'f40DriverSalary'
+  | 'e20DriverSalary'
+  | 'e40DriverSalary'
 
 export type RoutePricingFormData = {
   clientId: number
@@ -30,6 +34,10 @@ export type RoutePricingFormData = {
   f40Price: string
   e20Price: string
   e40Price: string
+  f20DriverSalary: string
+  f40DriverSalary: string
+  e20DriverSalary: string
+  e40DriverSalary: string
 }
 
 export interface RoutePricingTableProps {
@@ -92,6 +100,8 @@ function PriceCell({ value }: { value: number | null }) {
   )
 }
 
+type PriceField = 'f20Price' | 'f40Price' | 'e20Price' | 'e40Price' | 'f20DriverSalary' | 'f40DriverSalary' | 'e20DriverSalary' | 'e40DriverSalary'
+
 // ─── Inline edit row ─────────────────────────────────────────────────────────
 
 function RoutePricingEditRow({
@@ -112,10 +122,7 @@ function RoutePricingEditRow({
   initialFocus?: FocusableField
 }) {
   const [activeField, setActiveField] = useState<FocusableField>(initialFocus)
-  const f20Ref = useRef<HTMLInputElement>(null)
-  const f40Ref = useRef<HTMLInputElement>(null)
-  const e20Ref = useRef<HTMLInputElement>(null)
-  const e40Ref = useRef<HTMLInputElement>(null)
+  const fieldRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   const { form, errors, set, handleSave } = useInlineEditForm<RoutePricingFormData>({
     initial,
@@ -133,24 +140,21 @@ function RoutePricingEditRow({
   })
 
   useEffect(() => {
-    if (activeField === 'f20Price') f20Ref.current?.focus()
-    else if (activeField === 'f40Price') f40Ref.current?.focus()
-    else if (activeField === 'e20Price') e20Ref.current?.focus()
-    else if (activeField === 'e40Price') e40Ref.current?.focus()
+    fieldRefs.current[activeField]?.focus()
   }, [activeField])
 
-  const isLastPriceCol = activeField === 'e40Price'
+  const isLastCol = activeField === 'e40DriverSalary'
   const floatingActions = (
     <div style={{
       position: 'absolute',
       top: '50%',
       transform: 'translateY(-50%)',
       zIndex: 20,
-      ...(isLastPriceCol
+      ...(isLastCol
         ? { right: '100%', paddingRight: 6 }
         : { left: '100%', paddingLeft: 6 }),
     }}>
-      <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} hintAlign={isLastPriceCol ? 'right' : 'left'} />
+      <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} hintAlign={isLastCol ? 'right' : 'left'} />
     </div>
   )
 
@@ -169,12 +173,12 @@ function RoutePricingEditRow({
   const tdActive: React.CSSProperties = { padding: '5px 8px', position: 'relative' }
   const tdInactive = (): React.CSSProperties => ({ padding: '5px 8px', cursor: 'pointer', opacity: 0.45, transition: 'opacity 0.15s' })
 
-  const priceInput = (field: 'f20Price' | 'f40Price' | 'e20Price' | 'e40Price', ref: React.RefObject<HTMLInputElement | null>, color: string) => {
+  const priceInput = (field: PriceField, color: string) => {
     if (activeField === field) {
       return (
         <td style={{ ...tdActive, textAlign: 'right' }}>
           <input
-            ref={ref}
+            ref={(el) => { fieldRefs.current[field] = el }}
             type="text"
             inputMode="numeric"
             className="nepo-input text-[12px] tabular-nums"
@@ -198,10 +202,8 @@ function RoutePricingEditRow({
 
   return (
     <tr style={{ background: 'var(--accent-soft)' }}>
-      {/* # placeholder */}
       <td style={{ ...tdInactive(), color: 'var(--ink-4)', fontSize: 12 }} />
 
-      {/* Chủ hàng */}
       {activeField === 'clientId' ? (
         <td style={tdActive}>
           <InlineSelect
@@ -223,7 +225,6 @@ function RoutePricingEditRow({
         </td>
       )}
 
-      {/* Điểm đi */}
       {activeField === 'pickupLocationId' ? (
         <td style={tdActive}>
           <InlineSelect
@@ -244,7 +245,6 @@ function RoutePricingEditRow({
         </td>
       )}
 
-      {/* Điểm đến */}
       {activeField === 'dropoffLocationId' ? (
         <td style={tdActive}>
           <InlineSelect
@@ -265,16 +265,16 @@ function RoutePricingEditRow({
         </td>
       )}
 
-      {/* F20 */}
-      {priceInput('f20Price', f20Ref, '#3b82f6')}
-      {/* F40 */}
-      {priceInput('f40Price', f40Ref, '#3b82f6')}
-      {/* E20 */}
-      {priceInput('e20Price', e20Ref, '#6366f1')}
-      {/* E40 */}
-      {priceInput('e40Price', e40Ref, '#6366f1')}
+      {priceInput('f20Price', '#3b82f6')}
+      {priceInput('f40Price', '#3b82f6')}
+      {priceInput('e20Price', '#6366f1')}
+      {priceInput('e40Price', '#6366f1')}
 
-      {/* Tác nghiệp */}
+      {priceInput('f20DriverSalary', '#059669')}
+      {priceInput('f40DriverSalary', '#059669')}
+      {priceInput('e20DriverSalary', '#0d9488')}
+      {priceInput('e40DriverSalary', '#0d9488')}
+
       {activeField === 'workType' ? (
         <td style={tdActive}>
           <InlineSelect
@@ -291,7 +291,6 @@ function RoutePricingEditRow({
         </td>
       )}
 
-      {/* Delete placeholder */}
       <td style={{ width: 32 }} />
     </tr>
   )
@@ -342,6 +341,11 @@ function RoutePricingRow({ rp, idx, onEdit, onDelete }: {
       <td style={{ textAlign: 'right' }} onClick={cell('f40Price')}><PriceCell value={rp.f40Price} /></td>
       <td style={{ textAlign: 'right' }} onClick={cell('e20Price')}><PriceCell value={rp.e20Price} /></td>
       <td style={{ textAlign: 'right' }} onClick={cell('e40Price')}><PriceCell value={rp.e40Price} /></td>
+
+      <td style={{ textAlign: 'right' }} onClick={cell('f20DriverSalary')}><PriceCell value={rp.f20DriverSalary} /></td>
+      <td style={{ textAlign: 'right' }} onClick={cell('f40DriverSalary')}><PriceCell value={rp.f40DriverSalary} /></td>
+      <td style={{ textAlign: 'right' }} onClick={cell('e20DriverSalary')}><PriceCell value={rp.e20DriverSalary} /></td>
+      <td style={{ textAlign: 'right' }} onClick={cell('e40DriverSalary')}><PriceCell value={rp.e40DriverSalary} /></td>
 
       <td onClick={cell('workType')}><OpBadge type={rp.workType} /></td>
 
@@ -397,19 +401,27 @@ export function RoutePricingTable({
 
   return (
     <div className="nepo-table-scroll overflow-x-auto">
-      <table className="nepo-table w-full" style={{ minWidth: 900, borderCollapse: 'collapse' }}>
+      <table className="nepo-table w-full" style={{ minWidth: 1200, borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            <th style={{ width: 32 }}>#</th>
-            <th className="text-left" style={{ width: 130 }}>Chủ hàng</th>
-            <th className="text-left" style={{ minWidth: 140 }}>Điểm đi</th>
-            <th className="text-left" style={{ minWidth: 140 }}>Điểm đến</th>
+            <th rowSpan={2} style={{ width: 32 }}>#</th>
+            <th rowSpan={2} className="text-left" style={{ width: 130 }}>Chủ hàng</th>
+            <th rowSpan={2} className="text-left" style={{ minWidth: 140 }}>Điểm đi</th>
+            <th rowSpan={2} className="text-left" style={{ minWidth: 140 }}>Điểm đến</th>
+            <th colSpan={4} className="text-center text-xs" style={{ color: 'var(--ink-3)', borderBottom: '1px solid var(--border-2)' }}>Cước (Khách)</th>
+            <th colSpan={4} className="text-center text-xs" style={{ color: '#059669', borderBottom: '1px solid var(--border-2)' }}>Lương (Tài xế)</th>
+            <th rowSpan={2} className="text-left" style={{ minWidth: 130 }}>Tác nghiệp</th>
+            <th rowSpan={2} style={{ width: 32 }} />
+          </tr>
+          <tr>
             <th className="text-right" style={{ width: 80, color: '#3b82f6' }}>F20</th>
             <th className="text-right" style={{ width: 80, color: '#3b82f6' }}>F40</th>
             <th className="text-right" style={{ width: 80, color: '#6366f1' }}>E20</th>
             <th className="text-right" style={{ width: 80, color: '#6366f1' }}>E40</th>
-            <th className="text-left" style={{ minWidth: 130 }}>Tác nghiệp</th>
-            <th style={{ width: 32 }} />
+            <th className="text-right" style={{ width: 80, color: '#059669' }}>F20</th>
+            <th className="text-right" style={{ width: 80, color: '#059669' }}>F40</th>
+            <th className="text-right" style={{ width: 80, color: '#0d9488' }}>E20</th>
+            <th className="text-right" style={{ width: 80, color: '#0d9488' }}>E40</th>
           </tr>
         </thead>
         <tbody>

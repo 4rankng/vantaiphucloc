@@ -277,6 +277,10 @@ export interface RoutePricing {
   f40Price: number | null
   e20Price: number | null
   e40Price: number | null
+  f20DriverSalary: number | null
+  f40DriverSalary: number | null
+  e20DriverSalary: number | null
+  e40DriverSalary: number | null
   isActive: boolean
   createdAt: string
   updatedAt: string
