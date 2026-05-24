@@ -223,7 +223,7 @@ async def get_distinct_trip_partners(
     Used by the Xuất đối soát dialog to populate the customer dropdown."""
     from sqlalchemy import text
     session = use_case.repo.session  # type: ignore[attr-defined]
-    sql = "SELECT DISTINCT p.id, p.name FROM partners p " \
+    sql = "SELECT DISTINCT p.id, p.name FROM clients p " \
           "JOIN booked_trips t ON t.client_id = p.id " \
           "WHERE p.is_active = true"
     params = {}

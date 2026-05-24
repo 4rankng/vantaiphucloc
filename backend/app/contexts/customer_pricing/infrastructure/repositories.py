@@ -87,14 +87,14 @@ class SqlClientRepository(PartnerRepository):
         if active_only:
             q = q.where(ClientORM.is_active.is_(True))
         if search:
-            pattern = f"%{search}%"
+            from app.core.vi_search import vi_ilike
             q = q.where(or_(
-                ClientORM.name.ilike(pattern),
-                ClientORM.code.ilike(pattern),
-                ClientORM.phone.ilike(pattern),
-                ClientORM.tax_code.ilike(pattern),
-                ClientORM.address.ilike(pattern),
-                ClientORM.contact_person.ilike(pattern),
+                vi_ilike(ClientORM.name, search),
+                vi_ilike(ClientORM.code, search),
+                vi_ilike(ClientORM.phone, search),
+                vi_ilike(ClientORM.tax_code, search),
+                vi_ilike(ClientORM.address, search),
+                vi_ilike(ClientORM.contact_person, search),
             ))
         total = await self.session.scalar(
             select(func.count()).select_from(q.subquery())

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { CheckCircle2, Search, X } from 'lucide-react'
+import { normalizeVietnamese } from '@/lib/search-utils'
 
 export function PickModal<T extends { id: number }>({
   open, title, items, selectedId, onSelect, onClose, renderLabel, searchKeys,
@@ -18,8 +19,8 @@ export function PickModal<T extends { id: number }>({
 
   const filtered = useMemo(() => {
     if (!searchKeys || !query.trim()) return items
-    const q = query.toLowerCase()
-    return items.filter(item => searchKeys(item).toLowerCase().includes(q))
+    const q = normalizeVietnamese(query)
+    return items.filter(item => normalizeVietnamese(searchKeys(item)).includes(q))
   }, [items, query, searchKeys])
 
   if (!open) return null

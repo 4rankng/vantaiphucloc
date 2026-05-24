@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { ChevronDown, Search, Check, Plus } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/Popover/Popover'
+import { normalizeVietnamese } from '@/lib/search-utils'
 
 export interface InlineSelectOption {
   value: string
@@ -30,10 +31,11 @@ export function InlineSelect({ placeholder, value, options, onChange, onInputCha
 
   const selected = options.find(o => o.value === value)
 
-  const filtered = query.trim()
+  const normalizedQuery = normalizeVietnamese(query.trim())
+  const filtered = normalizedQuery
     ? options.filter(o =>
-        o.label.toLowerCase().includes(query.toLowerCase()) ||
-        (o.sublabel && o.sublabel.toLowerCase().includes(query.toLowerCase()))
+        normalizeVietnamese(o.label).includes(normalizedQuery) ||
+        (o.sublabel && normalizeVietnamese(o.sublabel).includes(normalizedQuery))
       )
     : options
 

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { normalizeVietnamese } from '@/lib/search-utils'
 import { TrendingUp, DollarSign, Coins, Download } from 'lucide-react'
 import { Button } from '@/components/ui/Button/Button'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -207,12 +208,12 @@ export function PnLPage() {
   const marginPct = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : null
 
   const filteredRows = useMemo(() => {
-    const q = search.trim().toLowerCase()
+    const q = normalizeVietnamese(search.trim())
     if (!q) return allRows
     return allRows.filter(
       (r) =>
-        r.plate.toLowerCase().includes(q) ||
-        (r.vendorName ?? '').toLowerCase().includes(q),
+        normalizeVietnamese(r.plate).includes(q) ||
+        normalizeVietnamese(r.vendorName ?? '').includes(q),
     )
   }, [allRows, search])
 

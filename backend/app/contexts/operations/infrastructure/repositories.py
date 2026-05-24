@@ -152,18 +152,18 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         if vendor_id is not None:
             q = q.where(DeliveredTripORM.vendor_id == vendor_id)
         if search:
-            pattern = f"%{search}%"
             from sqlalchemy import exists
+            from app.core.vi_search import vi_ilike
             client_exists = exists().where(
                 ClientORM.id == DeliveredTripORM.client_id,
                 or_(
-                    ClientORM.name.ilike(pattern),
-                    ClientORM.code.ilike(pattern),
+                    vi_ilike(ClientORM.name, search),
+                    vi_ilike(ClientORM.code, search),
                 ),
             )
             q = q.where(or_(
-                DeliveredTripORM.vessel.ilike(pattern),
-                DeliveredTripORM.cont_number.ilike(pattern),
+                vi_ilike(DeliveredTripORM.vessel, search),
+                vi_ilike(DeliveredTripORM.cont_number, search),
                 client_exists,
             ))
         if date_from is not None:

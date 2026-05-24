@@ -73,10 +73,9 @@ export function LocationAliasesPage() {
     let list = locations
     if (showOnlyDupes) list = list.filter(l => duplicateIds.has(l.id))
     if (!search.trim()) return list
-    const q = search.toLowerCase()
     return list.filter(l => {
       if (fuzzyMatch(l.name, search)) return true
-      return (aliasesByLoc.get(l.id) ?? []).some(a => fuzzyMatch(a.alias, search) || a.alias.toLowerCase().includes(q))
+      return (aliasesByLoc.get(l.id) ?? []).some(a => fuzzyMatch(a.alias, search))
     })
   }, [locations, search, aliasesByLoc, showOnlyDupes, duplicateIds])
 

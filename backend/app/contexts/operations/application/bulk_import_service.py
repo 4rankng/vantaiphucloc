@@ -14,6 +14,7 @@ from typing import Any
 
 import openpyxl
 from sqlalchemy import select
+from app.core.vi_search import vi_ilike as _vi_ilike
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
@@ -309,7 +310,7 @@ class BulkImportService:
         for name in names:
             partner = (
                 await self.session.execute(
-                    select(Client).where(Client.name.ilike(f"%{name}%"))
+                    select(Client).where(_vi_ilike(Client.name, name))
                 )
             ).scalar_one_or_none()
             if partner:

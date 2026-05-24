@@ -598,7 +598,6 @@ async def seed_dev() -> None:
                 work_type="CHUYỂN BÃI",
                 cont_number=trip["container"],
                 cont_type=f"F{trip['size']}",
-                revenue=trip["unit_price"],
             )
             db.add(to)
             all_tos.append(to)
@@ -637,7 +636,6 @@ async def seed_dev() -> None:
                     work_type="CHUYỂN BÃI",
                     cont_number=_rand_container(),
                     cont_type=f"F{size}",
-                    revenue=unit_price,
                 )
                 db.add(to)
                 to_code_idx += 1

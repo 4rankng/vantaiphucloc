@@ -38,11 +38,11 @@ class SqlDriverRepository(DriverRepository):
         base = select(DriverORM).where(DriverORM.role == "driver")
         count_q = select(func.count(DriverORM.id)).where(DriverORM.role == "driver")
         if search:
-            pattern = f"%{search}%"
+            from app.core.vi_search import vi_ilike
             cond = or_(
-                DriverORM.username.ilike(pattern),
-                DriverORM.full_name.ilike(pattern),
-                DriverORM.phone.ilike(pattern),
+                vi_ilike(DriverORM.username, search),
+                vi_ilike(DriverORM.full_name, search),
+                vi_ilike(DriverORM.phone, search),
             )
             base = base.where(cond)
             count_q = count_q.where(cond)

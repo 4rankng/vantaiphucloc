@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { normalizeVietnamese } from '@/lib/search-utils'
 import { useNavigate } from 'react-router-dom'
 import { usePricings, useClients, useCreatePricing, useCreateClient, type PricingCreatePayload } from '@/hooks/use-queries'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -47,9 +48,9 @@ export function PricingClientCards({ basePath }: Props) {
 
   const filtered = useMemo(() => {
     if (!search.trim()) return clientSummaries
-    const q = search.toLowerCase()
+    const q = normalizeVietnamese(search)
     return clientSummaries.filter(s =>
-      s.clientName.toLowerCase().includes(q) || s.clientCode.toLowerCase().includes(q)
+      normalizeVietnamese(s.clientName).includes(q) || normalizeVietnamese(s.clientCode).includes(q)
     )
   }, [clientSummaries, search])
 

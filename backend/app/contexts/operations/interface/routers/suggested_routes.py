@@ -105,7 +105,7 @@ _DRIVER_ROUTES_SQL = text("""
         COUNT(*) AS frequency,
         MAX(wo.created_at) AS last_used
     FROM delivered_trips wo
-    JOIN partners p ON p.id = wo.client_id
+    JOIN clients p ON p.id = wo.client_id
     JOIN locations pl ON pl.id = wo.pickup_location_id
     JOIN locations dl ON dl.id = wo.dropoff_location_id
     WHERE wo.driver_id = :driver_id
@@ -128,7 +128,7 @@ _GLOBAL_POPULAR_SQL = text("""
         COUNT(*) AS frequency,
         MAX(wo.created_at) AS last_used
     FROM delivered_trips wo
-    JOIN partners p ON p.id = wo.client_id
+    JOIN clients p ON p.id = wo.client_id
     JOIN locations pl ON pl.id = wo.pickup_location_id
     JOIN locations dl ON dl.id = wo.dropoff_location_id
     GROUP BY p.id, pl.id, dl.id

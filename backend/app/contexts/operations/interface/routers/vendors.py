@@ -74,14 +74,14 @@ async def list_vendors(
     from sqlalchemy import func, or_
     q = select(Vendor).where(Vendor.is_active == True)  # noqa: E712
     if search:
-        pattern = f"%{search}%"
+        from app.core.vi_search import vi_ilike
         q = q.where(or_(
-            Vendor.name.ilike(pattern),
-            Vendor.code.ilike(pattern),
-            Vendor.phone.ilike(pattern),
-            Vendor.tax_code.ilike(pattern),
-            Vendor.address.ilike(pattern),
-            Vendor.contact_person.ilike(pattern),
+            vi_ilike(Vendor.name, search),
+            vi_ilike(Vendor.code, search),
+            vi_ilike(Vendor.phone, search),
+            vi_ilike(Vendor.tax_code, search),
+            vi_ilike(Vendor.address, search),
+            vi_ilike(Vendor.contact_person, search),
         ))
     count_q = select(func.count()).select_from(q.subquery())
     total_count = (await db.execute(count_q)).scalar() or 0

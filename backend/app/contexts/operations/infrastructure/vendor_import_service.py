@@ -8,6 +8,7 @@ from datetime import date
 from typing import Any
 
 from sqlalchemy import select
+from app.core.vi_search import vi_ilike as _vi_ilike
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.customer_pricing.infrastructure.location_resolver import (
@@ -359,7 +360,7 @@ class ReconciliationImportService:
         if not client_name:
             raise ValueError("Không có tên khách hàng trong file")
         clients = (await self.session.execute(
-            select(Client).where(Client.name.ilike(f"%{client_name.strip()}%"))
+            select(Client).where(_vi_ilike(Client.name, client_name.strip()))
             .order_by(Client.name)
             .limit(2)
         )).scalars().all()

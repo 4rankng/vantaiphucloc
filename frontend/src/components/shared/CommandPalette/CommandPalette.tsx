@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react'
+import { normalizeVietnamese } from '@/lib/search-utils'
 import { useNavigate } from 'react-router-dom'
 import {
   Search, ArrowRight,
@@ -56,11 +57,11 @@ export function CommandPalette({
   const filteredCommands = useMemo(() => {
     if (!query.trim()) return allCommands
 
-    const q = query.toLowerCase()
+    const q = normalizeVietnamese(query)
     return allCommands.filter((cmd) => {
-      const matchLabel = cmd.label.toLowerCase().includes(q)
-      const matchDesc = cmd.description?.toLowerCase().includes(q)
-      const matchKeywords = cmd.keywords?.some((kw) => kw.includes(q))
+      const matchLabel = normalizeVietnamese(cmd.label).includes(q)
+      const matchDesc = cmd.description ? normalizeVietnamese(cmd.description).includes(q) : false
+      const matchKeywords = cmd.keywords?.some((kw) => normalizeVietnamese(kw).includes(q))
       return matchLabel || matchDesc || matchKeywords
     })
   }, [query, allCommands])

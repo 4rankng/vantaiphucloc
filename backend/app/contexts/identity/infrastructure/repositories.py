@@ -104,13 +104,13 @@ class SqlUserRepository(UserRepository):
             q = q.where(UserORM.role != exclude_role.value)
             cq = cq.where(UserORM.role != exclude_role.value)
         if search:
-            pattern = f"%{search}%"
+            from app.core.vi_search import vi_ilike
             search_cond = or_(
-                UserORM.username.ilike(pattern),
-                UserORM.full_name.ilike(pattern),
-                UserORM.phone.ilike(pattern),
-                UserORM.email.ilike(pattern),
-                UserORM.cccd.ilike(pattern),
+                vi_ilike(UserORM.username, search),
+                vi_ilike(UserORM.full_name, search),
+                vi_ilike(UserORM.phone, search),
+                vi_ilike(UserORM.email, search),
+                vi_ilike(UserORM.cccd, search),
             )
             q = q.where(search_cond)
             cq = cq.where(search_cond)

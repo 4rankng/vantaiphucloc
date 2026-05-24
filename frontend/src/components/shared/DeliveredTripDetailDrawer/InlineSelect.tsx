@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/Popover/Popover'
+import { normalizeVietnamese } from '@/lib/search-utils'
 
 export function InlineSelect({
   value,
@@ -23,7 +24,7 @@ export function InlineSelect({
   const showSearch = unique.length > 6
 
   const filtered = showSearch
-    ? unique.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()))
+    ? unique.filter((o) => normalizeVietnamese(o.label).includes(normalizeVietnamese(search)))
     : unique
 
   return (

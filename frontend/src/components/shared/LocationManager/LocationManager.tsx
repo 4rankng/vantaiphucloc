@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { normalizeVietnamese } from '@/lib/search-utils'
 import { Plus, Check, X, Loader2, Star, Trash2 } from 'lucide-react'
 import { useLocations, useCreateLocation, useUpdateLocation, useDeleteLocation } from '@/hooks/use-queries'
 import { api } from '@/services/api/client'
@@ -38,10 +39,10 @@ export function LocationManager({ search }: LocationManagerProps) {
 
   const filtered = search?.trim()
     ? locations.filter((l: Loc) => {
-        const q = search.toLowerCase()
-        if (l.name.toLowerCase().includes(q)) return true
+        const q = normalizeVietnamese(search)
+        if (normalizeVietnamese(l.name).includes(q)) return true
         const aliases = aliasData[l.id] ?? []
-        return aliases.some(a => a.alias.toLowerCase().includes(q))
+        return aliases.some(a => normalizeVietnamese(a.alias).includes(q))
       })
     : locations
 
