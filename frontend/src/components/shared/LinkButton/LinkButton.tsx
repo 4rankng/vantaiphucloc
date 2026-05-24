@@ -1,10 +1,7 @@
 import { Link } from 'react-router-dom'
 
-type LinkButtonVariant = 'brand' | 'muted'
-
 type BaseProps = {
   icon?: React.ElementType
-  variant?: LinkButtonVariant
   disabled?: boolean
   className?: string
   children?: React.ReactNode
@@ -23,23 +20,14 @@ type LinkButtonAsLink = BaseProps & {
 
 export type LinkButtonProps = LinkButtonAsButton | LinkButtonAsLink
 
-const brandStyles = {
-  color: 'var(--theme-brand-primary)',
-}
-
-const mutedStyles = {
-  color: 'var(--theme-text-muted)',
-}
-
 export function LinkButton({
   icon: Icon,
-  variant = 'brand',
   disabled,
   className,
   children,
   ...rest
 }: LinkButtonProps) {
-  const style = variant === 'muted' ? mutedStyles : brandStyles
+  const style = { color: 'var(--theme-brand-primary-dark)' }
 
   const sharedClass = [
     'inline-flex items-center gap-1.5 text-xs font-medium transition-opacity',

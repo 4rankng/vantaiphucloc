@@ -114,7 +114,7 @@ export function RoutePricingPage() {
         subtitle="Quản lý bảng giá cước theo tuyến đường và loại hình tác nghiệp"
         lucideIcon={Route}
         breadcrumbs={
-          <LinkButton to="/accountant/settings" icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
+          <LinkButton to="/accountant/settings" icon={ArrowLeft}>Thiết lập</LinkButton>
         }
         actions={
           <div className="flex gap-2">

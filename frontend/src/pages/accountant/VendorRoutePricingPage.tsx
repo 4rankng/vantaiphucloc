@@ -100,7 +100,7 @@ export function VendorRoutePricingPage() {
         subtitle="Quản lý bảng giá cước trả nhà thầu theo tuyến đường"
         lucideIcon={Route}
         breadcrumbs={
-          <LinkButton to="/accountant/settings" icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
+          <LinkButton to="/accountant/settings" icon={ArrowLeft}>Thiết lập</LinkButton>
         }
         actions={
           <div className="flex gap-2">

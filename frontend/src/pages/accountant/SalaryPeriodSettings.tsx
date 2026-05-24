@@ -9,6 +9,7 @@ import { useSalaryConfig, useUpdateSalaryConfig } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout/SettingsPageLayout'
+import { DriverBaseSalaryTable } from '@/components/payroll/DriverBaseSalaryTable'
 
 function periodExample(fromDay: number, toDay: number) {
   const now = new Date()
@@ -64,7 +65,7 @@ export function SalaryPeriodSettings() {
       subtitle="Cấu hình ngày bắt đầu và kết thúc kỳ lương hàng tháng"
       icon={Calendar}
       breadcrumb={
-        <LinkButton to="/accountant/settings" icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
+        <LinkButton to="/accountant/settings" icon={ArrowLeft}>Thiết lập</LinkButton>
       }
     >
       <Panel>
@@ -131,6 +132,8 @@ export function SalaryPeriodSettings() {
           </div>
         )}
       </Panel>
+
+      <DriverBaseSalaryTable />
 
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent>
