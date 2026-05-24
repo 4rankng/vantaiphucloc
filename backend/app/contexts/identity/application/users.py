@@ -168,7 +168,7 @@ class UpdateOwnProfile:
         await _check_unique(
             self._users,
             phone=cmd.phone,
-            email=None,
+            email=cmd.email,
             username=cmd.username,
             cccd=None,
             excluding_user_id=user.id,
@@ -177,6 +177,7 @@ class UpdateOwnProfile:
             full_name=cmd.full_name,
             phone=cmd.phone,
             username=cmd.username,
+            email=cmd.email,
         )
         return await self._users.save(user)
 

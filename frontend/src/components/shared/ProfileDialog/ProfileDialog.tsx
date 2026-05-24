@@ -48,30 +48,22 @@ function EditableField({ label, value, onSave, placeholder }: {
   const handleCancel = () => { setDraft(value); setEditing(false) }
 
   return (
-    <div className="flex items-center gap-3 px-5 py-3">
-      <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-medium uppercase tracking-wide mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
-        {editing ? (
+    <div className="px-5 py-3">
+      <p className="text-[11px] font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
+      {editing ? (
+        <div className="flex items-center gap-1.5">
           <Input
             value={draft}
             onChange={e => setDraft(e.target.value)}
             placeholder={placeholder}
-            className="text-sm h-7 px-2"
+            className="flex-1 text-sm h-7 px-2"
             autoFocus
             onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') handleCancel() }}
           />
-        ) : (
-          <p className="text-sm font-medium truncate" style={{ color: value ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>
-            {value || placeholder || '—'}
-          </p>
-        )}
-      </div>
-      {editing ? (
-        <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-7 h-7 flex items-center justify-center rounded-full"
+            className="w-7 h-7 flex items-center justify-center rounded-full shrink-0"
             style={{ background: 'var(--sb-bg)', color: 'white' }}
             aria-label="Lưu"
           >
@@ -79,7 +71,7 @@ function EditableField({ label, value, onSave, placeholder }: {
           </button>
           <button
             onClick={handleCancel}
-            className="w-7 h-7 flex items-center justify-center rounded-full"
+            className="w-7 h-7 flex items-center justify-center rounded-full shrink-0"
             style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
             aria-label="Huỷ"
           >
@@ -87,14 +79,19 @@ function EditableField({ label, value, onSave, placeholder }: {
           </button>
         </div>
       ) : (
-        <button
-          onClick={() => setEditing(true)}
-          className="w-7 h-7 flex items-center justify-center rounded-full shrink-0 hover:bg-[var(--theme-bg-tertiary)]"
-          style={{ color: 'var(--theme-text-muted)' }}
-          aria-label={`Sửa ${label}`}
-        >
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-3">
+          <p className="flex-1 min-w-0 text-sm font-medium truncate" style={{ color: value ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>
+            {value || placeholder || '—'}
+          </p>
+          <button
+            onClick={() => setEditing(true)}
+            className="w-7 h-7 flex items-center justify-center rounded-full shrink-0 hover:bg-[var(--theme-bg-tertiary)]"
+            style={{ color: 'var(--theme-text-muted)' }}
+            aria-label={`Sửa ${label}`}
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        </div>
       )}
     </div>
   )
@@ -112,8 +109,9 @@ export function UserInfoDialog({ open, onClose }: { open: boolean; onClose: () =
   const fullName = profile?.fullName ?? user?.name ?? ''
   const phone = profile?.phone ?? ''
   const username = profile?.username ?? ''
+  const email = profile?.email ?? ''
 
-  const saveField = async (field: 'full_name' | 'phone' | 'username', value: string) => {
+  const saveField = async (field: 'full_name' | 'phone' | 'username' | 'email', value: string) => {
     const res = await updateProfileField({ field, value })
     const updated = res.value ?? value
     if (field === 'full_name') {
@@ -121,6 +119,8 @@ export function UserInfoDialog({ open, onClose }: { open: boolean; onClose: () =
       toast.success('Đã cập nhật họ tên')
     } else if (field === 'phone') {
       toast.success('Đã cập nhật số điện thoại')
+    } else if (field === 'email') {
+      toast.success('Đã cập nhật email')
     } else {
       toast.success('Đã cập nhật tên đăng nhập')
     }
@@ -157,6 +157,8 @@ export function UserInfoDialog({ open, onClose }: { open: boolean; onClose: () =
             <EditableField label="Họ và tên" value={fullName} onSave={v => saveField('full_name', v)} placeholder="Nhập họ và tên" />
             <div className="mx-5" style={{ borderTop: '1px solid var(--theme-border-light)' }} />
             <EditableField label="Tên đăng nhập" value={username} onSave={v => saveField('username', v)} placeholder="Nhập tên đăng nhập" />
+            <div className="mx-5" style={{ borderTop: '1px solid var(--theme-border-light)' }} />
+            <EditableField label="Email" value={email} onSave={v => saveField('email', v)} placeholder="Nhập địa chỉ email" />
             <div className="mx-5" style={{ borderTop: '1px solid var(--theme-border-light)' }} />
             <EditableField label="Số điện thoại" value={phone} onSave={v => saveField('phone', v)} placeholder="Nhập số điện thoại" />
           </div>

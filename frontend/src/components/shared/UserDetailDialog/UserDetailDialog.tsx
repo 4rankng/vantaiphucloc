@@ -74,8 +74,10 @@ export function UserDetailDialog({
   if (!user) return null
   const RoleIcon = ROLE_ICONS[user.role] ?? Users
 
+  const cccdInvalid = editForm.cccd.trim() !== '' && !/^\d{12}$/.test(editForm.cccd.trim())
+
   const handleSave = async () => {
-    if (!onEdit || !editForm.username.trim()) return
+    if (!onEdit || !editForm.username.trim() || cccdInvalid) return
     setSaving(true)
     try {
       const payload: Record<string, unknown> = {
@@ -153,7 +155,8 @@ export function UserDetailDialog({
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>CCCD</Label>
-                  <Input value={editForm.cccd} onChange={e => updateField('cccd', e.target.value)} className="text-sm font-mono" placeholder="001234567890" />
+                  <Input value={editForm.cccd} onChange={e => updateField('cccd', e.target.value)} className={`text-sm font-mono${cccdInvalid ? ' !ring-2 !ring-[var(--theme-status-error)]' : ''}`} placeholder="001234567890" />
+                  {cccdInvalid && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>CCCD phải đúng 12 chữ số</p>}
                 </div>
               </div>
               {/* Password */}
@@ -198,7 +201,7 @@ export function UserDetailDialog({
             )}
             <Button variant="outline" onClick={onClose} className="flex-1">Huỷ</Button>
             {isEditMode ? (
-              <Button onClick={handleSave} disabled={!editForm.username.trim() || busy} className="flex-1 gap-1.5"
+              <Button onClick={handleSave} disabled={!editForm.username.trim() || cccdInvalid || busy} className="flex-1 gap-1.5"
                 style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
               >
                 <Pencil className="w-3.5 h-3.5" /> Lưu

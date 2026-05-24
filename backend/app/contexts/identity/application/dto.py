@@ -65,6 +65,7 @@ class UpdateProfileInput:
     full_name: str | None = None
     phone: str | None = None
     username: str | None = None
+    email: str | None = None
 
 
 @dataclass(frozen=True)

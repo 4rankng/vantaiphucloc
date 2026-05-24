@@ -73,6 +73,7 @@ async def update_own_profile(
         full_name=payload.get("full_name"),
         phone=payload.get("phone"),
         username=payload.get("username"),
+        email=payload.get("email"),
     )
     try:
         user = await use_case.execute(cmd)
