@@ -51,6 +51,8 @@ export interface NepoTableProps<T> {
   className?: string
   /** Extra content rendered above the table inside the card (e.g. filter bar) */
   toolbar?: ReactNode
+  /** Hide the column header row (e.g. when showing empty state) */
+  hideHeader?: boolean
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -95,6 +97,7 @@ export function NepoTable<T>({
   footerCells,
   className,
   toolbar,
+  hideHeader = false,
 }: NepoTableProps<T>) {
   return (
     <div
@@ -122,19 +125,21 @@ export function NepoTable<T>({
             className="nepo-table"
             style={{ minWidth, borderCollapse: 'collapse' }}
           >
-            <thead>
-              <tr>
-                {columns.map((col) => (
-                  <th
-                    key={col.key}
-                    className={`${colClass(col)}${col.headerClass ? ` ${col.headerClass}` : ''}`}
-                    style={colStyle(col)}
-                  >
-                    {col.header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+            {!hideHeader && (
+              <thead>
+                <tr>
+                  {columns.map((col) => (
+                    <th
+                      key={col.key}
+                      className={`${colClass(col)}${col.headerClass ? ` ${col.headerClass}` : ''}`}
+                      style={colStyle(col)}
+                    >
+                      {col.header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+            )}
 
             <tbody>
               {data.length === 0 ? (

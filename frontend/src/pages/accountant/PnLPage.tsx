@@ -161,6 +161,7 @@ function NgoaiTable({ rows, isLoading }: { rows: VehiclePnLRow[]; isLoading: boo
       data={rows}
       rowKey={(r) => r.vehicleId}
       isLoading={isLoading}
+      hideHeader={rows.length === 0}
       emptyText="Không có xe ngoài trong kỳ này"
       emptyIcon={
         <img
@@ -276,8 +277,8 @@ export function PnLPage() {
         </Button>
       </div>
 
-      {/* Tables — side-by-side on wide screens, stacked on small */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+      {/* Tables — side-by-side only when xe ngoài has data */}
+      <div className={`grid grid-cols-1 gap-6 items-start${!isLoading && ngoaiRows.length > 0 ? ' xl:grid-cols-2' : ''}`}>
         {/* Xe nội bộ */}
         <section className="space-y-2 min-w-0">
           <h2 className="text-sm font-semibold text-[var(--ink)] tracking-wide uppercase opacity-60">
@@ -287,14 +288,12 @@ export function PnLPage() {
         </section>
 
         {/* Xe ngoài */}
-        {(isLoading || ngoaiRows.length > 0) && (
-          <section className="space-y-2 min-w-0">
-            <h2 className="text-sm font-semibold text-[var(--ink)] tracking-wide uppercase opacity-60">
-              Xe ngoài
-            </h2>
-            <NgoaiTable rows={ngoaiRows} isLoading={isLoading} />
-          </section>
-        )}
+        <section className="space-y-2 min-w-0">
+          <h2 className="text-sm font-semibold text-[var(--ink)] tracking-wide uppercase opacity-60">
+            Xe ngoài
+          </h2>
+          <NgoaiTable rows={ngoaiRows} isLoading={isLoading} />
+        </section>
       </div>
     </div>
   )
