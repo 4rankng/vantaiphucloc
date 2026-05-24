@@ -72,7 +72,6 @@ export function createAppRouter() {
             { path: 'expenses',              element: ebc('AccountantExpenses', h(Lazy, { component: R.AccountantExpenses })) },
             { path: 'salary',                element: ebc('AccountantSalary', h(Lazy, { component: R.AccountantSalary })) },
             { path: 'pnl',                   element: ebc('AccountantPnL', h(Lazy, { component: R.AccountantPnL })) },
-            { path: 'settlement',            element: ebc('AccountantSettlement', h(Lazy, { component: R.AccountantSettlement })) },
             { path: 'locations',             element: ebc('AccountantLocations', h(Lazy, { component: R.AccountantLocations })) },
             { path: 'settings',              element: ebc('AccountantSettings', h(Lazy, { component: R.AccountantSettings })) },
             { path: 'settings/ky-luong',     element: ebc('SalaryPeriodSettings', h(Lazy, { component: R.SalaryPeriodSettings })) },

@@ -32,7 +32,6 @@ export const AccountantDoiSoat    = lazy(() => import('@/pages/accountant/DoiSoa
 export const AccountantExpenses   = lazy(() => import('@/pages/accountant/VehicleExpensesPage').then(m => ({ default: m.VehicleExpensesPage })))
 export const AccountantSalary     = lazy(() => import('@/pages/accountant/SalaryPage').then(m => ({ default: m.SalaryPage })))
 export const AccountantPnL        = lazy(() => import('@/pages/accountant/PnLPage').then(m => ({ default: m.PnLPage })))
-export const AccountantSettlement = lazy(() => import('@/pages/accountant/SettlementPage').then(m => ({ default: m.SettlementPage })))
 export const AccountantLocations  = lazy(() => import('@/pages/accountant/LocationAliases').then(m => ({ default: m.LocationAliasesPage })))
 
 

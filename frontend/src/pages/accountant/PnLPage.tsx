@@ -161,6 +161,14 @@ function NgoaiTable({ rows, isLoading }: { rows: VehiclePnLRow[]; isLoading: boo
       rowKey={(r) => r.vehicleId}
       isLoading={isLoading}
       emptyText="Không có xe ngoài trong kỳ này"
+      emptyIcon={
+        <img
+          src="/illustrations/empty-vendors.svg"
+          alt=""
+          className="h-28 w-auto"
+          draggable={false}
+        />
+      }
       minWidth={620}
       footerCells={footerCells}
     />
@@ -212,7 +220,7 @@ export function PnLPage() {
   const ngoaiRows = useMemo(() => filteredRows.filter((r) => r.isVendor), [filteredRows])
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-10">
       <PageHeader
         title="Báo cáo"
         subtitle="Doanh thu và lợi nhuận từng xe theo kỳ — đối chiếu chi phí xe, lương và biên lợi nhuận"

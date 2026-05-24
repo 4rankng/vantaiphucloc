@@ -255,13 +255,23 @@ function VehicleSection({ vehiclePnl }: { vehiclePnl: { rows: VehiclePnLRow[] } 
           <NoiBoSubTable rows={noiBoRows} />
         </>
       )}
-      {ngoaiRows.length > 0 && (
-        <>
-          <div style={{ borderTop: noiBoRows.length > 0 ? '2px solid var(--theme-border-light)' : undefined }}>
-            {subHeader('Xe ngoài', ngoaiRows.length)}
-          </div>
-          <NgoaiSubTable rows={ngoaiRows} />
-        </>
+      <div style={{ borderTop: noiBoRows.length > 0 ? '2px solid var(--theme-border-light)' : undefined }}>
+        {subHeader('Xe ngoài', ngoaiRows.length)}
+      </div>
+      {ngoaiRows.length > 0 ? (
+        <NgoaiSubTable rows={ngoaiRows} />
+      ) : (
+        <div className="flex flex-col items-center justify-center gap-3 py-6">
+          <img
+            src="/illustrations/empty-vendors.svg"
+            alt=""
+            className="h-24 w-auto opacity-80"
+            draggable={false}
+          />
+          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+            Không có xe ngoài trong tháng này
+          </p>
+        </div>
       )}
     </>
   )

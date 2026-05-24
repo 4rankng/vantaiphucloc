@@ -42,6 +42,8 @@ export interface NepoTableProps<T> {
   isLoading?: boolean
   loadingRows?: number
   emptyText?: string
+  /** Optional illustration rendered above the empty-state text */
+  emptyIcon?: ReactNode
   /** Minimum table width for horizontal scroll */
   minWidth?: number
   /** Optional tfoot row — one entry per column */
@@ -88,6 +90,7 @@ export function NepoTable<T>({
   isLoading,
   loadingRows = 6,
   emptyText = 'Không có dữ liệu',
+  emptyIcon,
   minWidth = 600,
   footerCells,
   className,
@@ -138,9 +141,14 @@ export function NepoTable<T>({
                 <tr>
                   <td
                     colSpan={columns.length}
-                    className="text-center py-14"
-                    style={{ color: 'var(--ink-3)', fontSize: 13 }}
+                    className="text-center"
+                    style={{ color: 'var(--ink-3)', fontSize: 13, padding: emptyIcon ? '24px 16px 32px' : '56px 16px' }}
                   >
+                    {emptyIcon && (
+                      <div className="flex justify-center mb-3">
+                        {emptyIcon}
+                      </div>
+                    )}
                     {emptyText}
                   </td>
                 </tr>
