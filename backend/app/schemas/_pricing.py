@@ -20,7 +20,6 @@ class PricingLineCreate(BaseModel):
     quantity: int
     unit_price: int = 0
     driver_salary: int = 0
-    allowance: int = 0
 
 
 class PricingLineOut(BaseModel):
@@ -28,7 +27,6 @@ class PricingLineOut(BaseModel):
     quantity: int
     unit_price: int = 0
     driver_salary: int = 0
-    allowance: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 

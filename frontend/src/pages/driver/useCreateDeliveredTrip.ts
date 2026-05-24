@@ -94,7 +94,6 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   const [submitting, setSubmitting] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
   const [activeContIdx, setActiveContIdx] = useState(0)
-  const [galleryImage, setGalleryImage] = useState<string | null>(null)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [containerErrors, setContainerErrors] = useState<Record<number, string>>({})
@@ -158,13 +157,6 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   // Scanner handlers
   const openScanner = useCallback((idx: number) => () => {
     setActiveContIdx(idx)
-    setGalleryImage(null)
-    setScannerOpen(true)
-  }, [])
-
-  const openGallery = useCallback((idx: number, dataUrl: string) => {
-    setActiveContIdx(idx)
-    setGalleryImage(dataUrl)
     setScannerOpen(true)
   }, [])
 
@@ -176,7 +168,6 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
         : c,
     ))
     setScannerOpen(false)
-    setGalleryImage(null)
 
     if (!isOnline) return
 
@@ -459,7 +450,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     selectedTripId,
 
     // UI state
-    submitting, scannerOpen, galleryImage, isOnline, summaryOpen, showSuccess,
+    submitting, scannerOpen, isOnline, summaryOpen, showSuccess,
     forceManualEntry, missingFields, containerErrors, containerSuggestions, suggestionLoading,
 
     // Derived
@@ -470,7 +461,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     setVessel,
     setPickupLocation: (v: string) => { setSelectedTripId(null); setPickupLocation(v) },
     setDropoffLocation: (v: string) => { setSelectedTripId(null); setDropoffLocation(v) },
-    openScanner, openGallery, handleScanComplete, setScannerOpen,
+    openScanner, handleScanComplete, setScannerOpen,
     updateContainer, addContainer, removeContainer, validateContainerOnBlur,
     applyContainerSuggestion,
     handleRecentTripSelect,

@@ -1,7 +1,7 @@
 import logging
 from io import BytesIO
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
@@ -15,6 +15,7 @@ async def generate_salary_excel(
     db: AsyncSession,
     start_date: str,
     end_date: str,
+    driver_salary_repo=None,
 ) -> bytes:
     """Export driver earnings breakdown to Excel, computed on-the-fly from matched work orders."""
     import openpyxl
@@ -44,11 +45,16 @@ async def generate_salary_excel(
             driver_earnings[wo.driver_id] = {
                 "order_count": 0,
                 "total_salary": 0,
-                "total_allowance": 0,
             }
         driver_earnings[wo.driver_id]["order_count"] += 1
         driver_earnings[wo.driver_id]["total_salary"] += wo.driver_salary or 0
-        driver_earnings[wo.driver_id]["total_allowance"] += wo.allowance or 0
+
+    # Read per-driver allowance from driver_salaries when available
+    driver_allowance: dict[int, int] = {}
+    if driver_salary_repo is not None:
+        salary_records = await driver_salary_repo.list_for_period(start_dt, end_dt)
+        for rec in salary_records:
+            driver_allowance[rec.driver_id] = rec.allowance
 
     driver_ids = set(driver_earnings.keys())
     driver_name_by_id = (
@@ -73,13 +79,14 @@ async def generate_salary_excel(
         cell.alignment = Alignment(horizontal="center")
 
     for driver_id, data in sorted(driver_earnings.items()):
+        total_allowance = driver_allowance.get(driver_id, 0)
         ws.append([
             driver_name_by_id.get(driver_id, ""),
             f"{start_date} → {end_date}",
             data["order_count"],
             data["total_salary"],
-            data["total_allowance"],
-            data["total_salary"] + data["total_allowance"],
+            total_allowance,
+            data["total_salary"] + total_allowance,
         ])
 
     for col in ws.columns:

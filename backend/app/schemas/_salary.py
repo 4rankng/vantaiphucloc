@@ -16,6 +16,8 @@ __all__ = [
     "DriverOut",
     "JobStatusResponse",
     "SalaryCalculateAsyncResponse",
+    "DriverSalaryOut",
+    "DriverSalaryUpdateIn",
 ]
 
 
@@ -84,3 +86,22 @@ class JobStatusResponse(BaseModel):
 class SalaryCalculateAsyncResponse(BaseModel):
     job_id: str
     message: str = "Calculation enqueued"
+
+
+class DriverSalaryOut(BaseModel):
+    id: int
+    driver_id: int
+    driver_name: str | None = None
+    driver_username: str | None = None
+    from_date: date
+    to_date: date
+    basic_salary: int
+    bonus_salary: int
+    allowance: int
+    note: str | None = None
+
+
+class DriverSalaryUpdateIn(BaseModel):
+    basic_salary: int | None = Field(default=None, ge=0)
+    allowance: int | None = Field(default=None, ge=0)
+    note: str | None = Field(default=None, max_length=500)

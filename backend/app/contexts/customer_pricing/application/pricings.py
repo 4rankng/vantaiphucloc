@@ -27,7 +27,6 @@ def _build_lines(items: list[PricingLineInput]) -> list[PricingLine]:
             quantity=int(li.quantity),
             unit_price=int(li.unit_price),
             driver_salary=int(li.driver_salary),
-            allowance=int(li.allowance),
         )
         for li in items
     ]

@@ -26,7 +26,7 @@ export function useConfirmAutoMatch() {
   return useMutation<
     ConfirmMatchResponse,
     Error,
-    Array<{ deliveredTripId: number; bookedTripId: number }>
+    Array<{ deliveredTripId: number; bookedTripId: number; syncSource?: string | null }>
   >({
     mutationFn: async (pairs) => {
       const res = await confirmAutoMatch(pairs)

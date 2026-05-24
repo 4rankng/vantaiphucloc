@@ -134,7 +134,6 @@ def pricing_line_to_domain(orm: PricingLineORM) -> PricingLine:
         quantity=int(orm.quantity),
         unit_price=int(orm.unit_price or 0),
         driver_salary=int(orm.driver_salary or 0),
-        allowance=int(orm.allowance or 0),
     )
 
 
@@ -148,7 +147,6 @@ def pricing_line_to_orm(ln: PricingLine, orm: PricingLineORM | None = None) -> P
     orm.quantity = int(ln.quantity)
     orm.unit_price = int(ln.unit_price)
     orm.driver_salary = int(ln.driver_salary)
-    orm.allowance = int(ln.allowance)
     return orm
 
 

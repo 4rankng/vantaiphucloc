@@ -92,7 +92,6 @@ export function formatFinancialChange(log: AuditLogEntry): { label: string; old:
       unitPrice: 'Đơn giá',
       driver_salary: 'Lương LX',
       driverSalary: 'Lương LX',
-      allowance: 'Phụ cấp',
     }
 
     for (const [field, label] of Object.entries(fieldMap)) {

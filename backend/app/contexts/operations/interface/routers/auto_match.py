@@ -90,6 +90,7 @@ class BookedTripSummary(BaseModel):
     dropoff_name: str | None = None
     vessel: str | None = None
     work_type: str | None = None
+    vehicle_plate: str | None = None
 
 
 class AISuggestionResponse(BaseModel):
@@ -258,6 +259,7 @@ async def ai_suggest_endpoint(
                 dropoff_name=dropoff_name,
                 vessel=bt.vessel,
                 work_type=bt.work_type,
+                vehicle_plate=bt.vehicle_plate,
             )
 
     return AISuggestionResponse(

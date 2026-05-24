@@ -135,7 +135,6 @@ async def test_find_tiered_pricing_uses_line_financials():
     mock_line = MagicMock()
     mock_line.unit_price = 900000
     mock_line.driver_salary = 350000
-    mock_line.allowance = 100000
 
     pricing_result = MagicMock()
     pricing_result.scalar_one_or_none.return_value = mock_pricing
@@ -154,4 +153,3 @@ async def test_find_tiered_pricing_uses_line_financials():
     assert result is not None
     assert result.unit_price == 900000
     assert result.driver_salary == 350000
-    assert result.allowance == 100000

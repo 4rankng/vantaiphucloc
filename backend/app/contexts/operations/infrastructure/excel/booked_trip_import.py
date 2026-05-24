@@ -46,8 +46,6 @@ _TRIP_IMPORT_COLUMNS = {
     "revenue": "revenue",
     "luong_tx": "driver_salary",
     "driver_salary": "driver_salary",
-    "phu_cap": "allowance",
-    "allowance": "allowance",
 }
 
 
@@ -71,7 +69,6 @@ async def parse_booked_trip_excel(file_content: bytes) -> list[dict[str, Any]]:
     - work_type (Loại/Loại cont) — E20/E40/F20/F40
     - revenue (Đơn giá) — optional
     - driver_salary (Lương TX) — optional
-    - allowance (Phụ cấp) — optional
     """
     try:
         import openpyxl
@@ -182,7 +179,6 @@ async def import_booked_trips(
         # Try auto-pricing
         revenue = int(first_row.get("revenue") or 0)
         driver_salary = int(first_row.get("driver_salary") or 0)
-        allowance = int(first_row.get("allowance") or 0)
         pricing_id = None
 
         # Resolve pickup/dropoff strings to Location FKs via the alias
@@ -211,9 +207,8 @@ async def import_booked_trips(
                 pickup_location_id=pickup_id, dropoff_location_id=dropoff_id,
             )
             if tiered:
-                revenue = tiered.revenue
+                revenue = tiered.unit_price
                 driver_salary = tiered.driver_salary
-                allowance = tiered.allowance
                 pricing_id = tiered.pricing.id
 
         # One BookedTrip per group — use first container's data
@@ -241,12 +236,12 @@ def generate_booked_trip_template() -> bytes:
     headers = [
         "Ngày", "Mã KH", "Điểm lấy", "Điểm trả",
         "Cung đường", "Số cont", "Loại cont", "Đơn giá",
-        "Lương TX", "Phụ cấp",
+        "Lương TX",
     ]
     examples = [
         "01/05/2026", "KH001", "Cát lái", "KC Bình Dương",
         "Cát lái - KC Bình Dương", "TCLU1234567", "E20", "1500000",
-        "500000", "100000",
+        "500000",
     ]
     workbook = openpyxl.Workbook()
     sheet = workbook.active

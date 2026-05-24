@@ -195,7 +195,6 @@ export interface PricingPreviewRow {
   old_unit_price?: number | null
   quantity: number
   driver_salary: number
-  allowance: number
   note: string
 }
 

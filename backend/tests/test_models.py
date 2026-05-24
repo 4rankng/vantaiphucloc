@@ -43,14 +43,14 @@ def _fk_ondelete(col):
 
 class TestMonetaryFieldsAreInteger:
 
-    @pytest.mark.parametrize("field", ["unit_price", "driver_salary", "allowance"])
+    @pytest.mark.parametrize("field", ["unit_price", "driver_salary"])
     def test_pricing_line_monetary_fields(self, field):
         col = _col(PricingLine, field)
         assert isinstance(col.type, Integer), (
             f"PricingLine.{field} should be Integer, got {type(col.type).__name__}"
         )
 
-    @pytest.mark.parametrize("field", ["revenue", "driver_salary", "allowance"])
+    @pytest.mark.parametrize("field", ["revenue", "driver_salary"])
     def test_delivered_trip_monetary_fields(self, field):
         col = _col(DeliveredTrip, field)
         assert isinstance(col.type, Integer)
@@ -70,6 +70,12 @@ class TestPricingSchemaClean:
 
     def test_pricing_has_no_allowance(self):
         assert "allowance" not in Pricing.__table__.columns
+
+    def test_pricing_line_has_no_allowance(self):
+        assert "allowance" not in PricingLine.__table__.columns
+
+    def test_delivered_trip_has_no_allowance(self):
+        assert "allowance" not in DeliveredTrip.__table__.columns
 
     def test_pricing_line_has_no_work_type(self):
         assert "work_type" not in PricingLine.__table__.columns
@@ -102,12 +108,6 @@ class TestColumnNullability:
 
     def test_client_name_not_nullable(self):
         assert _col(Client, "name").nullable is False
-
-    def test_booked_trip_matched_not_nullable(self):
-        assert _col(BookedTrip, "matched").nullable is False
-
-    def test_delivered_trip_matched_not_nullable(self):
-        assert _col(DeliveredTrip, "matched").nullable is False
 
 
 # ---------------------------------------------------------------------------

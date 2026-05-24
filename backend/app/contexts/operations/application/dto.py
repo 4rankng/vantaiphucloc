@@ -116,7 +116,6 @@ class DeliveredTripUpdateInput:
     cont_type: str | None = None
     revenue: int | None = None
     driver_salary: int | None = None
-    allowance: int | None = None
 
 
 @dataclass

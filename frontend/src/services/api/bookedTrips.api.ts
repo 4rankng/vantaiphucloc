@@ -26,7 +26,6 @@ export interface BookedTripCreatePayload {
   pricingId?: number | null
   unitPrice: number
   driverSalary: number
-  allowance: number
   matchedDeliveredTripIds?: number[]
 }
 
@@ -42,7 +41,6 @@ export interface BookedTripUpdatePayload {
   pricingId?: number | null
   unitPrice?: number
   driverSalary?: number
-  allowance?: number
   matched?: boolean
   isConfirmed?: boolean
   matchedDeliveredTripIds?: number[]

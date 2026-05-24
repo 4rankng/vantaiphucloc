@@ -51,6 +51,7 @@ export const queryKeys = {
   notifications: ['notifications'] as const,
   salaryConfig: ['salary/config'] as const,
   driverBaseSalary: (driverId: number) => ['driver-base-salary', driverId] as const,
+  salaryPeriod: (fromDate: string, toDate: string) => ['salary-period', fromDate, toDate] as const,
   monthlyPnL: (startDate: string, endDate: string) =>
     ['monthly-pnl', startDate, endDate] as const,
   vehiclePnL: (dateFrom: string, dateTo: string, vehicleId?: number) =>

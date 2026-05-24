@@ -177,11 +177,6 @@ export function JobDetail() {
             >
               Thu nhập chuyến
             </p>
-            {job.allowance > 0 && (
-              <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
-                Phụ cấp: {formatCurrencyFull(job.allowance)}
-              </p>
-            )}
           </div>
           {job.driverSalary > 0 ? (
             <p className="text-2xl font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>

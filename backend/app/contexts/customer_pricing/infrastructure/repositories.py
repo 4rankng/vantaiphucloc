@@ -341,7 +341,6 @@ class SqlPricingRepository(PricingRepository):
                 row = existing_by_qty[ln.quantity]
                 row.unit_price = int(ln.unit_price)
                 row.driver_salary = int(ln.driver_salary)
-                row.allowance = int(ln.allowance)
             else:
                 ln.pricing_id = PricingId(existing.id)
                 self.session.add(pricing_line_to_orm(ln))

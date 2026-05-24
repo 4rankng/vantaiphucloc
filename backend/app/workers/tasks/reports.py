@@ -35,15 +35,13 @@ async def generate_monthly_report_task(
 
         total_revenue = sum(wo.revenue or 0 for wo in orders)
         total_driver_cost = sum(wo.driver_salary or 0 for wo in orders)
-        total_allowance = sum(wo.allowance or 0 for wo in orders)
 
         report = {
             "period": f"{year}-{month:02d}",
             "total_orders": len(orders),
             "total_revenue": total_revenue,
             "total_driver_cost": total_driver_cost,
-            "total_allowance": total_allowance,
-            "gross_margin": total_revenue - total_driver_cost - total_allowance,
+            "gross_margin": total_revenue - total_driver_cost,
         }
 
         logger.info("Monthly report generated: period=%s", report["period"])

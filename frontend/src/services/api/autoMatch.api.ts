@@ -41,6 +41,7 @@ export interface BookedTripSummary {
   dropoffName: string | null
   vessel: string | null
   workType: string | null
+  vehiclePlate: string | null
 }
 
 export interface AISuggestionResponse {

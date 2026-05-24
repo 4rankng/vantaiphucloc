@@ -426,7 +426,6 @@ class ReconciliationImportService:
             trip_date=row.trip_date,
             revenue=0,
             driver_salary=row.amount or 0,
-            allowance=0,
         )
         self.session.add(wo)
         await self.session.flush()

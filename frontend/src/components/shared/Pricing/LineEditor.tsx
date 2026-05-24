@@ -12,7 +12,7 @@ export function LineEditor({ lines, onChange }: {
   const [pendingRemove, setPendingRemove] = useState<number | null>(null)
 
   const addLine = () =>
-    onChange([...lines, { quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }])
+    onChange([...lines, { quantity: 1, unitPrice: 0, driverSalary: 0 }])
 
   const removeLine = (idx: number) => {
     onChange(lines.filter((_, i) => i !== idx))
@@ -61,8 +61,8 @@ export function LineEditor({ lines, onChange }: {
             )}
           </div>
 
-          {/* Input grid: 3 columns */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Input grid: 2 columns */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="typo-form-label">Đơn giá</Label>
               <Input
@@ -81,17 +81,6 @@ export function LineEditor({ lines, onChange }: {
                 min={0}
                 value={line.driverSalary || ''}
                 onChange={e => updateLine(i, 'driverSalary', Math.max(0, Number(e.target.value)))}
-                placeholder="0"
-                className="font-mono-num"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="typo-form-label">Phụ cấp</Label>
-              <Input
-                type="number"
-                min={0}
-                value={line.allowance || ''}
-                onChange={e => updateLine(i, 'allowance', Math.max(0, Number(e.target.value)))}
                 placeholder="0"
                 className="font-mono-num"
               />

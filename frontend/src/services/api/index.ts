@@ -97,6 +97,9 @@ export const apiClient = {
   exportSalaryExcel: salaryApi.exportSalaryExcel,
   getDriverBaseSalaryHistory: salaryApi.getDriverBaseSalaryHistory,
   setDriverBaseSalary: salaryApi.setDriverBaseSalary,
+  getSalaryPeriod: salaryApi.getSalaryPeriod,
+  upsertDriverSalary: salaryApi.upsertDriverSalary,
+  initializeSalaryPeriod: salaryApi.initializeSalaryPeriod,
 
   // Monthly P&L
   getMonthlyPnL: pnlApi.getMonthlyPnL,
@@ -181,6 +184,8 @@ export type {
   DriverEarnings,
   DriverBaseSalary,
   SetDriverBaseSalaryInput,
+  DriverSalaryRecord,
+  DriverSalaryUpdateInput,
 } from './salary.api'
 export type {
   MonthlyPnL,

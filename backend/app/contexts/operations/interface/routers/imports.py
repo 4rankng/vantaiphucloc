@@ -329,7 +329,6 @@ class PricingPreviewRowDto(BaseModel):
     revenue: int
     quantity: int = 1
     driver_salary: int = 0
-    allowance: int = 0
     note: str = ""
 
 
@@ -425,7 +424,6 @@ async def commit_customer_pricing(
             revenue=r.revenue,
             quantity=r.quantity,
             driver_salary=r.driver_salary,
-            allowance=r.allowance,
             note=r.note,
         )
         for r in body.rows

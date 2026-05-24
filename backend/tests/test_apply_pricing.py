@@ -12,7 +12,6 @@ def test_delivered_trip_apply_pricing():
         dropoff_location_id=200,
         driver_id=5,
     )
-    dt.apply_pricing(revenue=1_500_000, driver_salary=300_000, allowance=50_000)
+    dt.apply_pricing(revenue=1_500_000, driver_salary=300_000)
     assert dt.revenue == 1_500_000
     assert dt.driver_salary == 300_000
-    assert dt.allowance == 50_000

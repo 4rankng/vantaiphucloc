@@ -61,7 +61,6 @@ class DeliveredTrip:
     booked_trip_id: int | None = None
     revenue: Money = 0
     driver_salary: Money = 0
-    allowance: Money = 0
     trip_date: object | None = None
     created_at: datetime = field(default_factory=_utcnow)
     updated_at: datetime = field(default_factory=_utcnow)
@@ -75,9 +74,7 @@ class DeliveredTrip:
         *,
         revenue: Money,
         driver_salary: Money,
-        allowance: Money,
     ) -> None:
         self.revenue = int(revenue)
         self.driver_salary = int(driver_salary)
-        self.allowance = int(allowance)
         self.updated_at = _utcnow()

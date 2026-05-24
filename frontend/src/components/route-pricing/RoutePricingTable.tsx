@@ -3,6 +3,7 @@ import { Trash2, MapPin } from 'lucide-react'
 import { compactCurrency, WORK_TYPE_LABELS } from '@/data/domain'
 import type { RoutePricing, WorkType } from '@/data/domain'
 import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
+import { tdActive, tdDimmed } from '@/components/shared/editCellStyles'
 import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 import { FieldActions } from '@/components/shared/ListUtils'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -59,11 +60,11 @@ export interface RoutePricingTableProps {
 
 const OP_BADGE_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
   'NHẬP HÀNG':       { bg: '#eff6ff', text: '#1d4ed8', dot: '#3b82f6' },
-  'XUẤT HÀNG':       { bg: '#f0fdf4', text: '#15803d', dot: '#22c55e' },
+  'XUẤT HÀNG':       { bg: '#fef2f2', text: '#b91c1c', dot: '#ef4444' },
   'CHẠY SÀ LAN':     { bg: '#faf5ff', text: '#7e22ce', dot: '#a855f7' },
   'CHUYỂN BÃI':      { bg: '#fff7ed', text: '#c2410c', dot: '#f97316' },
   'ĐÓNG KHO':        { bg: '#fefce8', text: '#a16207', dot: '#eab308' },
-  'LẤY VỎ HẠ HÀNG': { bg: '#f0fdfa', text: '#0f766e', dot: '#14b8a6' },
+  'LẤY VỎ HẠ HÀNG': { bg: '#fdf2f8', text: '#a21caf', dot: '#d946ef' },
   'XUẤT/NHẬP TÀU':   { bg: '#eef2ff', text: '#4338ca', dot: '#6366f1' },
 }
 const DEFAULT_BADGE = { bg: '#f4f4f5', text: '#52525b', dot: '#a1a1aa' }
@@ -101,6 +102,28 @@ function PriceCell({ value }: { value: number | null }) {
 }
 
 type PriceField = 'f20Price' | 'f40Price' | 'e20Price' | 'e40Price' | 'f20DriverSalary' | 'f40DriverSalary' | 'e20DriverSalary' | 'e40DriverSalary'
+
+// ─── Salary column visual treatment ──────────────────────────────────────────
+const SALARY_TINT = 'rgba(217, 119, 6, 0.055)'  // subtle amber overlay
+const SALARY_BORDER = '1px solid rgba(217, 119, 6, 0.22)'
+const SALARY_FIELDS: PriceField[] = ['f20DriverSalary', 'f40DriverSalary', 'e20DriverSalary', 'e40DriverSalary']
+
+// ─── Fixed column widths (used by both <colgroup> and the label band above) ──
+const COL = {
+  index: 40,
+  client: 240,
+  pickup: 140,
+  dropoff: 140,
+  price: 100,   // each of the 4 cước columns
+  salary: 100,  // each of the 4 lương columns
+  workType: 160,
+  actions: 40,
+} as const
+const FARE_GROUP_WIDTH = COL.price * 4
+const SALARY_GROUP_WIDTH = COL.salary * 4
+const LEFT_GROUP_WIDTH = COL.index + COL.client + COL.pickup + COL.dropoff
+const RIGHT_GROUP_WIDTH = COL.workType + COL.actions
+const TABLE_MIN_WIDTH = LEFT_GROUP_WIDTH + FARE_GROUP_WIDTH + SALARY_GROUP_WIDTH + RIGHT_GROUP_WIDTH
 
 // ─── Inline edit row ─────────────────────────────────────────────────────────
 
@@ -143,7 +166,16 @@ function RoutePricingEditRow({
     fieldRefs.current[activeField]?.focus()
   }, [activeField])
 
-  const isLastCol = activeField === 'e40DriverSalary'
+  // Last 2 editable columns — flip save/cancel buttons to the LEFT to avoid overflowing the table
+  const isLastCol = activeField === 'e40DriverSalary' || activeField === 'workType'
+
+  // Compact size for inline-edit dropdowns — overrides InlineSelect's default 44px / text-sm trigger
+  const compactSelectStyle: React.CSSProperties = {
+    height: 30,
+    fontSize: 12,
+    padding: '0 10px',
+    borderRadius: 6,
+  }
   const floatingActions = (
     <div style={{
       position: 'absolute',
@@ -151,10 +183,10 @@ function RoutePricingEditRow({
       transform: 'translateY(-50%)',
       zIndex: 20,
       ...(isLastCol
-        ? { right: '100%', paddingRight: 6 }
-        : { left: '100%', paddingLeft: 6 }),
+        ? { right: '100%', paddingRight: 4 }
+        : { left: '100%', paddingLeft: 4 }),
     }}>
-      <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} hintAlign={isLastCol ? 'right' : 'left'} />
+      <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} />
     </div>
   )
 
@@ -170,29 +202,36 @@ function RoutePricingEditRow({
     .filter(([key]) => !['E20', 'E40', 'F20', 'F40'].includes(key))
     .map(([key, label]) => ({ value: key, label }))
 
-  const tdActive: React.CSSProperties = { padding: '5px 8px', position: 'relative' }
-  const tdInactive = (): React.CSSProperties => ({ padding: '5px 8px', cursor: 'pointer', opacity: 0.45, transition: 'opacity 0.15s' })
-
   const priceInput = (field: PriceField, color: string) => {
+    const isSalary = SALARY_FIELDS.includes(field)
+    const isFirstSalary = field === 'f20DriverSalary'
+    const salaryBg = isSalary ? { background: SALARY_TINT } : null
+    const salaryLeft = isFirstSalary ? { borderLeft: SALARY_BORDER } : null
     if (activeField === field) {
       return (
-        <td style={{ ...tdActive, textAlign: 'right' }}>
-          <input
-            ref={(el) => { fieldRefs.current[field] = el }}
-            type="text"
-            inputMode="numeric"
-            className="nepo-input text-[12px] tabular-nums"
-            style={{ width: '100%', textAlign: 'right', borderColor: errors[field] ? 'var(--status-error, #e53)' : undefined }}
-            value={form[field]}
-            onChange={e => set(field, e.target.value.replace(/[^0-9]/g, ''))}
-            placeholder="—"
-          />
+        <td style={{ ...tdActive, textAlign: 'right', ...salaryBg, ...salaryLeft }}>
+          <div style={{ position: 'relative' }}>
+            <input
+              ref={(el) => { fieldRefs.current[field] = el }}
+              type="text"
+              inputMode="numeric"
+              className="nepo-input text-[12px] tabular-nums"
+              style={{
+                width: '100%',
+                textAlign: 'right',
+                borderColor: errors[field] ? 'var(--status-error, #e53)' : undefined,
+              }}
+              value={form[field]}
+              onChange={e => set(field, e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="—"
+            />
+          </div>
           {floatingActions}
         </td>
       )
     }
     return (
-      <td style={{ ...tdInactive(), textAlign: 'right' }} onClick={() => setActiveField(field)}>
+      <td style={{ ...tdDimmed, textAlign: 'right', ...salaryBg, ...salaryLeft }} onClick={() => setActiveField(field)}>
         <span className="tabular-nums text-xs" style={{ color: form[field] ? color : 'var(--ink-4)', fontFamily: 'var(--theme-font-mono)' }}>
           {form[field] ? compactCurrency(Number(form[field])) : '—'}
         </span>
@@ -201,8 +240,8 @@ function RoutePricingEditRow({
   }
 
   return (
-    <tr style={{ background: 'var(--accent-soft)' }}>
-      <td style={{ ...tdInactive(), color: 'var(--ink-4)', fontSize: 12 }} />
+    <tr style={{ background: '#FFFBEB' /* soft amber — signals edit mode without using brand-green */ }}>
+      <td style={{ ...tdDimmed, color: 'var(--ink-4)', fontSize: 12 }} />
 
       {activeField === 'clientId' ? (
         <td style={tdActive}>
@@ -211,14 +250,15 @@ function RoutePricingEditRow({
             value={form.clientId ? String(form.clientId) : ''}
             options={clientOptions}
             onChange={v => set('clientId', Number(v) || 0)}
+            style={compactSelectStyle}
           />
           {errors.clientId && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.clientId}</p>}
           {floatingActions}
         </td>
       ) : (
-        <td style={tdInactive()} onClick={() => setActiveField('clientId')}>
+        <td style={tdDimmed} onClick={() => setActiveField('clientId')}>
           {clients.find(c => c.id === form.clientId)
-            ? <span className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}>
+            ? <span className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold" style={{ background: 'color-mix(in srgb, var(--ink-1) 7%, transparent)', color: 'var(--ink-1)' }}>
                 {clients.find(c => c.id === form.clientId)?.name}
               </span>
             : <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>— Chủ hàng —</span>}
@@ -232,14 +272,15 @@ function RoutePricingEditRow({
             value={form.pickupLocationId ? String(form.pickupLocationId) : ''}
             options={locationOptions}
             onChange={v => { set('pickupLocationId', Number(v) || 0); setActiveField('dropoffLocationId') }}
+            style={compactSelectStyle}
           />
           {errors.pickupLocationId && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.pickupLocationId}</p>}
           {floatingActions}
         </td>
       ) : (
-        <td style={tdInactive()} onClick={() => setActiveField('pickupLocationId')}>
+        <td style={tdDimmed} onClick={() => setActiveField('pickupLocationId')}>
           <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--ink-1)' }}>
-            <MapPin className="h-3 w-3 shrink-0" style={{ color: '#16a34a' }} />
+            <MapPin className="h-3 w-3 shrink-0" style={{ color: '#2563eb' }} />
             {locations.find(l => l.id === form.pickupLocationId)?.name ?? '—'}
           </span>
         </td>
@@ -252,12 +293,13 @@ function RoutePricingEditRow({
             value={form.dropoffLocationId ? String(form.dropoffLocationId) : ''}
             options={locationOptions}
             onChange={v => set('dropoffLocationId', Number(v) || 0)}
+            style={compactSelectStyle}
           />
           {errors.dropoffLocationId && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.dropoffLocationId}</p>}
           {floatingActions}
         </td>
       ) : (
-        <td style={tdInactive()} onClick={() => setActiveField('dropoffLocationId')}>
+        <td style={tdDimmed} onClick={() => setActiveField('dropoffLocationId')}>
           <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--ink-1)' }}>
             <MapPin className="h-3 w-3 shrink-0" style={{ color: '#ea580c' }} />
             {locations.find(l => l.id === form.dropoffLocationId)?.name ?? '—'}
@@ -270,10 +312,10 @@ function RoutePricingEditRow({
       {priceInput('e20Price', '#6366f1')}
       {priceInput('e40Price', '#6366f1')}
 
-      {priceInput('f20DriverSalary', '#059669')}
-      {priceInput('f40DriverSalary', '#059669')}
-      {priceInput('e20DriverSalary', '#0d9488')}
-      {priceInput('e40DriverSalary', '#0d9488')}
+      {priceInput('f20DriverSalary', '#d97706')}
+      {priceInput('f40DriverSalary', '#d97706')}
+      {priceInput('e20DriverSalary', '#b45309')}
+      {priceInput('e40DriverSalary', '#b45309')}
 
       {activeField === 'workType' ? (
         <td style={tdActive}>
@@ -282,11 +324,12 @@ function RoutePricingEditRow({
             value={form.workType}
             options={workTypeOptions}
             onChange={v => set('workType', v as WorkType)}
+            style={compactSelectStyle}
           />
           {floatingActions}
         </td>
       ) : (
-        <td style={tdInactive()} onClick={() => setActiveField('workType')}>
+        <td style={tdDimmed} onClick={() => setActiveField('workType')}>
           <OpBadge type={form.workType} />
         </td>
       )}
@@ -312,13 +355,19 @@ function RoutePricingRow({ rp, idx, onEdit, onDelete }: {
         {idx + 1}
       </td>
 
-      <td onClick={cell('clientId')}>
+      <td onClick={cell('clientId')} style={{ overflow: 'hidden' }}>
         <span
           className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold"
           style={{
-            background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)',
-            color: 'var(--theme-brand-primary)',
+            background: 'color-mix(in srgb, var(--ink-1) 7%, transparent)',
+            color: 'var(--ink-1)',
+            maxWidth: '100%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            display: 'inline-block',
           }}
+          title={rp.client.name}
         >
           {rp.client.name}
         </span>
@@ -326,7 +375,7 @@ function RoutePricingRow({ rp, idx, onEdit, onDelete }: {
 
       <td onClick={cell('pickupLocationId')}>
         <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--ink-1)' }}>
-          <MapPin className="h-3 w-3 shrink-0" style={{ color: '#16a34a' }} />
+          <MapPin className="h-3 w-3 shrink-0" style={{ color: '#2563eb' }} />
           {rp.pickupLocation.name}
         </span>
       </td>
@@ -342,10 +391,10 @@ function RoutePricingRow({ rp, idx, onEdit, onDelete }: {
       <td style={{ textAlign: 'right' }} onClick={cell('e20Price')}><PriceCell value={rp.e20Price} /></td>
       <td style={{ textAlign: 'right' }} onClick={cell('e40Price')}><PriceCell value={rp.e40Price} /></td>
 
-      <td style={{ textAlign: 'right' }} onClick={cell('f20DriverSalary')}><PriceCell value={rp.f20DriverSalary} /></td>
-      <td style={{ textAlign: 'right' }} onClick={cell('f40DriverSalary')}><PriceCell value={rp.f40DriverSalary} /></td>
-      <td style={{ textAlign: 'right' }} onClick={cell('e20DriverSalary')}><PriceCell value={rp.e20DriverSalary} /></td>
-      <td style={{ textAlign: 'right' }} onClick={cell('e40DriverSalary')}><PriceCell value={rp.e40DriverSalary} /></td>
+      <td style={{ textAlign: 'right', background: SALARY_TINT, borderLeft: SALARY_BORDER }} onClick={cell('f20DriverSalary')}><PriceCell value={rp.f20DriverSalary} /></td>
+      <td style={{ textAlign: 'right', background: SALARY_TINT }} onClick={cell('f40DriverSalary')}><PriceCell value={rp.f40DriverSalary} /></td>
+      <td style={{ textAlign: 'right', background: SALARY_TINT }} onClick={cell('e20DriverSalary')}><PriceCell value={rp.e20DriverSalary} /></td>
+      <td style={{ textAlign: 'right', background: SALARY_TINT }} onClick={cell('e40DriverSalary')}><PriceCell value={rp.e40DriverSalary} /></td>
 
       <td onClick={cell('workType')}><OpBadge type={rp.workType} /></td>
 
@@ -401,27 +450,80 @@ export function RoutePricingTable({
 
   return (
     <div className="nepo-table-scroll overflow-x-auto">
-      <table className="nepo-table w-full" style={{ minWidth: 1200, borderCollapse: 'collapse' }}>
+      {/* Group label band — aligned with the column groups below */}
+      <div
+        className="flex"
+        style={{
+          minWidth: TABLE_MIN_WIDTH,
+          borderBottom: '1px solid var(--line)',
+          background: 'var(--surface-2)',
+        }}
+      >
+        <div style={{ width: LEFT_GROUP_WIDTH }} />
+        <div
+          className="flex items-center justify-center gap-1.5 text-[10.5px] font-semibold uppercase"
+          style={{
+            width: FARE_GROUP_WIDTH,
+            padding: '8px 0',
+            color: '#1d4ed8',
+            letterSpacing: '0.07em',
+          }}
+        >
+          <span className="inline-block rounded-sm" style={{ width: 8, height: 8, background: '#3b82f6' }} />
+          Cước (Khách)
+        </div>
+        <div
+          className="flex items-center justify-center gap-1.5 text-[10.5px] font-semibold uppercase"
+          style={{
+            width: SALARY_GROUP_WIDTH,
+            padding: '8px 0',
+            color: '#b45309',
+            letterSpacing: '0.07em',
+            background: SALARY_TINT,
+            borderLeft: SALARY_BORDER,
+          }}
+        >
+          <span className="inline-block rounded-sm" style={{ width: 8, height: 8, background: '#d97706' }} />
+          Lương sản lượng
+        </div>
+        <div style={{ width: RIGHT_GROUP_WIDTH }} />
+      </div>
+      <table
+        className="nepo-table"
+        style={{ minWidth: TABLE_MIN_WIDTH, width: TABLE_MIN_WIDTH, tableLayout: 'fixed', borderCollapse: 'collapse' }}
+      >
+        <colgroup>
+          <col style={{ width: COL.index }} />
+          <col style={{ width: COL.client }} />
+          <col style={{ width: COL.pickup }} />
+          <col style={{ width: COL.dropoff }} />
+          <col style={{ width: COL.price }} />
+          <col style={{ width: COL.price }} />
+          <col style={{ width: COL.price }} />
+          <col style={{ width: COL.price }} />
+          <col style={{ width: COL.salary }} />
+          <col style={{ width: COL.salary }} />
+          <col style={{ width: COL.salary }} />
+          <col style={{ width: COL.salary }} />
+          <col style={{ width: COL.workType }} />
+          <col style={{ width: COL.actions }} />
+        </colgroup>
         <thead>
           <tr>
-            <th rowSpan={2} style={{ width: 32 }}>#</th>
-            <th rowSpan={2} className="text-left" style={{ width: 130 }}>Chủ hàng</th>
-            <th rowSpan={2} className="text-left" style={{ minWidth: 140 }}>Điểm đi</th>
-            <th rowSpan={2} className="text-left" style={{ minWidth: 140 }}>Điểm đến</th>
-            <th colSpan={4} className="text-center text-xs" style={{ color: 'var(--ink-3)', borderBottom: '1px solid var(--border-2)' }}>Cước (Khách)</th>
-            <th colSpan={4} className="text-center text-xs" style={{ color: '#059669', borderBottom: '1px solid var(--border-2)' }}>Lương (Tài xế)</th>
-            <th rowSpan={2} className="text-left" style={{ minWidth: 130 }}>Tác nghiệp</th>
-            <th rowSpan={2} style={{ width: 32 }} />
-          </tr>
-          <tr>
-            <th className="text-right" style={{ width: 80, color: '#3b82f6' }}>F20</th>
-            <th className="text-right" style={{ width: 80, color: '#3b82f6' }}>F40</th>
-            <th className="text-right" style={{ width: 80, color: '#6366f1' }}>E20</th>
-            <th className="text-right" style={{ width: 80, color: '#6366f1' }}>E40</th>
-            <th className="text-right" style={{ width: 80, color: '#059669' }}>F20</th>
-            <th className="text-right" style={{ width: 80, color: '#059669' }}>F40</th>
-            <th className="text-right" style={{ width: 80, color: '#0d9488' }}>E20</th>
-            <th className="text-right" style={{ width: 80, color: '#0d9488' }}>E40</th>
+            <th>#</th>
+            <th className="text-left">Chủ hàng</th>
+            <th className="text-left">Điểm đi</th>
+            <th className="text-left">Điểm đến</th>
+            <th className="text-right" style={{ color: '#3b82f6' }}>F20</th>
+            <th className="text-right" style={{ color: '#3b82f6' }}>F40</th>
+            <th className="text-right" style={{ color: '#6366f1' }}>E20</th>
+            <th className="text-right" style={{ color: '#6366f1' }}>E40</th>
+            <th className="text-right" style={{ color: '#d97706', background: SALARY_TINT, borderLeft: SALARY_BORDER }}>F20</th>
+            <th className="text-right" style={{ color: '#d97706', background: SALARY_TINT }}>F40</th>
+            <th className="text-right" style={{ color: '#b45309', background: SALARY_TINT }}>E20</th>
+            <th className="text-right" style={{ color: '#b45309', background: SALARY_TINT }}>E40</th>
+            <th className="text-left">Tác nghiệp</th>
+            <th />
           </tr>
         </thead>
         <tbody>

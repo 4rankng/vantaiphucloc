@@ -1,11 +1,11 @@
-import { useState, useRef, useCallback, useMemo } from 'react'
-import { Building2, Plus, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+import { useState, useCallback, useMemo } from 'react'
+import { Building2, Plus, Trash2, Pencil, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
+import { CreateClientDialog, type ClientFormData } from '@/components/shared/CreateClientDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Panel } from '@/components/shared/Panel'
-import { LoadMoreSentinel, SearchInput, FieldActions } from '@/components/shared/ListUtils'
-import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
+import { LoadMoreSentinel, SearchInput } from '@/components/shared/ListUtils'
 import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
 import { StatPill } from '@/components/shared/StatPill'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -16,25 +16,7 @@ import { useInfiniteScroll } from '@/components/shared/ListUtils'
 import type { Client } from '@/data/domain'
 import type { ClientSortBy } from '@/services/api/clients.api'
 
-const VN_TAX_RE = /^\d{10}(\d{3})?$/
-
-type FormData = {
-  code: string
-  name: string
-  type: 'company' | 'individual'
-  phone: string
-  taxCode: string
-  address: string
-  contactPerson: string
-}
-
-const EMPTY_FORM: FormData = {
-  code: '', name: '', type: 'company', phone: '', taxCode: '', address: '', contactPerson: '',
-}
-
-// ─── Inline edit row ──────────────────────────────────────────────────────────
-
-type FocusableField = 'code' | 'name' | 'phone' | 'address' | 'taxCode' | null
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function ClientSortIndicator({ col, sortBy, sortOrder }: { col: ClientSortBy; sortBy: ClientSortBy; sortOrder: 'asc' | 'desc' }) {
   if (sortBy !== col) return <ChevronsUpDown className="inline-block ml-1 opacity-30" style={{ width: 12, height: 12, verticalAlign: 'middle' }} />
@@ -43,168 +25,41 @@ function ClientSortIndicator({ col, sortBy, sortOrder }: { col: ClientSortBy; so
     : <ChevronDown className="inline-block ml-1" style={{ width: 12, height: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />
 }
 
-function ClientEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name' }: {
-  initial: FormData
-  onSave: (data: FormData) => void
-  onCancel: () => void
-  saving?: boolean
-  initialFocus?: FocusableField
-}) {
-  const refs: Record<Exclude<FocusableField, null>, React.RefObject<HTMLInputElement | null>> = {
-    code: useRef<HTMLInputElement>(null),
-    name: useRef<HTMLInputElement>(null),
-    phone: useRef<HTMLInputElement>(null),
-    address: useRef<HTMLInputElement>(null),
-    taxCode: useRef<HTMLInputElement>(null),
+function toFormData(c: Client): ClientFormData {
+  return {
+    code: c.code ?? '',
+    name: c.name,
+    type: c.type ?? 'company',
+    phone: c.phone ?? '',
+    taxCode: c.taxCode ?? '',
+    address: c.address ?? '',
+    contactPerson: c.contactPerson ?? '',
   }
-
-  const { form, errors, set, isDirty, anyDirty, handleSave } = useInlineEditForm<FormData>({
-    initial,
-    validate: (f) => {
-      const errs: Record<string, string> = {}
-      if (!f.name.trim()) errs.name = 'Bắt buộc'
-      if (f.taxCode && !VN_TAX_RE.test(f.taxCode)) errs.taxCode = 'MST không hợp lệ'
-      return errs
-    },
-    onSave: (f) => onSave({ ...f, name: f.name.trim() }),
-    onCancel,
-    focusRef: initialFocus ? refs[initialFocus] : undefined,
-  })
-
-  const actions = anyDirty
-    ? <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} />
-    : null
-
-  return (
-    <tr style={{ background: 'var(--accent-soft)' }}>
-      {/* Mã khách */}
-      <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center">
-          <input ref={refs.code}
-            className="nepo-input text-[12px]"
-            style={{ minWidth: 60, flex: 1 }}
-            value={form.code}
-            onChange={e => set('code', e.target.value)}
-            placeholder="Mã KH"
-          />
-          {isDirty('code') && actions}
-        </div>
-      </td>
-      {/* Tên */}
-      <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center">
-          <div style={{ flex: 1 }}>
-            {/* eslint-disable-next-line react-hooks/refs */}
-            <input ref={refs.name}
-              className="nepo-input text-[12px]"
-              style={{ width: '100%', borderColor: errors.name ? 'var(--status-error, #e53)' : undefined }}
-              value={form.name}
-              onChange={e => set('name', e.target.value)}
-              placeholder="Tên chủ hàng *"
-            />
-            {errors.name && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.name}</p>}
-          </div>
-          {isDirty('name') && actions}
-        </div>
-      </td>
-      {/* Loại */}
-      <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center gap-1">
-          <div className="flex gap-1" style={{ minWidth: 90 }}>
-            {(['company', 'individual'] as const).map(t => (
-              <button
-                key={t} type="button"
-                onClick={() => set('type', t)}
-                className="flex-1 rounded text-[11px] font-medium transition-colors"
-                style={{
-                  padding: '3px 0',
-                  background: form.type === t ? 'var(--accent)' : 'var(--surface-3)',
-                  color: form.type === t ? '#fff' : 'var(--ink-2)',
-                }}
-              >
-                {t === 'company' ? 'Cty' : 'CN'}
-              </button>
-            ))}
-          </div>
-          {isDirty('type') && actions}
-        </div>
-      </td>
-      {/* SĐT */}
-      <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center">
-          {/* eslint-disable-next-line react-hooks/refs */}
-          <input ref={refs.phone}
-            className="nepo-input text-[12px]"
-            style={{ minWidth: 90, flex: 1 }}
-            type="tel"
-            value={form.phone}
-            onChange={e => set('phone', e.target.value)}
-            placeholder="SĐT"
-          />
-          {isDirty('phone') && actions}
-        </div>
-      </td>
-      {/* Địa chỉ */}
-      <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center">
-          {/* eslint-disable-next-line react-hooks/refs */}
-          <input ref={refs.address}
-            className="nepo-input text-[12px]"
-            style={{ minWidth: 100, flex: 1 }}
-            value={form.address}
-            onChange={e => set('address', e.target.value)}
-            placeholder="Địa chỉ"
-          />
-          {isDirty('address') && actions}
-        </div>
-      </td>
-      {/* MST */}
-      <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center">
-          <div style={{ flex: 1 }}>
-            {/* eslint-disable-next-line react-hooks/refs */}
-            <input ref={refs.taxCode}
-              className="nepo-input text-[12px]"
-              style={{ width: '100%', borderColor: errors.taxCode ? 'var(--status-error, #e53)' : undefined }}
-              value={form.taxCode}
-              onChange={e => set('taxCode', e.target.value)}
-              placeholder="MST"
-            />
-            {errors.taxCode && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.taxCode}</p>}
-          </div>
-          {isDirty('taxCode') && actions}
-        </div>
-      </td>
-      {/* Trash placeholder — keeps column width stable */}
-      <td style={{ width: 32 }} />
-    </tr>
-  )
 }
 
-// ─── Client row (read mode) ───────────────────────────────────────────────────
+// ─── Client row (read-only) ───────────────────────────────────────────────────
 
 function ClientRow({ client, onEdit, onDelete }: {
   client: Client
-  onEdit: (field: FocusableField) => void
+  onEdit: () => void
   onDelete: () => void
 }) {
   const isCompany = client.type === 'company'
-  const cell = (field: FocusableField) => (e: React.MouseEvent) => { e.stopPropagation(); onEdit(field) }
 
   return (
-    <tr className="cursor-pointer group">
+    <tr className="group cursor-pointer" onClick={onEdit}>
       {/* Code */}
-      <td style={{ width: 100 }} onClick={cell('code')}>
+      <td style={{ width: 100 }}>
         {client.code
           ? <span className="inline-block font-mono text-[11px] font-semibold tracking-wide px-1.5 py-0.5 rounded" style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}>{client.code}</span>
           : <span style={{ color: 'var(--ink-4)' }}>—</span>}
       </td>
       {/* Name */}
-      <td onClick={cell('name')}>
+      <td>
         <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{client.name}</span>
       </td>
       {/* Type badge */}
-      <td style={{ width: 90 }} onClick={() => onEdit(null)}>
+      <td style={{ width: 90 }}>
         <span
           className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
           style={{
@@ -216,11 +71,11 @@ function ClientRow({ client, onEdit, onDelete }: {
         </span>
       </td>
       {/* Phone */}
-      <td style={{ width: 130 }} onClick={cell('phone')}>
+      <td style={{ width: 130 }}>
         <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>{client.phone || '—'}</span>
       </td>
-      {/* Address — single line, full text in tooltip */}
-      <td onClick={cell('address')}>
+      {/* Address */}
+      <td>
         <span
           className="text-[13px] block"
           style={{ color: 'var(--ink-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 260 }}
@@ -230,19 +85,29 @@ function ClientRow({ client, onEdit, onDelete }: {
         </span>
       </td>
       {/* Tax code */}
-      <td style={{ width: 120 }} onClick={cell('taxCode')}>
+      <td style={{ width: 120 }}>
         <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>{client.taxCode || '—'}</span>
       </td>
-      {/* Trash — visible on row hover */}
-      <td style={{ width: 40 }}>
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete() }}
-          className="opacity-0 group-hover:opacity-100 flex items-center justify-center rounded transition-opacity"
-          style={{ width: 28, height: 28, color: 'var(--ink-3)' }}
-          title="Xoá"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+      {/* Row actions — visible on hover */}
+      <td style={{ width: 72 }}>
+        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit() }}
+            className="flex items-center justify-center rounded"
+            style={{ width: 28, height: 28, color: 'var(--ink-3)' }}
+            title="Sửa"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete() }}
+            className="flex items-center justify-center rounded"
+            style={{ width: 28, height: 28, color: 'var(--ink-3)' }}
+            title="Xoá"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </td>
     </tr>
   )
@@ -261,9 +126,11 @@ export function ClientsPage() {
   const debouncedSearch = useDebounce(search, 400)
   const [sortBy, setSortBy] = useState<ClientSortBy>('name')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
-  const [editingId, setEditingId] = useState<string | 'new' | null>(null)
-  const [editingField, setEditingField] = useState<FocusableField>(null)
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null)
+
+  // Dialog state — drives both Create and Edit
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingClient, setEditingClient] = useState<Client | null>(null)
 
   const {
     data,
@@ -300,24 +167,42 @@ export function ClientsPage() {
     }
   }
 
-  const handleCreate = useCallback((formData: FormData) => {
-    createClient.mutate(formData, {
-      onSuccess: () => { toast.success('Đã thêm chủ hàng'); setEditingId(null) },
-      onError: () => toast.error('Không thể thêm chủ hàng'),
-    })
-  }, [createClient, toast])
+  const openCreateDialog = () => {
+    setEditingClient(null)
+    setDialogOpen(true)
+  }
+  const openEditDialog = (client: Client) => {
+    setEditingClient(client)
+    setDialogOpen(true)
+  }
+  const closeDialog = () => {
+    setDialogOpen(false)
+    setEditingClient(null)
+  }
 
-  const handleUpdate = useCallback((id: string, formData: FormData) => {
-    updateClient.mutate({ id, data: formData }, {
-      onSuccess: () => { toast.success('Đã cập nhật'); setEditingId(null) },
-      onError: () => toast.error('Không thể cập nhật'),
+  const handleDialogConfirm = useCallback((formData: ClientFormData) => {
+    return new Promise<void>((resolve) => {
+      if (editingClient) {
+        updateClient.mutate(
+          { id: editingClient.id, data: formData },
+          {
+            onSuccess: () => { toast.success('Đã cập nhật'); closeDialog(); resolve() },
+            onError: () => { toast.error('Không thể cập nhật'); resolve() },
+          },
+        )
+      } else {
+        createClient.mutate(formData, {
+          onSuccess: () => { toast.success('Đã thêm chủ hàng'); closeDialog(); resolve() },
+          onError: () => { toast.error('Không thể thêm chủ hàng'); resolve() },
+        })
+      }
     })
-  }, [updateClient, toast])
+  }, [editingClient, createClient, updateClient, toast])
 
   const handleDelete = useCallback(() => {
     if (!deleteTarget) return
     deleteClient.mutate(deleteTarget.id, {
-      onSuccess: () => { toast.success('Đã xoá'); setDeleteTarget(null); setEditingId(null) },
+      onSuccess: () => { toast.success('Đã xoá'); setDeleteTarget(null) },
       onError: (err: unknown) => {
         const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
         toast.error('Không thể xoá', detail ?? `${deleteTarget.name} có dữ liệu liên quan.`)
@@ -346,7 +231,7 @@ export function ClientsPage() {
       <section>
         <div className="flex items-center gap-2 mb-3">
           <SearchInput value={search} onChange={setSearch} placeholder="Tìm tên, MST, SĐT…" />
-          <Button variant="default" onClick={() => { setEditingId('new'); setSearch('') }}>
+          <Button variant="default" onClick={openCreateDialog}>
             <Plus className="h-4 w-4" /> Thêm
           </Button>
         </div>
@@ -354,14 +239,14 @@ export function ClientsPage() {
         <Panel flush>
           {isLoading ? (
             <TableSkeleton rows={5} />
-          ) : clients.length === 0 && editingId !== 'new' ? (
+          ) : clients.length === 0 ? (
             <div className="py-10">
               <EmptyState
                 icon={<Building2 className="h-5 w-5" />}
                 title={search.trim() ? 'Không tìm thấy chủ hàng' : 'Chưa có chủ hàng nào'}
                 compact
                 action={!search.trim() ? (
-                  <button onClick={() => setEditingId('new')} className="btn-primary text-xs">
+                  <button onClick={openCreateDialog} className="btn-primary text-xs">
                     <Plus size={14} strokeWidth={2.25} /><span>Thêm chủ hàng</span>
                   </button>
                 ) : undefined}
@@ -370,6 +255,11 @@ export function ClientsPage() {
           ) : (
             <>
               <div className="nepo-table-scroll overflow-x-auto">
+                <div className="px-4 py-1.5" style={{ borderBottom: '1px solid var(--line)' }}>
+                  <span className="text-[11.5px]" style={{ color: 'var(--ink-4)' }}>
+                    Nhấp vào hàng để sửa
+                  </span>
+                </div>
                 <table className="nepo-table w-full" style={{ minWidth: 640, borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
@@ -391,45 +281,18 @@ export function ClientsPage() {
                       <th className="text-left">SĐT</th>
                       <th className="text-left">Địa chỉ</th>
                       <th className="text-left">MST</th>
-                      <th style={{ width: 40 }} />
+                      <th style={{ width: 72 }} />
                     </tr>
                   </thead>
                   <tbody>
-                    {editingId === 'new' && (
-                      <ClientEditRow
-                        initial={EMPTY_FORM}
-                        onSave={handleCreate}
-                        onCancel={() => setEditingId(null)}
-                        saving={createClient.isPending}
+                    {clients.map((c) => (
+                      <ClientRow
+                        key={c.id}
+                        client={c}
+                        onEdit={() => openEditDialog(c)}
+                        onDelete={() => setDeleteTarget(c)}
                       />
-                    )}
-                    {clients.map((c) =>
-                      editingId === c.id ? (
-                        <ClientEditRow
-                          key={c.id}
-                          initial={{
-                            code: c.code ?? '',
-                            name: c.name,
-                            type: c.type ?? 'company',
-                            phone: c.phone ?? '',
-                            taxCode: c.taxCode ?? '',
-                            address: c.address ?? '',
-                            contactPerson: c.contactPerson ?? '',
-                          }}
-                          onSave={(formData) => handleUpdate(c.id, formData)}
-                          onCancel={() => setEditingId(null)}
-                          saving={updateClient.isPending}
-                          initialFocus={editingField}
-                        />
-                      ) : (
-                        <ClientRow
-                          key={c.id}
-                          client={c}
-                          onEdit={(field) => { setEditingId(c.id); setEditingField(field) }}
-                          onDelete={() => setDeleteTarget(c)}
-                        />
-                      ),
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -438,6 +301,15 @@ export function ClientsPage() {
           )}
         </Panel>
       </section>
+
+      {/* ── Create / Edit dialog ── */}
+      <CreateClientDialog
+        open={dialogOpen}
+        onClose={closeDialog}
+        onConfirm={handleDialogConfirm}
+        initial={editingClient ? toFormData(editingClient) : null}
+        saving={editingClient ? updateClient.isPending : createClient.isPending}
+      />
 
       {/* ── Delete confirmation ── */}
       <DangerConfirmDialog

@@ -333,13 +333,7 @@ export function VehicleExpensesPage() {
         subtitle="Quản lý chi phí vận hành theo từng xe: xăng dầu, sửa chữa, tiền luật và khác"
         lucideIcon={Fuel}
         actions={
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setCreateDialogOpen(true)} className="gap-1.5">
-              <Plus className="h-3.5 w-3.5" />
-              Thêm chi phí
-            </Button>
-            <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
-          </div>
+          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
         }
       />
 
@@ -379,15 +373,15 @@ export function VehicleExpensesPage() {
         subtitle={`Tổng hợp chi phí ${vehicleSummary.length} xe trong kỳ`}
         actions={
           <div className="flex items-center gap-2">
-            <LinkButton onClick={() => setCreateDialogOpen(true)} icon={Plus}>
-              Thêm chi phí
-            </LinkButton>
             <InlineSearchInput
               value={vehicleSearch}
               onChange={setVehicleSearch}
               placeholder="Tìm biển số..."
               width={220}
             />
+            <LinkButton onClick={() => setCreateDialogOpen(true)} icon={Plus}>
+              Thêm chi phí
+            </LinkButton>
           </div>
         }
       >

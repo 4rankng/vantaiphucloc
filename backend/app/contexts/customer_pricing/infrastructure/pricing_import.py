@@ -48,7 +48,6 @@ class TariffRow:
     unit_price: int
     quantity: int = 1
     driver_salary: int = 0
-    allowance: int = 0
     cont_type: str | None = None  # F20 | F40 | E20 | E40
     note: str = ""
     old_unit_price: int | None = None
@@ -62,7 +61,6 @@ class TariffRow:
             "old_unit_price": self.old_unit_price,
             "quantity": self.quantity,
             "driver_salary": self.driver_salary,
-            "allowance": self.allowance,
             "cont_type": self.cont_type,
             "note": self.note,
         }
@@ -365,13 +363,11 @@ async def commit_tariff_rows(
                 quantity=row.quantity,
                 unit_price=row.unit_price,
                 driver_salary=row.driver_salary,
-                allowance=row.allowance,
             ))
             result.lines_created += 1
         elif update_existing_lines and existing_line.unit_price != row.unit_price:
             existing_line.unit_price = row.unit_price
             existing_line.driver_salary = row.driver_salary
-            existing_line.allowance = row.allowance
             result.lines_updated += 1
         else:
             result.lines_existing += 1

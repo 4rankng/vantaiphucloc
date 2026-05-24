@@ -10,7 +10,7 @@ export { useLocations, useCreateLocation, useUpdateLocation, useDeleteLocation }
 export { usePricings, useCreatePricing, useUpdatePricing, useDeletePricing, usePreviewPricing, useCommitPricing } from './queries/pricings'
 export { useDeliveredTrips, useDeliveredTripsInfinite, useDeliveredTrip, useCreateDeliveredTrip, useUpdateDeliveredTrip, useExportDeliveredTripsExcel } from './queries/delivered-trips'
 export { useBookedTrips, useBookedTrip, useCreateBookedTrip, useUpdateBookedTrip } from './queries/booked-trips'
-export { useDriverEarnings, useMyEarnings, useSalaryDashboard, useExportSalaryExcel, useCalculateSalary, useSalaryConfig, useUpdateSalaryConfig, useDriverBaseSalaryHistory, useSetDriverBaseSalary } from './queries/salary'
+export { useDriverEarnings, useMyEarnings, useSalaryDashboard, useExportSalaryExcel, useCalculateSalary, useSalaryConfig, useUpdateSalaryConfig, useDriverBaseSalaryHistory, useSetDriverBaseSalary, useSalaryPeriod, useUpsertDriverSalary, useInitializeSalaryPeriod } from './queries/salary'
 export { useDrivers, useDriversPaged, useCreateDriver, useUpdateDriver } from './queries/drivers'
 export { useVehicles, useCreateVehicle, useVehicleDrivers, useAddVehicleDriver, useRemoveVehicleDriver } from './queries/vehicles'
 export { useVehicleExpenses, useCreateVehicleExpense, useUpdateVehicleExpense, useDeleteVehicleExpense } from './queries/vehicle-expenses'

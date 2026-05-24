@@ -52,7 +52,6 @@ class DeliveredTripUpdate(BaseModel):
     cont_type: str | None = None
     revenue: int | None = None
     driver_salary: int | None = None
-    allowance: int | None = None
 
 
 class DeliveredTripOut(BaseModel):
@@ -70,7 +69,6 @@ class DeliveredTripOut(BaseModel):
     cont_type: str | None = None
     revenue: int
     driver_salary: int
-    allowance: int
     trip_date: date | None = None
     booked_trip_id: int | None = None
     created_at: datetime

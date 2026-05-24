@@ -15,10 +15,12 @@ from app.contexts.payroll.application import (
 )
 from app.contexts.payroll.domain.repositories import (
     DriverSalaryConfigRepository,
+    DriverSalaryRepository,
     SettingsRepository,
 )
 from app.contexts.payroll.infrastructure.repositories import (
     SqlDriverSalaryConfigRepository,
+    SqlDriverSalaryRepository,
     SqlSettingsRepository,
 )
 from app.database import get_db
@@ -34,6 +36,12 @@ def get_driver_salary_config_repository(
     db: AsyncSession = Depends(get_db),
 ) -> DriverSalaryConfigRepository:
     return SqlDriverSalaryConfigRepository(db)
+
+
+def get_driver_salary_repository(
+    db: AsyncSession = Depends(get_db),
+) -> DriverSalaryRepository:
+    return SqlDriverSalaryRepository(db)
 
 
 def get_get_salary_config(
@@ -53,8 +61,15 @@ def get_driver_earnings(
     base_salary_repo: DriverSalaryConfigRepository = Depends(
         get_driver_salary_config_repository
     ),
+    driver_salary_repo: DriverSalaryRepository = Depends(
+        get_driver_salary_repository
+    ),
 ) -> GetDriverEarnings:
-    return GetDriverEarnings(db, base_salary_repo=base_salary_repo)
+    return GetDriverEarnings(
+        db,
+        base_salary_repo=base_salary_repo,
+        driver_salary_repo=driver_salary_repo,
+    )
 
 
 def get_list_driver_base_salary_history(
@@ -74,5 +89,12 @@ def get_monthly_pnl(
     base_salary_repo: DriverSalaryConfigRepository = Depends(
         get_driver_salary_config_repository
     ),
+    driver_salary_repo: DriverSalaryRepository = Depends(
+        get_driver_salary_repository
+    ),
 ) -> GetMonthlyPnL:
-    return GetMonthlyPnL(db, base_salary_repo=base_salary_repo)
+    return GetMonthlyPnL(
+        db,
+        base_salary_repo=base_salary_repo,
+        driver_salary_repo=driver_salary_repo,
+    )

@@ -162,7 +162,6 @@ export interface DeliveredTrip {
   workType?: WorkType | null
   revenue: number
   driverSalary: number
-  allowance: number
   tripDate?: string | null
   createdAt: string
   updatedAt: string
@@ -176,7 +175,6 @@ export interface PricingLine {
   quantity: number
   unitPrice: number
   driverSalary: number
-  allowance: number
 }
 
 export interface Pricing {

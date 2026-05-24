@@ -175,7 +175,6 @@ class PricingLine:
     quantity: int
     unit_price: Money = 0
     driver_salary: Money = 0
-    allowance: Money = 0
 
 
 @dataclass
@@ -222,14 +221,12 @@ class Pricing:
         quantity: int,
         unit_price: Money,
         driver_salary: Money = 0,
-        allowance: Money = 0,
     ) -> PricingLine:
         """Add or update the tier for `quantity`."""
         for ln in self.lines:
             if ln.quantity == quantity:
                 ln.unit_price = int(unit_price)
                 ln.driver_salary = int(driver_salary)
-                ln.allowance = int(allowance)
                 self.updated_at = _utcnow()
                 return ln
         new = PricingLine(
@@ -238,7 +235,6 @@ class Pricing:
             quantity=int(quantity),
             unit_price=int(unit_price),
             driver_salary=int(driver_salary),
-            allowance=int(allowance),
         )
         self.lines.append(new)
         self.updated_at = _utcnow()

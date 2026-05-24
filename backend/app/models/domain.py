@@ -266,7 +266,6 @@ class PricingLine(Base):
     quantity = Column(Integer, nullable=False)
     unit_price = Column(Integer, nullable=False, default=0)
     driver_salary = Column(Integer, nullable=False, default=0)
-    allowance = Column(Integer, nullable=False, default=0)
 
 
 # ---------------------------------------------------------------------------
@@ -370,7 +369,6 @@ class DeliveredTrip(AuditableMixin, Base):
     booked_trip_id = Column(Integer, ForeignKey("booked_trips.id"), nullable=True, index=True)
     revenue = Column(Integer, nullable=False, default=0)
     driver_salary = Column(Integer, nullable=False, default=0)
-    allowance = Column(Integer, nullable=False, default=0)
     trip_date = Column(Date, nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
@@ -468,5 +466,54 @@ class DriverSalaryConfig(Base):
             "ix_driver_salary_configs_driver_effective_desc",
             "driver_id",
             "effective_from",
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# DriverSalary (per-driver, per-period salary record)
+# ---------------------------------------------------------------------------
+
+
+class DriverSalary(AuditableMixin, Base):
+    """Per-driver, per-period salary record managed by kế toán.
+
+    One row per driver per salary period (from_date..to_date).
+    basic_salary and allowance are entered by kế toán.
+    bonus_salary is auto-calculated from matched trips but can be overridden.
+    """
+
+    __tablename__ = "driver_salaries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    driver_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    from_date = Column(Date, nullable=False)
+    to_date = Column(Date, nullable=False)
+    basic_salary = Column(Integer, nullable=False, default=0)  # VND
+    bonus_salary = Column(Integer, nullable=False, default=0)  # VND
+    allowance = Column(Integer, nullable=False, default=0)  # VND
+    note = Column(String(500), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "driver_id",
+            "from_date",
+            "to_date",
+            name="uq_driver_salaries_period",
+        ),
+        Index(
+            "ix_driver_salaries_driver_period",
+            "driver_id",
+            "from_date",
+            "to_date",
         ),
     )

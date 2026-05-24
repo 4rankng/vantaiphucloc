@@ -156,3 +156,72 @@ export async function setDriverBaseSalary(
     return fail(err)
   }
 }
+
+
+// ───────────────────────────────────────────────────────────────────────────
+// Driver salary period records (per-driver, per-period)
+// ───────────────────────────────────────────────────────────────────────────
+
+export interface DriverSalaryRecord {
+  id: number
+  driverId: number
+  driverName: string | null
+  driverUsername: string | null
+  fromDate: string
+  toDate: string
+  basicSalary: number
+  bonusSalary: number
+  allowance: number
+  note: string | null
+}
+
+export interface DriverSalaryUpdateInput {
+  basicSalary?: number
+  allowance?: number
+  note?: string | null
+}
+
+export async function getSalaryPeriod(
+  fromDate: string,
+  toDate: string,
+): Promise<ApiResponse<DriverSalaryRecord[]>> {
+  try {
+    const res = await api.get(`/salary/periods/${fromDate}/${toDate}`)
+    return ok(toCamel<DriverSalaryRecord[]>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function upsertDriverSalary(
+  driverId: number,
+  fromDate: string,
+  toDate: string,
+  data: DriverSalaryUpdateInput,
+): Promise<ApiResponse<DriverSalaryRecord>> {
+  try {
+    const res = await api.put(
+      `/salary/periods/${fromDate}/${toDate}/${driverId}`,
+      {
+        basic_salary: data.basicSalary,
+        allowance: data.allowance,
+        note: data.note ?? null,
+      },
+    )
+    return ok(toCamel<DriverSalaryRecord>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function initializeSalaryPeriod(
+  fromDate: string,
+  toDate: string,
+): Promise<ApiResponse<DriverSalaryRecord[]>> {
+  try {
+    const res = await api.post(`/salary/periods/${fromDate}/${toDate}/initialize`)
+    return ok(toCamel<DriverSalaryRecord[]>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}

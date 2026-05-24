@@ -37,15 +37,15 @@ interface Props {
 
 function initContTypeLines(initial?: Pricing): Record<ContType, ContTypeLine> {
   const result: Record<ContType, ContTypeLine> = {
-    F20: { enabled: false, lines: [{ quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }] },
-    F40: { enabled: false, lines: [{ quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }] },
-    E20: { enabled: false, lines: [{ quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }] },
-    E40: { enabled: false, lines: [{ quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }] },
+    F20: { enabled: false, lines: [{ quantity: 1, unitPrice: 0, driverSalary: 0 }] },
+    F40: { enabled: false, lines: [{ quantity: 1, unitPrice: 0, driverSalary: 0 }] },
+    E20: { enabled: false, lines: [{ quantity: 1, unitPrice: 0, driverSalary: 0 }] },
+    E40: { enabled: false, lines: [{ quantity: 1, unitPrice: 0, driverSalary: 0 }] },
   }
   if (initial) {
     result[initial.workType] = {
       enabled: true,
-      lines: initial.lines.length > 0 ? initial.lines : [{ quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }],
+      lines: initial.lines.length > 0 ? initial.lines : [{ quantity: 1, unitPrice: 0, driverSalary: 0 }],
     }
   }
   return result
@@ -59,7 +59,7 @@ function MiniLineEditor({
   onChange: (lines: PricingLine[]) => void
 }) {
   const addLine = () =>
-    onChange([...lines, { quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }])
+    onChange([...lines, { quantity: 1, unitPrice: 0, driverSalary: 0 }])
 
   const removeLine = (idx: number) =>
     onChange(lines.filter((_, i) => i !== idx))
@@ -99,7 +99,7 @@ function MiniLineEditor({
             )}
           </div>
           {/* Price inputs */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <div>
               <div className="typo-label mb-0.5" style={{ fontSize: '10px' }}>Đơn giá</div>
               <input
@@ -123,22 +123,6 @@ function MiniLineEditor({
                 min={0}
                 value={line.driverSalary || ''}
                 onChange={e => updateLine(i, 'driverSalary', Math.max(0, Number(e.target.value)))}
-                placeholder="0"
-                className="w-full px-2 py-1.5 rounded-md text-xs font-mono-num"
-                style={{
-                  background: 'var(--theme-bg-secondary)',
-                  border: '1px solid var(--theme-border-default)',
-                  color: 'var(--theme-text-primary)',
-                }}
-              />
-            </div>
-            <div>
-              <div className="typo-label mb-0.5" style={{ fontSize: '10px' }}>Phụ cấp</div>
-              <input
-                type="number"
-                min={0}
-                value={line.allowance || ''}
-                onChange={e => updateLine(i, 'allowance', Math.max(0, Number(e.target.value)))}
                 placeholder="0"
                 className="w-full px-2 py-1.5 rounded-md text-xs font-mono-num"
                 style={{

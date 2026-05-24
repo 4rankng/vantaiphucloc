@@ -1,8 +1,8 @@
 """Pricing lookup helpers -- read-only.
 
 Used by Operations (delivered-trip / booked-trip creation, bulk apply-pricing,
-imports) to auto-fill `unit_price`, `driver_salary`, and `allowance` from
-the matching Pricing + PricingLine. Lookup is FK-only -- callers can pass
+imports) to auto-fill `unit_price` and `driver_salary` from the matching
+Pricing + PricingLine. Lookup is FK-only -- callers can pass
 `pickup_location_id`/`dropoff_location_id` directly, or pass name strings
 and we resolve them via the `locations` table.
 
@@ -114,7 +114,6 @@ class TieredPricing:
         self.pricing = pricing
         self.unit_price = line.unit_price
         self.driver_salary = line.driver_salary
-        self.allowance = line.allowance
 
     @property
     def id(self) -> int:

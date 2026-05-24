@@ -116,7 +116,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
   }, [])
 
   const addDraftLine = useCallback(() => {
-    setDraftLines(prev => [...prev, { quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }])
+    setDraftLines(prev => [...prev, { quantity: 1, unitPrice: 0, driverSalary: 0 }])
   }, [])
 
   const removeDraftLine = useCallback((idx: number) => {
@@ -339,7 +339,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
                       </td>
                     </tr>
 
-                    {/* ── Expanded edit row (salary + allowance) ── */}
+                    {/* ── Expanded edit row (salary details) ── */}
                     {isEditing && editingPricing && (
                       <tr
                         style={{
@@ -365,10 +365,6 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-[10px] uppercase font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Lương TX</span>
                                   <InlineCell value={line.driverSalary} onChange={v => updateDraftLine(lIdx, 'driverSalary', v)} editing className="text-xs" />
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] uppercase font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</span>
-                                  <InlineCell value={line.allowance} onChange={v => updateDraftLine(lIdx, 'allowance', v)} editing className="text-xs" />
                                 </div>
                                 {draftLines.length > 1 && (
                                   <button onClick={() => removeDraftLine(lIdx)} className="p-0.5" style={{ color: 'var(--theme-status-error)' }}>

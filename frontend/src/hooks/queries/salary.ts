@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { queryKeys } from '../query-keys'
 import type { ApiResponse } from '@/data/domain'
+import type { DriverSalaryUpdateInput } from '@/services/api/salary.api'
 
 function unwrap<T>(res: ApiResponse<T>): T {
   if (res.success) return res.data
@@ -126,6 +127,59 @@ export function useSetDriverBaseSalary() {
       qc.invalidateQueries({ queryKey: ['driver-base-salary'] })
       qc.invalidateQueries({ queryKey: ['driver-earnings'] })
       qc.invalidateQueries({ queryKey: ['my-earnings'] })
+      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+      qc.invalidateQueries({ queryKey: ['salary-period'] })
+    },
+  })
+}
+
+
+export function useSalaryPeriod(fromDate: string, toDate: string) {
+  return useQuery({
+    queryKey: queryKeys.salaryPeriod(fromDate, toDate),
+    queryFn: async () => {
+      const res = await apiClient.getSalaryPeriod(fromDate, toDate)
+      return res.success ? res.data : []
+    },
+    enabled: !!fromDate && !!toDate,
+  })
+}
+
+
+export function useUpsertDriverSalary() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      driverId,
+      fromDate,
+      toDate,
+      data,
+    }: {
+      driverId: number
+      fromDate: string
+      toDate: string
+      data: DriverSalaryUpdateInput
+    }) =>
+      apiClient
+        .upsertDriverSalary(driverId, fromDate, toDate, data)
+        .then(unwrap),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: queryKeys.salaryPeriod(variables.fromDate, variables.toDate) })
+      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+    },
+  })
+}
+
+
+export function useInitializeSalaryPeriod() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ fromDate, toDate }: { fromDate: string; toDate: string }) =>
+      apiClient.initializeSalaryPeriod(fromDate, toDate).then(unwrap),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: queryKeys.salaryPeriod(variables.fromDate, variables.toDate) })
       qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
       qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
     },

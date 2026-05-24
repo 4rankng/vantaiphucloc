@@ -11,7 +11,7 @@ import type { NepoColumn, NepoFooterCell } from '@/components/shared/NepoTable'
 import { Plate } from '@/components/shared/Plate'
 import { useVehiclePnL } from '@/hooks/use-queries'
 import { useMonthParams } from './use-month-params'
-import { compactCurrency } from '@/data/domain'
+import { formatCurrency } from '@/data/domain'
 import type { VehiclePnLRow, VehiclePnLResponse } from '@/services/api/pnl.api'
 import { exportVehiclePnL } from '@/services/api/pnl.api'
 import { AnimatedNumber } from '@/components/shared'
@@ -28,7 +28,7 @@ function MoneyCell({ value, bold }: { value: number; bold?: boolean }) {
       className={`tabular-nums${bold ? ' font-bold' : ''}`}
       style={{ color: bold ? profitColor(value) : 'var(--ink)', ...monoStyle }}
     >
-      {compactCurrency(value)}
+      {formatCurrency(value)}
     </span>
   )
 }
@@ -223,7 +223,7 @@ export function PnLPage() {
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       <PageHeader
-        title="Báo cáo"
+        title="Tổng hợp"
         subtitle="Doanh thu và lợi nhuận từng xe theo kỳ — đối chiếu chi phí xe, lương và biên lợi nhuận"
         lucideIcon={TrendingUp}
         actions={<MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />}
@@ -232,7 +232,7 @@ export function PnLPage() {
       <div className="grid grid-cols-3 gap-3">
         <KpiHeroCard
           label="Doanh thu"
-          formattedValue={<><AnimatedNumber value={totalRevenue} format="compact" /> ₫</>}
+          formattedValue={<><AnimatedNumber value={totalRevenue} format="currency" /> ₫</>}
           value={totalRevenue}
           icon={DollarSign}
           color="amber"
@@ -241,7 +241,7 @@ export function PnLPage() {
         />
         <KpiHeroCard
           label="Tổng chi phí"
-          formattedValue={<><AnimatedNumber value={totalCost} format="compact" /> ₫</>}
+          formattedValue={<><AnimatedNumber value={totalCost} format="currency" /> ₫</>}
           value={totalCost}
           icon={Coins}
           color="blue"
@@ -250,7 +250,7 @@ export function PnLPage() {
         />
         <KpiHeroCard
           label="Lợi nhuận"
-          formattedValue={<><AnimatedNumber value={totalProfit} format="compact" /> ₫</>}
+          formattedValue={<><AnimatedNumber value={totalProfit} format="currency" /> ₫</>}
           value={totalProfit}
           icon={TrendingUp}
           color={totalProfit >= 0 ? 'emerald' : 'rose'}

@@ -17,8 +17,10 @@ from app.contexts.payroll.domain.base_salary import (
     DriverSalaryConfig,
     effective_base_salary,
 )
+from app.contexts.payroll.domain.driver_salary import DriverSalaryRecord
 from app.contexts.payroll.domain.repositories import (
     DriverSalaryConfigRepository,
+    DriverSalaryRepository,
     SettingsRepository,
 )
 from app.models.domain import DeliveredTrip
@@ -38,28 +40,32 @@ class GetDriverEarnings:
     """Calculate driver earnings on-the-fly from MATCHED work orders.
 
     Cross-context read: queries DeliveredTrip rows from Operations and User
-    from Identity directly at the ORM level. Base salary is layered on
-    top via :class:`DriverSalaryConfigRepository` (latest rate effective
-    at *end_date*).
+    from Identity directly at the ORM level.
+
+    Salary is resolved from the ``driver_salaries`` table when a record
+    exists for the requested period. Falls back to computing from
+    ``driver_salary_configs`` + trip aggregation when no record exists.
     """
 
     def __init__(
         self,
         session: AsyncSession,
         base_salary_repo: DriverSalaryConfigRepository | None = None,
+        driver_salary_repo: DriverSalaryRepository | None = None,
     ) -> None:
         self.session = session
         self.base_salary_repo = base_salary_repo
+        self.driver_salary_repo = driver_salary_repo
 
     async def __call__(
         self, *, driver_id: int, start_date: date, end_date: date
     ) -> DriverEarningsDTO:
+        # Trip counts and driver_salary sum (no allowance column on trips)
         row = (
             await self.session.execute(
                 select(
                     func.count(DeliveredTrip.id),
                     func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
-                    func.coalesce(func.sum(DeliveredTrip.allowance), 0),
                 ).where(
                     DeliveredTrip.driver_id == driver_id,
                     DeliveredTrip.booked_trip_id.isnot(None),
@@ -71,7 +77,6 @@ class GetDriverEarnings:
 
         matched_order_count = row[0] or 0
         total_salary = row[1] or 0
-        total_allowance = row[2] or 0
 
         # Look up driver name and phone
         user_row = (
@@ -85,9 +90,21 @@ class GetDriverEarnings:
             driver_name = user_row[0] or user_row[1]
             driver_phone = user_row[2]
 
-        # Base salary: take the rate effective at end_date. No pro-rating.
+        # Try driver_salaries table first (source of truth when present).
         base_salary = 0
-        if self.base_salary_repo is not None:
+        total_allowance = 0
+        salary_record: DriverSalaryRecord | None = None
+        if self.driver_salary_repo is not None:
+            salary_record = await self.driver_salary_repo.get_for_period(
+                driver_id, start_date, end_date
+            )
+
+        if salary_record is not None:
+            base_salary = salary_record.basic_salary
+            total_allowance = salary_record.allowance
+            # bonus_salary is always computed from trips (total_salary above)
+        elif self.base_salary_repo is not None:
+            # Fallback: read base_salary from driver_salary_configs
             cfg = await self.base_salary_repo.latest_at_or_before(driver_id, end_date)
             if cfg is not None:
                 base_salary = cfg.base_salary
@@ -218,7 +235,7 @@ class MonthlyPnLDTO:
     end_date: date
     revenue: int
     total_productivity_salary: int  # Σ DeliveredTrip.driver_salary
-    total_allowance: int            # Σ DeliveredTrip.allowance
+    total_allowance: int            # Σ driver_salaries.allowance
     total_base_salary: int          # Σ effective base salary per driver
     total_vehicle_expenses: int     # Fuel + Repairs + Law + Other
     total_vendor_cost: int          # Σ vendor route pricing for xe ngoài
@@ -234,23 +251,22 @@ class GetMonthlyPnL:
     (booked_trip_id IS NOT NULL) whose trip_date falls within
     [start_date, end_date].
 
-    Costs are summed across all DeliveredTrips matched in the period:
-      * productivity salary (``DeliveredTrip.driver_salary``)
-      * allowance (``DeliveredTrip.allowance``)
-      * base salary — for every driver who has any MATCHED DeliveredTrip in
-        the period, take the rate effective at ``end_date``. Drivers
-        without a base salary configured contribute 0.
+    Salary costs are read from ``driver_salaries`` when records exist for
+    the period. Falls back to computing from trips + base salary configs
+    when no salary records are found.
 
-    Profit = revenue − (productivity + allowance + base + vehicle_expenses).
+    Profit = revenue - (productivity + allowance + base + vehicle_expenses).
     """
 
     def __init__(
         self,
         session: AsyncSession,
         base_salary_repo: DriverSalaryConfigRepository,
+        driver_salary_repo: DriverSalaryRepository | None = None,
     ) -> None:
         self.session = session
         self.base_salary_repo = base_salary_repo
+        self.driver_salary_repo = driver_salary_repo
 
     async def __call__(
         self, *, start_date: date, end_date: date
@@ -310,12 +326,11 @@ class GetMonthlyPnL:
             )
         ]
 
-        # ---- Productivity & allowance: Σ over MATCHED WOs in period ----
+        # ---- Productivity salary: Σ DeliveredTrip.driver_salary (no allowance) ----
         wage_row = (
             await self.session.execute(
                 select(
                     func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
-                    func.coalesce(func.sum(DeliveredTrip.allowance), 0),
                 ).where(
                     DeliveredTrip.booked_trip_id.isnot(None),
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
@@ -325,32 +340,47 @@ class GetMonthlyPnL:
                 )
             )
         ).one()
-        total_productivity = int(wage_row[0] or 0)
-        total_allowance = int(wage_row[1] or 0)
+        trip_productivity = int(wage_row[0] or 0)
 
-        # ---- Base salary: distinct drivers with MATCHED WOs in period ----
-        driver_id_rows = (
-            await self.session.execute(
-                select(DeliveredTrip.driver_id)
-                .where(
-                    DeliveredTrip.booked_trip_id.isnot(None),
-                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
-                    >= start_date,
-                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
-                    <= end_date,
-                )
-                .distinct()
+        # ---- Try driver_salaries table for base/bonus/allowance ----
+        salary_records: list[DriverSalaryRecord] = []
+        if self.driver_salary_repo is not None:
+            salary_records = await self.driver_salary_repo.list_for_period(
+                start_date, end_date
             )
-        ).scalars().all()
-        driver_ids = [d for d in driver_id_rows if d is not None]
 
-        history_by_driver = await self.base_salary_repo.list_history_for_drivers(
-            driver_ids
-        )
-        total_base_salary = sum(
-            effective_base_salary(history_by_driver.get(did, []), end_date)
-            for did in driver_ids
-        )
+        if salary_records:
+            total_base_salary = sum(r.basic_salary for r in salary_records)
+            total_allowance = sum(r.allowance for r in salary_records)
+            # bonus_salary is always computed from trips
+            total_productivity = trip_productivity
+        else:
+            # Fallback: compute from trips + base salary configs
+            total_productivity = trip_productivity
+            total_allowance = 0
+
+            driver_id_rows = (
+                await self.session.execute(
+                    select(DeliveredTrip.driver_id)
+                    .where(
+                        DeliveredTrip.booked_trip_id.isnot(None),
+                        func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+                        >= start_date,
+                        func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+                        <= end_date,
+                    )
+                    .distinct()
+                )
+            ).scalars().all()
+            driver_ids = [d for d in driver_id_rows if d is not None]
+
+            history_by_driver = await self.base_salary_repo.list_history_for_drivers(
+                driver_ids
+            )
+            total_base_salary = sum(
+                effective_base_salary(history_by_driver.get(did, []), end_date)
+                for did in driver_ids
+            )
 
         # ---- Vehicle expenses in period ----
         from app.models.domain import VehicleExpense  # local import avoids cycles

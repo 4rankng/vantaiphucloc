@@ -91,7 +91,6 @@ def _line_inputs(items) -> list[PricingLineInput]:
             quantity=int(li.quantity),
             unit_price=int(li.unit_price),
             driver_salary=int(li.driver_salary),
-            allowance=int(li.allowance),
         )
         for li in items
     ]

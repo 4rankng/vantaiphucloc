@@ -89,10 +89,6 @@ export function ClientJobs() {
                     <p className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(firstLine?.driverSalary ?? 0)}</p>
                   </div>
                   <div>
-                    <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</span>
-                    <p className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(firstLine?.allowance ?? 0)}</p>
-                  </div>
-                  <div>
                     <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Số lượng</span>
                     <p className="text-xs font-bold tabular-nums" style={{ color: jobCount > 0 ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }}>{jobCount} cont</p>
                   </div>

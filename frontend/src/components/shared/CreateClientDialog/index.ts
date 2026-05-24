@@ -1,1 +1,1 @@
-export { CreateClientDialog } from './CreateClientDialog'
+export { CreateClientDialog, type ClientFormData } from './CreateClientDialog'

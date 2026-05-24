@@ -18,7 +18,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.payroll.application import (
@@ -28,10 +28,12 @@ from app.contexts.payroll.application import (
     SetDriverBaseSalary,
     SetDriverBaseSalaryInput,
 )
+from app.contexts.payroll.domain.driver_salary import DriverSalaryRecord
 from app.contexts.payroll.interface.dependencies import (
     get_driver_earnings as _get_driver_earnings_dep,
 )
 from app.contexts.payroll.interface.dependencies import (
+    get_driver_salary_repository,
     get_list_driver_base_salary_history,
     get_monthly_pnl,
     get_set_driver_base_salary,
@@ -43,10 +45,13 @@ from app.schemas.domain import (
     DriverBaseSalaryOut,
     DriverBaseSalarySet,
     DriverEarningsOut,
+    DriverSalaryOut,
+    DriverSalaryUpdateIn,
     MonthlyPnLOut,
     ClientRevenueBreakdownOut,
     SalaryCalculateAsyncResponse,
 )
+from app.contexts.payroll.domain.repositories import DriverSalaryRepository
 
 router = APIRouter()
 
@@ -135,9 +140,12 @@ async def export_salary_excel(
     db=Depends(get_db),
 ):
     from app.contexts.operations.infrastructure.excel import generate_salary_excel
+    from app.contexts.payroll.infrastructure.repositories import SqlDriverSalaryRepository
 
+    driver_salary_repo = SqlDriverSalaryRepository(db)
     content = await generate_salary_excel(
-        db, start_date.isoformat(), end_date.isoformat()
+        db, start_date.isoformat(), end_date.isoformat(),
+        driver_salary_repo=driver_salary_repo,
     )
     return StreamingResponse(
         io.BytesIO(content),
@@ -238,3 +246,173 @@ async def get_monthly_pnl_endpoint(
             for p in dto.client_breakdown
         ],
     )
+
+
+# ---------------------------------------------------------------------------
+# Driver salary period CRUD
+# ---------------------------------------------------------------------------
+
+
+def _record_to_out(
+    rec: DriverSalaryRecord,
+    driver_name: str | None = None,
+    driver_username: str | None = None,
+) -> DriverSalaryOut:
+    return DriverSalaryOut(
+        id=rec.id,
+        driver_id=rec.driver_id,
+        driver_name=driver_name,
+        driver_username=driver_username,
+        from_date=rec.from_date,
+        to_date=rec.to_date,
+        basic_salary=rec.basic_salary,
+        bonus_salary=rec.bonus_salary,
+        allowance=rec.allowance,
+        note=rec.note,
+    )
+
+
+@router.get("/salary/periods/{from_date}/{to_date}", response_model=list[DriverSalaryOut])
+async def list_driver_salaries_for_period(
+    from_date: date,
+    to_date: date,
+    _current_user: User = Depends(require_permission("read", "Salary")),
+    repo: DriverSalaryRepository = Depends(get_driver_salary_repository),
+    db: AsyncSession = Depends(get_db),
+):
+    records = await repo.list_for_period(from_date, to_date)
+    driver_ids = {r.driver_id for r in records}
+    driver_names: dict[int, str | None] = {}
+    driver_usernames: dict[int, str | None] = {}
+    if driver_ids:
+        rows = (
+            await db.execute(
+                select(User.id, User.full_name, User.username).where(User.id.in_(driver_ids))
+            )
+        ).all()
+        driver_names = {rid: (full_name or username) for rid, full_name, username in rows}
+        driver_usernames = {rid: username for rid, full_name, username in rows}
+    return [
+        _record_to_out(r, driver_names.get(r.driver_id), driver_usernames.get(r.driver_id))
+        for r in records
+    ]
+
+
+@router.put(
+    "/salary/periods/{from_date}/{to_date}/{driver_id}",
+    response_model=DriverSalaryOut,
+)
+async def upsert_driver_salary(
+    from_date: date,
+    to_date: date,
+    driver_id: int,
+    body: DriverSalaryUpdateIn,
+    _current_user: User = Depends(require_permission("update", "Salary")),
+    repo: DriverSalaryRepository = Depends(get_driver_salary_repository),
+    db: AsyncSession = Depends(get_db),
+):
+    existing = await repo.get_for_period(driver_id, from_date, to_date)
+    if existing is not None:
+        basic = body.basic_salary if body.basic_salary is not None else existing.basic_salary
+        allow = body.allowance if body.allowance is not None else existing.allowance
+        note = body.note if body.note is not None else existing.note
+        bonus = existing.bonus_salary
+    else:
+        basic = body.basic_salary if body.basic_salary is not None else 0
+        allow = body.allowance if body.allowance is not None else 0
+        note = body.note
+        bonus = 0
+
+    record = DriverSalaryRecord(
+        id=existing.id if existing else None,
+        driver_id=driver_id,
+        from_date=from_date,
+        to_date=to_date,
+        basic_salary=basic,
+        bonus_salary=bonus,
+        allowance=allow,
+        note=note,
+    )
+    saved = await repo.upsert(record)
+
+    driver_row = (
+        await db.execute(
+            select(User.full_name, User.username).where(User.id == driver_id)
+        )
+    ).one_or_none()
+    display_name = (driver_row.full_name or driver_row.username) if driver_row else None
+    username = driver_row.username if driver_row else None
+    return _record_to_out(saved, display_name, username)
+
+
+@router.post(
+    "/salary/periods/{from_date}/{to_date}/initialize",
+    response_model=list[DriverSalaryOut],
+    status_code=201,
+)
+async def initialize_driver_salaries(
+    from_date: date,
+    to_date: date,
+    _current_user: User = Depends(require_permission("update", "Salary")),
+    repo: DriverSalaryRepository = Depends(get_driver_salary_repository),
+    db: AsyncSession = Depends(get_db),
+):
+    """Auto-create salary rows for all active drivers.
+
+    For each driver: look up effective base_salary from driver_salary_configs,
+    compute bonus_salary from SUM(delivered_trips.driver_salary) for matched
+    trips in the period, and set allowance=0.
+    """
+    from app.contexts.payroll.infrastructure.repositories import (
+        SqlDriverSalaryConfigRepository,
+    )
+    from app.models.domain import DeliveredTrip as DT
+
+    base_repo = SqlDriverSalaryConfigRepository(db)
+
+    driver_rows = (
+        await db.execute(
+            select(User.id).where(User.role == "driver", User.is_active == True)  # noqa: E712
+        )
+    ).scalars().all()
+
+    results: list[DriverSalaryOut] = []
+    for driver_id in driver_rows:
+        existing = await repo.get_for_period(driver_id, from_date, to_date)
+        if existing is not None:
+            continue
+
+        config = await base_repo.latest_at_or_before(driver_id, from_date)
+        basic_salary = config.base_salary if config else 0
+
+        bonus_result = (
+            await db.execute(
+                select(
+                    func.coalesce(func.sum(DT.driver_salary), 0)
+                ).where(
+                    DT.driver_id == driver_id,
+                    DT.trip_date >= from_date,
+                    DT.trip_date <= to_date,
+                    DT.booked_trip_id.isnot(None),
+                )
+            )
+        ).scalar() or 0
+
+        record = DriverSalaryRecord(
+            id=None,
+            driver_id=driver_id,
+            from_date=from_date,
+            to_date=to_date,
+            basic_salary=basic_salary,
+            bonus_salary=int(bonus_result),
+            allowance=0,
+        )
+        saved = await repo.upsert(record)
+        driver_row = (
+            await db.execute(select(User.full_name, User.username).where(User.id == driver_id))
+        ).one_or_none()
+        display_name = (driver_row.full_name or driver_row.username) if driver_row else None
+        username = driver_row.username if driver_row else None
+        results.append(_record_to_out(saved, display_name, username))
+
+    return results

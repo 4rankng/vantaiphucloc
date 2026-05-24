@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from datetime import date
 
 from app.contexts.payroll.domain.base_salary import DriverSalaryConfig
+from app.contexts.payroll.domain.driver_salary import DriverSalaryRecord
 
 
 class SettingsRepository(ABC):
@@ -49,3 +50,20 @@ class DriverSalaryConfigRepository(ABC):
     ) -> dict[int, list[DriverSalaryConfig]]:
         """Batch-load full history for many drivers. Used by P&L dashboard."""
         ...
+
+
+class DriverSalaryRepository(ABC):
+    """Per-driver, per-period salary records."""
+
+    @abstractmethod
+    async def get_for_period(
+        self, driver_id: int, from_date: date, to_date: date
+    ) -> DriverSalaryRecord | None: ...
+
+    @abstractmethod
+    async def list_for_period(
+        self, from_date: date, to_date: date
+    ) -> list[DriverSalaryRecord]: ...
+
+    @abstractmethod
+    async def upsert(self, record: DriverSalaryRecord) -> DriverSalaryRecord: ...

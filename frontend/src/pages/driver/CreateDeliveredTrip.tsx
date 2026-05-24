@@ -8,6 +8,7 @@ import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import { ContainerTypeGrid } from '@/components/shared/ContainerTypeGrid'
 import { TripSummaryDialog } from '@/components/shared/TripSummaryDialog'
 import { SuccessOverlay } from '@/components/shared/SuccessOverlay'
+import { AIScanningOverlay } from '@/components/shared/AIScanningOverlay'
 import { RecentTripSuggestions } from '@/components/shared/RecentTripSuggestions'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
@@ -44,6 +45,12 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
 
   const navigate = useNavigate()
   const toast = useToast()
+
+  // The first container with an in-flight OCR request — feeds the AI scanning
+  // overlay so the driver sees their captured photo being "scanned" while the
+  // backend runs OCR. We pick the first one rather than tracking which row
+  // started scanning because OCR is one-at-a-time in practice.
+  const scanningContainer = containers.find(c => c.ocrLoading)
 
   const handleConfirmSubmit = async () => {
     try {
@@ -425,6 +432,12 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
         vessel={vessel}
         pickupLocation={pickupLocation}
         dropoffLocation={dropoffLocation}
+      />
+
+      {/* AI scanning overlay — visible while backend OCR is in flight */}
+      <AIScanningOverlay
+        visible={!!scanningContainer}
+        imageSrc={scanningContainer?.photoDataUrl ?? null}
       />
 
       {/* Success overlay */}

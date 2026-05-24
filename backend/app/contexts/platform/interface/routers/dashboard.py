@@ -66,8 +66,8 @@ async def get_dashboard_summary(
     revenue_q = await db.execute(revenue_query)
     total_revenue = revenue_q.scalar() or 0
 
-    # Expense: sum of (driver_salary + allowance) per work order
-    expense_query = select(func.coalesce(func.sum(DeliveredTrip.driver_salary + DeliveredTrip.allowance), 0))
+    # Expense: sum of driver_salary per work order
+    expense_query = select(func.coalesce(func.sum(DeliveredTrip.driver_salary), 0))
     if parsed_from:
         expense_query = expense_query.where(DeliveredTrip.created_at >= parsed_from)
     if parsed_to:
@@ -118,7 +118,7 @@ async def get_dashboard_summary(
             User.username.label("driver_name"),
             Vehicle.plate.label("vehicle_plate"),
             func.count(DeliveredTrip.id).label("total_jobs"),
-            func.coalesce(func.sum(DeliveredTrip.driver_salary + DeliveredTrip.allowance), 0).label("total_salary"),
+            func.coalesce(func.sum(DeliveredTrip.driver_salary), 0).label("total_salary"),
         )
         .join(
             VehicleDriver,
@@ -240,7 +240,7 @@ async def get_kpi_trends(
     salary_rows = (await db.execute(
         select(
             wo_day.label("d"),
-            func.coalesce(func.sum(DeliveredTrip.driver_salary + DeliveredTrip.allowance), 0),
+            func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
         )
         .where(
             wo_day >= start_date,
@@ -320,7 +320,7 @@ async def get_vehicle_pnl(
       - Doanh thu: 0 (reconciliation table dropped; revenue-to-vehicle
         mapping not yet available).
       - CP Xe: vehicle_expenses subtotals (XANG_DAU, SUA_CHUA, TIEN_LUAT, KHAC).
-      - CP Lương sản lượng: SUM(DeliveredTrip.driver_salary + allowance) for WOs
+      - CP Lương sản lượng: SUM(DeliveredTrip.driver_salary) for WOs
         on this vehicle.
       - CP Lương cơ bản: effective base salary × period for drivers attached to
         this vehicle via vehicle_drivers.
@@ -398,7 +398,6 @@ async def get_vehicle_pnl(
         select(
             Vehicle.id,
             func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
-            func.coalesce(func.sum(DeliveredTrip.allowance), 0),
         )
         .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
         .where(
@@ -411,9 +410,9 @@ async def get_vehicle_pnl(
     )).all()
 
     salary_by_vehicle: dict[int, int] = {}
-    for vid, sal, allow in wo_salary_rows:
+    for vid, sal in wo_salary_rows:
         if vid:
-            salary_by_vehicle[vid] = int(sal or 0) + int(allow or 0)
+            salary_by_vehicle[vid] = int(sal or 0)
 
     # ── 3b. Trip count per vehicle for CP Chung allocation ─────────
     wo_count_rows = (await db.execute(
@@ -604,7 +603,6 @@ async def export_vehicle_pnl(
         select(
             Vehicle.id,
             func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
-            func.coalesce(func.sum(DeliveredTrip.allowance), 0),
         )
         .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
         .where(
@@ -615,7 +613,7 @@ async def export_vehicle_pnl(
         )
         .group_by(Vehicle.id)
     )).all()
-    salary_by_vehicle: dict[int, int] = {vid: int(sal or 0) + int(allow or 0) for vid, sal, allow in wo_salary_rows if vid}
+    salary_by_vehicle: dict[int, int] = {vid: int(sal or 0) for vid, sal in wo_salary_rows if vid}
 
     expense_rows = (await db.execute(
         select(

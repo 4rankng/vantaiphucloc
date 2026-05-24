@@ -9,12 +9,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.payroll.domain.base_salary import DriverSalaryConfig
+from app.contexts.payroll.domain.driver_salary import DriverSalaryRecord
 from app.contexts.payroll.domain.repositories import (
     DriverSalaryConfigRepository,
+    DriverSalaryRepository,
     SettingsRepository,
 )
 from app.contexts.payroll.infrastructure.orm import (
     DriverSalaryConfigORM,
+    DriverSalaryORM,
     SettingORM,
 )
 
@@ -146,3 +149,85 @@ class SqlDriverSalaryConfigRepository(DriverSalaryConfigRepository):
         for r in rows:
             out[r.driver_id].append(_to_domain(r))
         return dict(out)
+
+
+def _salary_to_domain(row: DriverSalaryORM) -> DriverSalaryRecord:
+    return DriverSalaryRecord(
+        id=row.id,
+        driver_id=row.driver_id,
+        from_date=row.from_date,
+        to_date=row.to_date,
+        basic_salary=row.basic_salary,
+        bonus_salary=row.bonus_salary,
+        allowance=row.allowance,
+        note=row.note,
+    )
+
+
+class SqlDriverSalaryRepository(DriverSalaryRepository):
+    """Per-driver, per-period salary records backed by ``driver_salaries``."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def get_for_period(
+        self, driver_id: int, from_date: date, to_date: date
+    ) -> DriverSalaryRecord | None:
+        row = (
+            await self.session.execute(
+                select(DriverSalaryORM).where(
+                    DriverSalaryORM.driver_id == driver_id,
+                    DriverSalaryORM.from_date == from_date,
+                    DriverSalaryORM.to_date == to_date,
+                )
+            )
+        ).scalars().first()
+        return _salary_to_domain(row) if row else None
+
+    async def list_for_period(
+        self, from_date: date, to_date: date
+    ) -> list[DriverSalaryRecord]:
+        rows = (
+            await self.session.execute(
+                select(DriverSalaryORM)
+                .where(
+                    DriverSalaryORM.from_date == from_date,
+                    DriverSalaryORM.to_date == to_date,
+                )
+                .order_by(DriverSalaryORM.driver_id)
+            )
+        ).scalars().all()
+        return [_salary_to_domain(r) for r in rows]
+
+    async def upsert(self, record: DriverSalaryRecord) -> DriverSalaryRecord:
+        existing = (
+            await self.session.execute(
+                select(DriverSalaryORM).where(
+                    DriverSalaryORM.driver_id == record.driver_id,
+                    DriverSalaryORM.from_date == record.from_date,
+                    DriverSalaryORM.to_date == record.to_date,
+                )
+            )
+        ).scalars().first()
+
+        if existing is not None:
+            existing.basic_salary = record.basic_salary
+            existing.bonus_salary = record.bonus_salary
+            existing.allowance = record.allowance
+            existing.note = record.note
+            row = existing
+        else:
+            row = DriverSalaryORM(
+                driver_id=record.driver_id,
+                from_date=record.from_date,
+                to_date=record.to_date,
+                basic_salary=record.basic_salary,
+                bonus_salary=record.bonus_salary,
+                allowance=record.allowance,
+                note=record.note,
+            )
+            self.session.add(row)
+
+        await self.session.commit()
+        await self.session.refresh(row)
+        return _salary_to_domain(row)

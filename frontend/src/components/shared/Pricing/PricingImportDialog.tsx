@@ -139,7 +139,7 @@ export function PricingImportDialog({ open, onClose, clients }: PricingImportDia
                   <p className="font-bold mb-1">Lưu ý về dữ liệu:</p>
                   <ul className="list-disc ml-4 space-y-1">
                     <li>Hệ thống sẽ chỉ lấy <strong>Đơn giá (Revenue)</strong> từ file Excel.</li>
-                    <li>Lương lái xe và Phụ cấp sẽ mặc định bằng 0 (Kế toán tự nhập sau).</li>
+                    <li>Lương lái xe sẽ mặc định bằng 0 (Kế toán tự nhập sau).</li>
                     <li>Nếu tuyến đường đã có giá, hệ thống sẽ hiển thị so sánh để xác nhận ghi đè.</li>
                   </ul>
                 </div>

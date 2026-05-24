@@ -65,7 +65,6 @@ class PricingLineInput:
     quantity: int
     unit_price: int = 0
     driver_salary: int = 0
-    allowance: int = 0
 
 
 @dataclass

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import io
 import logging
 import math
@@ -48,6 +49,8 @@ from app.core.summaries import (
     get_client_summary,
     get_vendor_summary,
 )
+from app.schemas._ocr import ContainerOCRRequest
+from app.contexts.operations.infrastructure.ocr import extract_container_number
 from app.utils.iso6346 import normalize_container_number as _norm
 
 _logger = logging.getLogger(__name__)
@@ -76,7 +79,6 @@ def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, vendors) -> Deliv
         cont_type=w.cont_type,
         revenue=w.revenue,
         driver_salary=w.driver_salary,
-        allowance=w.allowance,
         trip_date=w.trip_date,
         booked_trip_id=w.booked_trip_id,
         created_at=w.created_at,
@@ -149,6 +151,21 @@ async def validate_container(
         "error": error or None,
         "normalized": _norm(container_number),
         "suggestions": suggestions,
+    }
+
+
+@router.post("/delivered-trips/ocr-container")
+async def ocr_container(
+    body: ContainerOCRRequest,
+    current_user: User = Depends(get_current_user),
+):
+    image_bytes = base64.b64decode(body.image_data)
+    result = await extract_container_number(image_bytes, body.mime_type)
+    return {
+        "success": result["success"],
+        "container_number": result.get("container_number"),
+        "error": result.get("error"),
+        "attempts_remaining": 3,
     }
 
 
@@ -296,7 +313,6 @@ async def update_delivered_trip(
                 cont_type=body.cont_type,
                 revenue=body.revenue,
                 driver_salary=body.driver_salary,
-                allowance=body.allowance,
             ),
             _user_ctx(current_user),
         )

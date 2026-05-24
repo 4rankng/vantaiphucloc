@@ -54,7 +54,7 @@ async def test_get_trip_daily_stats_revenue(db_session, async_client):
         driver_id=driver.id,
         trip_date=date(2026, 5, 10),
         revenue=1200000,
-        matched=True,
+        booked_trip_id=1,
         work_type="F20",
     )
     t2 = DeliveredTrip(
@@ -64,7 +64,6 @@ async def test_get_trip_daily_stats_revenue(db_session, async_client):
         driver_id=driver.id,
         trip_date=date(2026, 5, 11),
         revenue=800000,
-        matched=False,
         work_type="F20",
     )
     db_session.add_all([t1, t2])

@@ -3,13 +3,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button, Input, Label } from '@/components/ui'
 import type { Client } from '@/data/domain'
 
-type ClientFormData = Omit<Client, 'id' | 'createdAt' | 'updatedAt'>
+export type ClientFormData = Omit<Client, 'id' | 'createdAt' | 'updatedAt'>
 
 interface CreateClientDialogProps {
   open: boolean
   onClose: () => void
   onConfirm: (data: ClientFormData) => Promise<void> | void
   defaultName?: string
+  /** When provided, dialog runs in "edit" mode — title and CTA change. */
+  initial?: ClientFormData | null
+  saving?: boolean
 }
 
 const VN_TAX_RE = /^\d{10}(\d{3})?$/
@@ -24,18 +27,26 @@ const EMPTY_FORM: ClientFormData = {
   contactPerson: '',
 }
 
-export function CreateClientDialog({ open, onClose, onConfirm, defaultName }: CreateClientDialogProps) {
+export function CreateClientDialog({ open, onClose, onConfirm, defaultName, initial, saving: externalSaving }: CreateClientDialogProps) {
+  const isEdit = !!initial
   const [form, setForm] = useState<ClientFormData>(EMPTY_FORM)
-  const [saving, setSaving] = useState(false)
+  const [internalSaving, setInternalSaving] = useState(false)
+  const saving = externalSaving ?? internalSaving
   const [errors, setErrors] = useState<{ phone?: string; taxCode?: string }>({})
 
   useEffect(() => {
     if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm(defaultName ? { ...EMPTY_FORM, name: defaultName } : EMPTY_FORM)
+      setForm(
+        initial
+          ? { ...EMPTY_FORM, ...initial }
+          : defaultName
+            ? { ...EMPTY_FORM, name: defaultName }
+            : EMPTY_FORM,
+      )
       setErrors({})
     }
-  }, [open, defaultName])
+  }, [open, defaultName, initial])
 
   const updateField = <K extends keyof ClientFormData>(key: K, value: ClientFormData[K]) => {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -45,6 +56,7 @@ export function CreateClientDialog({ open, onClose, onConfirm, defaultName }: Cr
   }
 
   const handleClose = () => {
+    if (saving) return
     setForm(EMPTY_FORM)
     setErrors({})
     onClose()
@@ -57,21 +69,21 @@ export function CreateClientDialog({ open, onClose, onConfirm, defaultName }: Cr
     }
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
     if (!form.name.trim()) return
-    setSaving(true)
+    setInternalSaving(true)
     try {
       await onConfirm({ ...form, name: form.name.trim() })
       setForm(EMPTY_FORM)
       setErrors({})
     } finally {
-      setSaving(false)
+      setInternalSaving(false)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Thêm khách hàng</DialogTitle>
+          <DialogTitle>{isEdit ? 'Sửa khách hàng' : 'Thêm khách hàng'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -169,14 +181,14 @@ export function CreateClientDialog({ open, onClose, onConfirm, defaultName }: Cr
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} className="flex-1">Huỷ</Button>
+          <Button variant="outline" onClick={handleClose} disabled={saving} className="flex-1">Huỷ</Button>
           <Button
             onClick={handleConfirm}
             disabled={!form.name.trim() || saving}
             className="flex-1"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
           >
-            {saving ? 'Đang tạo...' : 'Xác nhận'}
+            {saving ? (isEdit ? 'Đang lưu...' : 'Đang tạo...') : (isEdit ? 'Lưu thay đổi' : 'Xác nhận')}
           </Button>
         </DialogFooter>
       </DialogContent>

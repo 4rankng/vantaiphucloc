@@ -64,7 +64,7 @@ const ACCOUNTANT_NAV_SECTIONS: SidebarSection[] = [
     items: [
       { label: 'Chi phí xe', href: '/accountant/expenses', icon: Fuel },
       { label: 'Lương', href: '/accountant/salary', icon: Wallet },
-      { label: 'Báo cáo', href: '/accountant/pnl', icon: TrendingUp },
+      { label: 'Tổng hợp', href: '/accountant/pnl', icon: TrendingUp },
     ],
   },
   {

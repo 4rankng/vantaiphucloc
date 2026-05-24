@@ -15,8 +15,8 @@ export function useMonthParams() {
   const year = Number(searchParams.get('year')) || defaultYear
 
   const period = useMemo(() => {
-    const fromDay = config?.fromDay ?? 21
-    const toDay = config?.toDay ?? 20
+    const fromDay = config?.fromDay ?? 26
+    const toDay = config?.toDay ?? 25
     return getSalaryPeriodForMonth(year, month, { fromDay, toDay })
   }, [year, month, config])
 

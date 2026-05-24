@@ -51,7 +51,7 @@ async def generate_delivered_trips_excel(
     ws = wb.active
     ws.title = "Phiếu làm việc"
 
-    headers = ["Mã WO", "Khách hàng", "Điểm lấy", "Điểm trả", "Tài xế", "Biển số", "Số tàu", "Số cont", "Loại", "Lương TX", "Phụ cấp", "Thu nhập", "Trạng thái", "Ngày tạo"]
+    headers = ["Mã WO", "Khách hàng", "Điểm lấy", "Điểm trả", "Tài xế", "Biển số", "Số tàu", "Số cont", "Loại", "Lương TX", "Trạng thái", "Ngày tạo"]
     ws.append(headers)
 
     header_font = Font(bold=True, color="FFFFFF")
@@ -71,7 +71,7 @@ async def generate_delivered_trips_excel(
             driver_name_by_id.get(wo.driver_id, ""), plate,
             wo.vessel or "",
             wo.cont_number or "", wo.cont_type or "",
-            wo.driver_salary, wo.allowance, wo.driver_salary + wo.allowance,
+            wo.driver_salary,
             "Đã đối soát" if wo.booked_trip_id else "Chờ ghép",
             wo.created_at.date() if wo.created_at else "",
         ])
