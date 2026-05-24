@@ -152,12 +152,6 @@ export function UserInfoDialog({ open, onClose }: { open: boolean; onClose: () =
             <p className="text-xs text-white/60 mt-0.5">{ROLE_LABELS[user?.role ?? ''] ?? user?.role}</p>
           </div>
 
-          {/* Account ID */}
-          <div className="px-5 py-2.5 flex items-center gap-2" style={{ background: 'var(--theme-bg-tertiary)', borderBottom: '1px solid var(--theme-border-light)' }}>
-            <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Mã tài khoản</span>
-            <span className="ml-auto text-xs font-semibold font-mono" style={{ color: 'var(--theme-text-primary)' }}>#{user?.id}</span>
-          </div>
-
           {/* Editable fields */}
           <div style={{ background: 'var(--theme-bg-secondary)' }}>
             <EditableField label="Họ và tên" value={fullName} onSave={v => saveField('full_name', v)} placeholder="Nhập họ và tên" />
@@ -282,51 +276,51 @@ export function UserDropdown({ open, onClose, anchorRef }: {
     logout()
   }, [onClose, logout])
 
-  if (!open) return null
-
   return (
     <>
-      <div
-        ref={dropdownRef}
-        className="absolute right-0 top-full mt-2 z-50 rounded-xl overflow-hidden min-w-[220px]"
-        style={{
-          background: 'var(--theme-bg-secondary)',
-          boxShadow: 'var(--theme-shadow-elevated)',
-          border: '1px solid var(--theme-border-default)',
-        }}
-      >
-        {/* User info header */}
-        <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-          <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-            {user?.name}
-          </p>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-            {ROLE_LABELS[user?.role ?? ''] ?? user?.role}
-          </p>
+      {open && (
+        <div
+          ref={dropdownRef}
+          className="absolute right-0 top-full mt-2 z-50 rounded-xl overflow-hidden min-w-[220px]"
+          style={{
+            background: 'var(--theme-bg-secondary)',
+            boxShadow: 'var(--theme-shadow-elevated)',
+            border: '1px solid var(--theme-border-default)',
+          }}
+        >
+          {/* User info header */}
+          <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+            <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
+              {user?.name}
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+              {ROLE_LABELS[user?.role ?? ''] ?? user?.role}
+            </p>
+          </div>
+
+          {/* Profile info */}
+          <button
+            onClick={() => { onClose(); setShowInfoDialog(true) }}
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium touch-manipulation transition-colors hover:bg-[var(--theme-bg-tertiary)]"
+            style={{ color: 'var(--theme-text-primary)' }}
+          >
+            <UserCircle className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+            <span className="flex-1 text-left">Thông tin cá nhân</span>
+          </button>
+
+          <div style={{ borderTop: '1px solid var(--theme-border-light)' }} />
+
+          {/* Logout */}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium touch-manipulation transition-colors hover:bg-red-50"
+            style={{ color: 'var(--theme-status-error)' }}
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Đăng xuất</span>
+          </button>
         </div>
-
-        {/* Profile info */}
-        <button
-          onClick={() => { onClose(); setShowInfoDialog(true) }}
-          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium touch-manipulation transition-colors hover:bg-[var(--theme-bg-tertiary)]"
-          style={{ color: 'var(--theme-text-primary)' }}
-        >
-          <UserCircle className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-          <span className="flex-1 text-left">Thông tin cá nhân</span>
-        </button>
-
-        <div style={{ borderTop: '1px solid var(--theme-border-light)' }} />
-
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium touch-manipulation transition-colors hover:bg-red-50"
-          style={{ color: 'var(--theme-status-error)' }}
-        >
-          <LogOut className="w-4 h-4 shrink-0" />
-          <span className="flex-1 text-left">Đăng xuất</span>
-        </button>
-      </div>
+      )}
 
       <UserInfoDialog open={showInfoDialog} onClose={() => setShowInfoDialog(false)} />
     </>
@@ -394,15 +388,6 @@ export function SidebarProfileDialog({ open, onClose }: { open: boolean; onClose
             </div>
             <p className="text-base font-bold text-white leading-tight">{user?.name}</p>
             <p className="text-xs text-white/60 mt-0.5">{ROLE_LABELS[user?.role ?? ''] ?? user?.role}</p>
-          </div>
-
-          {/* Account ID row */}
-          <div
-            className="px-5 py-2.5 flex items-center gap-2"
-            style={{ background: 'var(--theme-bg-tertiary)', borderBottom: '1px solid var(--theme-border-light)' }}
-          >
-            <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Mã tài khoản</span>
-            <span className="ml-auto text-xs font-semibold font-mono" style={{ color: 'var(--theme-text-primary)' }}>#{user?.id}</span>
           </div>
 
           {/* Action list */}
