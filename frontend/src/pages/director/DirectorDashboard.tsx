@@ -220,7 +220,7 @@ function ActivityItem({ log, isFirst }: { log: AuditLogEntry; isFirst: boolean }
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function DirectorDashboard() {
-  const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
+  const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
 
   const { data: stats } = useDirectorDashboard(dateFrom, dateTo)
 
@@ -310,7 +310,7 @@ export function DirectorDashboard() {
                 Tháng {pad(month)} · {year}
               </div>
               <div style={{ fontFamily: fontMono, fontSize: 10, color: T.muted, letterSpacing: '0.02em', marginTop: 1 }}>
-                {periodStart?.slice(5)} → {periodEnd?.slice(5)}
+                {dateFrom.slice(5)} → {dateTo.slice(5)}
               </div>
             </div>
             <button onClick={onNext} className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-[#F1F7F3]" aria-label="Tháng sau">
