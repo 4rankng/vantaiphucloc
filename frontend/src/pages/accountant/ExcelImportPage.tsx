@@ -7,7 +7,7 @@ import { Panel } from '@/components/shared/Panel'
 import { StepIndicator } from '@/components/shared/StepIndicator'
 import { Button } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
-import { LinkButton } from '@/components/shared/LinkButton/LinkButton'
+import { LinkButton } from '@/components/shared/LinkButton'
 import { useBulkImportAndMatch, useParsePreview, useClients } from '@/hooks/use-queries'
 
 type Step = 'upload' | 'preview' | 'done'

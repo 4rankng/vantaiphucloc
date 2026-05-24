@@ -1,53 +1,80 @@
-import { ChevronRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
-/** Small link-style action button — green text, optional icon */
-export function LinkButton({ onClick, icon: Icon, children }: {
-  onClick: () => void
+type LinkButtonVariant = 'brand' | 'muted'
+
+type BaseProps = {
   icon?: React.ElementType
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-1 text-xs font-semibold"
-      style={{ color: 'var(--theme-brand-primary)' }}
-    >
-      {Icon && <Icon className="w-3.5 h-3.5" />}
-      {children}
-    </button>
-  )
+  variant?: LinkButtonVariant
+  disabled?: boolean
+  className?: string
+  children?: React.ReactNode
 }
 
-/** Link button with "Chi tiết →" suffix */
-export function DetailLink({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-0.5 text-xs font-semibold"
-      style={{ color: 'var(--theme-brand-primary)' }}
-    >
-      Chi tiết <ChevronRight className="w-3 h-3" />
-    </button>
-  )
+type LinkButtonAsButton = BaseProps & {
+  onClick: () => void
+  to?: never
 }
 
-/** Green pill action button */
-export function ActionPill({ onClick, icon: Icon, children }: {
-  onClick: () => void
-  icon?: React.ElementType
-  children: React.ReactNode
-}) {
+type LinkButtonAsLink = BaseProps & {
+  to: string
+  onClick?: never
+  disabled?: never
+}
+
+export type LinkButtonProps = LinkButtonAsButton | LinkButtonAsLink
+
+const brandStyles = {
+  color: 'var(--theme-brand-primary)',
+}
+
+const mutedStyles = {
+  color: 'var(--theme-text-muted)',
+}
+
+export function LinkButton({
+  icon: Icon,
+  variant = 'brand',
+  disabled,
+  className,
+  children,
+  ...rest
+}: LinkButtonProps) {
+  const style = variant === 'muted' ? mutedStyles : brandStyles
+
+  const sharedClass = [
+    'inline-flex items-center gap-1.5 text-xs font-medium transition-opacity',
+    disabled && 'opacity-50 cursor-not-allowed',
+    !disabled && 'hover:opacity-80',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  const content = (
+    <>
+      {Icon && <Icon className="h-3.5 w-3.5" />}
+      {children}
+    </>
+  )
+
+  if ('to' in rest && rest.to) {
+    return (
+      <Link to={rest.to} className={sharedClass} style={style}>
+        {content}
+      </Link>
+    )
+  }
+
+  const { onClick } = rest as LinkButtonAsButton
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full card-lift"
-      style={{
-        background: 'var(--theme-brand-primary)',
-        color: 'var(--theme-text-on-brand)',
-      }}
+      disabled={disabled}
+      className={sharedClass}
+      style={style}
     >
-      {Icon && <Icon className="w-3.5 h-3.5" />}
-      {children}
+      {content}
     </button>
   )
 }

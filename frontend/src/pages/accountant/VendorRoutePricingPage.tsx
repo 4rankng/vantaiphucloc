@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
-import { Link } from 'react-router-dom'
 import { Plus, Route, FileSpreadsheet, ArrowLeft } from 'lucide-react'
+import { LinkButton } from '@/components/shared/LinkButton'
 import { Button } from '@/components/ui'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Panel } from '@/components/shared/Panel'
@@ -100,10 +100,7 @@ export function VendorRoutePricingPage() {
         subtitle="Quản lý bảng giá cước trả nhà thầu theo tuyến đường"
         lucideIcon={Route}
         breadcrumbs={
-          <Link to="/accountant/settings" className="inline-flex items-center gap-1.5 text-xs font-medium hover:opacity-80 transition-opacity" style={{ color: 'var(--theme-text-muted)' }}>
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Thiết lập
-          </Link>
+          <LinkButton to="/accountant/settings" icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
         }
         actions={
           <div className="flex gap-2">

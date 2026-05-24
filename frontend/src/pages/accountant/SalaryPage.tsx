@@ -1,18 +1,16 @@
 import { useState } from 'react'
-import { Wallet, Download, Settings2, Coins, BadgePercent } from 'lucide-react'
+import { Wallet, Download, Coins, BadgePercent } from 'lucide-react'
+import { LinkButton } from '@/components/shared/LinkButton'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
-import { Drawer, DrawerHero } from '@/components/shared/Drawer'
-import { Button } from '@/components/ui'
 import { NepoTable } from '@/components/shared/NepoTable'
 import type { NepoColumn, NepoFooterCell } from '@/components/shared/NepoTable'
+import { DriverBaseSalaryDialog } from '@/components/payroll/DriverBaseSalaryDialog'
 import {
   useSalaryDashboard,
   useExportSalaryExcel,
   useDrivers,
-  useDriverBaseSalaryHistory,
-  useSetDriverBaseSalary,
 } from '@/hooks/use-queries'
 import { useMonthParams } from './use-month-params'
 import { formatCurrency } from '@/data/domain'
@@ -31,7 +29,7 @@ const monoStyle = { fontFamily: 'var(--theme-font-mono)' } as React.CSSPropertie
 
 export function SalaryPage() {
   const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
-  const [selectedDriver, setSelectedDriver] = useState<number | null>(null)
+  const [dialogDriver, setDialogDriver] = useState<{ id: number; name: string } | null>(null)
 
   const { data: drivers = [] } = useDrivers()
   const { data: dashboardRaw = [], isLoading } = useSalaryDashboard(dateFrom, dateTo)
@@ -93,7 +91,14 @@ export function SalaryPage() {
       align: 'right',
       width: 145,
       render: (d) => (
-        <span className="tabular-nums" style={monoStyle}>{formatCurrency(d.baseSalary ?? 0)}</span>
+        <button
+          type="button"
+          onClick={() => setDialogDriver({ id: d.driverId, name: d.driverName })}
+          className="tabular-nums cursor-pointer transition-colors hover:underline underline-offset-2"
+          style={{ ...monoStyle, color: 'var(--accent)' }}
+        >
+          {formatCurrency(d.baseSalary ?? 0)}
+        </button>
       ),
     },
     {
@@ -132,23 +137,6 @@ export function SalaryPage() {
         </span>
       ),
     },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: 52,
-      render: (d) => (
-        <button
-          type="button"
-          onClick={() => setSelectedDriver(d.driverId)}
-          className="nepo-row-action"
-          aria-label="Cấu hình lương cơ bản"
-          title="Cấu hình lương cơ bản"
-        >
-          <Settings2 className="h-4 w-4" />
-        </button>
-      ),
-    },
   ]
 
   const totalTrips = dashboard.reduce((s, d) => s + (d.matchedOrderCount ?? 0), 0)
@@ -168,7 +156,6 @@ export function SalaryPage() {
       align: 'right',
       className: 'nepo-col-net',
     },
-    { content: null },
   ]
 
   return (
@@ -178,21 +165,7 @@ export function SalaryPage() {
         subtitle="Bảng lương tài xế theo kỳ với chi tiết chuyến, lương cơ bản, năng suất và phụ cấp"
         lucideIcon={Wallet}
         actions={
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleExport}
-              disabled={exportMutation.isPending}
-              className="inline-flex items-center gap-1.5 text-[12.5px] font-medium transition-colors disabled:opacity-50"
-              style={{ color: 'var(--ink-3)' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'var(--ink)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'var(--ink-3)')}
-            >
-              <Download className="h-3.5 w-3.5" />
-              {exportMutation.isPending ? 'Đang xuất...' : 'Xuất Excel'}
-            </button>
-            <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
-          </div>
+          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
         }
       />
 
@@ -226,6 +199,17 @@ export function SalaryPage() {
         />
       </div>
 
+      <div className="flex justify-end">
+        <LinkButton
+          onClick={handleExport}
+          icon={Download}
+          variant="muted"
+          disabled={exportMutation.isPending}
+        >
+          {exportMutation.isPending ? 'Đang xuất...' : 'Xuất Excel'}
+        </LinkButton>
+      </div>
+
       <NepoTable
         columns={columns}
         data={dashboard}
@@ -236,139 +220,12 @@ export function SalaryPage() {
         footerCells={footerCells}
       />
 
-      {selectedDriver !== null && (
-        <BaseSalaryDrawer
-          driverId={selectedDriver}
-          drivers={drivers}
-          onClose={() => setSelectedDriver(null)}
-        />
-      )}
-    </div>
-  )
-}
-
-// ─── Base Salary Drawer ───────────────────────────────────────────────────────
-
-interface DriverShape {
-  id: number
-  fullName: string | null
-  username: string
-}
-
-function BaseSalaryDrawer({
-  driverId,
-  drivers,
-  onClose,
-}: {
-  driverId: number
-  drivers: DriverShape[]
-  onClose: () => void
-}) {
-  const [baseSalary, setBaseSalary] = useState('')
-  const [effectiveFrom, setEffectiveFrom] = useState(new Date().toISOString().slice(0, 10))
-  const [note, setNote] = useState('')
-
-  const { data: history = [] } = useDriverBaseSalaryHistory(driverId)
-  const setMutation = useSetDriverBaseSalary()
-
-  const driver = drivers.find(d => d.id === driverId)
-  const currentBase = history[0]?.baseSalary ?? 0
-
-  return (
-    <Drawer
-      open
-      onOpenChange={(o) => { if (!o) onClose() }}
-      breadcrumb="Cấu hình"
-      title={`Lương cơ bản — ${driver?.fullName ?? driver?.username ?? `ID ${driverId}`}`}
-      meta={driver?.username ? `@${driver.username}` : undefined}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>Đóng</Button>
-          <Button
-            variant="default"
-            onClick={() => {
-              setMutation.mutate(
-                { driverId, baseSalary: Number(baseSalary), effectiveFrom, note: note || null },
-                { onSuccess: onClose },
-              )
-            }}
-            disabled={!baseSalary || setMutation.isPending}
-          >
-            {setMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
-          </Button>
-        </>
-      }
-    >
-      <DrawerHero
-        label="Lương cơ bản hiện tại"
-        value={formatCurrency(currentBase)}
-        meta={history[0]?.effectiveFrom ? `Áp dụng từ ${history[0].effectiveFrom}` : 'Chưa thiết lập'}
+      <DriverBaseSalaryDialog
+        open={dialogDriver !== null}
+        onOpenChange={(open) => { if (!open) setDialogDriver(null) }}
+        driverId={dialogDriver?.id ?? null}
+        driverName={dialogDriver?.name}
       />
-
-      <div className="space-y-4">
-        <div>
-          <label className="nepo-field-label" htmlFor="new-base-salary">Lương cơ bản mới</label>
-          <input
-            id="new-base-salary"
-            type="number"
-            value={baseSalary}
-            onChange={e => setBaseSalary(e.target.value)}
-            className="nepo-input tabular-nums"
-            placeholder="0"
-          />
-        </div>
-        <div>
-          <label className="nepo-field-label" htmlFor="effective-from">Áp dụng từ</label>
-          <input
-            id="effective-from"
-            type="date"
-            value={effectiveFrom}
-            onChange={e => setEffectiveFrom(e.target.value)}
-            className="nepo-input"
-          />
-        </div>
-        <div>
-          <label className="nepo-field-label" htmlFor="note">Ghi chú</label>
-          <input
-            id="note"
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            className="nepo-input"
-            placeholder="Tùy chọn..."
-          />
-        </div>
-      </div>
-
-      {history.length > 0 && (
-        <div className="mt-6">
-          <p
-            className="m-0 mb-2 uppercase font-semibold"
-            style={{ fontSize: 11, letterSpacing: '0.06em', color: 'var(--ink-3)' }}
-          >
-            Lịch sử thay đổi
-          </p>
-          <div className="space-y-1.5">
-            {history.map(h => (
-              <div
-                key={h.id}
-                className="flex items-center justify-between px-3.5 py-2.5"
-                style={{
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--line)',
-                  borderRadius: 'var(--r-sm)',
-                }}
-              >
-                <span style={{ fontSize: 12.5, color: 'var(--ink-2)', fontFamily: 'var(--theme-font-mono)' }}>
-                  {h.effectiveFrom}
-                </span>
-                <span className="tabular-nums font-semibold" style={{ fontSize: 13, color: 'var(--ink)' }}>
-                  {formatCurrency(h.baseSalary)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </Drawer>
+    </div>
   )
 }

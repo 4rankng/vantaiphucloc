@@ -1,1 +1,2 @@
-export { LinkButton, DetailLink, ActionPill } from './LinkButton'
+export { LinkButton } from './LinkButton'
+export type { LinkButtonProps } from './LinkButton'

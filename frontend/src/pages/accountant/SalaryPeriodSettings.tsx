@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
 import { Calendar, AlertTriangle, ArrowLeft } from 'lucide-react'
+import { LinkButton } from '@/components/shared/LinkButton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button } from '@/components/ui'
 import { Panel } from '@/components/shared/Panel'
 import { DayStepperInput } from '@/components/shared/DayStepperInput'
@@ -64,10 +64,7 @@ export function SalaryPeriodSettings() {
       subtitle="Cấu hình ngày bắt đầu và kết thúc kỳ lương hàng tháng"
       icon={Calendar}
       breadcrumb={
-        <Link to="/accountant/settings" className="inline-flex items-center gap-1.5 text-xs font-medium hover:opacity-80 transition-opacity" style={{ color: 'var(--theme-text-muted)' }}>
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Thiết lập
-        </Link>
+        <LinkButton to="/accountant/settings" icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
       }
     >
       <Panel>
