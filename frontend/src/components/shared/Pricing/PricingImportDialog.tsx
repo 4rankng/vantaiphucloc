@@ -71,9 +71,12 @@ export function PricingImportDialog({ open, onClose, clients }: PricingImportDia
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); if (!o) reset(); }}>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 py-4 border-bottom">
+        <DialogHeader
+          className="px-6 py-4"
+          style={{ borderBottom: '1px solid var(--theme-border-default)' }}
+        >
           <DialogTitle className="flex items-center gap-2">
-            <FileSpreadsheet className="h-5 w-5 text-emerald-600" />
+            <FileSpreadsheet className="h-5 w-5" style={{ color: 'var(--theme-brand-primary)' }} />
             Nạp bảng giá từ Excel
           </DialogTitle>
         </DialogHeader>
@@ -84,7 +87,7 @@ export function PricingImportDialog({ open, onClose, clients }: PricingImportDia
               {/* Step 1: File & Options */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase text-slate-500">1. Chọn Khách hàng</label>
+                  <label className="text-xs font-bold uppercase" style={{ color: 'var(--theme-text-muted)' }}>1. Chọn Khách hàng</label>
                   <InlineSelect
                     placeholder="-- Chọn khách hàng --"
                     value={selectedClientId ? String(selectedClientId) : ''}
@@ -96,7 +99,7 @@ export function PricingImportDialog({ open, onClose, clients }: PricingImportDia
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase text-slate-500">2. Định dạng file (Tùy chọn)</label>
+                  <label className="text-xs font-bold uppercase" style={{ color: 'var(--theme-text-muted)' }}>2. Định dạng file (Tùy chọn)</label>
                   <InlineSelect
                     placeholder="Tự động nhận diện"
                     value={format ?? ''}
@@ -112,16 +115,16 @@ export function PricingImportDialog({ open, onClose, clients }: PricingImportDia
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-slate-500">3. Tệp Excel</label>
+                <label className="text-xs font-bold uppercase" style={{ color: 'var(--theme-text-muted)' }}>3. Tệp Excel</label>
                 <div 
                   className="border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-3 transition-colors hover:border-emerald-500 hover:bg-emerald-50/50"
                   onClick={() => document.getElementById('pricing-upload')?.click()}
                   style={{ cursor: 'pointer' }}
                 >
-                  <Upload className="h-8 w-8 text-slate-400" />
+                  <Upload className="h-8 w-8" style={{ color: 'var(--theme-text-muted)' }} />
                   <div className="text-center">
                     <p className="text-sm font-medium">{file ? file.name : 'Nhấp để chọn tệp hoặc kéo thả'}</p>
-                    <p className="text-xs text-slate-400 mt-1">Hỗ trợ .xlsx, .xls</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Hỗ trợ .xlsx, .xls</p>
                   </div>
                   <input 
                     id="pricing-upload"
@@ -133,9 +136,12 @@ export function PricingImportDialog({ open, onClose, clients }: PricingImportDia
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start gap-3">
-                <Info className="h-4 w-4 text-blue-600 mt-0.5" />
-                <div className="text-xs text-blue-800 leading-relaxed">
+              <div
+                className="rounded-lg p-4 flex items-start gap-3"
+                style={{ background: 'var(--theme-bg-tertiary)', border: '1px solid var(--theme-border-default)' }}
+              >
+                <Info className="h-4 w-4 mt-0.5" style={{ color: 'var(--theme-brand-primary)' }} />
+                <div className="text-xs leading-relaxed" style={{ color: 'var(--theme-text-primary)' }}>
                   <p className="font-bold mb-1">Lưu ý về dữ liệu:</p>
                   <ul className="list-disc ml-4 space-y-1">
                     <li>Hệ thống sẽ chỉ lấy <strong>Đơn giá (Revenue)</strong> từ file Excel.</li>
@@ -148,18 +154,21 @@ export function PricingImportDialog({ open, onClose, clients }: PricingImportDia
           ) : (
             <div className="space-y-4">
               {/* Preview Stats */}
-              <div className="flex items-center justify-between bg-slate-50 border rounded-lg px-4 py-3">
+              <div
+                className="flex items-center justify-between rounded-lg px-4 py-3"
+                style={{ background: 'var(--theme-bg-tertiary)', border: '1px solid var(--theme-border-default)' }}
+              >
                 <div className="flex gap-6">
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-slate-400">Số dòng</p>
+                    <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--theme-text-muted)' }}>Số dòng</p>
                     <p className="text-lg font-bold">{previewData.stats.row_count}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-slate-400">Cung đường</p>
+                    <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</p>
                     <p className="text-lg font-bold">{previewData.stats.unique_routes}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-slate-400">Định dạng</p>
+                    <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--theme-text-muted)' }}>Định dạng</p>
                     <p className="text-sm font-bold mt-1 uppercase">{previewData.format}</p>
                   </div>
                 </div>
@@ -169,29 +178,29 @@ export function PricingImportDialog({ open, onClose, clients }: PricingImportDia
               {/* Preview Table */}
               <div className="border rounded-lg overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b">
+                  <thead style={{ background: 'var(--theme-bg-tertiary)', borderBottom: '1px solid var(--theme-border-default)' }}>
                     <tr>
-                      <th className="text-left px-4 py-2 font-semibold text-slate-600">Cung đường</th>
-                      <th className="text-center px-4 py-2 font-semibold text-slate-600">Loại</th>
-                      <th className="text-right px-4 py-2 font-semibold text-slate-600">Giá cũ</th>
+                      <th className="text-left px-4 py-2 font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Cung đường</th>
+                      <th className="text-center px-4 py-2 font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Loại</th>
+                      <th className="text-right px-4 py-2 font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Giá cũ</th>
                       <th className="px-2 py-2"></th>
-                      <th className="text-right px-4 py-2 font-semibold text-slate-600">Giá mới</th>
+                      <th className="text-right px-4 py-2 font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Giá mới</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {previewData.rows.slice(0, 50).map((row, i) => (
-                      <tr key={i} className="hover:bg-slate-50">
+                      <tr key={i}>
                         <td className="px-4 py-3">
                           <div className="font-medium">{row.pickup_location} → {row.dropoff_location}</div>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className="text-[10px] font-bold border rounded px-1.5 py-0.5">{row.work_type}</span>
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-slate-400">
+                        <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>
                           {row.old_unit_price ? formatCurrencyShort(row.old_unit_price) : '—'}
                         </td>
                         <td className="px-2 py-3 text-center">
-                          <ChevronRight className="h-3 w-3 text-slate-300 mx-auto" />
+                          <ChevronRight className="h-3 w-3 mx-auto" style={{ color: 'var(--theme-border-default)' }} />
                         </td>
                         <td className="px-4 py-3 text-right font-bold tabular-nums">
                           <div className="flex flex-col items-end">
@@ -199,7 +208,10 @@ export function PricingImportDialog({ open, onClose, clients }: PricingImportDia
                               {formatCurrencyShort(row.unit_price)}
                             </span>
                             {row.old_unit_price && row.old_unit_price !== row.unit_price && (
-                              <span className="text-[9px] font-normal text-amber-600 bg-amber-50 px-1 rounded">Thay đổi</span>
+                              <span
+                                className="text-[9px] font-normal px-1 rounded"
+                                style={{ color: 'var(--warning)', background: 'var(--warning-soft)' }}
+                              >Thay đổi</span>
                             )}
                           </div>
                         </td>
@@ -208,7 +220,10 @@ export function PricingImportDialog({ open, onClose, clients }: PricingImportDia
                   </tbody>
                 </table>
                 {previewData.rows.length > 50 && (
-                  <div className="p-3 text-center bg-slate-50 text-xs text-slate-500 italic border-t">
+                  <div
+                    className="p-3 text-center text-xs italic"
+                    style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)', borderTop: '1px solid var(--theme-border-default)' }}
+                  >
                     Hiển thị 50 / {previewData.rows.length} dòng...
                   </div>
                 )}
@@ -217,7 +232,10 @@ export function PricingImportDialog({ open, onClose, clients }: PricingImportDia
           )}
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t bg-slate-50/50">
+        <DialogFooter
+          className="px-6 py-4"
+          style={{ borderTop: '1px solid var(--theme-border-default)', background: 'var(--theme-bg-tertiary)' }}
+        >
           <Button variant="outline" onClick={onClose} disabled={previewing || committing}>Huỷ</Button>
           {!previewData ? (
             <Button 

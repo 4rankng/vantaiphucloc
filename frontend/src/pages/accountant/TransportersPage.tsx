@@ -111,12 +111,11 @@ function TransporterDriverEditRow({
       ) : (
         <td style={tdHidden} onClick={() => setActiveField('fullName')}>
           <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{form.fullName || driver.username}</span>
+          {form.fullName && (
+            <span className="block text-[11px] font-mono" style={{ color: 'var(--ink-3)' }}>{driver.username}</span>
+          )}
         </td>
       )}
-
-      <td style={{ padding: '5px 8px' }}>
-        <span className="text-[12px] font-mono" style={{ color: 'var(--ink-3)' }}>{driver.username}</span>
-      </td>
 
       {activeField === 'phone' ? (
         <td style={tdActive}>
@@ -159,9 +158,9 @@ function TransporterDriverRow({ driver, onEdit, onResetPassword }: {
     <tr className="cursor-pointer group">
       <td onClick={() => onEdit('fullName')}>
         <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{driver.fullName || driver.username}</span>
-      </td>
-      <td>
-        <span className="text-[12px] font-mono" style={{ color: 'var(--ink-3)' }}>{driver.username}</span>
+        {driver.fullName && (
+          <span className="block text-[11px] font-mono" style={{ color: 'var(--ink-3)' }}>{driver.username}</span>
+        )}
       </td>
       <td onClick={() => onEdit('phone')}>
         <span className="text-[13px]" style={{ color: 'var(--ink-2)' }}>{driver.phone || '—'}</span>
@@ -438,11 +437,10 @@ function FleetSection() {
             ) : (
               <>
                 <div className="nepo-table-scroll overflow-x-auto">
-                  <table className="nepo-table w-full" style={{ minWidth: 420, borderCollapse: 'collapse' }}>
+                  <table className="nepo-table w-full" style={{ minWidth: 340, borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
                         <th className="text-left">Họ tên</th>
-                        <th className="text-left">Tài khoản</th>
                         <th className="text-left">SĐT</th>
                         <th className="text-left">Biển số</th>
                         <th className="w-10" />

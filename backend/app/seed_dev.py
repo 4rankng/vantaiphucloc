@@ -532,7 +532,6 @@ async def seed_dev() -> None:
                         pricing_id=pricing.id, quantity=1,
                         unit_price=prices["unit_price"],
                         driver_salary=prices["driver_salary"],
-                        allowance=prices["allowance"],
                     ))
                     await db.flush()
                     print(f"  + {client_code}: {pickup_name}→{dropoff_name} CHUYỂN BÃI: {prices['unit_price']:,}")
@@ -618,7 +617,6 @@ async def seed_dev() -> None:
                 cont_type=f"F{trip['size']}",
                 revenue=trip["unit_price"],
                 driver_salary=prices.get("driver_salary", 150000),
-                allowance=prices.get("allowance", 50000),
                 trip_date=trip_date,
             )
             db.add(wo)

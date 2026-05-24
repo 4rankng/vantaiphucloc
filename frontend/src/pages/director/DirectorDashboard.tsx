@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useState } from 'react'
+import { TripChartCard } from '@/components/shared/TripChartCard'
 import {
   TrendingUp, TrendingDown, ChevronLeft, ChevronRight,
   Activity, ArrowUpRight,
@@ -104,125 +104,6 @@ function KpiCard({
   )
 }
 
-function BarChart({ buckets, maxValue }: { buckets: { day: number; matched: number; pending: number }[]; maxValue: number }) {
-  const [hovered, setHovered] = useState<number | null>(null)
-  const tipRef = useRef<HTMLDivElement>(null)
-  const lastMouse = useRef({ x: 0, y: 0 })
-
-  const positionTip = useCallback((tip: HTMLDivElement, x: number, y: number) => {
-    const GAP = 10
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-    const tw = tip.offsetWidth
-    const th = tip.offsetHeight
-    const placeLeft = x + GAP + tw > vw
-    const placeUp = y + GAP + th > vh
-    tip.style.left = placeLeft ? `${x - tw - GAP}px` : `${x + GAP}px`
-    tip.style.top = placeUp ? `${y - th - GAP}px` : `${y + GAP}px`
-  }, [])
-
-  const moveTooltip = useCallback((e: React.MouseEvent) => {
-    lastMouse.current = { x: e.clientX, y: e.clientY }
-    const tip = tipRef.current
-    if (!tip) return
-    positionTip(tip, e.clientX, e.clientY)
-  }, [positionTip])
-
-  useEffect(() => {
-    const tip = tipRef.current
-    if (!tip) return
-    if (hovered != null) {
-      tip.style.display = 'block'
-      positionTip(tip, lastMouse.current.x, lastMouse.current.y)
-    } else {
-      tip.style.display = 'none'
-    }
-  }, [hovered, positionTip])
-
-  const hoveredBar = hovered != null ? buckets[hovered] : null
-
-  return (
-    <div style={{ position: 'relative', height: 280 }}>
-      {/* Y-axis */}
-      <div style={{ position: 'absolute', top: 0, left: 0, bottom: 24, width: 32, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-        {Array.from({ length: 5 }, (_, i) => Math.round(maxValue * (1 - i / 4))).map(v => (
-          <span key={v} style={{ fontFamily: fontMono, fontSize: 10, color: T.muted2, letterSpacing: '0.02em' }}>{v}</span>
-        ))}
-      </div>
-
-      {/* Grid + Bars */}
-      <div style={{ position: 'absolute', top: 0, left: 40, right: 0, bottom: 24, borderBottom: `1px solid ${T.lineSoft}` }}>
-        {[0, 25, 50, 75].map(pct => (
-          <div key={pct} style={{ position: 'absolute', left: 0, right: 0, height: 1, top: `${pct}%`, background: T.lineSoft }} />
-        ))}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', gap: 6, padding: '0 2px' }}>
-          {buckets.map((b, i) => {
-            const mH = maxValue > 0 ? (b.matched / maxValue) * 100 : 0
-            const wH = maxValue > 0 ? (b.pending / maxValue) * 100 : 0
-            return (
-              <div
-                key={i}
-                className="flex-1 flex flex-col-reverse h-full relative cursor-pointer"
-                onMouseEnter={(e) => { setHovered(i); moveTooltip(e) }}
-                onMouseMove={moveTooltip}
-                onMouseLeave={() => setHovered(null)}
-              >
-                <div style={{ width: '100%', height: `${mH}%`, borderRadius: '4px 4px 0 0', background: T.brand, transition: 'opacity 0.15s', opacity: hovered === i ? 0.78 : 1 }} />
-                <div style={{ width: '100%', height: `${wH}%`, background: T.accent, marginTop: 1 }} />
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* X-axis */}
-      <div style={{ position: 'absolute', left: 40, right: 0, bottom: 0, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
-        {buckets.filter((_, i) => i % 5 === 0 || i === buckets.length - 1).map((b, i) => {
-          const parts = b.date?.split('-')
-          const label = parts?.length === 3 ? `${parts[2]}/${parts[1]}` : ''
-          return (
-            <span key={i} style={{ fontFamily: fontMono, fontSize: 10, color: T.muted2, letterSpacing: '0.02em' }}>
-              {label}
-            </span>
-          )
-        })}
-      </div>
-
-      {/* Tooltip — portaled to body, tracks mouse position */}
-      {createPortal(
-        <div
-          ref={tipRef}
-          className="fixed pointer-events-none z-50"
-          style={{ display: 'none' }}
-        >
-          {hoveredBar && (
-            <div
-              style={{
-                background: T.ink, color: '#fff', padding: '7px 10px', borderRadius: 8, fontSize: 11,
-                whiteSpace: 'nowrap', fontFamily: fontMono, letterSpacing: '-0.01em',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-              }}
-            >
-              <div className="font-semibold">{hoveredBar.date}</div>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="inline-block h-1.5 w-1.5 rounded-sm" style={{ background: T.brand }} />
-                Khớp: {hoveredBar.matched}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="inline-block h-1.5 w-1.5 rounded-sm" style={{ background: T.accent }} />
-                Chờ: {hoveredBar.pending}
-              </div>
-              <div className="mt-0.5 pt-0.5 font-semibold" style={{ borderTop: `1px solid rgba(255,255,255,0.2)` }}>
-                Tổng: {hoveredBar.matched + hoveredBar.pending}
-              </div>
-            </div>
-          )}
-        </div>,
-        document.body,
-      )}
-    </div>
-  )
-}
 
 const ROLE_INITIALS: Record<string, string> = {
   accountant: 'KT',
@@ -401,8 +282,6 @@ export function DirectorDashboard() {
 
   const prevMonth = month === 1 ? 12 : month - 1
 
-  const maxBarValue = Math.max(...buckets.map(b => b.matched + b.pending), 1)
-
   // Activity feed
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([])
   useEffect(() => {
@@ -521,32 +400,11 @@ export function DirectorDashboard() {
         </section>
 
         {/* Chart */}
-        <section className="mb-4">
-          <div
-            style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 18, boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)', animation: 'fadeIn 0.5s ease both', animationDelay: '120ms' }}
-          >
-            <div className="flex items-center justify-between px-6 pt-[22px] pb-4">
-              <div>
-                <div className="text-[15px] font-bold" style={{ color: T.ink, letterSpacing: '-0.01em' }}>Chuyến theo ngày</div>
-                <div className="text-xs mt-0.5" style={{ color: T.muted }}>Tháng {pad(month)} · {year}</div>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="flex items-center gap-[7px] text-xs font-medium" style={{ color: T.muted2 }}>
-                  <span className="inline-block h-2.5 w-2.5 rounded-[3px]" style={{ background: T.brand }} />
-                  Đã khớp
-                  <span style={{ fontFamily: fontMono, fontWeight: 600, color: T.ink, fontSize: 11, marginLeft: 2 }}>{matched}</span>
-                </span>
-                <span className="flex items-center gap-[7px] text-xs font-medium" style={{ color: T.muted2 }}>
-                  <span className="inline-block h-2.5 w-2.5 rounded-[3px]" style={{ background: T.accent }} />
-                  Chờ xử lý
-                  <span style={{ fontFamily: fontMono, fontWeight: 600, color: T.ink, fontSize: 11, marginLeft: 2 }}>{pending}</span>
-                </span>
-              </div>
-            </div>
-            <div className="px-6 pt-2 pb-6">
-              <BarChart buckets={buckets} maxValue={Math.ceil(maxBarValue / 15) * 15 || 60} />
-            </div>
-          </div>
+        <section className="mb-4" style={{ animation: 'fadeIn 0.5s ease both', animationDelay: '120ms' }}>
+          <TripChartCard
+            subtitle={`Tháng ${pad(month)} · ${year}`}
+            bars={buckets}
+          />
         </section>
 
         {/* Bottom insights */}
@@ -595,54 +453,67 @@ export function DirectorDashboard() {
         </section>
 
         {/* PnL per vehicle — split between own fleet and from-vendor */}
-        <section className="grid grid-cols-1 xl:grid-cols-2 gap-4 mt-4" style={{ animation: 'fadeIn 0.5s ease both', animationDelay: '300ms' }}>
+        <section className="mt-4" style={{ animation: 'fadeIn 0.5s ease both', animationDelay: '300ms' }}>
+          <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 18, boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)', overflow: 'hidden' }}>
 
-          {/* Own fleet */}
-          <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 18, padding: '22px 24px', boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)' }}>
-            <div className="flex items-baseline justify-between mb-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase" style={{ color: T.muted, letterSpacing: '0.1em' }}>Lợi nhuận theo xe · Xe nhà</p>
-                <p className="text-xs mt-1" style={{ color: T.muted }}>
-                  {ownFleetPnl.rows.length} xe · Doanh thu {ownFleetPnl.totalRevenue.toLocaleString('vi-VN')} · Chi phí {ownFleetPnl.totalCost.toLocaleString('vi-VN')}
-                </p>
+            {/* Shared header */}
+            <div className="flex items-center justify-between px-6 pt-[22px] pb-4" style={{ borderBottom: `1px solid ${T.line}` }}>
+              <div className="text-[15px] font-bold" style={{ color: T.ink, letterSpacing: '-0.01em' }}>
+                Doanh thu &amp; Chi phí theo xe
               </div>
-              <span
-                className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                style={{
-                  fontFamily: fontMono,
-                  letterSpacing: '-0.01em',
-                  background: ownFleetPnl.totalProfit >= 0 ? T.brandTint : T.roseTint,
-                  color:      ownFleetPnl.totalProfit >= 0 ? T.brand    : T.rose,
-                }}
-              >
-                LN {ownFleetPnl.totalProfit.toLocaleString('vi-VN')}
+              <span className="text-xs" style={{ color: T.muted }}>
+                {(ownFleetPnl.rows.length + vendorPnl.rows.length)} xe
               </span>
             </div>
-            <VehiclePnLTable group={ownFleetPnl} emptyHint="Chưa có dữ liệu xe nhà" />
-          </div>
 
-          {/* Vendor */}
-          <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 18, padding: '22px 24px', boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)' }}>
-            <div className="flex items-baseline justify-between mb-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase" style={{ color: T.muted, letterSpacing: '0.1em' }}>Lợi nhuận theo xe · Xe ngoài</p>
-                <p className="text-xs mt-1" style={{ color: T.muted }}>
-                  {vendorPnl.rows.length} xe · Doanh thu {vendorPnl.totalRevenue.toLocaleString('vi-VN')} · Chi phí {vendorPnl.totalCost.toLocaleString('vi-VN')}
-                </p>
+            {/* Two sub-sections side by side at xl */}
+            <div className="grid grid-cols-1 lg:grid-cols-2">
+
+              {/* Own fleet */}
+              <div className="min-w-0" style={{ borderRight: `1px solid ${T.line}` }}>
+                {/* Sub-header */}
+                <div className="flex items-center justify-between px-6 py-3" style={{ borderBottom: `1px solid ${T.lineSoft}`, background: `color-mix(in srgb, ${T.brandSoft} 60%, transparent)` }}>
+                  <p className="text-[11px] font-semibold uppercase" style={{ color: T.muted, letterSpacing: '0.1em' }}>
+                    Xe nội bộ <span style={{ fontWeight: 400 }}>({ownFleetPnl.rows.length})</span>
+                  </p>
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                    style={{
+                      fontFamily: fontMono,
+                      letterSpacing: '-0.01em',
+                      background: ownFleetPnl.totalProfit >= 0 ? T.brandTint : T.roseTint,
+                      color:      ownFleetPnl.totalProfit >= 0 ? T.brand    : T.rose,
+                    }}
+                  >
+                    LN {ownFleetPnl.totalProfit.toLocaleString('vi-VN')}
+                  </span>
+                </div>
+                <VehiclePnLTable group={ownFleetPnl} emptyHint="Chưa có dữ liệu xe nhà" />
               </div>
-              <span
-                className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                style={{
-                  fontFamily: fontMono,
-                  letterSpacing: '-0.01em',
-                  background: vendorPnl.totalProfit >= 0 ? T.brandTint : T.roseTint,
-                  color:      vendorPnl.totalProfit >= 0 ? T.brand    : T.rose,
-                }}
-              >
-                LN {vendorPnl.totalProfit.toLocaleString('vi-VN')}
-              </span>
+
+              {/* Vendor */}
+              <div className="min-w-0">
+                {/* Sub-header */}
+                <div className="flex items-center justify-between px-6 py-3" style={{ borderBottom: `1px solid ${T.lineSoft}`, background: `color-mix(in srgb, ${T.brandSoft} 60%, transparent)` }}>
+                  <p className="text-[11px] font-semibold uppercase" style={{ color: T.muted, letterSpacing: '0.1em' }}>
+                    Xe ngoài <span style={{ fontWeight: 400 }}>({vendorPnl.rows.length})</span>
+                  </p>
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                    style={{
+                      fontFamily: fontMono,
+                      letterSpacing: '-0.01em',
+                      background: vendorPnl.totalProfit >= 0 ? T.brandTint : T.roseTint,
+                      color:      vendorPnl.totalProfit >= 0 ? T.brand    : T.rose,
+                    }}
+                  >
+                    LN {vendorPnl.totalProfit.toLocaleString('vi-VN')}
+                  </span>
+                </div>
+                <VehiclePnLTable group={vendorPnl} emptyHint="Chưa có dữ liệu xe ngoài" />
+              </div>
+
             </div>
-            <VehiclePnLTable group={vendorPnl} emptyHint="Chưa có dữ liệu xe ngoài" />
           </div>
         </section>
 

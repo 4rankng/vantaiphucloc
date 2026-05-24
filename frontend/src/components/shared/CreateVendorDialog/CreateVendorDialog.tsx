@@ -64,7 +64,7 @@ export function CreateVendorDialog({ open, onClose, onConfirm }: CreateVendorDia
           {/* Tên */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              Tên nhà thầu <span style={{ color: 'var(--theme-error, #ef4444)' }}>*</span>
+              Tên nhà thầu <span style={{ color: 'var(--theme-status-error)' }}>*</span>
             </Label>
             <Input
               value={form.name}

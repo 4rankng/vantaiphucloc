@@ -12,7 +12,7 @@ import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHead
 import { RevealList, Reveal } from '@/components/shared/Reveal'
 import { AnimatedNumber } from '@/components/shared'
 import { DashboardCard } from '@/components/shared/DashboardCard'
-import { TripBarChart } from '@/components/shared/TripBarChart'
+import { TripChartCard } from '@/components/shared/TripChartCard'
 import { SortableTableHeader } from '@/components/shared/SortableTableHeader'
 import type { SortDirection } from '@/components/shared/SortableTableHeader'
 import { useMonthParams } from './use-month-params'
@@ -248,32 +248,36 @@ function VehicleSection({ vehiclePnl }: { vehiclePnl: { rows: VehiclePnLRow[] } 
   }
 
   return (
-    <>
-      {noiBoRows.length > 0 && (
-        <>
-          {subHeader('Xe nội bộ', noiBoRows.length)}
-          <NoiBoSubTable rows={noiBoRows} />
-        </>
-      )}
-      <div style={{ borderTop: noiBoRows.length > 0 ? '2px solid var(--theme-border-light)' : undefined }}>
-        {subHeader('Xe ngoài', ngoaiRows.length)}
+    <div className="grid grid-cols-1 lg:grid-cols-2">
+      {/* Xe nội bộ */}
+      <div className="min-w-0" style={{ borderRight: '1px solid var(--theme-border-light)' }}>
+        {subHeader('Xe nội bộ', noiBoRows.length)}
+        {noiBoRows.length > 0
+          ? <NoiBoSubTable rows={noiBoRows} />
+          : <EmptyState icon={Truck} text="Không có xe nội bộ trong tháng này" />
+        }
       </div>
-      {ngoaiRows.length > 0 ? (
-        <NgoaiSubTable rows={ngoaiRows} />
-      ) : (
-        <div className="flex flex-col items-center justify-center gap-3 py-6">
-          <img
-            src="/illustrations/empty-vendors.svg"
-            alt=""
-            className="h-24 w-auto opacity-80"
-            draggable={false}
-          />
-          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
-            Không có xe ngoài trong tháng này
-          </p>
-        </div>
-      )}
-    </>
+
+      {/* Xe ngoài */}
+      <div className="min-w-0">
+        {subHeader('Xe ngoài', ngoaiRows.length)}
+        {ngoaiRows.length > 0 ? (
+          <NgoaiSubTable rows={ngoaiRows} />
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-3 py-6">
+            <img
+              src="/illustrations/empty-vendors.svg"
+              alt=""
+              className="h-24 w-auto opacity-80"
+              draggable={false}
+            />
+            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+              Không có xe ngoài trong tháng này
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -301,11 +305,7 @@ function DesktopDashboard() {
   const chiPhiDelta  = computeDelta(chiPhi, sumChiPhi(prevPnl))
   const laiDelta     = computeDelta(laiRong, prevPnl?.profit ?? 0)
 
-  const matchedCount = dailyStats?.matched ?? 0
-  const pendingCount = dailyStats?.pending ?? 0
-  const totalCount   = dailyStats?.total ?? 0
-  const matchRate    = dailyStats?.matchRate ?? null
-  const dayBars      = dailyStats?.buckets ?? []
+  const dayBars = dailyStats?.buckets ?? []
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -356,42 +356,11 @@ function DesktopDashboard() {
 
       {/* ── Bar chart ── */}
       <Reveal threshold={0.05}>
-        <DashboardCard className="card-hover-lift">
-          <div className="px-4 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-            <DashboardSectionHeader
-              title="Chuyến theo ngày"
-              icon={BarChart3}
-              right={
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>
-                    <span className="inline-block h-2 w-2 rounded-sm" style={{ background: 'var(--theme-status-success)' }} />
-                    Ghép
-                  </span>
-                  <span className="flex items-center gap-1 text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>
-                    <span className="inline-block h-2 w-2 rounded-sm" style={{ background: 'var(--theme-status-warning)' }} />
-                    Chờ
-                  </span>
-                </div>
-              }
-            />
-          </div>
-          <div className="px-3 pt-3 pb-2">
-            <TripBarChart bars={dayBars} />
-          </div>
-          <div className="grid grid-cols-4" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-            {[
-              { label: 'Ghép', value: String(matchedCount), color: 'var(--theme-status-success)' },
-              { label: 'Chờ', value: String(pendingCount), color: 'var(--theme-status-warning)' },
-              { label: 'Tổng', value: String(totalCount), color: 'var(--theme-text-primary)' },
-              { label: 'Tỷ lệ', value: matchRate != null ? `${matchRate}%` : '—', color: 'var(--theme-text-primary)' },
-            ].map((s, i) => (
-              <div key={s.label} className="py-2.5 text-center" style={{ borderLeft: i > 0 ? '1px solid var(--theme-border-light)' : 'none' }}>
-                <div className="text-[13px] font-bold tabular-nums" style={{ color: s.color }}>{s.value}</div>
-                <div className="text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
-        </DashboardCard>
+        <TripChartCard
+          subtitle={`Tháng ${pad(month)} · ${year}`}
+          bars={dayBars}
+          className="card-hover-lift"
+        />
       </Reveal>
 
       {/* ── Vehicle tables ── */}
@@ -439,11 +408,7 @@ function MobileDashboard() {
   const chiPhiDelta  = computeDelta(chiPhi, sumChiPhi(prevPnl))
   const laiDelta     = computeDelta(laiRong, prevPnl?.profit ?? 0)
 
-  const matchedCount = dailyStats?.matched ?? 0
-  const pendingCount = dailyStats?.pending ?? 0
-  const totalCount   = dailyStats?.total ?? 0
-  const matchRate    = dailyStats?.matchRate ?? null
-  const dayBars      = dailyStats?.buckets ?? []
+  const dayBars = dailyStats?.buckets ?? []
 
   return (
     <div className="space-y-4 pb-8">
@@ -491,42 +456,10 @@ function MobileDashboard() {
       </RevealList>
 
       {/* Bar chart */}
-      <DashboardCard>
-        <div className="px-4 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-          <DashboardSectionHeader
-            title="Chuyến theo ngày"
-            icon={BarChart3}
-            right={
-              <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1 text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>
-                  <span className="inline-block h-2 w-2 rounded-sm" style={{ background: 'var(--theme-status-success)' }} />
-                  Ghép
-                </span>
-                <span className="flex items-center gap-1 text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>
-                  <span className="inline-block h-2 w-2 rounded-sm" style={{ background: 'var(--theme-status-warning)' }} />
-                  Chờ
-                </span>
-              </div>
-            }
-          />
-        </div>
-        <div className="px-3 pt-3 pb-2">
-          <TripBarChart bars={dayBars} />
-        </div>
-        <div className="grid grid-cols-4" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-          {[
-            { label: 'Ghép', value: String(matchedCount), color: 'var(--theme-status-success)' },
-            { label: 'Chờ', value: String(pendingCount), color: 'var(--theme-status-warning)' },
-            { label: 'Tổng', value: String(totalCount), color: 'var(--theme-text-primary)' },
-            { label: 'Tỷ lệ', value: matchRate != null ? `${matchRate}%` : '—', color: 'var(--theme-text-primary)' },
-          ].map((s, i) => (
-            <div key={s.label} className="py-2.5 text-center" style={{ borderLeft: i > 0 ? '1px solid var(--theme-border-light)' : 'none' }}>
-              <div className="text-[13px] font-bold tabular-nums" style={{ color: s.color }}>{s.value}</div>
-              <div className="text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </DashboardCard>
+      <TripChartCard
+        subtitle={`Tháng ${pad(month)} · ${year}`}
+        bars={dayBars}
+      />
 
       {/* Vehicle P&L tables */}
       <DashboardCard>

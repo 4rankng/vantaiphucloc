@@ -126,28 +126,15 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSuggestionLoading(true)
 
-    // Try to get GPS for proximity bonus
-    const fetchWithGPS = async () => {
-      let lat: number | undefined, lng: number | undefined
-      try {
-        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-          if (!navigator.geolocation) return reject(new Error('no geolocation'))
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: false, timeout: 3000,
-          })
-        })
-        lat = pos.coords.latitude
-        lng = pos.coords.longitude
-      } catch { /* GPS unavailable — still get suggestions without proximity */ }
-
-      const res = await apiClient.getSuggestedRoutes(lat, lng, 5)
+    const fetchSuggestions = async () => {
+      const res = await apiClient.getSuggestedRoutes(undefined, undefined, 5)
       if (!cancelled && res.success) {
         setRecentOrders(res.data)
       }
       if (!cancelled) setSuggestionLoading(false)
     }
 
-    fetchWithGPS().catch(() => {
+    fetchSuggestions().catch(() => {
       if (!cancelled) setSuggestionLoading(false)
     })
 

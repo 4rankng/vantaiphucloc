@@ -91,7 +91,7 @@ export function CreateClientDialog({ open, onClose, onConfirm, defaultName, init
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2 space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                Tên khách hàng <span style={{ color: 'var(--theme-error, #ef4444)' }}>*</span>
+                Tên khách hàng <span style={{ color: 'var(--theme-status-error)' }}>*</span>
               </Label>
               <Input
                 value={form.name}

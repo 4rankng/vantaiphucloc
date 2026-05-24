@@ -78,7 +78,7 @@ export function AutoMatchDateDialog({ open, onClose, defaultDateFrom, defaultDat
 
         {/* ── Date inputs (hidden while scanning) ─────── */}
         {!isPending && (
-          <div className="px-6 py-5" style={{ background: 'white' }}>
+          <div className="px-6 py-5" style={{ background: 'var(--theme-bg-secondary)' }}>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="auto-match-from" className="text-xs font-semibold" style={{ color: '#6d28d9' }}>Từ ngày</Label>
@@ -96,7 +96,7 @@ export function AutoMatchDateDialog({ open, onClose, defaultDateFrom, defaultDat
 
         {/* ── Footer ───────────────────────────────────── */}
         <div className="flex items-center justify-between px-6 py-4"
-          style={{ background: 'white', borderTop: isPending ? 'none' : '1px solid rgba(0,0,0,0.06)' }}
+          style={{ background: 'var(--theme-bg-secondary)', borderTop: isPending ? 'none' : '1px solid var(--theme-border-default)' }}
         >
           {isPending ? (
             <div style={{ height: 8 }} />

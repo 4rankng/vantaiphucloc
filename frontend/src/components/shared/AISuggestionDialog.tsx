@@ -255,7 +255,7 @@ export function AISuggestionDialog({ trip, onClose }: { trip: DeliveredTrip; onC
         />
 
         {/* ── Body ─────────────────────────────────────────── */}
-        <div className="px-5 py-4" style={{ background: 'white', minHeight: 120 }}>
+        <div className="px-5 py-4" style={{ background: 'var(--theme-bg-secondary)', minHeight: 120 }}>
 
           {/* Loading */}
           {isLoading && (
@@ -453,7 +453,7 @@ export function AISuggestionDialog({ trip, onClose }: { trip: DeliveredTrip; onC
         {/* ── Footer ───────────────────────────────────────── */}
         <div
           className="flex items-center justify-between px-5 py-4"
-          style={{ background: 'white', borderTop: '1px solid rgba(0,0,0,0.06)' }}
+          style={{ background: 'var(--theme-bg-secondary)', borderTop: '1px solid var(--theme-border-default)' }}
         >
           {reconciling ? (
             <>

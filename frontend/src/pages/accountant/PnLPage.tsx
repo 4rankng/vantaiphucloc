@@ -276,21 +276,26 @@ export function PnLPage() {
         </Button>
       </div>
 
-      {/* Xe nội bộ */}
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold text-[var(--ink)] tracking-wide uppercase opacity-60">
-          Xe nội bộ
-        </h2>
-        <NoiBoTable rows={noiBoRows} isLoading={isLoading} />
-      </section>
+      {/* Tables — side-by-side on wide screens, stacked on small */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+        {/* Xe nội bộ */}
+        <section className="space-y-2 min-w-0">
+          <h2 className="text-sm font-semibold text-[var(--ink)] tracking-wide uppercase opacity-60">
+            Xe nội bộ
+          </h2>
+          <NoiBoTable rows={noiBoRows} isLoading={isLoading} />
+        </section>
 
-      {/* Xe ngoài */}
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold text-[var(--ink)] tracking-wide uppercase opacity-60">
-          Xe ngoài
-        </h2>
-        <NgoaiTable rows={ngoaiRows} isLoading={isLoading} />
-      </section>
+        {/* Xe ngoài */}
+        {(isLoading || ngoaiRows.length > 0) && (
+          <section className="space-y-2 min-w-0">
+            <h2 className="text-sm font-semibold text-[var(--ink)] tracking-wide uppercase opacity-60">
+              Xe ngoài
+            </h2>
+            <NgoaiTable rows={ngoaiRows} isLoading={isLoading} />
+          </section>
+        )}
+      </div>
     </div>
   )
 }

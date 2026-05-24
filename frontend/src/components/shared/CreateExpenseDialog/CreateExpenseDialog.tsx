@@ -89,7 +89,7 @@ export function CreateExpenseDialog({ open, onClose, onConfirm, vehicles, saving
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                Ngày <span style={{ color: 'var(--theme-error, #ef4444)' }}>*</span>
+                Ngày <span style={{ color: 'var(--theme-status-error)' }}>*</span>
               </Label>
               <Input
                 type="date"
@@ -101,7 +101,7 @@ export function CreateExpenseDialog({ open, onClose, onConfirm, vehicles, saving
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                Xe <span style={{ color: 'var(--theme-error, #ef4444)' }}>*</span>
+                Xe <span style={{ color: 'var(--theme-status-error)' }}>*</span>
               </Label>
               <InlineSelect
                 placeholder="— Chọn xe —"
@@ -113,7 +113,7 @@ export function CreateExpenseDialog({ open, onClose, onConfirm, vehicles, saving
                 onChange={v => updateField('vehicleId', Number(v) || 0)}
               />
               {errors.vehicleId && (
-                <p className="text-xs" style={{ color: 'var(--theme-status-error, #ef4444)' }}>{errors.vehicleId}</p>
+                <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{errors.vehicleId}</p>
               )}
             </div>
           </div>
@@ -151,7 +151,7 @@ export function CreateExpenseDialog({ open, onClose, onConfirm, vehicles, saving
           {/* Số tiền */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              Số tiền <span style={{ color: 'var(--theme-error, #ef4444)' }}>*</span>
+              Số tiền <span style={{ color: 'var(--theme-status-error)' }}>*</span>
             </Label>
             <Input
               type="text"

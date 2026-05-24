@@ -1,10 +1,12 @@
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/Dialog'
+  Button,
+} from '@/components/ui'
 import type { WorkType } from '@/data/domain'
 import { hapticSuccess } from '@/lib/haptic'
 import { playTick } from '@/lib/sound'
@@ -97,26 +99,18 @@ export function TripSummaryDialog({
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 h-12 rounded-lg text-base font-bold touch-manipulation transition-colors active:scale-[0.98]"
-            style={{
-              background: 'var(--theme-bg-secondary)',
-              color: 'var(--theme-text-secondary)',
-              border: '1.5px solid var(--theme-border-default)',
-            }}
-          >
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} className="flex-1">
             Hủy
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleConfirm}
-            className="flex-1 h-12 rounded-lg text-base font-bold touch-manipulation transition-colors active:scale-[0.98]"
+            className="flex-1"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
           >
             Xác nhận
-          </button>
-        </div>
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

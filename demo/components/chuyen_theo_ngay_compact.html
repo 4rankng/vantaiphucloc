@@ -1,0 +1,99 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  .gd-card {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    background: #fff;
+    border: 1px solid #E6EAE6;
+    border-radius: 18px;
+    box-shadow: 0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03);
+    overflow: hidden;
+  }
+  .gd-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px 10px;
+  }
+  .gd-title { font-size: 14px; font-weight: 700; color: #0F1A14; letter-spacing: -0.01em; }
+  .gd-meta  { font-size: 11px; color: #9AA39E; margin-top: 2px; }
+  .gd-legend { display: flex; align-items: center; gap: 12px; }
+  .gd-leg-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #9AA39E; font-weight: 500; }
+  .gd-swatch { width: 8px; height: 8px; border-radius: 2px; }
+  .gd-swatch.m { background: #005A2D; }
+  .gd-swatch.w { background: #B8893A; }
+  .gd-chart-wrap { padding: 0 20px 12px; }
+</style>
+
+<div class="gd-card">
+  <h2 class="sr-only">Biểu đồ chuyến theo ngày từ 21/04 đến 20/05: tổng 1413 chuyến ghép, tỷ lệ 100%.</h2>
+
+  <div class="gd-head">
+    <div>
+      <div class="gd-title">Chuyến theo ngày</div>
+    </div>
+    <div class="gd-legend">
+      <span class="gd-leg-item"><span class="gd-swatch m"></span>Ghép</span>
+      <span class="gd-leg-item"><span class="gd-swatch w"></span>Chờ</span>
+    </div>
+  </div>
+
+  <div class="gd-chart-wrap">
+    <div style="position:relative; height:180px;">
+      <canvas id="gdChart" role="img" aria-label="Bar chart of daily trips (Chuyến theo ngày) from 21/04 to 20/05">1413 matched trips total over 30 days, 0 waiting.</canvas>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const labels = ['21/04','22/04','23/04','24/04','25/04','26/04','27/04','28/04','29/04','30/04','01/05','02/05','03/05','04/05','05/05','06/05','07/05','08/05','09/05','10/05','11/05','12/05','13/05','14/05','15/05','16/05','17/05','18/05','19/05','20/05'];
+const matched = [51,51,51,51,51,57,64,66,63,49,47,45,45,48,28,51,46,39,40,47,36,51,46,57,55,48,48,46,39,48];
+
+new Chart(document.getElementById('gdChart'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      { label: 'Ghép', data: matched, backgroundColor: '#005A2D', borderRadius: 3, borderSkipped: 'bottom' },
+      { label: 'Chờ',  data: labels.map(() => 0), backgroundColor: '#B8893A', borderRadius: 3 }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: {
+      backgroundColor: '#0F1A14',
+      titleFont: { family: "'JetBrains Mono', monospace", size: 11 },
+      bodyFont:  { family: "'JetBrains Mono', monospace", size: 11 },
+      padding: 8, cornerRadius: 8,
+      callbacks: { title: (i) => i[0].label, label: (i) => i.dataset.label + ': ' + i.raw }
+    }},
+    scales: {
+      x: {
+        stacked: true,
+        grid: { display: false },
+        border: { display: false },
+        ticks: {
+          font: { family: "'JetBrains Mono', monospace", size: 9 },
+          color: '#9AA39E',
+          maxRotation: 0,
+          autoSkip: true,
+          maxTicksLimit: 8
+        }
+      },
+      y: {
+        stacked: true,
+        grid: { color: '#EEF1ED', lineWidth: 1 },
+        border: { display: false, dash: [4,4] },
+        ticks: {
+          font: { family: "'JetBrains Mono', monospace", size: 9 },
+          color: '#9AA39E',
+          maxTicksLimit: 5
+        }
+      }
+    },
+    barPercentage: 0.75,
+    categoryPercentage: 0.85
+  }
+});
+</script>

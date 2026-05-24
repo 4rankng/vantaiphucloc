@@ -38,11 +38,11 @@ export function DangerConfirmDialog({
         <div
           className="flex items-start gap-3 rounded-lg px-3 py-2.5"
           style={{
-            background: 'color-mix(in srgb, var(--status-error, #e53) 8%, transparent)',
-            border: '1px solid color-mix(in srgb, var(--status-error, #e53) 15%, transparent)',
+            background: 'color-mix(in srgb, var(--theme-status-error) 8%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--theme-status-error) 15%, transparent)',
           }}
         >
-          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--status-error, #e53)' }} />
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--theme-status-error)' }} />
           <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
             <strong style={{ color: 'var(--ink)' }}>{entityName}</strong> {warningText}
           </p>
