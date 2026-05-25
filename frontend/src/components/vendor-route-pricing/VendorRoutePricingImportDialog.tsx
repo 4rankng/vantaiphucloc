@@ -284,11 +284,11 @@ export function VendorRoutePricingImportDialog({ open, onOpenChange }: Props) {
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-3 border-t" style={{ borderColor: 'var(--line)' }}>
-          {step === 'upload' && <Button variant="ghost" onClick={handleClose}>Huỷ</Button>}
+          {step === 'upload' && <Button variant="outline" size="sm" onClick={handleClose}>Huỷ</Button>}
           {step === 'preview' && (
             <>
-              <Button variant="ghost" onClick={handleReset}>Quay lại</Button>
-              <Button onClick={handleCommit} disabled={commitMut.isPending || rows.length === 0}>
+              <Button variant="outline" size="sm" onClick={handleReset}>Quay lại</Button>
+              <Button size="sm" onClick={handleCommit} disabled={commitMut.isPending || rows.length === 0}>
                 {commitMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                 {commitMut.isPending ? 'Đang lưu...' : `Lưu ${commitRows.length} dòng`}
               </Button>
@@ -296,8 +296,8 @@ export function VendorRoutePricingImportDialog({ open, onOpenChange }: Props) {
           )}
           {step === 'done' && (
             <>
-              <Button variant="ghost" onClick={handleReset}>Nhập file khác</Button>
-              <Button onClick={handleClose}>Xong</Button>
+              <Button variant="outline" size="sm" onClick={handleReset}>Nhập file khác</Button>
+              <Button size="sm" onClick={handleClose}>Xong</Button>
             </>
           )}
         </div>

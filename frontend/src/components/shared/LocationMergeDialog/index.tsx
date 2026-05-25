@@ -99,9 +99,9 @@ export function LocationMergeDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={handleClose}>Huỷ</Button>
+          <Button variant="outline" size="sm" onClick={handleClose}>Huỷ</Button>
           <Button
-            variant="default"
+            size="sm"
             onClick={() => { if (source && target && source !== target) onMerge(source, target) }}
             disabled={merging || !source || !target || source === target}
           >

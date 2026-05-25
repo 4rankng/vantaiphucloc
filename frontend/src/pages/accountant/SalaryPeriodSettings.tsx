@@ -117,13 +117,13 @@ export function SalaryPeriodSettings() {
               <div className="flex items-center justify-end gap-2">
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => { setFromDay(config?.fromDay ?? 26); setToDay(config?.toDay ?? 25) }}
-                  className="text-sm"
                 >
                   Huỷ
                 </Button>
                 <PulseHint hintKey="settings-save">
-                  <Button variant="default" onClick={() => setShowConfirm(true)} className="text-sm">
+                  <Button size="sm" onClick={() => setShowConfirm(true)}>
                     Lưu thay đổi
                   </Button>
                 </PulseHint>
@@ -142,8 +142,8 @@ export function SalaryPeriodSettings() {
             Kỳ lương mới: ngày {fromDay} → ngày {toDay} hàng tháng. Tất cả dữ liệu tổng quan sẽ được tính lại theo kỳ mới.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirm(false)} className="flex-1">Huỷ</Button>
-            <Button variant="default" onClick={handleConfirmSave} className="flex-1">Xác nhận</Button>
+            <Button variant="outline" size="sm" onClick={() => setShowConfirm(false)} className="flex-1">Huỷ</Button>
+            <Button size="sm" onClick={handleConfirmSave} className="flex-1">Xác nhận</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

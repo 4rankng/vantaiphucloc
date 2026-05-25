@@ -310,10 +310,10 @@ export function ExcelImportPage() {
                 Hệ thống đã ánh xạ các cột — dữ liệu sẽ được nhập rồi tự động ghép với chuyến đã đi
               </span>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" onClick={() => { setStep('upload'); setPreviewData([]); setPreviewColumns([]) }}>
+                <Button variant="outline" size="sm" onClick={() => { setStep('upload'); setPreviewData([]); setPreviewColumns([]) }}>
                   Quay lại
                 </Button>
-                <Button variant="default" onClick={handleImport} disabled={bulkImport.isPending}>
+                <Button size="sm" onClick={handleImport} disabled={bulkImport.isPending}>
                   {bulkImport.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                   {bulkImport.isPending ? 'Đang nhập...' : 'Nhập dữ liệu'}
                 </Button>
@@ -343,10 +343,10 @@ export function ExcelImportPage() {
                 Bạn có thể kiểm tra ngay tại trang Đối soát.
               </p>
               <div className="flex items-center gap-2 mt-6">
-                <Button variant="ghost" onClick={handleReset}>
+                <Button variant="outline" size="sm" onClick={handleReset}>
                   Nhập file khác
                 </Button>
-                <Button variant="default" onClick={() => navigate('/accountant/doi-soat')}>
+                <Button size="sm" onClick={() => navigate('/accountant/doi-soat')}>
                   Xem đối soát
                   <ArrowRight className="h-4 w-4" />
                 </Button>

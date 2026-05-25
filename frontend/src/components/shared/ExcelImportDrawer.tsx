@@ -410,7 +410,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
   const footer =
     step === 'upload' ? (
       <>
-        <Button variant="ghost" onClick={onClose}>
+        <Button variant="outline" size="sm" onClick={onClose}>
           Huỷ
         </Button>
         {(previewClientExcel.isPending || previewDriverRecon.isPending || previewVendorRecon.isPending) && (
@@ -442,7 +442,8 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
           )
         )}
         <Button
-          variant="ghost"
+          variant="outline"
+          size="sm"
           onClick={() => {
             setStep('upload')
             setPreviewData([])
@@ -451,7 +452,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
         >
           Quay lại
         </Button>
-        <Button variant="default" onClick={handleImport}
+        <Button size="sm" onClick={handleImport}
           disabled={importType === 'client' ? (commitClientExcel.isPending || !clientId) : (commitDriverRecon.isPending || commitVendorRecon.isPending)}
         >
           {commitClientExcel.isPending || commitDriverRecon.isPending || commitVendorRecon.isPending ? (
@@ -464,10 +465,10 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
       </>
     ) : (
       <>
-        <Button variant="ghost" onClick={handleReset}>
+        <Button variant="outline" size="sm" onClick={handleReset}>
           Nhập file khác
         </Button>
-        <Button variant="default" onClick={onClose}>
+        <Button size="sm" onClick={onClose}>
           Xong
         </Button>
       </>
@@ -759,12 +760,12 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                     hoặc
                   </span>
                   <Button
-                    variant="default"
+                    variant="outline"
+                    size="sm"
                     onClick={openCreateClient}
                     style={{
-                      background: 'var(--surface)',
                       color: 'var(--warning)',
-                      border: '1px solid var(--warning)',
+                      borderColor: 'var(--warning)',
                     }}
                   >
                     <UserPlus className="h-4 w-4" />
@@ -901,11 +902,11 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
 
                   {/* Actions */}
                   <div className="flex items-center justify-end gap-2 mt-4">
-                    <Button variant="ghost" onClick={cancelCreateClient} disabled={createClient.isPending}>
+                    <Button variant="outline" size="sm" onClick={cancelCreateClient} disabled={createClient.isPending}>
                       Huỷ
                     </Button>
                     <Button
-                      variant="default"
+                      size="sm"
                       onClick={handleSaveNewClient}
                       disabled={!clientForm.name.trim() || createClient.isPending}
                     >

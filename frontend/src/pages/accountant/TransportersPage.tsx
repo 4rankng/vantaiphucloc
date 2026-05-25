@@ -492,8 +492,8 @@ function FleetSection() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowAddVehicle(false)}>Huỷ</Button>
-            <Button variant="default" onClick={handleAddVehicle} disabled={!newPlate.trim() || createVehicle.isPending}>
+            <Button variant="outline" size="sm" onClick={() => setShowAddVehicle(false)}>Huỷ</Button>
+            <Button size="sm" onClick={handleAddVehicle} disabled={!newPlate.trim() || createVehicle.isPending}>
               Thêm xe
             </Button>
           </DialogFooter>
@@ -534,8 +534,8 @@ function FleetSection() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setAddingDriverFor(null)}>Huỷ</Button>
-            <Button variant="default" onClick={handleAddDriverToVehicle} disabled={!selectedDriverId}>Gán</Button>
+            <Button variant="outline" size="sm" onClick={() => setAddingDriverFor(null)}>Huỷ</Button>
+            <Button size="sm" onClick={handleAddDriverToVehicle} disabled={!selectedDriverId}>Gán</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -561,8 +561,8 @@ function FleetSection() {
             </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRemoveDriverTarget(null)} className="flex-1">Huỷ</Button>
-            <Button onClick={confirmRemoveDriver} variant="destructive" className="flex-1">Gỡ</Button>
+            <Button variant="outline" size="sm" onClick={() => setRemoveDriverTarget(null)} className="flex-1">Huỷ</Button>
+            <Button size="sm" onClick={confirmRemoveDriver} variant="destructive" className="flex-1">Gỡ</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -582,8 +582,8 @@ function FleetSection() {
             />
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => { setResetPwdDriver(null); setResetPwdValue('') }}>Huỷ</Button>
-            <Button variant="default" onClick={handleResetPassword} disabled={!resetPwdValue.trim() || resetPwdSaving}>
+            <Button variant="outline" size="sm" onClick={() => { setResetPwdDriver(null); setResetPwdValue('') }}>Huỷ</Button>
+            <Button size="sm" onClick={handleResetPassword} disabled={!resetPwdValue.trim() || resetPwdSaving}>
               {resetPwdSaving ? 'Đang lưu...' : 'Xác nhận'}
             </Button>
           </DialogFooter>

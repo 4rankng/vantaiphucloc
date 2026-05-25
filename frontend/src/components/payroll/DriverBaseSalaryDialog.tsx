@@ -205,16 +205,17 @@ export function DriverBaseSalaryDialog({
         <DialogFooter>
           <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => onOpenChange(false)}
-            className="btn-secondary h-9 px-4 text-sm"
           >
             Đóng
           </Button>
           <Button
             type="button"
+            size="sm"
             onClick={form.submit}
             disabled={form.submitting}
-            className="btn-primary h-9 px-4 text-sm"
           >
             {form.submitting ? 'Đang lưu…' : 'Lưu mức mới'}
           </Button>

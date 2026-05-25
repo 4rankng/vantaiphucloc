@@ -29,8 +29,8 @@ export function DriverFormDrawer({ open, onClose, onSave, saving }: DriverFormDr
       breadcrumb="Lái xe" title="Thêm lái xe"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Huỷ</Button>
-          <Button variant="default" onClick={handleSave} disabled={!form.username.trim() || !!saving}>
+          <Button variant="outline" size="sm" onClick={onClose}>Huỷ</Button>
+          <Button size="sm" onClick={handleSave} disabled={!form.username.trim() || !!saving}>
             {saving ? 'Đang lưu...' : 'Xác nhận'}
           </Button>
         </>
