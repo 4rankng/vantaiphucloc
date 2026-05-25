@@ -248,9 +248,9 @@ function VehicleSection({ vehiclePnl }: { vehiclePnl: { rows: VehiclePnLRow[] } 
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2">
+    <div className="flex flex-col">
       {/* Xe nội bộ */}
-      <div className="min-w-0" style={{ borderRight: '1px solid var(--theme-border-light)' }}>
+      <div className="min-w-0">
         {subHeader('Xe nội bộ', noiBoRows.length)}
         {noiBoRows.length > 0
           ? <NoiBoSubTable rows={noiBoRows} />
@@ -259,7 +259,7 @@ function VehicleSection({ vehiclePnl }: { vehiclePnl: { rows: VehiclePnLRow[] } 
       </div>
 
       {/* Xe ngoài */}
-      <div className="min-w-0">
+      <div className="min-w-0" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
         {subHeader('Xe ngoài', ngoaiRows.length)}
         {ngoaiRows.length > 0 ? (
           <NgoaiSubTable rows={ngoaiRows} />

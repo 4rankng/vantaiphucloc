@@ -13,6 +13,50 @@ export interface DeliveredTripColumnsOptions {
 export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Column<DeliveredTrip>[] {
   return [
     {
+      key: 'actions',
+      header: '',
+      width: 44,
+      render: (t) => {
+        if (!t.bookedTripId) {
+          return (
+            <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ml-3" style={{ background: '#f59e0b', opacity: 0.85 }} />
+          )
+        }
+        return (
+          <button
+            title="Bỏ ghép chuyến này"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (opts.isUnmatchPending) return
+              opts.onUnmatch(t.id)
+            }}
+            disabled={opts.isUnmatchPending}
+            className="group relative flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200 ease-out hover:scale-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              color: 'var(--ink-4)',
+              background: 'transparent',
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget
+              el.style.color = '#d97706'
+              el.style.background = 'rgba(245,158,11,0.10)'
+              el.style.boxShadow = '0 0 0 1.5px rgba(245,158,11,0.25), 0 2px 8px rgba(245,158,11,0.15)'
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget
+              el.style.color = 'var(--ink-4)'
+              el.style.background = 'transparent'
+              el.style.boxShadow = 'none'
+            }}
+          >
+            {opts.isUnmatchPending && opts.unmatchVariables === t.id
+              ? <Loader2 className="h-4 w-4 animate-spin" style={{ color: '#d97706' }} />
+              : <Unlink className="h-4 w-4 transition-transform duration-200 group-hover:rotate-12" />}
+          </button>
+        )
+      },
+    },
+    {
       key: 'date',
       header: 'Ngày đi',
       width: 64,
@@ -159,46 +203,6 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
           </span>
         ) : (
           <span style={{ color: 'var(--ink-4)' }}>—</span>
-        )
-      },
-    },
-    {
-      key: 'actions',
-      header: '',
-      width: 44,
-      render: (t) => {
-        if (!t.bookedTripId) return null
-        return (
-          <button
-            title="Bỏ ghép chuyến này"
-            onClick={(e) => {
-              e.stopPropagation()
-              if (opts.isUnmatchPending) return
-              opts.onUnmatch(t.id)
-            }}
-            disabled={opts.isUnmatchPending}
-            className="group relative flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200 ease-out hover:scale-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{
-              color: 'var(--ink-4)',
-              background: 'transparent',
-            }}
-            onMouseEnter={e => {
-              const el = e.currentTarget
-              el.style.color = '#d97706'
-              el.style.background = 'rgba(245,158,11,0.10)'
-              el.style.boxShadow = '0 0 0 1.5px rgba(245,158,11,0.25), 0 2px 8px rgba(245,158,11,0.15)'
-            }}
-            onMouseLeave={e => {
-              const el = e.currentTarget
-              el.style.color = 'var(--ink-4)'
-              el.style.background = 'transparent'
-              el.style.boxShadow = 'none'
-            }}
-          >
-            {opts.isUnmatchPending && opts.unmatchVariables === t.id
-              ? <Loader2 className="h-4 w-4 animate-spin" style={{ color: '#d97706' }} />
-              : <Unlink className="h-4 w-4 transition-transform duration-200 group-hover:rotate-12" />}
-          </button>
         )
       },
     },

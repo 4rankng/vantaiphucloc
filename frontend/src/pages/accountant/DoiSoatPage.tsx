@@ -3,6 +3,7 @@ import {
   ClipboardList,
   Loader2,
   FileSpreadsheet,
+  Unlink,
 } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -297,7 +298,7 @@ export function DoiSoatPage() {
         {!isLoading && filtered.length > 0 && (
           <div className="flex items-center justify-between mb-1.5">
             <p className="text-[11.5px]" style={{ color: 'var(--ink-4)' }}>
-              Nhấp vào hàng để xem chi tiết và ghép nối chuyến
+              Nhấp vào hàng để xem chi tiết
             </p>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--ink-3)' }}>
@@ -305,8 +306,8 @@ export function DoiSoatPage() {
                 Chờ ghép
               </span>
               <span className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--ink-3)' }}>
-                <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: 'var(--line-2)' }} />
-                Đã ghép
+                <Unlink className="h-3 w-3" style={{ color: 'var(--ink-4)' }} />
+                Đã ghép (nhấn để bỏ)
               </span>
             </div>
           </div>
