@@ -229,10 +229,10 @@ export function ClientsPage() {
 
       {/* ── Section ── */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-2">
           <SearchInput value={search} onChange={setSearch} placeholder="Tìm tên, MST, SĐT…" />
-          <Button variant="default" onClick={openCreateDialog}>
-            <Plus className="h-4 w-4" /> Thêm
+          <Button size="sm" onClick={openCreateDialog}>
+            <Plus className="h-3.5 w-3.5" /> Thêm
           </Button>
         </div>
 

@@ -260,7 +260,8 @@ export function PnLPage() {
         />
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
         <SearchBar
           value={search}
           onChange={setSearch}
@@ -269,6 +270,7 @@ export function PnLPage() {
         />
         <Button
           variant="outline"
+          size="sm"
           onClick={handleExport}
           disabled={isExporting || isLoading}
         >
@@ -281,7 +283,7 @@ export function PnLPage() {
       <div className={`grid grid-cols-1 gap-6 items-start${!isLoading && ngoaiRows.length > 0 ? ' xl:grid-cols-2' : ''}`}>
         {/* Xe nội bộ */}
         <section className="space-y-2 min-w-0">
-          <h2 className="text-sm font-semibold text-[var(--ink)] tracking-wide uppercase opacity-60">
+          <h2 className="text-[11px] font-semibold tracking-wider uppercase" style={{ color: 'var(--ink-3)' }}>
             Xe nội bộ
           </h2>
           <NoiBoTable rows={noiBoRows} isLoading={isLoading} />
@@ -289,12 +291,13 @@ export function PnLPage() {
 
         {/* Xe ngoài */}
         <section className="space-y-2 min-w-0">
-          <h2 className="text-sm font-semibold text-[var(--ink)] tracking-wide uppercase opacity-60">
+          <h2 className="text-[11px] font-semibold tracking-wider uppercase" style={{ color: 'var(--ink-3)' }}>
             Xe ngoài
           </h2>
           <NgoaiTable rows={ngoaiRows} isLoading={isLoading} />
         </section>
       </div>
+      </div>{/* end controls+tables group */}
     </div>
   )
 }

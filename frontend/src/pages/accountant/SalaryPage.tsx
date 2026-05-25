@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Wallet, Download, Coins, BadgePercent } from 'lucide-react'
-import { LinkButton } from '@/components/shared/LinkButton'
+import { Button } from '@/components/ui'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
@@ -322,23 +322,27 @@ export function SalaryPage() {
         />
       </div>
 
-      <div className="flex justify-end gap-3">
+      <div className="flex flex-col gap-2">
+      <div className="flex justify-end gap-2">
         {notInitialized && (
-          <LinkButton
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => initializeMutation.mutate({ fromDate: dateFrom, toDate: dateTo })}
             disabled={initializeMutation.isPending}
           >
             {initializeMutation.isPending ? 'Đang khởi tạo...' : 'Khởi tạo kỳ lương'}
-          </LinkButton>
+          </Button>
         )}
-        <LinkButton
+        <Button
+          variant="outline"
+          size="sm"
           onClick={handleExport}
-          icon={Download}
-          variant="muted"
           disabled={exportMutation.isPending}
         >
+          <Download className="h-3.5 w-3.5" />
           {exportMutation.isPending ? 'Đang xuất...' : 'Xuất Excel'}
-        </LinkButton>
+        </Button>
       </div>
 
       <NepoTable
@@ -350,6 +354,7 @@ export function SalaryPage() {
         minWidth={700}
         footerCells={rows.length > 0 ? footerCells : undefined}
       />
+      </div>{/* end controls+table group */}
 
       <DriverBaseSalaryDialog
         open={dialogDriver !== null}

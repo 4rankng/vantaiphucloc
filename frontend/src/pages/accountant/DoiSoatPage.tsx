@@ -225,7 +225,8 @@ export function DoiSoatPage() {
               style={{ width: 185, height: 32, fontSize: 12.5 }}
             />
             <Button
-              variant="ghost"
+              variant="outline"
+              size="sm"
               title={doiSoatClientId === 'ALL' || !doiSoatClientId ? 'Chọn chủ hàng để xuất file đối soát' : 'Xuất Excel đối soát cho chủ hàng đã chọn'}
               onClick={() => {
                 if (!doiSoatClientId || doiSoatClientId === 'ALL') return
@@ -249,7 +250,7 @@ export function DoiSoatPage() {
               {exportDoiSoat.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
               Xuất đối soát
             </Button>
-            <Button variant="ghost" onClick={() => setShowImport(true)}>
+            <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
               <FileSpreadsheet className="h-3.5 w-3.5" />
               Nhập Excel
             </Button>
