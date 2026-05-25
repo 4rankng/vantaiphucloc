@@ -51,12 +51,12 @@ export function QuickCreateDialog({ open, onClose, title, label, placeholder, on
           />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} className="flex-1">Huỷ</Button>
+          <Button variant="outline" size="sm" onClick={handleClose} className="flex-1">Huỷ</Button>
           <Button
+            size="sm"
             onClick={handleConfirm}
             disabled={!name.trim() || saving}
             className="flex-1"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
           >
             {saving ? 'Đang tạo...' : 'Xác nhận'}
           </Button>

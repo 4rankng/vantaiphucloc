@@ -227,7 +227,7 @@ export function ExcelImportPage() {
                 <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>
                   Hỗ trợ .xlsx, .xls, .csv
                 </span>
-                <Button variant="default" onClick={handlePreview} disabled={!file || parsePreview.isPending}>
+                <Button size="sm" onClick={handlePreview} disabled={!file || parsePreview.isPending}>
                   {parsePreview.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (

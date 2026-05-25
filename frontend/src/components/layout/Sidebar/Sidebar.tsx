@@ -242,8 +242,8 @@ export function Sidebar({ items, basePath }: SidebarProps) {
             <DialogDescription>Bạn có chắc muốn đăng xuất?</DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 justify-end mt-2">
-            <DialogClose asChild><Button variant="outline">Huỷ</Button></DialogClose>
-            <Button variant="destructive" onClick={handleLogout}>Đăng xuất</Button>
+            <DialogClose asChild><Button variant="outline" size="sm">Huỷ</Button></DialogClose>
+            <Button variant="destructive" size="sm" onClick={handleLogout}>Đăng xuất</Button>
           </div>
         </DialogContent>
       </Dialog>

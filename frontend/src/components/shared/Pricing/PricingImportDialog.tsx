@@ -236,23 +236,23 @@ export function PricingImportDialog({ open, onClose, clients }: PricingImportDia
           className="px-6 py-4"
           style={{ borderTop: '1px solid var(--theme-border-default)', background: 'var(--theme-bg-tertiary)' }}
         >
-          <Button variant="outline" onClick={onClose} disabled={previewing || committing}>Huỷ</Button>
+          <Button variant="outline" size="sm" onClick={onClose} disabled={previewing || committing}>Huỷ</Button>
           {!previewData ? (
-            <Button 
-              onClick={handlePreview} 
+            <Button
+              size="sm"
+              onClick={handlePreview}
               disabled={!file || !selectedClientId || previewing}
               className="min-w-[120px]"
-              style={{ background: 'var(--theme-brand-primary)', color: 'white' }}
             >
               {previewing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowRight className="h-4 w-4 mr-2" />}
               {previewing ? 'Đang xử lý...' : 'Xem trước'}
             </Button>
           ) : (
-            <Button 
-              onClick={handleCommit} 
+            <Button
+              size="sm"
+              onClick={handleCommit}
               disabled={committing}
               className="min-w-[140px]"
-              style={{ background: 'var(--theme-brand-primary)', color: 'white' }}
             >
               {committing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
               {committing ? 'Đang nạp...' : `Xác nhận nạp ${previewData.rows.length} dòng`}

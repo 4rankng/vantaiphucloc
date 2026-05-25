@@ -43,11 +43,12 @@ export function ConfirmDialog({
           </p>
         )}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
+          <Button variant="outline" size="sm" onClick={onClose} className="flex-1" disabled={loading}>
             {cancelLabel}
           </Button>
           <Button
             variant={variant === 'danger' ? 'destructive' : 'default'}
+            size="sm"
             className="flex-1"
             onClick={onConfirm}
             disabled={loading}

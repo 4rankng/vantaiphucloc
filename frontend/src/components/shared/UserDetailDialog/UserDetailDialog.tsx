@@ -192,6 +192,7 @@ export function UserDetailDialog({
             {isEditMode && onDelete && !isSelf && (
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => setDeleteConfirm(true)}
                 className="flex-1 gap-1.5"
                 style={{ color: 'var(--theme-status-error)', borderColor: 'var(--theme-status-error)' }}
@@ -199,16 +200,13 @@ export function UserDetailDialog({
                 <Trash2 className="w-3.5 h-3.5" /> Xoá
               </Button>
             )}
-            <Button variant="outline" onClick={onClose} className="flex-1">Huỷ</Button>
+            <Button variant="outline" size="sm" onClick={onClose} className="flex-1">Huỷ</Button>
             {isEditMode ? (
-              <Button onClick={handleSave} disabled={!editForm.username.trim() || cccdInvalid || busy} className="flex-1 gap-1.5"
-                style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-              >
+              <Button size="sm" onClick={handleSave} disabled={!editForm.username.trim() || cccdInvalid || busy} className="flex-1 gap-1.5">
                 <Pencil className="w-3.5 h-3.5" /> Lưu
               </Button>
             ) : (
-              <Button onClick={onClose} className="flex-1"
-                style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+              <Button size="sm" onClick={onClose} className="flex-1">
                 Xác nhận
               </Button>
             )}
@@ -224,8 +222,8 @@ export function UserDetailDialog({
             Tài khoản sẽ bị vô hiệu hoà. Hành động này không thể hoàn tác.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleDelete} disabled={busy} className="flex-1" style={{ background: 'var(--theme-status-error)', color: '#fff' }}>
+            <Button variant="outline" size="sm" onClick={() => setDeleteConfirm(false)} className="flex-1">Huỷ</Button>
+            <Button variant="destructive" size="sm" onClick={handleDelete} disabled={busy} className="flex-1">
               Xoá
             </Button>
           </DialogFooter>

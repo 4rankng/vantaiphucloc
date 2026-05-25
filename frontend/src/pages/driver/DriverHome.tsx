@@ -7,7 +7,6 @@ import { DeliveredTripCard } from '@/components/shared/DeliveredTripCard'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { useMyEarnings, useSalaryConfig, useDeliveredTrips } from '@/hooks/use-queries'
 import { getSalaryPeriodDates, dayBefore, dayAfter, toISODate } from '@/utils/salaryPeriod'
-import { LiveDot } from '@/components/shared/Decoration'
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
 
 const PAGE_SIZE = 10
@@ -132,7 +131,6 @@ function MobileDriverHome() {
     <div className="space-y-4">
       {/* Month navigator — standalone row, NOT part of the stat card */}
       <div className="flex items-center justify-center gap-2">
-        <LiveDot active={true} />
         <MonthNavigator
           year={displayYear}
           month={displayMonth}

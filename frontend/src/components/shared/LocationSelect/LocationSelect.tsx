@@ -74,8 +74,8 @@ export function LocationSelect({ value, onChange, placeholder = 'Chọn địa �
             autoFocus
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleCreate} disabled={!newName.trim()} className="flex-1 btn-primary">
+            <Button variant="outline" size="sm" onClick={() => handleOpenChange(false)} className="flex-1">Huỷ</Button>
+            <Button size="sm" onClick={handleCreate} disabled={!newName.trim()} className="flex-1">
               Tạo
             </Button>
           </DialogFooter>

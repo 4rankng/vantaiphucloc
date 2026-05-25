@@ -1,4 +1,4 @@
-import { Check, TrendingUp, Clock, Star } from 'lucide-react'
+import { Check } from 'lucide-react'
 import type { SuggestedRoute } from '@/services/api/deliveredTrips.api'
 
 interface RecentTripSuggestionsProps {
@@ -12,12 +12,6 @@ interface RecentTripSuggestionsProps {
     dropoffLocation: string
   }) => void
   loading?: boolean
-}
-
-const SOURCE_CONFIG: Record<string, { label: string; icon: typeof TrendingUp; color: string }> = {
-  frequent: { label: 'Quen thuộc', icon: Star, color: 'var(--theme-brand-primary)' },
-  recent:   { label: 'Gần đây',   icon: Clock, color: 'var(--theme-status-info, #3b82f6)' },
-  popular:  { label: 'Phổ biến',  icon: TrendingUp, color: 'var(--theme-status-warning)' },
 }
 
 export function RecentTripSuggestions({
@@ -49,8 +43,6 @@ export function RecentTripSuggestions({
         const dropoff = route.dropoffLocation?.name || ''
         const clientLabel = route.client?.code || route.client?.name || ''
         const isSelected = selectedTripId !== undefined && String(selectedTripId) === String(idx)
-        const src = SOURCE_CONFIG[route.source] ?? SOURCE_CONFIG.recent
-        const SrcIcon = src.icon
 
         return (
           <button
@@ -86,20 +78,9 @@ export function RecentTripSuggestions({
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0 ml-2">
-              {/* Source badge */}
-              <span
-                className="inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
-                style={{ background: `color-mix(in srgb, ${src.color} 12%, transparent)`, color: src.color }}
-              >
-                <SrcIcon className="w-2.5 h-2.5" />
-                {src.label}
-              </span>
-
-              {isSelected && (
-                <Check className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
-              )}
-            </div>
+            {isSelected && (
+              <Check className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-brand-primary)' }} />
+            )}
           </button>
         )
       })}

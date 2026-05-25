@@ -102,7 +102,7 @@ export function VendorManagementDrawer({ open, onClose }: { open: boolean; onClo
               <StatPill count={companyCount} label=" công ty" />
               <StatPill count={individualCount} label=" cá nhân" />
             </div>
-            <Button variant="default" onClick={() => setShowCreateDialog(true)}>
+            <Button size="sm" onClick={() => setShowCreateDialog(true)}>
               <Plus className="h-4 w-4" /> Thêm nhà thầu
             </Button>
           </div>

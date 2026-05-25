@@ -145,13 +145,14 @@ export function DirectorContacts() {
           <DialogFooter>
             <Button
               variant="outline"
+              size="sm"
               onClick={() => { setDeleteConfirm(selected); setSelected(null) }}
               className="flex-1"
-              style={{ color: 'var(--theme-status-error)' }}
+              style={{ color: 'var(--theme-status-error)', borderColor: 'var(--theme-status-error)' }}
             >
               Xoá
             </Button>
-            <Button variant="outline" onClick={() => setSelected(null)} className="flex-1">Đóng</Button>
+            <Button variant="outline" size="sm" onClick={() => setSelected(null)} className="flex-1">Đóng</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -164,8 +165,8 @@ export function DirectorContacts() {
             {deleteConfirm?.name} sẽ bị xoá vĩnh viễn.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleDelete} className="flex-1" style={{ background: 'var(--theme-status-error)', color: 'white' }}>Xoá</Button>
+            <Button variant="outline" size="sm" onClick={() => setDeleteConfirm(null)} className="flex-1">Huỷ</Button>
+            <Button variant="destructive" size="sm" onClick={handleDelete} className="flex-1">Xoá</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

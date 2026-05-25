@@ -26,8 +26,8 @@ export function LogoutConfirmDialog({ open, onOpenChange, onConfirm }: {
           <DialogDescription>Bạn có chắc muốn đăng xuất? Bạn sẽ cần chọn lại vai trò để tiếp tục.</DialogDescription>
         </DialogHeader>
         <div className="flex gap-3 justify-end mt-2">
-          <DialogClose asChild><Button variant="outline">Huỷ</Button></DialogClose>
-          <Button variant="destructive" onClick={onConfirm}>Đăng xuất</Button>
+          <DialogClose asChild><Button variant="outline" size="sm">Huỷ</Button></DialogClose>
+          <Button variant="destructive" size="sm" onClick={onConfirm}>Đăng xuất</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -92,9 +92,8 @@ export function ChangePasswordDialog({ open, onOpenChange }: {
           </div>
         </div>
         <DialogFooter>
-          <DialogClose asChild><Button variant="outline" className="flex-1">Huỷ</Button></DialogClose>
-          <Button onClick={handleSubmit} disabled={!currentPw || !newPw || newPw !== confirmPw || saving} className="flex-1"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+          <DialogClose asChild><Button variant="outline" size="sm" className="flex-1">Huỷ</Button></DialogClose>
+          <Button size="sm" onClick={handleSubmit} disabled={!currentPw || !newPw || newPw !== confirmPw || saving} className="flex-1">
             {saving ? 'Đang lưu...' : 'Xác nhận'}
           </Button>
         </DialogFooter>

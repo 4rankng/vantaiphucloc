@@ -181,12 +181,12 @@ export function CreateClientDialog({ open, onClose, onConfirm, defaultName, init
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={saving} className="flex-1">Huỷ</Button>
+          <Button variant="outline" size="sm" onClick={handleClose} disabled={saving} className="flex-1">Huỷ</Button>
           <Button
+            size="sm"
             onClick={handleConfirm}
             disabled={!form.name.trim() || saving}
             className="flex-1"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
           >
             {saving ? (isEdit ? 'Đang lưu...' : 'Đang tạo...') : (isEdit ? 'Lưu thay đổi' : 'Xác nhận')}
           </Button>

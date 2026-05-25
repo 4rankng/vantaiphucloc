@@ -48,10 +48,10 @@ export function DangerConfirmDialog({
           </p>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
+          <Button variant="outline" size="sm" onClick={onClose} className="flex-1" disabled={loading}>
             Huỷ
           </Button>
-          <Button variant="destructive" className="flex-1" onClick={onConfirm} disabled={loading}>
+          <Button variant="destructive" size="sm" className="flex-1" onClick={onConfirm} disabled={loading}>
             {loading ? 'Đang xử lý...' : confirmLabel}
           </Button>
         </DialogFooter>

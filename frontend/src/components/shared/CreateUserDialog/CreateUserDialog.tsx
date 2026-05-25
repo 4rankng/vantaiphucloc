@@ -173,11 +173,10 @@ export function CreateUserDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="flex-1">Huỷ</Button>
-          <Button onClick={handleSubmit}
+          <Button variant="outline" size="sm" onClick={onClose} className="flex-1">Huỷ</Button>
+          <Button size="sm" onClick={handleSubmit}
             disabled={!form.username.trim() || !form.password.trim() || saving}
-            className="flex-1"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+            className="flex-1">
             {saving ? 'Đang tạo...' : 'Xác nhận'}
           </Button>
         </DialogFooter>

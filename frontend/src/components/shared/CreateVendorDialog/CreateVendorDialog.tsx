@@ -144,12 +144,12 @@ export function CreateVendorDialog({ open, onClose, onConfirm }: CreateVendorDia
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} className="flex-1">Huỷ</Button>
+          <Button variant="outline" size="sm" onClick={handleClose} className="flex-1">Huỷ</Button>
           <Button
+            size="sm"
             onClick={handleConfirm}
             disabled={!form.name.trim() || saving}
             className="flex-1"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
           >
             {saving ? 'Đang tạo...' : 'Xác nhận'}
           </Button>

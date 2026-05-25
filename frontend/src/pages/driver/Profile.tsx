@@ -303,12 +303,12 @@ export function Profile() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPwDialog(false)} className="flex-1">Huỷ</Button>
+            <Button variant="outline" size="sm" onClick={() => setPwDialog(false)} className="flex-1">Huỷ</Button>
             <Button
+              size="sm"
               onClick={handleChangePw}
               disabled={!currentPw || !newPw || newPw !== confirmPw || changePasswordMutation.isPending}
               className="flex-1"
-              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
               {changePasswordMutation.isPending ? 'Đang lưu...' : 'Xác nhận'}
             </Button>

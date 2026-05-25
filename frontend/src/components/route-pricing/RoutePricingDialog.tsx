@@ -334,13 +334,14 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
         >
           <Button
             variant="outline"
+            size="sm"
             onClick={() => onOpenChange(false)}
             className="min-w-[96px]"
           >
             Huỷ
           </Button>
           <Button
-            variant="default"
+            size="sm"
             onClick={onSubmit}
             disabled={isSubmitting}
             className="min-w-[120px]"

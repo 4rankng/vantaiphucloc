@@ -71,12 +71,12 @@ export function ErrorFallback({ variant = 'runtime', error, component, onRetry, 
           {(onRetry || onHome) && (
             <div className="mt-6 flex items-center gap-2">
               {onHome && (
-                <Button onClick={onHome} variant="outline" className="flex-1">
+                <Button onClick={onHome} variant="outline" size="sm" className="flex-1">
                   <Home className="mr-2 h-4 w-4" /> Về trang chủ
                 </Button>
               )}
               {onRetry && (
-                <Button onClick={onRetry} className="flex-1">
+                <Button onClick={onRetry} size="sm" className="flex-1">
                   <RefreshCw className="mr-2 h-4 w-4" /> Thử lại
                 </Button>
               )}

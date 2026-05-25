@@ -100,14 +100,10 @@ export function TripSummaryDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="flex-1">
+          <Button variant="outline" size="sm" onClick={onClose} className="flex-1">
             Hủy
           </Button>
-          <Button
-            onClick={handleConfirm}
-            className="flex-1"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-          >
+          <Button size="sm" onClick={handleConfirm} className="flex-1">
             Xác nhận
           </Button>
         </DialogFooter>

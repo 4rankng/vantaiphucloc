@@ -60,15 +60,12 @@ export function ImportResultDialog({ open, onClose, result, onCreateManual }: Im
           {/* Actions */}
           <div className="flex gap-2 pt-1">
             {hasErrors && (
-              <Button onClick={() => { onClose(); onCreateManual() }}
-                className="flex-1 flex items-center justify-center gap-1.5 h-10 font-semibold rounded-xl text-xs"
-                style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}>
+              <Button variant="outline" size="sm" onClick={() => { onClose(); onCreateManual() }}
+                className="flex-1 gap-1.5">
                 <Plus className="w-3.5 h-3.5" /> Tạo thủ công
               </Button>
             )}
-            <Button onClick={onClose}
-              className="flex-1 h-10 font-semibold rounded-xl"
-              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+            <Button size="sm" onClick={onClose} className="flex-1">
               Đóng
             </Button>
           </div>

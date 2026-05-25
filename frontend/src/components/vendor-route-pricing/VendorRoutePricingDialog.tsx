@@ -169,11 +169,11 @@ export const VendorRoutePricingDialog = memo(function VendorRoutePricingDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} className="flex-1">
             Huỷ
           </Button>
           <Button
-            variant="default"
+            size="sm"
             onClick={onSubmit}
             disabled={isSubmitting}
             className="flex-1"

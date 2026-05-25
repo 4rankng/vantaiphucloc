@@ -238,10 +238,8 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} className="flex-1">Huỷ</Button>
-          <Button onClick={handleSubmit} disabled={!currentPw || !newPw || newPw !== confirmPw || saving} className="flex-1"
-            style={{ background: 'var(--sb-bg)', color: 'white' }}
-          >
+          <Button variant="outline" size="sm" onClick={handleClose} className="flex-1">Huỷ</Button>
+          <Button size="sm" onClick={handleSubmit} disabled={!currentPw || !newPw || newPw !== confirmPw || saving} className="flex-1">
             {saving ? 'Đang lưu...' : 'Xác nhận'}
           </Button>
         </DialogFooter>

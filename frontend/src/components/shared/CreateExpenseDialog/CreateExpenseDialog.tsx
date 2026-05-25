@@ -177,12 +177,12 @@ export function CreateExpenseDialog({ open, onClose, onConfirm, vehicles, saving
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={saving} className="flex-1">Huỷ</Button>
+          <Button variant="outline" size="sm" onClick={handleClose} disabled={saving} className="flex-1">Huỷ</Button>
           <Button
+            size="sm"
             onClick={handleConfirm}
             disabled={saving}
             className="flex-1"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
           >
             {saving ? 'Đang lưu...' : 'Thêm chi phí'}
           </Button>

@@ -358,7 +358,7 @@ function FleetSection() {
         <section>
           <div className="flex items-center gap-2 mb-3">
             <SearchInput value={fleetSearch} onChange={handleFleetSearch} placeholder="Tìm biển số, lái xe…" />
-            <Button variant="default" onClick={() => setShowAddVehicle(true)}>
+            <Button size="sm" onClick={() => setShowAddVehicle(true)}>
               <Plus className="h-4 w-4" /> Thêm xe
             </Button>
           </div>
@@ -423,7 +423,7 @@ function FleetSection() {
         <section>
           <div className="flex items-center gap-2 mb-3">
             <SearchInput value={driverSearch} onChange={handleDriverSearch} placeholder="Tìm tên, SĐT, biển số…" />
-            <Button variant="default" onClick={() => setShowCreateDriver(true)}>
+            <Button size="sm" onClick={() => setShowCreateDriver(true)}>
               <Plus className="h-4 w-4" /> Thêm lái xe
             </Button>
           </div>
@@ -610,7 +610,7 @@ export function TransportersPage() {
         subtitle="Quản lý đội xe, tài xế và nhà thầu vận chuyển"
         lucideIcon={Truck}
         actions={
-          <Button variant="outline" onClick={() => setShowVendorMgmt(true)} className="shrink-0 mt-1">
+          <Button variant="outline" size="sm" onClick={() => setShowVendorMgmt(true)} className="shrink-0 mt-1">
             <Building2 className="h-4 w-4" />
             Quản lý nhà thầu
           </Button>

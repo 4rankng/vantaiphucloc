@@ -365,10 +365,8 @@ function UserManagementInner() {
             </div>
           </div>
           <DialogFooter className="flex-row gap-2">
-            <Button variant="outline" onClick={() => setCreateOpen(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleCreate} disabled={!createForm.username.trim() || !createForm.password.trim() || createUser.isPending} className="flex-1"
-              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-            >
+            <Button variant="outline" size="sm" onClick={() => setCreateOpen(false)} className="flex-1">Huỷ</Button>
+            <Button size="sm" onClick={handleCreate} disabled={!createForm.username.trim() || !createForm.password.trim() || createUser.isPending} className="flex-1">
               Xác nhận
             </Button>
           </DialogFooter>
@@ -439,10 +437,8 @@ function UserManagementInner() {
               <Trash2 className="w-3 h-3 inline mr-0.5" /> Xoá
             </button>
             <div className="flex-1" />
-            <Button variant="outline" onClick={() => setDetailUser(null)}>Huỷ</Button>
-            <Button onClick={handleEdit} disabled={!editForm.username.trim() || updateUser.isPending} className="gap-1.5"
-              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-            >
+            <Button variant="outline" size="sm" onClick={() => setDetailUser(null)}>Huỷ</Button>
+            <Button size="sm" onClick={handleEdit} disabled={!editForm.username.trim() || updateUser.isPending} className="gap-1.5">
               <Pencil className="w-3.5 h-3.5" /> Lưu
             </Button>
           </DialogFooter>
@@ -457,8 +453,8 @@ function UserManagementInner() {
             Tài khoản sẽ bị vô hiệu hoá. Hành động này không thể hoàn tác.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleDelete} disabled={deleteUser.isPending} className="flex-1" style={{ background: 'var(--theme-status-error)', color: '#fff' }}>
+            <Button variant="outline" size="sm" onClick={() => setDeleteId(null)} className="flex-1">Huỷ</Button>
+            <Button variant="destructive" size="sm" onClick={handleDelete} disabled={deleteUser.isPending} className="flex-1">
               Xoá
             </Button>
           </DialogFooter>

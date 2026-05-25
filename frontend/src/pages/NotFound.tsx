@@ -14,7 +14,7 @@ export function NotFound() {
       <p className="typo-body-sm mb-6" style={{ color: 'var(--theme-text-muted)' }}>
         Không tìm thấy trang này
       </p>
-      <Button onClick={() => navigate('/')} className="btn-primary">Quay lại Tổng quan</Button>
+      <Button size="sm" onClick={() => navigate('/')}>Quay lại Tổng quan</Button>
     </div>
   )
 }

@@ -322,7 +322,7 @@ export function VendorsPage() {
       <section>
         <div className="flex items-center gap-2 mb-3">
           <SearchInput value={search} onChange={setSearch} placeholder="Tìm tên, MST, SĐT…" />
-          <Button variant="default" onClick={() => { setEditingId('new'); setSearch('') }}>
+          <Button size="sm" onClick={() => { setEditingId('new'); setSearch('') }}>
             <Plus className="h-4 w-4" /> Thêm
           </Button>
         </div>
