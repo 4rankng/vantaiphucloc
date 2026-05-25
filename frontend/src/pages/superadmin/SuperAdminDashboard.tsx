@@ -300,6 +300,7 @@ export function SuperAdminDashboard({
   onViewUser,
   onCreateUser,
   onActivateUser,
+  createButtonColor,
 }: {
   users: UserAccount[]
   filterRole: Role | 'ALL'
@@ -307,6 +308,7 @@ export function SuperAdminDashboard({
   onViewUser: (u: UserAccount) => void
   onCreateUser?: () => void
   onActivateUser?: (u: UserAccount) => void
+  createButtonColor?: string
 }) {
   const [search, setSearch]     = useState('')
   const [sortKey, setSortKey]   = useState<SortKey>('newest')
@@ -366,13 +368,18 @@ export function SuperAdminDashboard({
   const hasMore  = filtered.length > visibleCount
   const sortLabel = SORT_OPTIONS.find(o => o.value === sortKey)?.label ?? 'Mới nhất'
 
-  const TABS: { value: Role | 'ALL'; label: string }[] = [
+  const ALL_TABS: { value: Role | 'ALL'; label: string }[] = [
     { value: 'ALL',        label: 'Tất cả'    },
     { value: 'superadmin', label: 'SuperAdmin' },
     { value: 'director',   label: ROLE_LABELS.director  },
     { value: 'driver',     label: ROLE_LABELS.driver    },
     { value: 'accountant', label: ROLE_LABELS.accountant },
   ]
+
+  // Only show role tabs that have at least one user in the dataset
+  const TABS = ALL_TABS.filter(tab =>
+    tab.value === 'ALL' || (counts[tab.value as keyof typeof counts] ?? 0) > 0,
+  )
 
   return (
     <div className="space-y-5">
@@ -517,7 +524,14 @@ export function SuperAdminDashboard({
 
         {/* Create button */}
         {onCreateUser && (
-          <button onClick={onCreateUser} className="btn-primary h-11">
+          <button
+            onClick={onCreateUser}
+            className="btn-primary h-11"
+            style={createButtonColor ? {
+              background: createButtonColor,
+              borderColor: createButtonColor,
+            } : undefined}
+          >
             <Plus size={16} strokeWidth={2.4} />
             <span>Tạo tài khoản</span>
           </button>

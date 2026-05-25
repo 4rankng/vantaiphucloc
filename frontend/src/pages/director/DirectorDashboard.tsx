@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { TripChartCard } from '@/components/shared/TripChartCard'
 import {
   TrendingUp, TrendingDown, ChevronLeft, ChevronRight,
-  Activity, ArrowUpRight,
+  Activity, ArrowUpRight, Users,
 } from 'lucide-react'
 import { useDirectorDashboard } from '@/hooks/queries/pnl'
 import type { VehiclePnLGroup, VehiclePnLRow } from '@/services/api/pnl.api'
@@ -327,8 +328,9 @@ export function DirectorDashboard() {
       <style>{fadeStyle}</style>
       <div style={{ padding: '32px 40px 48px', maxWidth: 1480, margin: '0 auto' }}>
 
-        {/* Page header */}
-        <div className="flex items-end justify-between mb-7" style={{ animation: 'fadeIn 0.5s ease both' }}>
+        {/* Page header — 3-col: title | month picker (center) | actions */}
+        <div className="grid grid-cols-3 items-center mb-7" style={{ animation: 'fadeIn 0.5s ease both' }}>
+          {/* Left: title */}
           <div>
             <h1 style={{ fontSize: 32, fontWeight: 700, color: T.ink, letterSpacing: '-0.025em', lineHeight: 1.1 }}>
               Tổng quan điều hành
@@ -342,7 +344,8 @@ export function DirectorDashboard() {
             </div>
           </div>
 
-          {/* Month picker */}
+          {/* Center: month picker */}
+          <div className="flex justify-center">
           <div className="flex items-center gap-1 rounded-xl border p-1" style={{ background: T.surface, borderColor: T.line, borderRadius: 12 }}>
             <button onClick={onPrev} className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-[#F1F7F3]" aria-label="Tháng trước">
               <ChevronLeft style={{ width: 14, height: 14, stroke: T.ink2 }} />
@@ -358,6 +361,19 @@ export function DirectorDashboard() {
             <button onClick={onNext} className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-[#F1F7F3]" aria-label="Tháng sau">
               <ChevronRight style={{ width: 14, height: 14, stroke: T.ink2 }} />
             </button>
+          </div>
+          </div>
+
+          {/* Right: actions */}
+          <div className="flex justify-end">
+            <Link
+              to="/director/users"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{ background: T.brand, color: '#fff', boxShadow: `0 1px 3px rgba(0,90,45,0.18)` }}
+            >
+              <Users style={{ width: 14, height: 14 }} strokeWidth={2.2} />
+              Quản lý người dùng
+            </Link>
           </div>
         </div>
 

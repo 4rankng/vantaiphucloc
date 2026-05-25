@@ -1,229 +1,140 @@
 import { useState, useCallback, useMemo, type ReactNode } from 'react'
-import { Phone, Pencil, Trash2, ChevronRight, Plus, UserCog } from 'lucide-react'
+import { Phone, ChevronRight, UserCog } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
-import { Button } from '@/components/ui'
-import { Input } from '@/components/ui'
-import { Label } from '@/components/ui'
-import { DataTablePro, type Column } from '@/components/shared/DataTablePro/DataTablePro'
-import { useToast } from '@/components/atoms/Toast'
-import { FilterPills } from '@/components/shared/FilterPills'
+import { useQueryClient } from '@tanstack/react-query'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { FilterPills } from '@/components/shared/FilterPills'
 import { SearchInput } from '@/components/shared/ListUtils'
+import { UserDetailDialog } from '@/components/shared/UserDetailDialog'
+import { CreateUserDialog } from '@/components/shared/CreateUserDialog'
+import { BackButton } from '@/components/shared/BackButton/BackButton'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
 import { ROLE_ICONS } from '@/pages/superadmin/types'
 import { ROLE_COLORS, CREATABLE_ROLES } from '@/lib/role-mappings'
-import { useUsersPaged, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/use-queries'
+import { useUsersPaged, useUpdateUser, useDeleteUser, queryKeys } from '@/hooks/use-queries'
 import type { UserAccount } from '@/hooks/use-queries'
 import { useAuth } from '@/contexts/AuthContext'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useDebounce } from '@/hooks/use-debounce'
-
-function RequiredLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-      {children} <span className="text-xs" style={{ color: 'var(--theme-status-error)' }}>*</span>
-    </Label>
-  )
-}
-
-interface UserForm {
-  username: string
-  fullName: string
-  phone: string
-  cccd: string
-  role: Role
-  password: string
-}
-
-const EMPTY_FORM: UserForm = { username: '', fullName: '', phone: '', cccd: '', role: 'driver', password: '' }
+import { SuperAdminDashboard } from '@/pages/superadmin/SuperAdminDashboard'
 
 // ─── User management ──────────────────────────────────────────────────────────
 
 function UserManagementInner() {
-  const toast = useToast()
+  const qc = useQueryClient()
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebounce(searchInput, 400)
   const { data: pagedData, isLoading: loading } = useUsersPaged({
     search: debouncedSearch || undefined,
     pageSize: 500,
   })
+  // Include inactive users so the director can see and reactivate them
   const allUsers = useMemo(() => pagedData?.items ?? [], [pagedData])
-  const users = useMemo(() => allUsers.filter(u => u.isActive !== false), [allUsers])
-  const createUser = useCreateUser()
   const updateUser = useUpdateUser()
   const deleteUser = useDeleteUser()
 
   const [filterRole, setFilterRole] = useState<Role | 'ALL'>('ALL')
-
   const [createOpen, setCreateOpen] = useState(false)
-  const [createForm, setCreateForm] = useState<UserForm>(EMPTY_FORM)
-
-  const [detailUser, setDetailUser] = useState<UserAccount | null>(null)
-  const [editForm, setEditForm] = useState<UserForm>(EMPTY_FORM)
-
-  const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [createErrors, setCreateErrors] = useState<Partial<Record<keyof UserForm, string>>>({})
+  const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null)
 
   const isMobile = useIsMobile(768)
 
-  // Only superadmin can see superadmin accounts; all other roles are excluded
+  // Only superadmin can see superadmin accounts
   const currentUser = useAuth().user
-  const visibleUsers = currentUser?.role === 'superadmin'
-    ? users
-    : users.filter(u => u.role !== 'superadmin')
+  const visibleUsers = useMemo(
+    () => currentUser?.role === 'superadmin'
+      ? allUsers
+      : allUsers.filter(u => u.role !== 'superadmin'),
+    [allUsers, currentUser],
+  )
 
-  const filtered = useMemo(
+  // Mobile: filter by role for the list view
+  const mobileFiltered = useMemo(
     () => filterRole === 'ALL' ? visibleUsers : visibleUsers.filter(u => u.role === filterRole),
     [filterRole, visibleUsers],
   )
 
-  const columns: Column<UserAccount>[] = useMemo(() => [
-    {
-      key: 'fullName',
-      header: 'Tên',
-      accessor: u => {
-        const RoleIcon = ROLE_ICONS[u.role]
-        const rc = ROLE_COLORS[u.role]
-        return (
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: rc.bg }}>
-              <RoleIcon className="w-3.5 h-3.5" style={{ color: rc.color }} />
-            </div>
-            <span className="font-medium truncate">{u.fullName || u.username}</span>
-          </div>
-        )
-      },
-      sortable: true,
-    },
-    { key: 'role', header: 'Vai trò', accessor: u => ROLE_LABELS[u.role] },
-    { key: 'phone', header: 'SĐT', accessor: u => u.phone ?? '—' },
-    {
-      key: 'plate',
-      header: 'Biển số xe',
-      accessor: u => u.role === 'driver'
-        ? (u.vehiclePlate
-          ? <span className="font-mono text-xs">{u.vehiclePlate}</span>
-          : '—')
-        : '',
-    },
-  ], [])
-
-  const updateCreateField = useCallback((field: keyof UserForm, value: string) => {
-    setCreateForm(prev => ({ ...prev, [field]: value }))
-  }, [])
-
-  const updateEditField = useCallback((field: keyof UserForm, value: string) => {
-    setEditForm(prev => ({ ...prev, [field]: value }))
-  }, [])
-
-  const handleCreate = useCallback(async () => {
-    const errors: Partial<Record<keyof UserForm, string>> = {}
-    if (!createForm.username.trim()) errors.username = 'Vui lòng nhập tên đăng nhập'
-    if (!createForm.password.trim()) errors.password = 'Vui lòng nhập mật khẩu'
-    if (!createForm.role) errors.role = 'Vui lòng chọn vai trò'
-    setCreateErrors(errors)
-    if (Object.keys(errors).length > 0) return
-    try {
-      await createUser.mutateAsync({
-        username: createForm.username.trim(),
-        fullName: createForm.fullName.trim() || undefined,
-        phone: createForm.phone.trim() || undefined,
-        cccd: createForm.cccd.trim() || undefined,
-        role: createForm.role,
-        password: createForm.password,
-      })
-      toast.success('Đã tạo tài khoản')
-      setCreateOpen(false)
-      setCreateForm(EMPTY_FORM)
-      setCreateErrors({})
-    } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Lỗi không xác định'
-      toast.error('Lỗi', detail)
-    }
-  }, [createForm, toast, createUser])
-
-  const openDetail = useCallback((user: UserAccount) => {
-    setDetailUser(user)
-    setEditForm({
-      username: user.username,
-      fullName: user.fullName ?? '',
-      phone: user.phone ?? '',
-      cccd: user.cccd ?? '',
-      role: user.role,
-      password: '',
-    })
-  }, [])
-
-  const handleEdit = useCallback(async () => {
-    if (!detailUser || !editForm.username.trim()) return
-    try {
-      const payload: Record<string, unknown> = {
-        username: editForm.username.trim(),
-        fullName: editForm.fullName.trim() || undefined,
-        phone: editForm.phone.trim() || undefined,
-        cccd: editForm.cccd.trim() || undefined,
-        role: editForm.role,
-      }
-      if (editForm.password.trim()) payload.password = editForm.password.trim()
-      await updateUser.mutateAsync({ id: detailUser.id, data: payload })
-      toast.success('Đã cập nhật')
-      setDetailUser(null)
-    } catch {
-      toast.error('Lỗi', 'Không thể cập nhật')
-    }
-  }, [detailUser, editForm, toast, updateUser])
-
-  const handleDelete = useCallback(async () => {
-    if (!deleteId) return
-    try {
-      await deleteUser.mutateAsync(deleteId)
-      toast.success('Đã xoá tài khoản')
-      setDeleteId(null)
-      setDetailUser(null)
-    } catch {
-      toast.error('Lỗi', 'Không thể xoá tài khoản')
-    }
-  }, [deleteId, toast, deleteUser])
-
-  // visibleUsers moved before filtered useMemo
-  const roleCounts = {
+  const roleCounts = useMemo(() => ({
     ALL: visibleUsers.length,
     ...(currentUser?.role === 'superadmin' ? { superadmin: visibleUsers.filter(u => u.role === 'superadmin').length } : {}),
     director: visibleUsers.filter(u => u.role === 'director').length,
-    accountant: users.filter(u => u.role === 'accountant').length,
-    driver: users.filter(u => u.role === 'driver').length,
-  }
+    accountant: visibleUsers.filter(u => u.role === 'accountant').length,
+    driver: visibleUsers.filter(u => u.role === 'driver').length,
+  }), [visibleUsers, currentUser])
 
-  if (loading) return <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>Đang tải...</div>
+  const handleEditUser = useCallback(async (userId: string, data: Record<string, unknown>) => {
+    await updateUser.mutateAsync({ id: userId, data })
+    setSelectedUser(null)
+  }, [updateUser])
 
-  const addButton = (
-    <button
-      onClick={() => { setCreateForm(EMPTY_FORM); setCreateOpen(true) }}
-      className="btn-primary"
-    >
-      <Plus size={16} strokeWidth={2.25} />
-      <span>Tạo tài khoản</span>
-    </button>
+  const handleDeleteUser = useCallback(async (userId: string) => {
+    await deleteUser.mutateAsync(userId)
+    setSelectedUser(null)
+  }, [deleteUser])
+
+  const handleActivateUser = useCallback(async (user: UserAccount) => {
+    await updateUser.mutateAsync({ id: user.id, data: { is_active: true } })
+  }, [updateUser])
+
+  const editableRoles = CREATABLE_ROLES.map(r => ({ value: r, label: ROLE_LABELS[r] }))
+
+  if (loading) return (
+    <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>
+      Đang tải...
+    </div>
   )
 
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-          {users.length} tài khoản đang hoạt động
-        </span>
-        {addButton}
-      </div>
+  // ── Desktop: polished card grid ──────────────────────────────────────────────
+  if (!isMobile) {
+    return (
+      <>
+        <BackButton label="Tổng quan" onClick={() => window.history.back()} />
+        <SuperAdminDashboard
+          users={visibleUsers}
+          filterRole={filterRole}
+          setFilterRole={setFilterRole}
+          onViewUser={setSelectedUser}
+          onCreateUser={() => setCreateOpen(true)}
+          onActivateUser={handleActivateUser}
+          createButtonColor="var(--theme-sidebar, #047857)"
+        />
 
-      <SearchInput value={searchInput} onChange={setSearchInput} placeholder="Tìm tên, SĐT, CCCD, tên đăng nhập…" />
+        <CreateUserDialog
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onCreated={() => qc.invalidateQueries({ queryKey: queryKeys.users })}
+          roles={editableRoles}
+        />
+
+        <UserDetailDialog
+          user={selectedUser}
+          open={!!selectedUser}
+          onClose={() => setSelectedUser(null)}
+          onEdit={handleEditUser}
+          onDelete={handleDeleteUser}
+          editableRoles={editableRoles}
+          saving={updateUser.isPending || deleteUser.isPending}
+        />
+      </>
+    )
+  }
+
+  // ── Mobile: compact list ─────────────────────────────────────────────────────
+  return (
+    <div className="space-y-4">
+      <SearchInput
+        value={searchInput}
+        onChange={setSearchInput}
+        placeholder="Tìm tên, SĐT, tên đăng nhập…"
+      />
 
       <FilterPills
         options={[
           { value: 'ALL', label: 'Tất cả', count: roleCounts.ALL },
-          ...(currentUser?.role === 'superadmin' ? [{ value: 'superadmin', label: ROLE_LABELS.superadmin, count: roleCounts.superadmin }] : []),
+          ...(currentUser?.role === 'superadmin'
+            ? [{ value: 'superadmin', label: ROLE_LABELS.superadmin, count: roleCounts.superadmin }]
+            : []),
           { value: 'director', label: ROLE_LABELS.director, count: roleCounts.director },
           { value: 'accountant', label: ROLE_LABELS.accountant, count: roleCounts.accountant },
           { value: 'driver', label: ROLE_LABELS.driver, count: roleCounts.driver },
@@ -232,234 +143,110 @@ function UserManagementInner() {
         onChange={setFilterRole}
       />
 
-      {filtered.length === 0 && !loading && (
+      {mobileFiltered.length === 0 && (
         <EmptyState
           icon={<UserCog className="w-10 h-10" />}
           title="Chưa có tài khoản"
-          description={filterRole !== 'ALL' ? `Không có tài khoản với vai trò ${ROLE_LABELS[filterRole]}` : 'Tạo tài khoản đầu tiên cho team'}
+          description={
+            filterRole !== 'ALL'
+              ? `Không có tài khoản với vai trò ${ROLE_LABELS[filterRole]}`
+              : 'Tạo tài khoản đầu tiên cho team'
+          }
           compact
         />
       )}
 
-      {isMobile ? (
-        <div className="grid grid-cols-1 gap-3">
-          {filtered.map(u => {
-            const RoleIcon = ROLE_ICONS[u.role]
-            const roleColor = ROLE_COLORS[u.role]
-            return (
-              <button
-                key={u.id}
-                onClick={() => openDetail(u)}
-                className="w-full flex items-center gap-3 p-3.5 rounded-lg text-left card-lift touch-manipulation"
-                style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
+      <div className="grid grid-cols-1 gap-3">
+        {mobileFiltered.map(u => {
+          const RoleIcon = ROLE_ICONS[u.role]
+          const roleColor = ROLE_COLORS[u.role]
+          const inactive = u.isActive === false
+          return (
+            <button
+              key={u.id}
+              onClick={() => setSelectedUser(u)}
+              className="w-full flex items-center gap-3 p-3.5 rounded-lg text-left card-lift touch-manipulation"
+              style={{
+                background: inactive
+                  ? 'linear-gradient(180deg,#FFFBFB 0%,#FFFFFF 60%)'
+                  : 'var(--theme-bg-secondary)',
+                boxShadow: 'var(--theme-shadow-card)',
+                opacity: inactive ? 0.85 : 1,
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: inactive ? 'var(--theme-bg-tertiary)' : roleColor.bg }}
               >
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: roleColor.bg }}
-                >
-                  <RoleIcon className="w-4.5 h-4.5" style={{ color: roleColor.color }} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{u.fullName || u.username}</p>
-                  {(() => {
-                    let renderedAny = false
-                    const sep = (
-                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
-                    )
-                    const items: ReactNode[] = []
-                    if (u.phone) {
-                      items.push(
-                        <span key="phone" className="inline-flex items-center gap-1">
-                          <Phone className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
-                          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{u.phone}</span>
-                        </span>,
-                      )
-                      renderedAny = true
-                    }
-                    if (u.cccd) {
-                      if (renderedAny) items.push(<span key="sep-cccd">{sep}</span>)
-                      items.push(
-                        <span key="cccd" className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>CCCD: {u.cccd}</span>,
-                      )
-                      renderedAny = true
-                    }
-                    if (u.role === 'driver' && u.vehiclePlate) {
-                      if (renderedAny) items.push(<span key="sep-plate">{sep}</span>)
-                      items.push(
-                        <span key="plate" className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{u.vehiclePlate}</span>,
-                      )
-                      renderedAny = true
-                    }
-                    return (
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">{items}</div>
-                    )
-                  })()}
-                </div>
-                <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-              </button>
-            )
-          })}
-        </div>
-      ) : (
-        <DataTablePro
-          data={filtered}
-          columns={columns}
-          rowKey={u => u.id}
-          onRowClick={u => openDetail(u)}
-          defaultSortKey="fullName"
-          emptyState={<p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có tài khoản</p>}
-        />
-      )}
-
-      {/* Create dialog */}
-      <Dialog open={createOpen} onOpenChange={(open) => { if (!open) setCreateOpen(false) }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Thêm tài khoản</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <RequiredLabel>Vai trò</RequiredLabel>
-              <div className="grid grid-cols-3 gap-2">
-                {CREATABLE_ROLES.map(r => (
-                  <button
-                    key={r}
-                    onClick={() => updateCreateField('role', r)}
-                    className="py-2.5 px-3 rounded-xl text-sm font-medium transition-colors touch-manipulation"
-                    style={{
-                      background: createForm.role === r ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                      color: createForm.role === r ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                    }}
+                <RoleIcon
+                  className="w-4.5 h-4.5"
+                  style={{ color: inactive ? 'var(--theme-text-muted)' : roleColor.color }}
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p
+                    className="text-sm font-semibold truncate"
+                    style={{ color: 'var(--theme-text-primary)' }}
                   >
-                    {ROLE_LABELS[r]}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {/* Row 1: username + full name */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <RequiredLabel>Tên đăng nhập</RequiredLabel>
-                <Input value={createForm.username} onChange={e => { updateCreateField('username', e.target.value); if (createErrors.username) setCreateErrors(prev => ({ ...prev, username: undefined })) }} placeholder="nguyenvana" className="text-sm" />
-                {createErrors.username && <p className="text-xs font-medium" style={{ color: 'var(--theme-status-error)' }}>{createErrors.username}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ và tên</Label>
-                <Input value={createForm.fullName} onChange={e => updateCreateField('fullName', e.target.value)} placeholder="Nguyễn Văn A" className="text-sm" />
-              </div>
-            </div>
-            {/* Row 2: phone + CCCD */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
-                <Input value={createForm.phone} onChange={e => updateCreateField('phone', e.target.value)} placeholder="0912-345-678" className="text-sm" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>CCCD</Label>
-                <Input value={createForm.cccd} onChange={e => updateCreateField('cccd', e.target.value)} placeholder="001234567890" className="text-sm font-mono" />
-              </div>
-            </div>
-            {/* Password */}
-            <div className="space-y-1.5">
-              <RequiredLabel>Mật khẩu mặc định</RequiredLabel>
-              <Input type="password" value={createForm.password} onChange={e => { updateCreateField('password', e.target.value); if (createErrors.password) setCreateErrors(prev => ({ ...prev, password: undefined })) }} placeholder="••••••••" className="text-sm" />
-              {createErrors.password && <p className="text-xs font-medium" style={{ color: 'var(--theme-status-error)' }}>{createErrors.password}</p>}
-            </div>
-          </div>
-          <DialogFooter className="flex-row gap-2">
-            <Button variant="outline" size="sm" onClick={() => setCreateOpen(false)} className="flex-1">Huỷ</Button>
-            <Button size="sm" onClick={handleCreate} disabled={!createForm.username.trim() || !createForm.password.trim() || createUser.isPending} className="flex-1">
-              Xác nhận
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Detail/Edit dialog */}
-      <Dialog open={!!detailUser} onOpenChange={(open) => { if (!open) setDetailUser(null) }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Thông tin tài khoản</DialogTitle>
-          </DialogHeader>
-          {detailUser && (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <RequiredLabel>Vai trò</RequiredLabel>
-                <div className="grid grid-cols-3 gap-2">
-                  {CREATABLE_ROLES.map(r => (
-                    <button
-                      key={r}
-                      onClick={() => updateEditField('role', r)}
-                      className="py-2.5 px-3 rounded-xl text-sm font-medium transition-colors touch-manipulation"
+                    {u.fullName || u.username}
+                  </p>
+                  {inactive && (
+                    <span
+                      className="shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
                       style={{
-                        background: editForm.role === r ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                        color: editForm.role === r ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                        background: 'var(--theme-status-error-light)',
+                        color: 'var(--theme-status-error)',
                       }}
                     >
-                      {ROLE_LABELS[r]}
-                    </button>
-                  ))}
+                      Tạm dừng
+                    </span>
+                  )}
                 </div>
+                {(() => {
+                  const items: ReactNode[] = []
+                  const sep = <span key="sep" className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
+                  if (u.phone) {
+                    items.push(
+                      <span key="phone" className="inline-flex items-center gap-1">
+                        <Phone className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
+                        <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{u.phone}</span>
+                      </span>,
+                    )
+                  }
+                  if (u.role === 'driver' && u.vehiclePlate) {
+                    if (items.length) items.push(sep)
+                    items.push(
+                      <span key="plate" className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{u.vehiclePlate}</span>,
+                    )
+                  }
+                  return (
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">{items}</div>
+                  )
+                })()}
               </div>
-              {/* Row 1: username + full name */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <RequiredLabel>Tên đăng nhập</RequiredLabel>
-                  <Input value={editForm.username} onChange={e => updateEditField('username', e.target.value)} className="text-sm" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ và tên</Label>
-                  <Input value={editForm.fullName} onChange={e => updateEditField('fullName', e.target.value)} className="text-sm" placeholder="Nguyễn Văn A" />
-                </div>
-              </div>
-              {/* Row 2: phone + CCCD */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
-                  <Input value={editForm.phone} onChange={e => updateEditField('phone', e.target.value)} className="text-sm" placeholder="0912-345-678" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>CCCD</Label>
-                  <Input value={editForm.cccd} onChange={e => updateEditField('cccd', e.target.value)} className="text-sm font-mono" placeholder="001234567890" />
-                </div>
-              </div>
-              {/* Password */}
-              <div className="space-y-1.5">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu mới</Label>
-                <Input type="password" value={editForm.password} onChange={e => updateEditField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
-              </div>
-            </div>
-          )}
-          <DialogFooter className="gap-2">
-            <button
-              onClick={() => setDeleteId(detailUser?.id ?? null)}
-              className="text-xs font-medium px-2 py-1.5 transition hover:opacity-70"
-              style={{ color: 'var(--theme-status-error)' }}
-            >
-              <Trash2 className="w-3 h-3 inline mr-0.5" /> Xoá
+              <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
             </button>
-            <div className="flex-1" />
-            <Button variant="outline" size="sm" onClick={() => setDetailUser(null)}>Huỷ</Button>
-            <Button size="sm" onClick={handleEdit} disabled={!editForm.username.trim() || updateUser.isPending} className="gap-1.5">
-              <Pencil className="w-3.5 h-3.5" /> Lưu
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          )
+        })}
+      </div>
 
-      {/* Delete confirm */}
-      <Dialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null) }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Xoá tài khoản?</DialogTitle></DialogHeader>
-          <p className="text-sm" style={{ color: 'var(--theme-text-secondary)' }}>
-            Tài khoản sẽ bị vô hiệu hoá. Hành động này không thể hoàn tác.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setDeleteId(null)} className="flex-1">Huỷ</Button>
-            <Button variant="destructive" size="sm" onClick={handleDelete} disabled={deleteUser.isPending} className="flex-1">
-              Xoá
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CreateUserDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => qc.invalidateQueries({ queryKey: queryKeys.users })}
+        roles={editableRoles}
+      />
+
+      <UserDetailDialog
+        user={selectedUser}
+        open={!!selectedUser}
+        onClose={() => setSelectedUser(null)}
+        onEdit={handleEditUser}
+        onDelete={handleDeleteUser}
+        editableRoles={editableRoles}
+        saving={updateUser.isPending || deleteUser.isPending}
+      />
     </div>
   )
 }
