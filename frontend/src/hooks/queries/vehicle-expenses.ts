@@ -1,7 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { queryKeys } from '../query-keys'
 import type { ApiResponse } from '@/data/domain'
+import type { VehicleExpenseCategory, VehicleExpensePage } from '@/services/api/vehicleExpenses.api'
 
 function unwrap<T>(res: ApiResponse<T>): T {
   if (res.success) return res.data
@@ -25,6 +26,30 @@ export function useVehicleExpenses(params?: {
   })
 }
 
+
+export function useVehicleExpensesInfinite(params?: {
+  vehicleId?: number
+  category?: VehicleExpenseCategory
+  dateFrom?: string
+  dateTo?: string
+  pageSize?: number
+}) {
+  return useInfiniteQuery<VehicleExpensePage, Error>({
+    queryKey: ['vehicle-expenses-infinite', params?.vehicleId ?? '', params?.category ?? '', params?.dateFrom ?? '', params?.dateTo ?? ''],
+    queryFn: async ({ pageParam }) => {
+      const res = await apiClient.listVehicleExpenses({
+        ...params,
+        page: pageParam as number,
+        pageSize: params?.pageSize ?? 30,
+      })
+      if (!res.success) throw new Error(res.message ?? 'Lỗi hệ thống')
+      return res.data
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
+  })
+}
 
 export function useCreateVehicleExpense() {
   const qc = useQueryClient()

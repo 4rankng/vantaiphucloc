@@ -346,7 +346,7 @@ export function Login() {
                 type="submit"
                 className="login-submit-btn"
                 style={{
-                  background: 'var(--theme-brand-primary)',
+                  background: 'var(--theme-sidebar, #005A2D)',
                   color: 'var(--theme-text-on-brand)',
                 }}
                 disabled={loading || !username.trim() || !password.trim()}

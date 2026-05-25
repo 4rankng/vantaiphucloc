@@ -1,8 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog'
-import { Input } from '@/components/ui/Input/Input'
-import { Label } from '@/components/ui/Label'
 import { RobotDialogHero } from '@/components/shared/RobotHead'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface Props {
   open: boolean
@@ -11,6 +10,96 @@ interface Props {
   defaultDateTo: string
   isPending: boolean
   onConfirm: (dateFrom: string, dateTo: string) => void
+}
+
+/* ── Helpers ──────────────────────────────────────────────── */
+function toYearMonth(dateStr: string): { year: number; month: number } {
+  const [y, m] = dateStr.split('-').map(Number)
+  return { year: y || new Date().getFullYear(), month: m || new Date().getMonth() + 1 }
+}
+
+function firstDayOf(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, '0')}-01`
+}
+
+function lastDayOf(year: number, month: number): string {
+  const last = new Date(year, month, 0).getDate()
+  return `${year}-${String(month).padStart(2, '0')}-${String(last).padStart(2, '0')}`
+}
+
+function addMonths(year: number, month: number, delta: number): { year: number; month: number } {
+  let m = month - 1 + delta
+  let y = year + Math.floor(m / 12)
+  m = ((m % 12) + 12) % 12
+  return { year: y, month: m + 1 }
+}
+
+const VI_MONTHS = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+  'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12']
+
+/* ── Month navigator pill ─────────────────────────────────── */
+function MonthNav({
+  label,
+  year,
+  month,
+  onPrev,
+  onNext,
+  accentColor = '#6d28d9',
+}: {
+  label: string
+  year: number
+  month: number
+  onPrev: () => void
+  onNext: () => void
+  accentColor?: string
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-semibold" style={{ color: accentColor }}>{label}</p>
+      <div
+        className="flex items-center justify-between rounded-xl px-1 py-1"
+        style={{ border: `1.5px solid ${accentColor}66`, background: 'white', gap: 4 }}
+      >
+        <button
+          type="button"
+          onClick={onPrev}
+          className="flex items-center justify-center w-7 h-7 rounded-lg transition-all hover:scale-110 active:scale-95"
+          style={{ color: accentColor, background: 'transparent' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = `${accentColor}18` }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+          aria-label="Tháng trước"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+
+        <span
+          className="flex-1 text-center text-sm font-semibold select-none"
+          style={{ color: '#1f2937', letterSpacing: '-0.01em' }}
+        >
+          {VI_MONTHS[month - 1]}&nbsp;<span style={{ color: accentColor, fontWeight: 700 }}>{year}</span>
+        </span>
+
+        <button
+          type="button"
+          onClick={onNext}
+          className="flex items-center justify-center w-7 h-7 rounded-lg transition-all hover:scale-110 active:scale-95"
+          style={{ color: accentColor, background: 'transparent' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = `${accentColor}18` }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+          aria-label="Tháng tiếp theo"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Fine-tune hint */}
+      <p className="text-[10.5px] text-center" style={{ color: '#9ca3af' }}>
+        {firstDayOf(year, month).split('-').reverse().join('/')}
+        &nbsp;→&nbsp;
+        {lastDayOf(year, month).split('-').reverse().join('/')}
+      </p>
+    </div>
+  )
 }
 
 /* ── Cycling scan messages ──────────────────────────────── */
@@ -49,25 +138,56 @@ function ScanMessages() {
 
 /* ── Main component ─────────────────────────────────────── */
 export function AutoMatchDateDialog({ open, onClose, defaultDateFrom, defaultDateTo, isPending, onConfirm }: Props) {
-  const [dateFrom, setDateFrom] = useState(defaultDateFrom)
-  const [dateTo, setDateTo] = useState(defaultDateTo)
+  const [fromYM, setFromYM] = useState(() => toYearMonth(defaultDateFrom))
+  const [toYM, setToYM] = useState(() => toYearMonth(defaultDateTo))
+
+  // Re-sync when defaults change (dialog re-opens)
+  useEffect(() => {
+    if (open) {
+      setFromYM(toYearMonth(defaultDateFrom))
+      setToYM(toYearMonth(defaultDateTo))
+    }
+  }, [open, defaultDateFrom, defaultDateTo])
 
   const handleOpen = useCallback((isOpen: boolean) => {
     if (!isOpen) onClose()
-    else { setDateFrom(defaultDateFrom); setDateTo(defaultDateTo) }
-  }, [onClose, defaultDateFrom, defaultDateTo])
+  }, [onClose])
 
   const handleConfirm = useCallback(() => {
-    if (!dateFrom || !dateTo) return
-    onConfirm(dateFrom, dateTo)
-  }, [dateFrom, dateTo, onConfirm])
+    onConfirm(firstDayOf(fromYM.year, fromYM.month), lastDayOf(toYM.year, toYM.month))
+  }, [fromYM, toYM, onConfirm])
+
+  const prevFrom = useCallback(() => setFromYM(ym => addMonths(ym.year, ym.month, -1)), [])
+  const nextFrom = useCallback(() => {
+    setFromYM(ym => {
+      const next = addMonths(ym.year, ym.month, 1)
+      // clamp: from can't exceed to
+      if (next.year > toYM.year || (next.year === toYM.year && next.month > toYM.month)) return ym
+      return next
+    })
+  }, [toYM])
+
+  const prevTo = useCallback(() => {
+    setToYM(ym => {
+      const prev = addMonths(ym.year, ym.month, -1)
+      // clamp: to can't go before from
+      if (prev.year < fromYM.year || (prev.year === fromYM.year && prev.month < fromYM.month)) return ym
+      return prev
+    })
+  }, [fromYM])
+
+  const nextTo = useCallback(() => setToYM(ym => addMonths(ym.year, ym.month, 1)), [])
 
   return (
     <Dialog open={open} onOpenChange={isPending ? undefined : handleOpen}>
-      <DialogContent className="max-w-sm overflow-hidden p-0 border-0 gap-0"
+      <DialogContent
+        className="max-w-sm overflow-hidden p-0 border-0 gap-0"
         style={{ borderRadius: 20, boxShadow: '0 24px 60px rgba(0,0,0,0.35)' }}
       >
-        <DialogTitle style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', borderWidth: 0 }}>Quét thông minh với AI</DialogTitle>
+        <DialogTitle style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', borderWidth: 0 }}>
+          Quét thông minh với AI
+        </DialogTitle>
+
         {/* ── Hero Header ─────────────────────────────── */}
         <RobotDialogHero
           title={isPending ? 'AI đang quét dữ liệu…' : 'Quét thông minh với AI'}
@@ -76,33 +196,40 @@ export function AutoMatchDateDialog({ open, onClose, defaultDateFrom, defaultDat
           {isPending && <ScanMessages />}
         </RobotDialogHero>
 
-        {/* ── Date inputs (hidden while scanning) ─────── */}
+        {/* ── Month pickers ────────────────────────────── */}
         {!isPending && (
           <div className="px-6 py-5" style={{ background: 'var(--theme-bg-secondary)' }}>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="auto-match-from" className="text-xs font-semibold" style={{ color: '#6d28d9' }}>Từ ngày</Label>
-                <Input id="auto-match-from" type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-                  style={{ borderColor: dateFrom ? 'rgba(109,40,217,0.4)' : undefined }} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="auto-match-to" className="text-xs font-semibold" style={{ color: '#6d28d9' }}>Đến ngày</Label>
-                <Input id="auto-match-to" type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-                  style={{ borderColor: dateTo ? 'rgba(109,40,217,0.4)' : undefined }} />
-              </div>
+            <div className="grid grid-cols-2 gap-4">
+              <MonthNav
+                label="Từ tháng"
+                year={fromYM.year}
+                month={fromYM.month}
+                onPrev={prevFrom}
+                onNext={nextFrom}
+              />
+              <MonthNav
+                label="Đến tháng"
+                year={toYM.year}
+                month={toYM.month}
+                onPrev={prevTo}
+                onNext={nextTo}
+                accentColor="#7c3aed"
+              />
             </div>
           </div>
         )}
 
         {/* ── Footer ───────────────────────────────────── */}
-        <div className="flex items-center justify-between px-6 py-4"
+        <div
+          className="flex items-center justify-between px-6 py-4"
           style={{ background: 'var(--theme-bg-secondary)', borderTop: isPending ? 'none' : '1px solid var(--theme-border-default)' }}
         >
           {isPending ? (
             <div style={{ height: 8 }} />
           ) : (
             <>
-              <button onClick={onClose}
+              <button
+                onClick={onClose}
                 className="text-sm font-medium transition-colors"
                 style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 0' }}
                 onMouseEnter={e => (e.currentTarget.style.color = '#111')}
@@ -112,8 +239,7 @@ export function AutoMatchDateDialog({ open, onClose, defaultDateFrom, defaultDat
               </button>
               <button
                 onClick={handleConfirm}
-                disabled={!dateFrom || !dateTo}
-                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-white text-sm font-medium bg-violet-600 hover:bg-violet-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-1"
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-white text-sm font-medium bg-violet-600 hover:bg-violet-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-1"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>

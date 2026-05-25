@@ -131,15 +131,18 @@ function AILoadingState() {
 
 /* ── No-result state ─────────────────────────────────────── */
 const NO_RESULT_BODY = 'Hệ thống chưa tìm thấy cặp chuyến nào đủ tiêu chí tự động ghép trong khoảng thời gian đã chọn.'
+const ALL_MATCHED_BODY = 'Tất cả chuyến trong khoảng thời gian đã chọn đều đã được đối chiếu. Không còn chuyến nào cần ghép thêm.'
 
-function NoResultState({ onClose }: { onClose: () => void }) {
-  const { displayed, done } = useTypewriter(NO_RESULT_BODY, 28)
+function NoResultState({ onClose, allMatched = false }: { onClose: () => void; allMatched?: boolean }) {
+  const body = allMatched ? ALL_MATCHED_BODY : NO_RESULT_BODY
+  const title = allMatched ? 'Tất cả đã ghép xong' : 'Không tìm thấy kết quả'
+  const { displayed, done } = useTypewriter(body, 28)
   const isTyping = !!displayed && !done
 
   return (
     <div style={{ borderRadius: 20, overflow: 'hidden' }}>
       {/* ── Hero ── */}
-      <RobotDialogHero title="Không tìm thấy kết quả" _externalTyping={isTyping} />
+      <RobotDialogHero title={title} _externalTyping={isTyping} />
 
       {/* ── Body ── */}
       <div style={{ background: 'white', padding: '20px 24px 4px' }}>
@@ -394,7 +397,7 @@ export function AutoMatchDialog({
         <DialogTitle style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', borderWidth: 0 }}>
           Tự động đối chiếu (AI)
         </DialogTitle>
-        {isLoading ? <AILoadingState /> : isEmptyResult ? <NoResultState onClose={onClose} /> : <>
+        {isLoading ? <AILoadingState /> : isEmptyResult ? <NoResultState onClose={onClose} allMatched={unmatchedCount === 0} /> : <>
         {/* Gradient accent strip */}
         <div style={{
           margin: '-24px -24px 20px -24px',

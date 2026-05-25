@@ -292,11 +292,23 @@ export function DoiSoatPage() {
           </div>
         </Panel>
 
-        {/* Hint text — above the table, outside the Panel */}
+        {/* Hint text + legend — above the table, outside the Panel */}
         {!isLoading && filtered.length > 0 && (
-          <p className="text-[11.5px] mb-1.5" style={{ color: 'var(--ink-4)' }}>
-            Nhấp vào hàng để xem chi tiết và ghép nối chuyến
-          </p>
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[11.5px]" style={{ color: 'var(--ink-4)' }}>
+              Nhấp vào hàng để xem chi tiết và ghép nối chuyến
+            </p>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--ink-3)' }}>
+                <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#f59e0b', opacity: 0.85 }} />
+                Chờ ghép
+              </span>
+              <span className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--ink-3)' }}>
+                <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: 'var(--line-2)' }} />
+                Đã ghép
+              </span>
+            </div>
+          </div>
         )}
 
         <Panel flush>

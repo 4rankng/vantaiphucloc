@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Trash2, MapPin } from 'lucide-react'
-import { compactCurrency, WORK_TYPE_LABELS } from '@/data/domain'
+import { formatCurrency, WORK_TYPE_LABELS } from '@/data/domain'
 import type { RoutePricing, WorkType } from '@/data/domain'
 import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
 import { tdActive, tdDimmed } from '@/components/shared/editCellStyles'
@@ -96,7 +96,7 @@ function PriceCell({ value }: { value: number | null }) {
   }
   return (
     <span className="font-mono-num text-xs tabular-nums" style={{ color: 'var(--ink-1)' }}>
-      {compactCurrency(value)}
+      {formatCurrency(value)}
     </span>
   )
 }
@@ -114,8 +114,8 @@ const COL = {
   client: 240,
   pickup: 140,
   dropoff: 140,
-  price: 100,   // each of the 4 cước columns
-  salary: 100,  // each of the 4 lương columns
+  price: 130,   // each of the 4 cước columns
+  salary: 130,  // each of the 4 lương columns
   workType: 160,
   actions: 40,
 } as const
@@ -233,7 +233,7 @@ function RoutePricingEditRow({
     return (
       <td style={{ ...tdDimmed, textAlign: 'right', ...salaryBg, ...salaryLeft }} onClick={() => setActiveField(field)}>
         <span className="tabular-nums text-xs" style={{ color: form[field] ? color : 'var(--ink-4)', fontFamily: 'var(--theme-font-mono)' }}>
-          {form[field] ? compactCurrency(Number(form[field])) : '—'}
+          {form[field] ? formatCurrency(Number(form[field])) : '—'}
         </span>
       </td>
     )

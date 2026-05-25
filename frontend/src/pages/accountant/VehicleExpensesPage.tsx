@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback } from 'react'
-import { Fuel, Plus, Coins, Wrench, History, Truck, Search } from 'lucide-react'
-import { LinkButton } from '@/components/shared/LinkButton'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { Fuel, Plus, Coins, Wrench, History, Truck, Search, Loader2 } from 'lucide-react'
+import { Button, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { Panel } from '@/components/shared/Panel'
@@ -10,9 +10,9 @@ import { Plate } from '@/components/shared/Plate'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
 import { CreateExpenseDialog, type CreateExpenseFormData } from '@/components/shared/CreateExpenseDialog/CreateExpenseDialog'
-import { Button } from '@/components/ui'
 import {
   useVehicleExpenses,
+  useVehicleExpensesInfinite,
   useCreateVehicleExpense,
   useVehicles,
 } from '@/hooks/use-queries'
@@ -74,17 +74,17 @@ function ExpensesByVehicleTable({ rows, totalAll }: { rows: VehicleSummary[]; to
   if (rows.length === 0) return null
   return (
     <div className="nepo-table-scroll overflow-x-auto">
-      <table className="nepo-table w-full" style={{ minWidth: 720, borderCollapse: 'collapse' }}>
+      <table className="nepo-table w-full" style={{ minWidth: 480, borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            <th className="text-left" style={{ width: 140 }}>Biển số</th>
-            <th className="text-right" style={{ width: 70 }}>SL</th>
+            <th className="text-left" style={{ width: 100 }}>Biển số</th>
+            <th className="text-right" style={{ width: 36 }}>SL</th>
             {CATEGORIES.map(c => (
               <th key={c} className="text-right" style={{ whiteSpace: 'nowrap' }}>
                 {EXPENSE_CATEGORY_LABELS[c]}
               </th>
             ))}
-            <th className="text-right" style={{ width: 140, whiteSpace: 'nowrap' }}>Tổng</th>
+            <th className="text-right" style={{ width: 110, whiteSpace: 'nowrap' }}>Tổng</th>
           </tr>
         </thead>
         <tbody>
@@ -115,8 +115,8 @@ function ExpensesByVehicleTable({ rows, totalAll }: { rows: VehicleSummary[]; to
               </td>
             </tr>
           ))}
-          <tr style={{ background: 'var(--surface-2, var(--surface))', borderTop: '1px solid var(--line)' }}>
-            <td style={{ fontWeight: 600, color: 'var(--ink)', fontSize: 12.5 }}>Tổng cộng</td>
+          <tr style={{ background: 'var(--surface-2, var(--surface))', borderTop: '2px solid var(--line-2)' }}>
+            <td style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 12.5 }}>Tổng cộng</td>
             <td style={{ textAlign: 'right' }}>
               <span className="tabular-nums" style={{ color: 'var(--ink-2)', fontSize: 12.5 }}>
                 {rows.reduce((s, r) => s + r.count, 0)}
@@ -126,14 +126,14 @@ function ExpensesByVehicleTable({ rows, totalAll }: { rows: VehicleSummary[]; to
               const sum = rows.reduce((s, r) => s + r.byCategory[c], 0)
               return (
                 <td key={c} style={{ textAlign: 'right' }}>
-                  <span className="tabular-nums font-bold" style={{ color: 'var(--ink)', fontFamily: 'var(--theme-font-mono)', fontSize: 12.5 }}>
+                  <span className="tabular-nums font-bold" style={{ color: sum > 0 ? 'var(--ink)' : 'var(--ink-4)', fontFamily: 'var(--theme-font-mono)', fontSize: 12.5 }}>
                     {sum > 0 ? formatCurrency(sum) : '—'}
                   </span>
                 </td>
               )
             })}
             <td style={{ textAlign: 'right' }}>
-              <span className="tabular-nums font-bold" style={{ color: 'var(--ink)', fontSize: 12.5 }}>
+              <span className="tabular-nums font-bold" style={{ color: 'var(--theme-brand-primary-dark)', fontSize: 13, fontFamily: 'var(--theme-font-mono)' }}>
                 {formatCurrency(totalAll)}
               </span>
             </td>
@@ -144,13 +144,11 @@ function ExpensesByVehicleTable({ rows, totalAll }: { rows: VehicleSummary[]; to
   )
 }
 
-// ─── Audit log: grouped by day-added ────────────────────────────────────────
+// ─── Audit log table ─────────────────────────────────────────────────────────
 
 type AuditEntry = {
   expense: VehicleExpense
-  /** ISO date (YYYY-MM-DD) of createdAt, in local time */
   addedDate: string
-  /** Whether updatedAt differs meaningfully from createdAt → "edited" */
   edited: boolean
 }
 
@@ -163,74 +161,84 @@ function toLocalISODate(iso: string): string {
   return `${yyyy}-${mm}-${dd}`
 }
 
-
-function AuditLogList({ entries }: { entries: AuditEntry[] }) {
+function AuditLogTable({
+  entries,
+  isFetchingNextPage,
+  hasNextPage,
+  sentinelRef,
+}: {
+  entries: AuditEntry[]
+  isFetchingNextPage: boolean
+  hasNextPage: boolean
+  sentinelRef: React.RefObject<HTMLDivElement>
+}) {
   if (entries.length === 0) return null
-
   return (
-    <div className="nepo-table-scroll overflow-x-auto" style={{ maxHeight: 480, overflowY: 'auto' }}>
-      <table className="nepo-table w-full" style={{ minWidth: 920, borderCollapse: 'collapse' }}>
-        <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--surface)' }}>
-          <tr>
-            <th className="text-left" style={{ width: 110, whiteSpace: 'nowrap' }}>Ngày phát sinh</th>
-            <th className="text-left" style={{ width: 110 }}>Biển số</th>
-            <th className="text-left" style={{ width: 1, whiteSpace: 'nowrap' }}>Loại</th>
-            <th className="text-right" style={{ width: 130, whiteSpace: 'nowrap' }}>Số tiền</th>
-            <th className="text-left" style={{ width: 110, whiteSpace: 'nowrap' }}>Ngày tạo</th>
-            <th className="text-left" style={{ width: 200, whiteSpace: 'nowrap' }}>Mô tả</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map(({ expense: e, edited }) => (
-            <tr key={e.id}>
-              <td>
-                <span
-                  className="tabular-nums"
-                  style={{
-                    fontSize: 12,
-                    color: 'var(--ink-2)',
-                    fontFamily: 'var(--theme-font-mono)',
-                  }}
-                >
-                  {formatDate(e.expenseDate, 'full')}
-                </span>
-              </td>
-              <td><Plate>{e.vehiclePlate ?? '—'}</Plate></td>
-              <td>
-                <Pill variant={CATEGORY_VARIANT[e.category]} dot={false}>
-                  {EXPENSE_CATEGORY_LABELS[e.category]}
-                </Pill>
-              </td>
-              <td style={{ textAlign: 'right' }}>
-                <span
-                  className="tabular-nums font-bold"
-                  style={{ fontSize: 12.5, color: 'var(--ink)', fontFamily: 'var(--theme-font-mono)' }}
-                >
-                  {formatCurrency(e.amount)}
-                </span>
-              </td>
-              <td>
-                <span
-                  className="tabular-nums"
-                  style={{ fontSize: 12, color: 'var(--ink-3)', fontFamily: 'var(--theme-font-mono)' }}
-                >
-                  {formatDate(toLocalISODate(edited ? e.updatedAt : e.createdAt), 'full')}
-                </span>
-              </td>
-              <td>
-                <span
-                  className="truncate block"
-                  style={{ fontSize: 12, color: 'var(--ink-2)', maxWidth: 200 }}
-                  title={e.description ?? ''}
-                >
-                  {e.description || <span style={{ color: 'var(--ink-4)' }}>—</span>}
-                </span>
-              </td>
+    <>
+      <div className="nepo-table-scroll overflow-x-auto">
+        <table className="nepo-table w-full" style={{ minWidth: 520, borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th className="text-left" style={{ width: 90, whiteSpace: 'nowrap' }}>Ngày CP</th>
+              <th className="text-left" style={{ width: 90 }}>Biển số</th>
+              <th className="text-left" style={{ width: 1, whiteSpace: 'nowrap' }}>Loại</th>
+              <th className="text-right" style={{ width: 110, whiteSpace: 'nowrap' }}>Số tiền</th>
+              <th className="text-left" style={{ width: 90, whiteSpace: 'nowrap' }}>Ngày tạo</th>
+              <th className="text-left" style={{ whiteSpace: 'nowrap' }}>Mô tả</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {entries.map(({ expense: e, edited }) => (
+              <tr key={e.id}>
+                <td>
+                  <span className="tabular-nums" style={{ fontSize: 12, color: 'var(--ink-2)', fontFamily: 'var(--theme-font-mono)' }}>
+                    {formatDate(e.expenseDate, 'full')}
+                  </span>
+                </td>
+                <td><Plate>{e.vehiclePlate ?? '—'}</Plate></td>
+                <td>
+                  <Pill variant={CATEGORY_VARIANT[e.category]} dot={false}>
+                    {EXPENSE_CATEGORY_LABELS[e.category]}
+                  </Pill>
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  <span className="tabular-nums font-bold" style={{ fontSize: 12.5, color: 'var(--ink)', fontFamily: 'var(--theme-font-mono)' }}>
+                    {formatCurrency(e.amount)}
+                  </span>
+                </td>
+                <td>
+                  <span className="tabular-nums" style={{ fontSize: 12, color: 'var(--ink-3)', fontFamily: 'var(--theme-font-mono)' }}>
+                    {formatDate(toLocalISODate(edited ? e.updatedAt : e.createdAt), 'full')}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    className="truncate block"
+                    style={{ fontSize: 12, color: 'var(--ink-2)', maxWidth: 200 }}
+                    title={e.description ?? ''}
+                  >
+                    {e.description || <span style={{ color: 'var(--ink-4)' }}>—</span>}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Infinite scroll sentinel */}
+      <div ref={sentinelRef} style={{ height: 1 }} />
+      {isFetchingNextPage && (
+        <div className="flex justify-center py-4">
+          <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--ink-4)' }} />
+        </div>
+      )}
+      {!hasNextPage && entries.length > 0 && (
+        <div className="py-3 text-center" style={{ fontSize: 12, color: 'var(--ink-4)' }}>
+          Đã hiển thị tất cả {entries.length} mục
+        </div>
+      )}
+    </>
   )
 }
 
@@ -240,18 +248,30 @@ export function VehicleExpensesPage() {
   const toast = useToast()
   const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [vehicleSearch, setVehicleSearch] = useState('')
-  const [auditSearch, setAuditSearch] = useState('')
+  const [search, setSearch] = useState('')
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   const { data: vehicles } = useVehicles()
-  const { data: expensePage, isLoading } = useVehicleExpenses({
+
+  // All expenses for the period — used for KPI cards + Chi phí theo xe tab
+  const { data: expensePage, isLoading: isLoadingExpenses } = useVehicleExpenses({
     dateFrom,
     dateTo,
     pageSize: 100,
   })
 
+  // Infinite query for Nhật ký tab
+  const {
+    data: auditData,
+    isLoading: isLoadingAudit,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useVehicleExpensesInfinite({ dateFrom, dateTo, pageSize: 30 })
+
   const createMutation = useCreateVehicleExpense()
 
+  // ── KPI data (from full-load query) ─────────────────────────────────────
   const expenses = useMemo(() => expensePage?.items ?? [], [expensePage])
 
   const totalByCategory = useMemo(
@@ -267,8 +287,7 @@ export function VehicleExpensesPage() {
     CATEGORIES[0],
   )
 
-  // Per-vehicle aggregation for the "Chi phí theo xe" summary table.
-  // Filtered by the panel's own search input (matches plate).
+  // ── Chi phí theo xe aggregation ──────────────────────────────────────────
   const vehicleSummary = useMemo<VehicleSummary[]>(() => {
     const map = new Map<number, VehicleSummary>()
     for (const e of expenses) {
@@ -285,36 +304,44 @@ export function VehicleExpensesPage() {
       map.set(e.vehicleId, row)
     }
     const all = Array.from(map.values()).sort((a, b) => b.total - a.total)
-    if (!vehicleSearch.trim()) return all
-    return all.filter(r => fuzzyMatch(r.vehiclePlate, vehicleSearch))
-  }, [expenses, vehicleSearch])
+    if (!search.trim()) return all
+    return all.filter(r => fuzzyMatch(r.vehiclePlate, search))
+  }, [expenses, search])
 
-  // Audit log entries: derived from createdAt / updatedAt and filtered by the
-  // panel's own search (plate / description / category label).
+  // ── Nhật ký entries (from infinite query) ────────────────────────────────
   const auditEntries = useMemo<AuditEntry[]>(() => {
-    const all = expenses
+    const raw = (auditData?.pages ?? []).flatMap(p => p.items)
+    const all = raw
       .map(e => {
         const created = new Date(e.createdAt).getTime()
         const updated = new Date(e.updatedAt).getTime()
         const edited = !isNaN(created) && !isNaN(updated) && updated - created > 5000
-        return {
-          expense: e,
-          addedDate: toLocalISODate(edited ? e.updatedAt : e.createdAt),
-          edited,
-        }
+        return { expense: e, addedDate: toLocalISODate(edited ? e.updatedAt : e.createdAt), edited }
       })
       .sort((a, b) => {
         const ax = a.edited ? a.expense.updatedAt : a.expense.createdAt
         const bx = b.edited ? b.expense.updatedAt : b.expense.createdAt
         return ax < bx ? 1 : -1
       })
-    if (!auditSearch.trim()) return all
+    if (!search.trim()) return all
     return all.filter(({ expense: e }) =>
-      fuzzyMatch(e.vehiclePlate ?? '', auditSearch) ||
-      fuzzyMatch(e.description ?? '', auditSearch) ||
-      fuzzyMatch(EXPENSE_CATEGORY_LABELS[e.category], auditSearch),
+      fuzzyMatch(e.vehiclePlate ?? '', search) ||
+      fuzzyMatch(e.description ?? '', search) ||
+      fuzzyMatch(EXPENSE_CATEGORY_LABELS[e.category], search),
     )
-  }, [expenses, auditSearch])
+  }, [auditData, search])
+
+  // ── Infinite scroll via IntersectionObserver ──────────────────────────────
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || !hasNextPage) return
+    const observer = new IntersectionObserver(
+      entries => { if (entries[0].isIntersecting) fetchNextPage() },
+      { threshold: 0.1 },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasNextPage, fetchNextPage])
 
   const handleCreate = useCallback((data: CreateExpenseFormData) => {
     const payload = { ...data, description: data.description || null }
@@ -367,71 +394,78 @@ export function VehicleExpensesPage() {
         />
       </div>
 
-      <Panel
-        flush
-        title={<span className="inline-flex items-center gap-2"><Truck className="h-4 w-4" /> Chi phí theo xe</span>}
-        subtitle={`Tổng hợp chi phí ${vehicleSummary.length} xe trong kỳ`}
-        actions={
-          <div className="flex items-center gap-2">
-            <InlineSearchInput
-              value={vehicleSearch}
-              onChange={setVehicleSearch}
-              placeholder="Tìm biển số..."
-              width={220}
-            />
-            <LinkButton onClick={() => setCreateDialogOpen(true)} icon={Plus}>
-              Thêm chi phí
-            </LinkButton>
-          </div>
-        }
-      >
-        {isLoading ? (
-          <TableSkeleton rows={4} />
-        ) : vehicleSummary.length === 0 ? (
-          <div className="py-8">
-            <EmptyState
-              icon={<Truck className="h-5 w-5" />}
-              title={vehicleSearch.trim() ? 'Không có xe phù hợp' : 'Chưa có chi phí xe nào trong tháng này'}
-              compact
-            />
-          </div>
-        ) : (
-          <ExpensesByVehicleTable rows={vehicleSummary} totalAll={totalAmount} />
-        )}
-      </Panel>
+      {/* ── Controls row + Panel grouped tightly ── */}
+      <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-end gap-2">
+        <InlineSearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Tìm biển số, mô tả..."
+          width={200}
+        />
+        <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+          <Plus className="h-3.5 w-3.5" />
+          Thêm chi phí
+        </Button>
+      </div>
 
-      <Panel
-        flush
-        title={<span className="inline-flex items-center gap-2"><History className="h-4 w-4" /> Nhật ký thêm chi phí</span>}
-        subtitle={`${auditEntries.length} mục`}
-        actions={
-          <div className="flex items-center gap-2">
-            <InlineSearchInput
-              value={auditSearch}
-              onChange={setAuditSearch}
-              placeholder="Tìm biển số, mô tả..."
-              width={240}
-            />
-            <LinkButton onClick={() => setCreateDialogOpen(true)} icon={Plus}>
-              Thêm chi phí
-            </LinkButton>
+      <Panel flush>
+        <Tabs defaultValue="by-vehicle">
+          {/* ── Tab bar ── */}
+          <div className="px-5 pt-3" style={{ borderBottom: '1px solid var(--line)' }}>
+            <TabsList className="border-b-0" style={{ marginBottom: -1 }}>
+              <TabsTrigger value="by-vehicle" className="inline-flex items-center gap-1.5">
+                <Truck className="h-3.5 w-3.5" />
+                Chi phí theo xe
+              </TabsTrigger>
+              <TabsTrigger value="audit" className="inline-flex items-center gap-1.5">
+                <History className="h-3.5 w-3.5" />
+                Nhật ký chi phí
+              </TabsTrigger>
+            </TabsList>
           </div>
-        }
-      >
-        {isLoading ? (
-          <TableSkeleton rows={5} />
-        ) : auditEntries.length === 0 ? (
-          <div className="py-8">
-            <EmptyState
-              icon={<History className="h-5 w-5" />}
-              title={auditSearch.trim() ? 'Không có hoạt động phù hợp' : 'Chưa có hoạt động nào trong tháng này'}
-              compact
-            />
-          </div>
-        ) : (
-          <AuditLogList entries={auditEntries} />
-        )}
+
+          {/* ── Chi phí theo xe ── */}
+          <TabsContent value="by-vehicle" className="mt-0">
+            {isLoadingExpenses ? (
+              <div className="px-0 py-0"><TableSkeleton rows={4} /></div>
+            ) : vehicleSummary.length === 0 ? (
+              <div className="py-8">
+                <EmptyState
+                  icon={<Truck className="h-5 w-5" />}
+                  title={search.trim() ? 'Không có xe phù hợp' : 'Chưa có chi phí xe nào trong tháng này'}
+                  compact
+                />
+              </div>
+            ) : (
+              <ExpensesByVehicleTable rows={vehicleSummary} totalAll={totalAmount} />
+            )}
+          </TabsContent>
+
+          {/* ── Nhật ký chi phí ── */}
+          <TabsContent value="audit" className="mt-0">
+            {isLoadingAudit ? (
+              <div className="px-0 py-0"><TableSkeleton rows={6} /></div>
+            ) : auditEntries.length === 0 ? (
+              <div className="py-8">
+                <EmptyState
+                  icon={<History className="h-5 w-5" />}
+                  title={search.trim() ? 'Không có hoạt động phù hợp' : 'Chưa có hoạt động nào trong tháng này'}
+                  compact
+                />
+              </div>
+            ) : (
+              <AuditLogTable
+                entries={auditEntries}
+                isFetchingNextPage={isFetchingNextPage}
+                hasNextPage={!!hasNextPage}
+                sentinelRef={sentinelRef}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </Panel>
+      </div>{/* end controls+panel group */}
 
       <CreateExpenseDialog
         open={createDialogOpen}

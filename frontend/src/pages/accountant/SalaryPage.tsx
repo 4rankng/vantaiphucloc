@@ -17,6 +17,7 @@ import {
 import { useMonthParams } from './use-month-params'
 import { formatCurrency } from '@/data/domain'
 import { AnimatedNumber } from '@/components/shared'
+import { FieldActions } from '@/components/shared/ListUtils'
 import type { DriverEarnings, DriverSalaryRecord } from '@/services/api/salary.api'
 
 const monoStyle = { fontFamily: 'var(--theme-font-mono)' } as React.CSSProperties
@@ -51,38 +52,50 @@ function InlineEditCell({
     if (!isNaN(parsed) && parsed !== value) onSave(parsed)
   }
 
+  const cancel = () => {
+    setDraft(String(value))
+    setEditing(false)
+  }
+
   if (editing) {
     return (
-      <input
-        ref={ref}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={save}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') save()
-          if (e.key === 'Escape') {
-            setDraft(String(value))
-            setEditing(false)
-          }
-        }}
-        inputMode="numeric"
-        className="w-full border-none bg-transparent text-right text-sm font-medium outline-none p-0 tabular-nums"
-        style={{ color: 'var(--ink)', ...monoStyle }}
-      />
+      <div style={{ position: 'relative', width: '100%' }}>
+        <input
+          ref={ref}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') save()
+            if (e.key === 'Escape') cancel()
+          }}
+          inputMode="numeric"
+          className="nepo-input text-[12px] tabular-nums"
+          style={{ width: '100%', textAlign: 'right', ...monoStyle }}
+        />
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '100%',
+          transform: 'translateY(-50%)',
+          paddingLeft: 6,
+          zIndex: 20,
+        }}>
+          <FieldActions onSave={save} onCancel={cancel} />
+        </div>
+      </div>
     )
   }
 
   return (
-    <button
-      type="button"
+    <span
       onClick={() => setEditing(true)}
-      className="w-full text-right text-sm tabular-nums cursor-pointer rounded px-1 -mx-1 py-0.5 transition-colors"
-      style={{ color: 'var(--ink)', background: 'transparent', ...monoStyle }}
+      className="block w-full text-right tabular-nums transition-colors"
+      style={{ cursor: 'text', color: 'var(--ink)', ...monoStyle, borderRadius: 4, padding: '2px 4px', margin: '-2px -4px' }}
       onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = 'var(--surface-3)')}
       onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
     >
       {formatCurrency(value)}
-    </button>
+    </span>
   )
 }
 
