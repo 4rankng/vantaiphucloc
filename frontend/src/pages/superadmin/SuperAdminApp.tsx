@@ -47,6 +47,15 @@ export function SuperAdminApp() {
     }
   }, [toast, deleteUser])
 
+  const handleActivateUser = useCallback(async (user: UserAccount) => {
+    try {
+      await updateUser.mutateAsync({ id: user.id, data: { is_active: true } })
+      toast.success(`Đã kích hoạt lại tài khoản ${user.fullName || user.username}`)
+    } catch {
+      toast.error('Lỗi', 'Không thể kích hoạt tài khoản')
+    }
+  }, [toast, updateUser])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -63,6 +72,7 @@ export function SuperAdminApp() {
         setFilterRole={setFilterRole}
         onViewUser={setSelectedUser}
         onCreateUser={() => setCreateOpen(true)}
+        onActivateUser={handleActivateUser}
       />
       <CreateUserDialog
         open={createOpen}

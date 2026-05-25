@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quản lý tài khoản · NEPO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green-900: #003D1F;
+    --green-800: #005A2D;
+    --green-700: #00713A;
+    --green-600: #008E48;
+    --green-500: #10A05A;
+    --green-50:  #E8F5EE;
+    --green-25:  #F2FAF5;
+
+    --ink-900: #0E1116;
+    --ink-800: #1A1F26;
+    --ink-700: #2A323D;
+    --ink-500: #5A6573;
+    --ink-400: #818B98;
+    --ink-300: #A7B0BB;
+    --ink-200: #D8DDE3;
+    --ink-100: #ECEFF3;
+    --ink-50:  #F6F8FA;
+
+    --amber-600: #C77A00;
+    --amber-50:  #FFF5E1;
+    --rose-600:  #C73B3B;
+    --rose-50:   #FCEBEB;
+    --violet-600:#6E45B0;
+    --violet-50: #F1ECF9;
+
+    --radius-sm: 8px;
+    --radius:    12px;
+    --radius-lg: 16px;
+
+    --shadow-sm: 0 1px 2px rgba(14,17,22,0.04), 0 1px 1px rgba(14,17,22,0.03);
+    --shadow:    0 1px 3px rgba(14,17,22,0.06), 0 4px 12px rgba(14,17,22,0.04);
+
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-sans);
+    background: var(--ink-50);
+    color: var(--ink-900);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  input { font-family: inherit; }
+
+  /* ===== TOPBAR ===== */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    background: #fff;
+    border-bottom: 1px solid var(--ink-100);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .topbar-left .crumb { font-size: 12px; color: var(--ink-400); font-weight: 500; }
+  .topbar-left h1 {
+    margin: 2px 0 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .icon-btn {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: grid; place-items: center;
+    color: var(--ink-700);
+    border: 1px solid var(--ink-100);
+    background: #fff;
+    position: relative;
+    transition: all 0.15s ease;
+  }
+  .icon-btn:hover { background: var(--ink-50); border-color: var(--ink-200); }
+  .icon-btn .dot {
+    position: absolute;
+    top: 8px; right: 9px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--rose-600);
+    border: 2px solid #fff;
+  }
+  .topbar-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 12px 4px 4px;
+    border-radius: 999px;
+    border: 1px solid var(--ink-100);
+    background: #fff;
+    transition: all 0.15s ease;
+  }
+  .topbar-profile:hover { background: var(--ink-50); }
+  .topbar-profile .avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--ink-900);
+    color: #fff;
+    display: grid; place-items: center;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .topbar-profile .name { font-size: 13px; font-weight: 600; }
+
+  /* page */
+  .page { padding: 28px 32px 64px; max-width: 1600px; margin: 0 auto; }
+
+  /* ===== TOOLBAR (tabs + search) ===== */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .tabs {
+    display: inline-flex;
+    background: #fff;
+    border: 1px solid var(--ink-100);
+    border-radius: 12px;
+    padding: 4px;
+    gap: 2px;
+  }
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-500);
+    transition: all 0.15s ease;
+  }
+  .tab:hover { color: var(--ink-900); background: var(--ink-50); }
+  .tab.active {
+    background: var(--ink-900);
+    color: #fff;
+  }
+  .tab .count {
+    background: var(--ink-100);
+    color: var(--ink-700);
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .tab.active .count {
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+  }
+  .search {
+    flex: 1;
+    min-width: 220px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    background: #fff;
+    border: 1px solid var(--ink-100);
+    border-radius: 12px;
+    height: 44px;
+    transition: all 0.15s ease;
+  }
+  .search:focus-within {
+    border-color: var(--green-700);
+    box-shadow: 0 0 0 4px var(--green-50);
+  }
+  .search input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: none;
+    font-size: 13px;
+    color: var(--ink-900);
+  }
+  .search input::placeholder { color: var(--ink-400); }
+  .search kbd {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: var(--ink-50);
+    border: 1px solid var(--ink-100);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--ink-500);
+  }
+  .select {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 14px;
+    background: #fff;
+    border: 1px solid var(--ink-100);
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-700);
+    transition: all 0.15s ease;
+  }
+  .select:hover { background: var(--ink-50); }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 18px;
+    background: var(--green-800);
+    color: #fff;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 1px 2px rgba(0,90,45,0.20), inset 0 1px 0 rgba(255,255,255,0.10);
+    transition: all 0.15s ease;
+  }
+  .btn-primary:hover {
+    background: var(--green-700);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0,90,45,0.25), inset 0 1px 0 rgba(255,255,255,0.10);
+  }
+
+  /* ===== GRID ===== */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+  @media (max-width: 1280px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 980px)  { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 600px)  { .grid { grid-template-columns: 1fr; } }
+
+  /* ===== CARD ===== */
+  .card {
+    background: #fff;
+    border: 1px solid var(--ink-100);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    position: relative;
+    transition: all 0.18s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .card:hover {
+    border-color: var(--ink-200);
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+  }
+  .card.paused {
+    background: linear-gradient(180deg, #FFFBFB 0%, #FFFFFF 60%);
+  }
+  .card.paused .avatar,
+  .card.paused .card-info {
+    opacity: 0.78;
+  }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .avatar {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .avatar.role-superadmin { background: var(--ink-900); color: #fff; }
+  .avatar.role-giamdoc    { background: var(--violet-50); color: var(--violet-600); }
+  .avatar.role-taixe      { background: var(--green-50); color: var(--green-700); }
+  .avatar.role-ketoan     { background: var(--amber-50); color: var(--amber-600); }
+
+  .avatar .status-dot {
+    position: absolute;
+    bottom: -2px; right: -2px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    background: var(--green-500);
+  }
+  .card.paused .avatar .status-dot { background: var(--ink-300); }
+
+  .card-info { flex: 1; min-width: 0; }
+  .card-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink-900);
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+  }
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .role-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+  .role-tag.role-superadmin { background: var(--ink-900); color: #fff; }
+  .role-tag.role-giamdoc    { background: var(--violet-50); color: var(--violet-600); }
+  .role-tag.role-taixe      { background: var(--green-50); color: var(--green-700); }
+  .role-tag.role-ketoan     { background: var(--amber-50); color: var(--amber-600); }
+
+  .username {
+    font-family: var(--font-mono);
+    color: var(--ink-400);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .card-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+  }
+  .badge-paused {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: var(--rose-50);
+    color: var(--rose-600);
+  }
+  .badge-paused::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--rose-600);
+  }
+  .menu-btn {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: grid; place-items: center;
+    color: var(--ink-400);
+    transition: all 0.15s ease;
+  }
+  .menu-btn:hover { background: var(--ink-50); color: var(--ink-900); }
+
+  .card-body {
+    padding: 12px 0 0;
+    border-top: 1px dashed var(--ink-100);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .info-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--ink-700);
+  }
+  .info-row svg { color: var(--ink-400); flex-shrink: 0; }
+  .info-row .label {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-700);
+    font-weight: 500;
+    font-size: 12.5px;
+  }
+  .info-row .company {
+    color: var(--ink-500);
+    font-size: 12.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .card-foot {
+    display: flex;
+    gap: 6px;
+    padding-top: 12px;
+    border-top: 1px solid var(--ink-100);
+    opacity: 0;
+    max-height: 0;
+    transition: all 0.2s ease;
+    overflow: hidden;
+  }
+  .card:hover .card-foot { opacity: 1; max-height: 60px; }
+  .quick-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-700);
+    background: var(--ink-50);
+    transition: all 0.15s ease;
+  }
+  .quick-btn:hover { background: var(--ink-100); color: var(--ink-900); }
+  .quick-btn.primary { background: var(--green-800); color: #fff; }
+  .quick-btn.primary:hover { background: var(--green-700); }
+
+  .hint {
+    margin-top: 16px;
+    color: var(--ink-400);
+    font-size: 12px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============== TOPBAR ============== -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="crumb">Quản trị / Tài khoản</div>
+    <h1>Quản lý tài khoản</h1>
+  </div>
+  <div class="topbar-right">
+    <button class="icon-btn" aria-label="Thông báo">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="dot"></span>
+    </button>
+    <button class="topbar-profile">
+      <div class="avatar">SA</div>
+      <span class="name">Super Admin</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- ============== PAGE ============== -->
+<div class="page">
+
+  <!-- TOOLBAR -->
+  <section class="toolbar">
+    <div class="tabs" role="tablist">
+      <button class="tab active">Tất cả <span class="count">29</span></button>
+      <button class="tab">SuperAdmin <span class="count">1</span></button>
+      <button class="tab">Giám đốc <span class="count">1</span></button>
+      <button class="tab">Tài xế <span class="count">26</span></button>
+      <button class="tab">Kế toán <span class="count">1</span></button>
+    </div>
+
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--ink-400)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="Tìm theo tên, username, số điện thoại…" />
+      <kbd>⌘K</kbd>
+    </div>
+
+    <button class="select">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/></svg>
+      Sắp xếp: Mới nhất
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+
+    <button class="btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+      Tạo tài khoản
+    </button>
+  </section>
+
+  <!-- GRID -->
+  <section class="grid">
+
+    <!-- Super Admin -->
+    <article class="card">
+      <div class="card-top">
+        <div class="avatar role-superadmin">SA<span class="status-dot"></span></div>
+        <div class="card-info">
+          <div class="card-name">Super Admin</div>
+          <div class="card-meta">
+            <span class="role-tag role-superadmin">SuperAdmin</span>
+            <span class="username">admin</span>
+          </div>
+        </div>
+        <div class="card-actions"><button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label">0000 000 000</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>Chỉnh sửa</button>
+      </div>
+    </article>
+
+    <!-- Driver Chu Đức Anh -->
+    <article class="card">
+      <div class="card-top">
+        <div class="avatar role-taixe">CĐ<span class="status-dot"></span></div>
+        <div class="card-info">
+          <div class="card-name">Chu Đức Anh</div>
+          <div class="card-meta">
+            <span class="role-tag role-taixe">Tài xế</span>
+            <span class="username">anhcd</span>
+          </div>
+        </div>
+        <div class="card-actions"><button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label">0917 177 008</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>Chỉnh sửa</button>
+      </div>
+    </article>
+
+    <!-- Driver Lê Quang Anh -->
+    <article class="card">
+      <div class="card-top">
+        <div class="avatar role-taixe">LQ<span class="status-dot"></span></div>
+        <div class="card-info">
+          <div class="card-name">Lê Quang Anh</div>
+          <div class="card-meta">
+            <span class="role-tag role-taixe">Tài xế</span>
+            <span class="username">anhlq</span>
+          </div>
+        </div>
+        <div class="card-actions"><button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label">0903 003 003</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>Chỉnh sửa</button>
+      </div>
+    </article>
+
+    <!-- Driver Mai Văn Bình -->
+    <article class="card">
+      <div class="card-top">
+        <div class="avatar role-taixe">MV<span class="status-dot"></span></div>
+        <div class="card-info">
+          <div class="card-name">Mai Văn Bình</div>
+          <div class="card-meta">
+            <span class="role-tag role-taixe">Tài xế</span>
+            <span class="username">binhmv</span>
+          </div>
+        </div>
+        <div class="card-actions"><button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label">0915 155 006</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>Chỉnh sửa</button>
+      </div>
+    </article>
+
+    <!-- Driver Trần Minh Đức -->
+    <article class="card">
+      <div class="card-top">
+        <div class="avatar role-taixe">TM<span class="status-dot"></span></div>
+        <div class="card-info">
+          <div class="card-name">Trần Minh Đức</div>
+          <div class="card-meta">
+            <span class="role-tag role-taixe">Tài xế</span>
+            <span class="username">ductm</span>
+          </div>
+        </div>
+        <div class="card-actions"><button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label">0902 002 002</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>Chỉnh sửa</button>
+      </div>
+    </article>
+
+    <!-- Giám đốc Test -->
+    <article class="card">
+      <div class="card-top">
+        <div class="avatar role-giamdoc">TE<span class="status-dot"></span></div>
+        <div class="card-info">
+          <div class="card-name">Test</div>
+          <div class="card-meta">
+            <span class="role-tag role-giamdoc">Giám đốc</span>
+            <span class="username">giamdoc</span>
+          </div>
+        </div>
+        <div class="card-actions"><button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label" style="color: var(--ink-400)">Chưa cập nhật</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>Chỉnh sửa</button>
+      </div>
+    </article>
+
+    <!-- Driver Đỗ Quang Hải -->
+    <article class="card">
+      <div class="card-top">
+        <div class="avatar role-taixe">ĐQ<span class="status-dot"></span></div>
+        <div class="card-info">
+          <div class="card-name">Đỗ Quang Hải</div>
+          <div class="card-meta">
+            <span class="role-tag role-taixe">Tài xế</span>
+            <span class="username">haidq</span>
+          </div>
+        </div>
+        <div class="card-actions"><button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label">0907 007 007</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>Chỉnh sửa</button>
+      </div>
+    </article>
+
+    <!-- Driver Phạm Văn Hùng -->
+    <article class="card">
+      <div class="card-top">
+        <div class="avatar role-taixe">PV<span class="status-dot"></span></div>
+        <div class="card-info">
+          <div class="card-name">Phạm Văn Hùng</div>
+          <div class="card-meta">
+            <span class="role-tag role-taixe">Tài xế</span>
+            <span class="username">hungpv</span>
+          </div>
+        </div>
+        <div class="card-actions"><button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label">0904 004 004</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>Chỉnh sửa</button>
+      </div>
+    </article>
+
+    <!-- PAUSED ToDelete -->
+    <article class="card paused">
+      <div class="card-top">
+        <div class="avatar role-taixe">TD</div>
+        <div class="card-info">
+          <div class="card-name">ToDelete</div>
+          <div class="card-meta">
+            <span class="role-tag role-taixe">Tài xế</span>
+            <span class="username">it_del_04f948f0</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <span class="badge-paused">Tạm dừng</span>
+          <button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label">0960 4f9 48f</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>Kích hoạt lại</button>
+      </div>
+    </article>
+
+    <!-- PAUSED IT Dir -->
+    <article class="card paused">
+      <div class="card-top">
+        <div class="avatar role-giamdoc">ID</div>
+        <div class="card-info">
+          <div class="card-name">IT Dir 9f4a5792</div>
+          <div class="card-meta">
+            <span class="role-tag role-giamdoc">Giám đốc</span>
+            <span class="username">it_dir_9f4a5792</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <span class="badge-paused">Tạm dừng</span>
+          <button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label">0979 f4a 579</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>Kích hoạt lại</button>
+      </div>
+    </article>
+
+    <!-- PAUSED IT Driver -->
+    <article class="card paused">
+      <div class="card-top">
+        <div class="avatar role-taixe">ID</div>
+        <div class="card-info">
+          <div class="card-name">IT Driver 8847dd70</div>
+          <div class="card-meta">
+            <span class="role-tag role-taixe">Tài xế</span>
+            <span class="username">it_drv_8847dd70</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <span class="badge-paused">Tạm dừng</span>
+          <button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label">0988 847 dd7</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>Kích hoạt lại</button>
+      </div>
+    </article>
+
+    <!-- PAUSED PwdTest -->
+    <article class="card paused">
+      <div class="card-top">
+        <div class="avatar role-taixe">PT</div>
+        <div class="card-info">
+          <div class="card-name">PwdTest</div>
+          <div class="card-meta">
+            <span class="role-tag role-taixe">Tài xế</span>
+            <span class="username">it_pwd_56d9a024</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <span class="badge-paused">Tạm dừng</span>
+          <button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label">0935 6d9 a02</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>Kích hoạt lại</button>
+      </div>
+    </article>
+
+    <!-- PAUSED IT Updated -->
+    <article class="card paused">
+      <div class="card-top">
+        <div class="avatar role-taixe">IU</div>
+        <div class="card-info">
+          <div class="card-name">IT Updated Name</div>
+          <div class="card-meta">
+            <span class="role-tag role-taixe">Tài xế</span>
+            <span class="username">it_upd_103f1b81</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <span class="badge-paused">Tạm dừng</span>
+          <button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label">0921 03f 1b8</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>Kích hoạt lại</button>
+      </div>
+    </article>
+
+    <!-- PAUSED IT Test -->
+    <article class="card paused">
+      <div class="card-top">
+        <div class="avatar role-taixe">IT</div>
+        <div class="card-info">
+          <div class="card-name">IT Test 2b271a2a</div>
+          <div class="card-meta">
+            <span class="role-tag role-taixe">Tài xế</span>
+            <span class="username">it_user_2b271a2a</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <span class="badge-paused">Tạm dừng</span>
+          <button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label">0912 b27 1a2</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>Kích hoạt lại</button>
+      </div>
+    </article>
+
+    <!-- Accountant Hà Thị Thắm -->
+    <article class="card">
+      <div class="card-top">
+        <div class="avatar role-ketoan">HT<span class="status-dot"></span></div>
+        <div class="card-info">
+          <div class="card-name">Hà Thị Thắm</div>
+          <div class="card-meta">
+            <span class="role-tag role-ketoan">Kế toán</span>
+            <span class="username">ketoan</span>
+          </div>
+        </div>
+        <div class="card-actions"><button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label">0000 000 002</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>Chỉnh sửa</button>
+      </div>
+    </article>
+
+    <!-- Driver Trần Lái Xe -->
+    <article class="card">
+      <div class="card-top">
+        <div class="avatar role-taixe">TL<span class="status-dot"></span></div>
+        <div class="card-info">
+          <div class="card-name">Trần Lái Xe</div>
+          <div class="card-meta">
+            <span class="role-tag role-taixe">Tài xế</span>
+            <span class="username">laixe</span>
+          </div>
+        </div>
+        <div class="card-actions"><button class="menu-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="label">0920 002 002</span></div>
+        <div class="info-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg><span class="company">Vận Tải Phúc Lộc</span></div>
+      </div>
+      <div class="card-foot">
+        <button class="quick-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Xem</button>
+        <button class="quick-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>Chỉnh sửa</button>
+      </div>
+    </article>
+
+  </section>
+
+  <p class="hint">Hiển thị 16 / 29 tài khoản · <a href="#" style="color: var(--green-700); text-decoration: none; font-weight: 600;">Tải thêm</a></p>
+
+</div>
+
+<script>
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>
