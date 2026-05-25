@@ -1163,7 +1163,7 @@ async def get_director_dashboard(
             .where(DeliveredTrip.trip_date >= start, DeliveredTrip.trip_date <= end)
             .group_by(PickupLoc.name, DropLoc.name)
             .order_by(func.count(DeliveredTrip.id).desc())
-            .limit(4)
+            .limit(5)
         )).all()
         top_routes = [{"name": r.route, "count": r.cnt} for r in route_rows]
 
@@ -1178,7 +1178,7 @@ async def get_director_dashboard(
             .where(DeliveredTrip.trip_date >= start, DeliveredTrip.trip_date <= end)
             .group_by(User.full_name, DeliveredTrip.vehicle_plate)
             .order_by(func.count(DeliveredTrip.id).desc())
-            .limit(3)
+            .limit(5)
         )).all()
         top_drivers = [{"name": r.name, "plate": r.plate or "", "trip_count": r.cnt} for r in driver_rows]
 

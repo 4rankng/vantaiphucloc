@@ -339,27 +339,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     return fields
   }, [containers, clientId, pickupLocation, dropoffLocation])
 
-  // Submit flow
-  const onRequestSubmit = useCallback(async () => {
-    if (!canSubmit) return
-    // Validate container numbers via backend
-    const errors: Record<number, string> = {}
-    const isOnlineFlag = navigator.onLine
-    if (isOnlineFlag) {
-      await Promise.all(containers.map(async (c, idx) => {
-        try {
-          const res = await apiClient.validateContainer(c.containerNumber.trim())
-          if (!res.success || !res.data?.valid) {
-            errors[idx] = res.data?.error ?? 'Số container không hợp lệ'
-          }
-        } catch { /* skip validation on error */ }
-      }))
-    }
-    setContainerErrors(errors)
-    if (Object.keys(errors).length > 0) return
-    setSummaryOpen(true)
-  }, [canSubmit, containers])
-
+  // Submit flow — confirmSubmit defined first so onRequestSubmit can call it directly in edit mode
   const confirmSubmit = useCallback(async () => {
     setSummaryOpen(false)
     setSubmitting(true)
@@ -383,6 +363,12 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
           dropoffLocationId: dropoffId,
           vessel: vessel || null,
         })
+        setShowSuccess(true)
+        setTimeout(() => {
+          setShowSuccess(false)
+          // Go back to detail so driver can verify the change
+          navigate(`/driver/delivered-trips/${existingDeliveredTrip.id}`)
+        }, 1500)
       } else {
         await apiClient.createDeliveredTrip({
           contNumber: firstCont?.containerNumber.trim() || null,
@@ -394,18 +380,42 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
           driverId: Number(user!.id),
           vessel: vessel || null,
         })
+        setShowSuccess(true)
+        setTimeout(() => {
+          setShowSuccess(false)
+          navigate('/driver')
+        }, 2000)
       }
-
-      setShowSuccess(true)
-      setTimeout(() => {
-        setShowSuccess(false)
-        navigate('/driver')
-      }, 2000)
     } catch (err) {
       console.error('Submit failed:', err)
       setSubmitting(false)
     }
   }, [containers, clientId, vessel, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingDeliveredTrip])
+
+  const onRequestSubmit = useCallback(async () => {
+    if (!canSubmit) return
+    // Validate container numbers via backend
+    const errors: Record<number, string> = {}
+    const isOnlineFlag = navigator.onLine
+    if (isOnlineFlag) {
+      await Promise.all(containers.map(async (c, idx) => {
+        try {
+          const res = await apiClient.validateContainer(c.containerNumber.trim())
+          if (!res.success || !res.data?.valid) {
+            errors[idx] = res.data?.error ?? 'Số container không hợp lệ'
+          }
+        } catch { /* skip validation on error */ }
+      }))
+    }
+    setContainerErrors(errors)
+    if (Object.keys(errors).length > 0) return
+    // Edit mode: skip the summary dialog — driver already reviewed on the detail page
+    if (isEdit) {
+      await confirmSubmit()
+    } else {
+      setSummaryOpen(true)
+    }
+  }, [canSubmit, containers, isEdit, confirmSubmit])
 
   // Summary data for dialog
   const summaryContNumber = useMemo(() =>
@@ -424,10 +434,38 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     return client?.name ?? ''
   }, [clients, clientId])
 
+  // ─── Original values for edit-mode "Trước:" hints ────────────────────────
+  // Surface the saved trip's values so the form can show the driver what
+  // they're changing. We resolve client name + date here so the view layer
+  // doesn't have to repeat that lookup.
+  const original = useMemo(() => {
+    if (!existingDeliveredTrip) return null
+    // Backward-compat: if workType holds a ContType value, treat it as contType.
+    let contType: ContType | null = existingDeliveredTrip.contType ?? null
+    let workType: WorkType | null = existingDeliveredTrip.workType ?? null
+    if (!contType && workType && CONT_TYPE_SET.has(workType)) {
+      contType = workType as ContType
+      workType = null
+    }
+    const tripDate = new Date(existingDeliveredTrip.tripDate ?? existingDeliveredTrip.createdAt)
+    return {
+      contNumber: existingDeliveredTrip.contNumber ?? '',
+      contType,
+      workType,
+      clientId: String(existingDeliveredTrip.client.id),
+      clientName: existingDeliveredTrip.client.name,
+      vessel: existingDeliveredTrip.vessel ?? '',
+      pickupLocation: existingDeliveredTrip.pickupLocation.name,
+      dropoffLocation: existingDeliveredTrip.dropoffLocation.name,
+      tripDateLabel: tripDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+    }
+  }, [existingDeliveredTrip])
+
   // ─── Return ───────────────────────────────────────────────────────────────
   return {
     // Mode
     isEdit,
+    original,
 
     // Reference data
     clients, recentOrders,

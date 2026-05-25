@@ -2,8 +2,9 @@ import { useNavigate } from 'react-router-dom'
 import {
   ScanLine, RotateCcw, Trash2, AlertCircle, Loader2, Plus,
   ChevronLeft, CheckCircle2, Container as ContainerIcon, Ship, MapPin,
-  WifiOff, Sparkles,
+  WifiOff, Sparkles, Calendar, Lock,
 } from 'lucide-react'
+import { getWorkTypeLabel } from '@/data/domain'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import { ContainerTypeGrid } from '@/components/shared/ContainerTypeGrid'
 import { TripSummaryDialog } from '@/components/shared/TripSummaryDialog'
@@ -28,7 +29,7 @@ import type { DeliveredTrip } from '@/data/domain'
  */
 export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliveredTrip?: DeliveredTrip | null }) {
   const {
-    isEdit,
+    isEdit, original,
     clients, recentOrders,
     containers, clientId, vessel, pickupLocation, dropoffLocation,
     selectedTripId,
@@ -108,6 +109,30 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
           )}
         </div>
 
+        {/* Edit mode: show the locked Ngày đi so driver knows the date can't be changed here */}
+        {isEdit && original && (
+          <div
+            className="flex items-center gap-2 px-3 py-2 rounded-lg"
+            style={{
+              background: 'var(--theme-bg-secondary)',
+              border: '1px solid var(--theme-border-default)',
+            }}
+          >
+            <Calendar className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+            <span className="text-[11px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
+              Ngày đi:
+            </span>
+            <span className="text-[13px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+              {original.tripDateLabel}
+            </span>
+            <span
+              className="ml-auto flex items-center gap-1 text-[10px] font-semibold"
+              style={{ color: 'var(--theme-text-muted)' }}
+            >
+              <Lock className="w-3 h-3" /> Không thể đổi
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="px-4 pt-2 space-y-6">
@@ -230,6 +255,13 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                     )}
                   </div>
 
+                  {/* Edit-mode hint: show prior cont number if changed (only on the first row,
+                      which is the one that maps to the existing trip — additional rows are
+                      always new and don't have a prior value). */}
+                  {isEdit && idx === 0 && original && (
+                    <OriginalHint current={cont.containerNumber} original={original.contNumber} />
+                  )}
+
                   {/* Two independent groups: Loại cont (E20/E40/F20/F40) + Tác nghiệp */}
                   <ContainerTypeGrid
                     contType={cont.contType}
@@ -237,6 +269,20 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                     onContTypeChange={(ct) => updateContainer(idx, 'contType', ct)}
                     onWorkTypeChange={(wt) => updateContainer(idx, 'workType', wt)}
                   />
+
+                  {/* Edit-mode hint: show prior contType / workType if changed */}
+                  {isEdit && idx === 0 && original && (
+                    <div className="space-y-0.5">
+                      <OriginalHint
+                        current={cont.contType ?? ''}
+                        original={original.contType ?? ''}
+                      />
+                      <OriginalHint
+                        current={getWorkTypeLabel(cont.workType) ?? cont.workType ?? ''}
+                        original={getWorkTypeLabel(original.workType) ?? original.workType ?? ''}
+                      />
+                    </div>
+                  )}
 
                   {/* Status messages */}
                   {(forceManualEntry || containerErrors[idx] || cont.ocrError || (containerSuggestions[idx]?.length ?? 0) > 0) && !cont.ocrLoading && (
@@ -265,19 +311,23 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
               )
             })}
 
-            {/* Add cont */}
-            <button
-              onClick={addContainer}
-              type="button"
-              className="w-full h-12 rounded-xl text-sm font-bold flex items-center justify-center gap-2 touch-manipulation transition-all active:scale-[0.98]"
-              style={{
-                background: 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)',
-                color: 'var(--theme-brand-primary)',
-                border: '1.5px dashed color-mix(in srgb, var(--theme-brand-primary) 40%, transparent)',
-              }}
-            >
-              <Plus className="w-4 h-4" /> Thêm container
-            </button>
+            {/* Add cont — hidden in edit mode. The edit flow only persists a single
+                container (the one that belongs to the existing trip); offering "Thêm
+                container" here would create rows that get silently dropped on submit. */}
+            {!isEdit && (
+              <button
+                onClick={addContainer}
+                type="button"
+                className="w-full h-12 rounded-xl text-sm font-bold flex items-center justify-center gap-2 touch-manipulation transition-all active:scale-[0.98]"
+                style={{
+                  background: 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)',
+                  color: 'var(--theme-brand-primary)',
+                  border: '1.5px dashed color-mix(in srgb, var(--theme-brand-primary) 40%, transparent)',
+                }}
+              >
+                <Plus className="w-4 h-4" /> Thêm container
+              </button>
+            )}
           </div>
         </Section>
 
@@ -300,6 +350,9 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
             }}
             autoCapitalize="characters"
           />
+          {isEdit && original && (
+            <OriginalHint current={vessel} original={original.vessel} />
+          )}
         </Section>
 
         {/* ────────────────────── ④ Customer & route ────────────────────── */}
@@ -310,7 +363,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
           accent={recentOrders.length > 0}
         >
           <div className="space-y-3">
-            {recentOrders.length > 0 && (
+            {!isEdit && recentOrders.length > 0 && (
               <RecentTripSuggestions
                 suggestions={recentOrders}
                 selectedTripId={selectedTripId ?? undefined}
@@ -330,6 +383,12 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                 }))}
                 onChange={setClientId}
               />
+              {isEdit && original && (
+                <OriginalHint
+                  current={clients.find(c => String(c.id) === clientId)?.name ?? ''}
+                  original={original.clientName}
+                />
+              )}
             </Field>
 
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -342,6 +401,9 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                     setDropoffLocation('')
                   }}
                 />
+                {isEdit && original && (
+                  <OriginalHint current={pickupLocation} original={original.pickupLocation} />
+                )}
               </Field>
 
               <Field label="Điểm đến" required>
@@ -350,6 +412,9 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                   value={dropoffLocation}
                   onChange={setDropoffLocation}
                 />
+                {isEdit && original && (
+                  <OriginalHint current={dropoffLocation} original={original.dropoffLocation} />
+                )}
               </Field>
             </div>
           </div>
@@ -499,6 +564,28 @@ function Field({ label, required, children }: { label: string; required?: boolea
       </label>
       {children}
     </div>
+  )
+}
+
+/**
+ * OriginalHint — small dimmed "Trước: <value>" caption shown below an input
+ * in edit mode when the current value differs from the saved original.
+ *
+ * Helps the driver see what they're changing without re-opening the detail page.
+ * Renders nothing when current === original (or original is empty) so the
+ * caption only appears for fields the driver has actually edited.
+ */
+function OriginalHint({ current, original }: { current: string; original: string }) {
+  if (!original) return null
+  if ((current ?? '').trim() === original.trim()) return null
+  return (
+    <p
+      className="text-[11px] font-medium pl-1 flex items-center gap-1"
+      style={{ color: 'var(--theme-text-muted)' }}
+    >
+      <span style={{ opacity: 0.7 }}>Trước:</span>
+      <span className="line-through" style={{ opacity: 0.85 }}>{original}</span>
+    </p>
   )
 }
 

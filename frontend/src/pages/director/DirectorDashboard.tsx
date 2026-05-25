@@ -528,7 +528,7 @@ export function DirectorDashboard() {
             <div className="px-6 pt-[22px] pb-4">
               <div className="text-[15px] font-bold" style={{ color: T.ink, letterSpacing: '-0.01em' }}>Hoạt động gần đây</div>
             </div>
-            <div className="overflow-y-auto px-3 pb-3.5 custom-scrollbar" style={{ maxHeight: 380 }}>
+            <div className="px-3 pb-3.5">
               {auditLogs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-2">
                   <Activity className="w-8 h-8" style={{ color: T.line }} />

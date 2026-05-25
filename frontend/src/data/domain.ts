@@ -4,10 +4,10 @@ export type ContType = 'E20' | 'E40' | 'F20' | 'F40'
 export const CONT_TYPES: ContType[] = ['E20', 'E40', 'F20', 'F40']
 
 export const CONT_TYPE_LABELS: Record<ContType, string> = {
-  E20: 'E20 (Container rỗng 20ft)',
-  E40: 'E40 (Container rỗng 40ft)',
-  F20: 'F20 (Container hàng 20ft)',
-  F40: 'F40 (Container hàng 40ft)',
+  E20: 'E20',
+  E40: 'E40',
+  F20: 'F20',
+  F40: 'F40',
 }
 
 // Work types — container types + operation types (Tác nghiệp)

@@ -55,7 +55,7 @@ function ContainerChip({ wo }: { wo: DeliveredTrip }) {
           className="text-xs font-bold px-1.5 py-0.5 rounded-md shrink-0"
           style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}
         >
-          {getWorkTypeLabel(wo.contType) ?? wo.contType}
+          {wo.contType}
         </span>
       )}
     </div>
@@ -96,16 +96,13 @@ function StatusPill({ matched, variant, compact = false }: { matched: boolean; v
 }
 
 /**
- * Driver delivered-trip card — 3-row layout per spec.
+ * Driver delivered-trip card — 3-row layout.
  *
  *   ┌────────────────────────────────────────────────────────┐
- *   │ Hapag-Lloyd Việt Nam                  +450.000 đ       │  ← line 1
- *   │ Điểm đi:  Cát Lái                   09-05 · 08:30     │  ← line 2
- *   │ Điểm đến:  Đồng Nai                       [Đã ghép]    │  ← line 3
+ *   │ TCKU3456789  [20DC]              +182.000 đ            │  ← row 1: cont id + earnings (hero)
+ *   │ CONSCIENCE · SHIPPING                                  │  ← row 2: client name (secondary)
+ *   │ HẢI AN → NHĐV   31/05·08:00   [Chờ ghép]              │  ← row 3: route + date + status
  *   └────────────────────────────────────────────────────────┘
- *
- * Container info is intentionally omitted — it only appears on the detail
- * page when the user taps the card.
  *
  * Whole card is the tap target → opens detail page.
  */
@@ -113,6 +110,7 @@ function DriverCard({ wo, onClick }: { wo: DeliveredTrip; onClick: () => void })
   const hasEarning = wo.driverSalary > 0
   const pickup = wo.pickupLocation?.name || ''
   const dropoff = wo.dropoffLocation?.name || ''
+  const hasContInfo = !!(wo.contNumber || wo.contType)
 
   return (
     <button
@@ -123,46 +121,62 @@ function DriverCard({ wo, onClick }: { wo: DeliveredTrip; onClick: () => void })
         borderColor: 'var(--surface-border)',
       }}
     >
-      {/* Row 1 — company name (left) + earning (right) */}
-      <div className="flex items-baseline justify-between gap-3">
-        <p
-          className="text-[14px] font-semibold leading-snug truncate flex-1 min-w-0"
-          style={{ color: 'var(--theme-text-primary)' }}
-        >
-          {wo.client.code ? `${wo.client.code} · ${wo.client.name}` : wo.client.name}
-        </p>
+      {/* Row 1 — cont number + type (left) + earning (right, hero) */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
+          {hasContInfo ? (
+            <>
+              <span className="text-[14px] font-bold font-mono tracking-wide truncate" style={{ color: 'var(--theme-text-primary)' }}>
+                {wo.contNumber || '—'}
+              </span>
+              {wo.contType && (
+                <span
+                  className="text-[11px] font-bold px-1.5 py-0.5 rounded-md shrink-0"
+                  style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}
+                >
+                  {wo.contType}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-[13px] font-medium italic" style={{ color: 'var(--theme-text-muted)' }}>
+              Chưa có số cont
+            </span>
+          )}
+        </div>
         {hasEarning ? (
           <span
-            className="text-[14px] font-bold tabular-nums whitespace-nowrap shrink-0"
+            className="text-[15px] font-bold tabular-nums whitespace-nowrap shrink-0"
             style={{ color: 'var(--theme-brand-primary)' }}
           >
             +{formatCurrencyFull(wo.driverSalary)}
           </span>
         ) : (
-          <span className="text-[11px] font-medium whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
-            {!wo.bookedTripId ? 'Chờ ghép' : '—'}
+          <span className="text-[12px] font-medium whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
+            —
           </span>
         )}
       </div>
 
-      {/* Row 2 — Điểm đi (left) + timestamp (right) */}
-      <div className="mt-1.5 flex items-baseline justify-between gap-3">
-        <p className="text-[12px] truncate flex-1 min-w-0" style={{ color: 'var(--theme-text-secondary)' }}>
-          <span style={{ color: 'var(--theme-text-muted)' }}>Điểm đi:&nbsp;</span>
-          {pickup}
-        </p>
-        <span className="text-[11px] tabular-nums whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
-          {fmtDate(wo.tripDate ?? wo.createdAt)}
-        </span>
-      </div>
+      {/* Row 2 — client name (secondary) */}
+      <p
+        className="mt-1 text-[12px] font-medium truncate"
+        style={{ color: 'var(--theme-text-secondary)' }}
+      >
+        {wo.client.code ? `${wo.client.code} · ${wo.client.name}` : wo.client.name}
+      </p>
 
-      {/* Row 3 — Điểm đến (left) + status chip (right) */}
-      <div className="mt-0.5 flex items-baseline justify-between gap-3">
-        <p className="text-[12px] truncate flex-1 min-w-0" style={{ color: 'var(--theme-text-secondary)' }}>
-          <span style={{ color: 'var(--theme-text-muted)' }}>Điểm đến:&nbsp;</span>
+      {/* Row 3 — route arrow (left) + date · status (right) */}
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        <p className="text-[12px] font-semibold truncate flex-1 min-w-0" style={{ color: 'var(--theme-text-primary)' }}>
+          {pickup || '—'}
+          <span className="mx-1.5 font-normal" style={{ color: 'var(--theme-text-muted)' }}>→</span>
           {dropoff || '—'}
         </p>
-        <div className="shrink-0 relative z-10">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-[11px] tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>
+            {fmtDate(wo.tripDate ?? wo.createdAt)}
+          </span>
           <StatusPill matched={!!wo.bookedTripId} variant="driver" compact />
         </div>
       </div>
