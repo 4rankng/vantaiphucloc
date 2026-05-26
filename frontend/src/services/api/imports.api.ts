@@ -356,3 +356,55 @@ export async function commitDriverReconciliation(
   }
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// Location import
+// ──────────────────────────────────────────────────────────────────────────
+
+export interface LocationImportPreviewRow {
+  name: string
+  row: number
+  column: number
+}
+
+export interface LocationImportPreviewResponse {
+  filename: string
+  sheet_name: string
+  rows: LocationImportPreviewRow[]
+  total_count: number
+  duplicate_names: string[]
+  already_exist: string[]
+  new_names: string[]
+}
+
+export interface LocationImportCommitRequest {
+  names: string[]
+}
+
+export interface LocationImportCommitResponse {
+  created: number
+  skipped_existing: number
+  errors: string[]
+}
+
+export async function previewLocationImport(file: File): Promise<ApiResponse<LocationImportPreviewResponse>> {
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await api.post('/locations/import/preview', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return ok(res.data as LocationImportPreviewResponse)
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function commitLocationImport(names: string[]): Promise<ApiResponse<LocationImportCommitResponse>> {
+  try {
+    const res = await api.post('/locations/import/commit', { names })
+    return ok(res.data as LocationImportCommitResponse)
+  } catch (err) {
+    return fail(err)
+  }
+}
+

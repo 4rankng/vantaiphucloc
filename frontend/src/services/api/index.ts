@@ -49,6 +49,8 @@ export const apiClient = {
   createLocation: locationsApi.createLocation,
   updateLocation: locationsApi.updateLocation,
   deleteLocation: locationsApi.deleteLocation,
+  previewLocationImport: locationsApi.previewLocationImport,
+  commitLocationImport: locationsApi.commitLocationImport,
 
   // Location Aliases
   listAliases: locationAliasesApi.listAliases,

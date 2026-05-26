@@ -6,7 +6,7 @@ export type {
 
 export { useClients, useClientsInfinite, useCreateClient, useUpdateClient, useDeleteClient } from './queries/clients'
 export { useVendors, useVendorsPaged, useCreateVendor, useUpdateVendor, useDeleteVendor } from './queries/vendors'
-export { useLocations, useCreateLocation, useUpdateLocation, useDeleteLocation } from './queries/locations'
+export { useLocations, useCreateLocation, useUpdateLocation, useDeleteLocation, usePreviewLocationImport, useCommitLocationImport } from './queries/locations'
 export { usePricings, useCreatePricing, useUpdatePricing, useDeletePricing, usePreviewPricing, useCommitPricing } from './queries/pricings'
 export { useDeliveredTrips, useDeliveredTripsInfinite, useDeliveredTrip, useCreateDeliveredTrip, useUpdateDeliveredTrip, useExportDeliveredTripsExcel } from './queries/delivered-trips'
 export { useBookedTrips, useBookedTrip, useCreateBookedTrip, useUpdateBookedTrip } from './queries/booked-trips'

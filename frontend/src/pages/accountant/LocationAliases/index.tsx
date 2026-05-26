@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { MapPin, Plus, AlertTriangle, Merge, Search } from 'lucide-react'
+import { MapPin, Plus, AlertTriangle, Merge, Search, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -10,6 +10,7 @@ import { LocationListItem } from '@/components/shared/LocationListItem'
 import { LocationDetailPanel } from '@/components/shared/LocationDetailPanel'
 import { NewLocationInput } from '@/components/shared/NewLocationInput'
 import { LocationMergeDialog } from '@/components/shared/LocationMergeDialog'
+import { LocationImportDrawer } from '@/components/shared/LocationImportDrawer'
 import { findDuplicateHint } from '@/lib/duplicate-detection'
 import {
   useLocations,
@@ -41,6 +42,7 @@ export function LocationAliasesPage() {
 
   const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [showOnlyDupes, setShowOnlyDupes] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
@@ -207,6 +209,9 @@ export function LocationAliasesPage() {
             <div className="flex items-center gap-2">
               <StatPill count={locations.length} label=" địa điểm" accent />
               <StatPill count={aliases.length} label=" tên phụ" />
+              <Button variant="outline" onClick={() => setImporting(true)}>
+                <FileSpreadsheet className="h-4 w-4" /> Nhập Excel
+              </Button>
               {locations.length >= 2 && (
                 <Button variant="ghost" onClick={() => openMergeDialog()}>
                   <Merge className="h-4 w-4" /> Gộp
@@ -371,6 +376,11 @@ export function LocationAliasesPage() {
         onMerge={handleMerge}
         merging={mergeLocations.isPending}
       />
+
+      {/* ── Import drawer ── */}
+      {importing && (
+        <LocationImportDrawer onClose={() => setImporting(false)} />
+      )}
     </div>
   )
 }

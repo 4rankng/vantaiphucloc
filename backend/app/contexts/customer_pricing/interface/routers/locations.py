@@ -292,3 +292,102 @@ async def pin_driver_location(
         user_id=current_user.id,
     ))
     return location_to_out(loc)
+
+
+# ── Import from Excel ────────────────────────────────────────────────────────────
+
+
+class LocationImportPreviewRow(BaseModel):
+    name: str
+    row: int
+    column: int
+
+
+class LocationImportPreviewResponse(BaseModel):
+    filename: str
+    sheet_name: str
+    rows: list[LocationImportPreviewRow]
+    total_count: int
+    duplicate_names: list[str]
+    already_exist: list[str]
+    new_names: list[str]
+
+
+class LocationImportCommitRequest(BaseModel):
+    names: list[str]
+
+
+class LocationImportCommitResponse(BaseModel):
+    created: int
+    skipped_existing: int
+    errors: list[str]
+
+
+@router.post("/locations/import/preview", response_model=LocationImportPreviewResponse)
+async def preview_location_import(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_permission("create", "Location")),
+):
+    """Preview location import from Excel file.
+
+    Analyzes the uploaded file and returns:
+    - Parsed location names
+    - Names that already exist in database
+    - Names that would be newly created
+    - Potential duplicates within the file
+    """
+    if file.filename is None:
+        raise HTTPException(status_code=400, detail="Tệp tải lên không có tên.")
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Tệp tải lên rỗng.")
+
+    from app.contexts.customer_pricing.infrastructure.location_import import (
+        preview_location_import,
+    )
+
+    try:
+        result = await preview_location_import(db, content, file.filename)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return LocationImportPreviewResponse(
+        filename=result.filename,
+        sheet_name=result.sheet_name,
+        rows=[LocationImportPreviewRow(name=r.name, row=r.row, column=r.column) for r in result.rows],
+        total_count=result.total_count,
+        duplicate_names=result.duplicate_names,
+        already_exist=result.already_exist,
+        new_names=result.new_names,
+    )
+
+
+@router.post("/locations/import/commit", response_model=LocationImportCommitResponse)
+async def commit_location_import(
+    body: LocationImportCommitRequest = Body(...),
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_permission("create", "Location")),
+    create_use_case: CreateLocation = Depends(get_create_location),
+    redis: Redis = Depends(get_redis),
+):
+    """Commit location import, creating new locations from the provided names.
+
+    Skips names that already exist in the database.
+    """
+    if not body.names:
+        raise HTTPException(status_code=400, detail="Không có tên địa điểm nào để tạo.")
+
+    from app.contexts.customer_pricing.infrastructure.location_import import (
+        commit_location_import,
+    )
+
+    result = await commit_location_import(db, create_use_case, body.names)
+
+    await CacheManager(redis).invalidate_namespace("locations")
+
+    return LocationImportCommitResponse(
+        created=result.created,
+        skipped_existing=result.skipped_existing,
+        errors=result.errors,
+    )

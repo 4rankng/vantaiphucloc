@@ -66,3 +66,79 @@ export function useDeleteLocation() {
   })
 }
 
+export function useLocationAliases() {
+  return useQuery({
+    queryKey: ['location-aliases'],
+    queryFn: async () => {
+      const res = await apiClient.getLocationAliases()
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function useCreateAlias() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { locationId: number; alias: string }) => apiClient.createAlias(data).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['location-aliases'] })
+      qc.invalidateQueries({ queryKey: ['locations'] })
+    },
+  })
+}
+
+export function usePromoteAlias() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (aliasId: number) => apiClient.promoteAlias(aliasId).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['location-aliases'] })
+      qc.invalidateQueries({ queryKey: ['locations'] })
+    },
+  })
+}
+
+export function useDeleteAlias() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (aliasId: number) => apiClient.deleteAlias(aliasId).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['location-aliases'] })
+      qc.invalidateQueries({ queryKey: ['locations'] })
+    },
+  })
+}
+
+export function useMergeLocations() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { sourceLocationId: number; targetLocationId: number }) =>
+      apiClient.mergeLocations(data).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['locations'] })
+      qc.invalidateQueries({ queryKey: ['location-aliases'] })
+      qc.invalidateQueries({ queryKey: ['routes'] })
+      qc.invalidateQueries({ queryKey: ['pricings'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+    },
+  })
+}
+
+export function usePreviewLocationImport() {
+  return useMutation({
+    mutationFn: (file: File) => apiClient.previewLocationImport(file).then(unwrap),
+  })
+}
+
+export function useCommitLocationImport() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (names: string[]) => apiClient.commitLocationImport(names).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['locations'] })
+      qc.invalidateQueries({ queryKey: ['location-aliases'] })
+    },
+  })
+}
+
