@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { MapPin } from 'lucide-react'
+import { MapPin, Flag } from 'lucide-react'
 import { formatCurrency, WORK_TYPE_LABELS } from '@/data/domain'
 import type { RoutePricing, WorkType } from '@/data/domain'
 import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
@@ -56,31 +56,10 @@ export interface RoutePricingTableProps {
   locations: Array<{ id: number; name: string }>
 }
 
-// ─── Color map for operation type badges ─────────────────────────────────────
-
-const OP_BADGE_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
-  'NHẬP HÀNG':       { bg: '#eff6ff', text: '#1d4ed8', dot: '#3b82f6' },
-  'XUẤT HÀNG':       { bg: '#fef2f2', text: '#b91c1c', dot: '#ef4444' },
-  'CHẠY SÀ LAN':     { bg: '#faf5ff', text: '#7e22ce', dot: '#a855f7' },
-  'CHUYỂN BÃI':      { bg: '#fff7ed', text: '#c2410c', dot: '#f97316' },
-  'ĐÓNG KHO':        { bg: '#fefce8', text: '#a16207', dot: '#eab308' },
-  'LẤY VỎ HẠ HÀNG': { bg: '#fdf2f8', text: '#a21caf', dot: '#d946ef' },
-  'XUẤT/NHẬP TÀU':   { bg: '#eef2ff', text: '#4338ca', dot: '#6366f1' },
-}
-const DEFAULT_BADGE = { bg: '#f4f4f5', text: '#52525b', dot: '#a1a1aa' }
-
 function OpBadge({ type }: { type: string }) {
   const label = WORK_TYPE_LABELS[type as WorkType] ?? type
-  const colors = OP_BADGE_COLORS[type] ?? DEFAULT_BADGE
   return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
-      style={{ background: colors.bg, color: colors.text }}
-    >
-      <span
-        className="inline-block rounded-full"
-        style={{ width: 6, height: 6, background: colors.dot, flexShrink: 0 }}
-      />
+    <span className="text-xs font-medium" style={{ color: 'var(--ink-1)' }}>
       {label}
     </span>
   )
@@ -300,7 +279,7 @@ function RoutePricingEditRow({
       ) : (
         <td style={tdDimmed} onClick={() => setActiveField('dropoffLocationId')}>
           <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--ink-1)' }}>
-            <MapPin className="h-3 w-3 shrink-0" style={{ color: '#ea580c' }} />
+            <Flag className="h-3 w-3 shrink-0" style={{ color: '#ea580c' }} />
             {locations.find(l => l.id === form.dropoffLocationId)?.name ?? '—'}
           </span>
         </td>
@@ -397,7 +376,7 @@ function RoutePricingRow({ rp, idx, onEdit, onDelete }: {
       </td>
       <td onClick={cell('dropoffLocationId')}>
         <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--ink-1)' }}>
-          <MapPin className="h-3 w-3 shrink-0" style={{ color: '#ea580c' }} />
+          <Flag className="h-3 w-3 shrink-0" style={{ color: '#ea580c' }} />
           {rp.dropoffLocation.name}
         </span>
       </td>
