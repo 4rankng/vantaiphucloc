@@ -342,10 +342,13 @@ export function VendorRoutePricingTable({
   const isEditing = editingId !== null
   const workTypeWidth = isEditing ? 170 : 120
   const tableMinWidth = 900 + (isEditing ? 50 : 0)
-
   return (
-    <div className="nepo-table-scroll overflow-x-auto">
-      <table className="nepo-table w-full" style={{ minWidth: tableMinWidth, borderCollapse: 'collapse' }}>
+    <div className="space-y-1.5">
+      <div className="px-4 pt-3.5 text-[11px] font-medium flex items-center gap-1.5" style={{ color: 'var(--ink-3)' }}>
+        <span>💡 Nhấp vào ô bất kỳ để chỉnh sửa trực tiếp</span>
+      </div>
+      <div className="nepo-table-scroll overflow-x-auto">
+        <table className="nepo-table w-full" style={{ minWidth: tableMinWidth, borderCollapse: 'collapse' }}>
         <thead>
           <tr>
             <th style={{ width: 32 }}>#</th>
@@ -384,6 +387,7 @@ export function VendorRoutePricingTable({
           )}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }

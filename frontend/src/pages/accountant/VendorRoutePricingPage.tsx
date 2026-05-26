@@ -94,7 +94,7 @@ export function VendorRoutePricingPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title={!isLoading && vendorRoutePricings.length > 0 ? `Bảng phí thuê xe (${vendorRoutePricings.length})` : "Bảng phí thuê xe"}
+        title="Bảng phí thuê xe"
         subtitle="Quản lý bảng giá cước trả nhà thầu theo tuyến đường"
         lucideIcon={Route}
       />

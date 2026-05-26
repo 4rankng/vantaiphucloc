@@ -108,7 +108,7 @@ export function RoutePricingPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title={!isLoading && routePricings.length > 0 ? `Bảng giá cước (${routePricings.length})` : "Bảng giá cước"}
+        title="Bảng giá cước"
         subtitle="Quản lý bảng giá cước theo tuyến đường và loại hình tác nghiệp"
         lucideIcon={Route}
       />
