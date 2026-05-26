@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { MapPin, Flag } from 'lucide-react'
+import { MapPin, Flag, Trash2 } from 'lucide-react'
 import { formatCurrency, WORK_TYPE_LABELS } from '@/data/domain'
 import type { RoutePricing, WorkType } from '@/data/domain'
 import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
@@ -346,8 +346,17 @@ function RoutePricingRow({ rp, idx, onEdit, onDelete }: {
 
   return (
     <tr className="cursor-pointer group">
-      <td style={{ color: 'var(--ink-4)', fontSize: 12, fontFamily: 'var(--theme-font-mono)' }} onClick={cell('clientId')}>
-        {idx + 1}
+      <td className="relative" style={{ width: COL.index }}>
+        <span className="group-hover:opacity-0 transition-opacity duration-100 flex items-center justify-center font-mono text-[12px]" style={{ color: 'var(--ink-4)' }}>
+          {idx + 1}
+        </span>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete() }}
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all duration-100 text-red-500 hover:text-red-700"
+          title="Xoá"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
       </td>
 
       <td onClick={cell('clientId')} style={{ overflow: 'hidden' }}>
