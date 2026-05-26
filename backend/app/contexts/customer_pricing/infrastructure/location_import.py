@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,7 @@ from app.contexts.customer_pricing.application import (
 from app.contexts.customer_pricing.application.dto import LocationCreateInput
 from app.contexts.customer_pricing.domain.exceptions import AlreadyExists
 from app.contexts.customer_pricing.infrastructure.location_resolver import normalize as _normalize
+from app.contexts.customer_pricing.infrastructure.repositories import SqlLocationRepository
 
 _logger = logging.getLogger(__name__)
 
@@ -153,7 +155,7 @@ def parse_location_excel(content: bytes, filename: str) -> LocationPreviewResult
         LocationPreviewResult with parsed locations
     """
     try:
-        wb = load_workbook(filename=Path(filename), data_only=True, read_only=True)
+        wb = load_workbook(filename=BytesIO(content), data_only=True, read_only=True)
     except Exception as e:
         raise ValueError(f"Không thể đọc file Excel: {e}")
 
@@ -248,7 +250,7 @@ async def preview_location_import(
     result = parse_location_excel(content, filename)
 
     # Check which names already exist
-    list_use_case = ListAllActiveLocations()
+    list_use_case = ListAllActiveLocations(SqlLocationRepository(db))
     existing_locations = await list_use_case(limit=100000)
     existing_normalized = {_normalize(loc.name): loc.name for loc in existing_locations}
 
@@ -279,7 +281,7 @@ async def commit_location_import(
     errors: list[str] = []
 
     # Get existing locations to check against
-    list_use_case = ListAllActiveLocations()
+    list_use_case = ListAllActiveLocations(SqlLocationRepository(db))
     existing_locations = await list_use_case(limit=100000)
     existing_normalized = {_normalize(loc.name): loc.name for loc in existing_locations}
 
