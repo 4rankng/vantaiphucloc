@@ -443,6 +443,10 @@ export function RoutePricingTable({
     )
   }
 
+  const isEditing = editingId !== null
+  const workTypeWidth = isEditing ? 170 : COL.workType
+  const tableMinWidth = LEFT_GROUP_WIDTH + FARE_GROUP_WIDTH + SALARY_GROUP_WIDTH + workTypeWidth
+
   return (
     <div className="space-y-1.5">
       <div className="px-4 pt-3.5 text-[11px] font-medium flex items-center gap-1.5" style={{ color: 'var(--ink-3)' }}>
@@ -452,7 +456,7 @@ export function RoutePricingTable({
 
       <table
         className="nepo-table"
-        style={{ minWidth: TABLE_MIN_WIDTH, width: TABLE_MIN_WIDTH, tableLayout: 'fixed', borderCollapse: 'collapse' }}
+        style={{ minWidth: tableMinWidth, width: tableMinWidth, tableLayout: 'fixed', borderCollapse: 'collapse' }}
       >
         <colgroup>
           <col style={{ width: COL.index }} />
@@ -467,7 +471,7 @@ export function RoutePricingTable({
           <col style={{ width: COL.salary }} />
           <col style={{ width: COL.salary }} />
           <col style={{ width: COL.salary }} />
-          <col style={{ width: COL.workType }} />
+          <col style={{ width: workTypeWidth }} />
         </colgroup>
         <thead>
           <tr>
