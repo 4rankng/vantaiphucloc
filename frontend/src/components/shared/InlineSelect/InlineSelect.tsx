@@ -23,6 +23,7 @@ interface InlineSelectProps {
   className?: string
   style?: React.CSSProperties
   compact?: boolean
+  size?: 'sm' | 'md' | 'lg'
 }
 
 export function InlineSelect({
@@ -36,6 +37,7 @@ export function InlineSelect({
   className,
   style,
   compact = false,
+  size,
 }: InlineSelectProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -66,6 +68,27 @@ export function InlineSelect({
     onInputChange?.(val)
   }
 
+  // Resolve size
+  const resolvedSize = size ?? (compact ? 'sm' : 'lg')
+  const isCompactDropdown = resolvedSize === 'sm' || resolvedSize === 'md'
+
+  let triggerHeight = 44
+  let triggerPadding = '0 16px'
+  let triggerRadius = 12
+  let triggerFontSize = 14
+
+  if (resolvedSize === 'sm') {
+    triggerHeight = 30
+    triggerPadding = '0 10px'
+    triggerRadius = 6
+    triggerFontSize = 12
+  } else if (resolvedSize === 'md') {
+    triggerHeight = 36
+    triggerPadding = '0 12px'
+    triggerRadius = 8
+    triggerFontSize = 13
+  }
+
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
@@ -73,10 +96,10 @@ export function InlineSelect({
           type="button"
           className={`w-full flex items-center justify-between touch-manipulation overflow-hidden ${className ?? ''}`}
           style={{
-            height: compact ? 30 : 44,
-            padding: compact ? '0 10px' : '0 16px',
-            borderRadius: compact ? 6 : 12,
-            fontSize: compact ? 12 : 14,
+            height: triggerHeight,
+            padding: triggerPadding,
+            borderRadius: triggerRadius,
+            fontSize: triggerFontSize,
             background: 'var(--theme-bg-secondary)',
             border: '1px solid var(--theme-border-default)',
             color: selected || value ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
@@ -86,7 +109,7 @@ export function InlineSelect({
           <span className={`truncate min-w-0 ${selected || value ? 'font-medium' : ''}`}>
             {selected?.label ?? (value || placeholder)}
           </span>
-          <ChevronDown className={`${compact ? 'w-3.5 h-3.5 ml-1' : 'w-4 h-4 ml-2'} shrink-0`} style={{ color: 'var(--theme-text-muted)' }} />
+          <ChevronDown className={`${isCompactDropdown ? 'w-3.5 h-3.5 ml-1' : 'w-4 h-4 ml-2'} shrink-0`} style={{ color: 'var(--theme-text-muted)' }} />
         </button>
       </PopoverTrigger>
 
@@ -100,13 +123,13 @@ export function InlineSelect({
           className="flex items-center gap-2 px-3 border-b"
           style={{ borderColor: 'var(--theme-border-default)' }}
         >
-          <Search className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} shrink-0`} style={{ color: 'var(--theme-text-muted)' }} />
+          <Search className={`${isCompactDropdown ? 'w-3.5 h-3.5' : 'w-4 h-4'} shrink-0`} style={{ color: 'var(--theme-text-muted)' }} />
           <input
             ref={searchRef}
             value={query}
             onChange={handleQueryChange}
             placeholder="Tìm kiếm..."
-            className={`flex-1 bg-transparent outline-none ${compact ? 'h-8 text-xs' : 'h-10 text-sm'}`}
+            className={`flex-1 bg-transparent outline-none ${isCompactDropdown ? 'h-8 text-xs' : 'h-10 text-sm'}`}
             style={{ color: 'var(--theme-text-primary)' }}
           />
         </div>
@@ -116,7 +139,7 @@ export function InlineSelect({
           onWheel={e => e.stopPropagation()}
         >
           {filtered.length === 0 ? (
-            <p className={`${compact ? 'text-[11px] py-4' : 'text-xs py-6'} text-center`} style={{ color: 'var(--theme-text-muted)' }}>
+            <p className={`${isCompactDropdown ? 'text-[11px] py-4' : 'text-xs py-6'} text-center`} style={{ color: 'var(--theme-text-muted)' }}>
               Không tìm thấy kết quả
             </p>
           ) : (
@@ -131,24 +154,24 @@ export function InlineSelect({
                     setOpen(false)
                   }}
                   className={`w-full text-left flex items-center justify-between transition-colors touch-manipulation ${
-                    compact ? 'px-2.5 py-1.5' : 'px-4 py-3'
+                    isCompactDropdown ? 'px-2.5 py-1.5' : 'px-4 py-3'
                   }`}
                   style={{
                     background: isSelected ? 'var(--theme-brand-primary-light)' : 'transparent',
                   }}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className={`${compact ? 'text-xs' : 'text-sm'} font-medium truncate`} style={{ color: 'var(--theme-text-primary)' }}>
+                    <p className={`${isCompactDropdown ? 'text-xs' : 'text-sm'} font-medium truncate`} style={{ color: 'var(--theme-text-primary)' }}>
                       {opt.label}
                     </p>
                     {opt.sublabel && (
-                      <p className={`${compact ? 'text-[10px]' : 'text-xs'} mt-0.5 truncate`} style={{ color: 'var(--theme-text-muted)' }}>
+                      <p className={`${isCompactDropdown ? 'text-[10px]' : 'text-xs'} mt-0.5 truncate`} style={{ color: 'var(--theme-text-muted)' }}>
                         {opt.sublabel}
                       </p>
                     )}
                   </div>
                   {isSelected && (
-                    <Check className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} shrink-0 ml-2`} style={{ color: 'var(--theme-brand-primary)' }} />
+                    <Check className={`${isCompactDropdown ? 'w-3.5 h-3.5' : 'w-4 h-4'} shrink-0 ml-2`} style={{ color: 'var(--theme-brand-primary)' }} />
                   )}
                 </button>
               )
@@ -165,11 +188,11 @@ export function InlineSelect({
                 onCreateNew()
               }}
               className={`w-full flex items-center gap-2 font-semibold transition-colors touch-manipulation ${
-                compact ? 'px-3 py-2 text-xs' : 'px-4 py-3 text-sm'
+                isCompactDropdown ? 'px-3 py-2 text-xs' : 'px-4 py-3 text-sm'
               }`}
               style={{ color: 'var(--theme-brand-primary)' }}
             >
-              <Plus className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} shrink-0`} />
+              <Plus className={`${isCompactDropdown ? 'w-3.5 h-3.5' : 'w-4 h-4'} shrink-0`} />
               {createNewLabel}
             </button>
           </div>

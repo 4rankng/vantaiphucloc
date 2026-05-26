@@ -121,6 +121,7 @@ export function RoutePricingPage() {
               value={clientId ? String(clientId) : 'all'}
               options={clientOptions}
               onChange={v => setClientId(v === 'all' ? undefined : Number(v))}
+              size="md"
             />
           </div>
 
@@ -130,6 +131,7 @@ export function RoutePricingPage() {
               value={workType ?? 'all'}
               options={workTypeOptions}
               onChange={v => setWorkType(v === 'all' ? undefined : v)}
+              size="md"
             />
           </div>
 
@@ -147,11 +149,11 @@ export function RoutePricingPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5 whitespace-nowrap">
+          <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5 whitespace-nowrap">
             <FileSpreadsheet className="h-3.5 w-3.5" />
             Nhập Excel
           </Button>
-          <Button size="sm" onClick={openCreate} className="gap-1.5 whitespace-nowrap">
+          <Button onClick={openCreate} className="gap-1.5 whitespace-nowrap">
             <Plus className="h-3.5 w-3.5" />
             Thêm cước tuyến
           </Button>
