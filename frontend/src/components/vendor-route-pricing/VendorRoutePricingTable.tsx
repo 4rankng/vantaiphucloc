@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react'
-import { Trash2, MapPin } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import { compactCurrency, WORK_TYPE_LABELS } from '@/data/domain'
 import type { VendorRoutePricing, WorkType } from '@/data/domain'
 export type { VendorRoutePricingFormData } from './useVendorRoutePricing'
@@ -267,8 +267,6 @@ function VendorRoutePricingEditRow({
           <OpBadge type={form.workType} />
         </td>
       )}
-
-      <td style={{ width: 32 }} />
     </tr>
   )
 }
@@ -318,17 +316,6 @@ function VendorRoutePricingRow({ rp, idx, onEdit, onDelete }: {
       <td style={{ textAlign: 'right' }} onClick={cell('e40Price')}><PriceCell value={rp.e40Price} /></td>
 
       <td onClick={cell('workType')}><OpBadge type={rp.workType} /></td>
-
-      <td style={{ width: 32 }}>
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete() }}
-          className="opacity-0 group-hover:opacity-100 flex items-center justify-center rounded transition-opacity"
-          style={{ width: 24, height: 24, color: 'var(--ink-3)' }}
-          title="Xoá"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      </td>
     </tr>
   )
 }
@@ -380,8 +367,7 @@ export function VendorRoutePricingTable({
             <th className="text-right" style={{ width: 80, color: '#3b82f6' }}>F40</th>
             <th className="text-right" style={{ width: 80, color: '#6366f1' }}>E20</th>
             <th className="text-right" style={{ width: 80, color: '#6366f1' }}>E40</th>
-            <th className="text-left" style={{ minWidth: 130 }}>Tác nghiệp</th>
-            <th style={{ width: 32 }} />
+            <th className="text-left" style={{ width: 120 }}>Tác nghiệp</th>
           </tr>
         </thead>
         <tbody>

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { Trash2, MapPin } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import { formatCurrency, WORK_TYPE_LABELS } from '@/data/domain'
 import type { RoutePricing, WorkType } from '@/data/domain'
 import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
