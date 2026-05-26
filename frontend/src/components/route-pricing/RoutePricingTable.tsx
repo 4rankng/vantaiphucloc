@@ -228,7 +228,7 @@ function RoutePricingEditRow({
             value={form.clientId ? String(form.clientId) : ''}
             options={clientOptions}
             onChange={v => set('clientId', Number(v) || 0)}
-            style={compactSelectStyle}
+            compact
           />
           {errors.clientId && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.clientId}</p>}
           {floatingActions}
@@ -250,7 +250,7 @@ function RoutePricingEditRow({
             value={form.pickupLocationId ? String(form.pickupLocationId) : ''}
             options={locationOptions}
             onChange={v => { set('pickupLocationId', Number(v) || 0); setActiveField('dropoffLocationId') }}
-            style={compactSelectStyle}
+            compact
           />
           {errors.pickupLocationId && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.pickupLocationId}</p>}
           {floatingActions}
@@ -271,7 +271,7 @@ function RoutePricingEditRow({
             value={form.dropoffLocationId ? String(form.dropoffLocationId) : ''}
             options={locationOptions}
             onChange={v => set('dropoffLocationId', Number(v) || 0)}
-            style={compactSelectStyle}
+            compact
           />
           {errors.dropoffLocationId && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.dropoffLocationId}</p>}
           {floatingActions}
@@ -311,7 +311,7 @@ function RoutePricingEditRow({
             value={form.workType}
             options={workTypeOptions}
             onChange={v => set('workType', v as WorkType)}
-            style={compactSelectStyle}
+            compact
           />
           {floatingActions}
         </td>

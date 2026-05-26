@@ -22,9 +22,21 @@ interface InlineSelectProps {
   createNewLabel?: string
   className?: string
   style?: React.CSSProperties
+  compact?: boolean
 }
 
-export function InlineSelect({ placeholder, value, options, onChange, onInputChange, onCreateNew, createNewLabel = 'Tạo mới', className, style }: InlineSelectProps) {
+export function InlineSelect({
+  placeholder,
+  value,
+  options,
+  onChange,
+  onInputChange,
+  onCreateNew,
+  createNewLabel = 'Tạo mới',
+  className,
+  style,
+  compact = false,
+}: InlineSelectProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
@@ -59,8 +71,12 @@ export function InlineSelect({ placeholder, value, options, onChange, onInputCha
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={`w-full flex items-center justify-between h-11 rounded-xl px-4 text-sm touch-manipulation overflow-hidden ${className ?? ''}`}
+          className={`w-full flex items-center justify-between touch-manipulation overflow-hidden ${className ?? ''}`}
           style={{
+            height: compact ? 30 : 44,
+            padding: compact ? '0 10px' : '0 16px',
+            borderRadius: compact ? 6 : 12,
+            fontSize: compact ? 12 : 14,
             background: 'var(--theme-bg-secondary)',
             border: '1px solid var(--theme-border-default)',
             color: selected || value ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
@@ -70,7 +86,7 @@ export function InlineSelect({ placeholder, value, options, onChange, onInputCha
           <span className={`truncate min-w-0 ${selected || value ? 'font-medium' : ''}`}>
             {selected?.label ?? (value || placeholder)}
           </span>
-          <ChevronDown className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
+          <ChevronDown className={`${compact ? 'w-3.5 h-3.5 ml-1' : 'w-4 h-4 ml-2'} shrink-0`} style={{ color: 'var(--theme-text-muted)' }} />
         </button>
       </PopoverTrigger>
 
@@ -84,13 +100,13 @@ export function InlineSelect({ placeholder, value, options, onChange, onInputCha
           className="flex items-center gap-2 px-3 border-b"
           style={{ borderColor: 'var(--theme-border-default)' }}
         >
-          <Search className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+          <Search className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} shrink-0`} style={{ color: 'var(--theme-text-muted)' }} />
           <input
             ref={searchRef}
             value={query}
             onChange={handleQueryChange}
             placeholder="Tìm kiếm..."
-            className="flex-1 h-10 bg-transparent text-sm outline-none"
+            className={`flex-1 bg-transparent outline-none ${compact ? 'h-8 text-xs' : 'h-10 text-sm'}`}
             style={{ color: 'var(--theme-text-primary)' }}
           />
         </div>
@@ -100,7 +116,7 @@ export function InlineSelect({ placeholder, value, options, onChange, onInputCha
           onWheel={e => e.stopPropagation()}
         >
           {filtered.length === 0 ? (
-            <p className="text-xs text-center py-6" style={{ color: 'var(--theme-text-muted)' }}>
+            <p className={`${compact ? 'text-[11px] py-4' : 'text-xs py-6'} text-center`} style={{ color: 'var(--theme-text-muted)' }}>
               Không tìm thấy kết quả
             </p>
           ) : (
@@ -114,23 +130,25 @@ export function InlineSelect({ placeholder, value, options, onChange, onInputCha
                     onChange(opt.value)
                     setOpen(false)
                   }}
-                  className="w-full text-left flex items-center justify-between px-4 py-3 transition-colors touch-manipulation"
+                  className={`w-full text-left flex items-center justify-between transition-colors touch-manipulation ${
+                    compact ? 'px-2.5 py-1.5' : 'px-4 py-3'
+                  }`}
                   style={{
                     background: isSelected ? 'var(--theme-brand-primary-light)' : 'transparent',
                   }}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
+                    <p className={`${compact ? 'text-xs' : 'text-sm'} font-medium truncate`} style={{ color: 'var(--theme-text-primary)' }}>
                       {opt.label}
                     </p>
                     {opt.sublabel && (
-                      <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--theme-text-muted)' }}>
+                      <p className={`${compact ? 'text-[10px]' : 'text-xs'} mt-0.5 truncate`} style={{ color: 'var(--theme-text-muted)' }}>
                         {opt.sublabel}
                       </p>
                     )}
                   </div>
                   {isSelected && (
-                    <Check className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-brand-primary)' }} />
+                    <Check className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} shrink-0 ml-2`} style={{ color: 'var(--theme-brand-primary)' }} />
                   )}
                 </button>
               )
@@ -146,10 +164,12 @@ export function InlineSelect({ placeholder, value, options, onChange, onInputCha
                 setOpen(false)
                 onCreateNew()
               }}
-              className="w-full flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-colors touch-manipulation"
+              className={`w-full flex items-center gap-2 font-semibold transition-colors touch-manipulation ${
+                compact ? 'px-3 py-2 text-xs' : 'px-4 py-3 text-sm'
+              }`}
               style={{ color: 'var(--theme-brand-primary)' }}
             >
-              <Plus className="w-4 h-4 shrink-0" />
+              <Plus className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} shrink-0`} />
               {createNewLabel}
             </button>
           </div>
