@@ -116,13 +116,12 @@ const COL = {
   dropoff: 140,
   price: 130,   // each of the 4 cước columns
   salary: 130,  // each of the 4 lương columns
-  workType: 160,
-  actions: 40,
+  workType: 120, // tightened from 160 to 120
 } as const
 const FARE_GROUP_WIDTH = COL.price * 4
 const SALARY_GROUP_WIDTH = COL.salary * 4
 const LEFT_GROUP_WIDTH = COL.index + COL.client + COL.pickup + COL.dropoff
-const RIGHT_GROUP_WIDTH = COL.workType + COL.actions
+const RIGHT_GROUP_WIDTH = COL.workType
 const TABLE_MIN_WIDTH = LEFT_GROUP_WIDTH + FARE_GROUP_WIDTH + SALARY_GROUP_WIDTH + RIGHT_GROUP_WIDTH
 
 // ─── Inline edit row ─────────────────────────────────────────────────────────
@@ -322,7 +321,7 @@ function RoutePricingEditRow({
           style={{
             ...tdActive,
             position: 'sticky',
-            right: COL.actions,
+            right: 0,
             background: '#FFFBEB',
             zIndex: 1,
             borderLeft: '1px solid var(--line)',
@@ -342,7 +341,7 @@ function RoutePricingEditRow({
           style={{
             ...tdDimmed,
             position: 'sticky',
-            right: COL.actions,
+            right: 0,
             background: '#FFFBEB',
             zIndex: 1,
             borderLeft: '1px solid var(--line)',
@@ -352,16 +351,6 @@ function RoutePricingEditRow({
           <OpBadge type={form.workType} />
         </td>
       )}
-
-      <td
-        style={{
-          width: 32,
-          position: 'sticky',
-          right: 0,
-          background: '#FFFBEB',
-          zIndex: 1,
-        }}
-      />
     </tr>
   )
 }
@@ -427,32 +416,13 @@ function RoutePricingRow({ rp, idx, onEdit, onDelete }: {
         onClick={cell('workType')}
         style={{
           position: 'sticky',
-          right: COL.actions,
+          right: 0,
           background: 'var(--surface)',
           zIndex: 1,
           borderLeft: '1px solid var(--line)',
         }}
       >
         <OpBadge type={rp.workType} />
-      </td>
-
-      <td
-        style={{
-          width: 32,
-          position: 'sticky',
-          right: 0,
-          background: 'var(--surface)',
-          zIndex: 1,
-        }}
-      >
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete() }}
-          className="opacity-0 group-hover:opacity-100 flex items-center justify-center rounded transition-opacity"
-          style={{ width: 24, height: 24, color: 'var(--ink-3)' }}
-          title="Xoá"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
       </td>
     </tr>
   )
@@ -519,7 +489,6 @@ export function RoutePricingTable({
           <col style={{ width: COL.salary }} />
           <col style={{ width: COL.salary }} />
           <col style={{ width: COL.workType }} />
-          <col style={{ width: COL.actions }} />
         </colgroup>
         <thead>
           <tr>
@@ -535,8 +504,7 @@ export function RoutePricingTable({
             <th className="text-right" title="Lương sản lượng" style={{ color: '#d97706', background: SALARY_TINT }}>Lương F40</th>
             <th className="text-right" title="Lương sản lượng" style={{ color: '#b45309', background: SALARY_TINT }}>Lương E20</th>
             <th className="text-right" title="Lương sản lượng" style={{ color: '#b45309', background: SALARY_TINT }}>Lương E40</th>
-            <th className="text-left" style={{ position: 'sticky', right: COL.actions, background: 'var(--surface-2)', zIndex: 2, borderLeft: '1px solid var(--line)' }}>Tác nghiệp</th>
-            <th style={{ position: 'sticky', right: 0, background: 'var(--surface-2)', zIndex: 2 }} />
+            <th className="text-left" style={{ position: 'sticky', right: 0, background: 'var(--surface-2)', zIndex: 2, borderLeft: '1px solid var(--line)' }}>Tác nghiệp</th>
           </tr>
         </thead>
         <tbody>
