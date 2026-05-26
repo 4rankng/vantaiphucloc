@@ -3,7 +3,6 @@ import { Plus, Route, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Panel } from '@/components/shared/Panel'
-import { Toolbar, ToolbarSpacer } from '@/components/shared/Toolbar'
 import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
 import { VendorRoutePricingTable, type FocusableField, type VendorRoutePricingFormData } from '@/components/vendor-route-pricing/VendorRoutePricingTable'
@@ -95,16 +94,48 @@ export function VendorRoutePricingPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Bảng phí thuê xe"
+        title={!isLoading && vendorRoutePricings.length > 0 ? `Bảng phí thuê xe (${vendorRoutePricings.length})` : "Bảng phí thuê xe"}
         subtitle="Quản lý bảng giá cước trả nhà thầu theo tuyến đường"
         lucideIcon={Route}
         actions={
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
+          <div className="flex items-center gap-3">
+            <div style={{ width: 190 }}>
+              <InlineSelect
+                placeholder="Tất cả nhà thầu"
+                value={vendorId ? String(vendorId) : 'all'}
+                options={vendorOptions}
+                onChange={v => setVendorId(v === 'all' ? undefined : Number(v))}
+              />
+            </div>
+
+            <div style={{ width: 180 }}>
+              <InlineSelect
+                placeholder="Tất cả tác nghiệp"
+                value={workType ?? 'all'}
+                options={workTypeOptions}
+                onChange={v => setWorkType(v === 'all' ? undefined : v)}
+              />
+            </div>
+
+            {(vendorId || workType) && (
+              <button
+                className="text-xs font-medium transition-colors whitespace-nowrap"
+                style={{ color: 'var(--ink-3)' }}
+                onClick={() => { setVendorId(undefined); setWorkType(undefined) }}
+                onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.color = 'var(--ink-1)')}
+                onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = 'var(--ink-3)')}
+              >
+                Xoá lọc
+              </button>
+            )}
+
+            <div className="h-5 w-px" style={{ background: 'var(--line)' }} />
+
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5 whitespace-nowrap">
               <FileSpreadsheet className="h-3.5 w-3.5" />
               Nhập Excel
             </Button>
-            <Button size="sm" onClick={openCreate} className="gap-1.5">
+            <Button size="sm" onClick={openCreate} className="gap-1.5 whitespace-nowrap">
               <Plus className="h-3.5 w-3.5" />
               Thêm cước trả
             </Button>
@@ -113,45 +144,6 @@ export function VendorRoutePricingPage() {
       />
 
       <Panel flush>
-        <Toolbar bordered>
-          <div style={{ width: 190 }}>
-            <InlineSelect
-              placeholder="Tất cả nhà thầu"
-              value={vendorId ? String(vendorId) : 'all'}
-              options={vendorOptions}
-              onChange={v => setVendorId(v === 'all' ? undefined : Number(v))}
-            />
-          </div>
-
-          <div style={{ width: 200 }}>
-            <InlineSelect
-              placeholder="Tất cả tác nghiệp"
-              value={workType ?? 'all'}
-              options={workTypeOptions}
-              onChange={v => setWorkType(v === 'all' ? undefined : v)}
-            />
-          </div>
-
-          {(vendorId || workType) && (
-            <button
-              className="text-xs font-medium transition-colors"
-              style={{ color: 'var(--ink-3)' }}
-              onClick={() => { setVendorId(undefined); setWorkType(undefined) }}
-              onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.color = 'var(--ink-1)')}
-              onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = 'var(--ink-3)')}
-            >
-              Xoá lọc
-            </button>
-          )}
-
-          <ToolbarSpacer />
-
-          {!isLoading && vendorRoutePricings.length > 0 && (
-            <span className="text-xs" style={{ color: 'var(--ink-4)' }}>
-              {vendorRoutePricings.length} tuyến
-            </span>
-          )}
-        </Toolbar>
 
         <VendorRoutePricingTable
           data={vendorRoutePricings}
