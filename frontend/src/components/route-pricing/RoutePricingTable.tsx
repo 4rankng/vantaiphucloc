@@ -495,7 +495,11 @@ export function RoutePricingTable({
   }
 
   return (
-    <div className="nepo-table-scroll overflow-x-auto">
+    <div className="space-y-1.5">
+      <div className="px-4 pt-3.5 text-[11px] font-medium flex items-center gap-1.5" style={{ color: 'var(--ink-3)' }}>
+        <span>💡 Cuộn sang phải để xem đầy đủ cột cước & lương sản lượng</span>
+      </div>
+      <div className="nepo-table-scroll overflow-x-auto">
 
       <table
         className="nepo-table"
@@ -560,6 +564,7 @@ export function RoutePricingTable({
           )}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }
