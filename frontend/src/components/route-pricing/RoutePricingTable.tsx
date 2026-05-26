@@ -318,7 +318,16 @@ function RoutePricingEditRow({
       {priceInput('e40DriverSalary', '#b45309')}
 
       {activeField === 'workType' ? (
-        <td style={tdActive}>
+        <td
+          style={{
+            ...tdActive,
+            position: 'sticky',
+            right: COL.actions,
+            background: '#FFFBEB',
+            zIndex: 1,
+            borderLeft: '1px solid var(--line)',
+          }}
+        >
           <InlineSelect
             placeholder="Tác nghiệp"
             value={form.workType}
@@ -329,12 +338,30 @@ function RoutePricingEditRow({
           {floatingActions}
         </td>
       ) : (
-        <td style={tdDimmed} onClick={() => setActiveField('workType')}>
+        <td
+          style={{
+            ...tdDimmed,
+            position: 'sticky',
+            right: COL.actions,
+            background: '#FFFBEB',
+            zIndex: 1,
+            borderLeft: '1px solid var(--line)',
+          }}
+          onClick={() => setActiveField('workType')}
+        >
           <OpBadge type={form.workType} />
         </td>
       )}
 
-      <td style={{ width: 32 }} />
+      <td
+        style={{
+          width: 32,
+          position: 'sticky',
+          right: 0,
+          background: '#FFFBEB',
+          zIndex: 1,
+        }}
+      />
     </tr>
   )
 }
@@ -396,9 +423,28 @@ function RoutePricingRow({ rp, idx, onEdit, onDelete }: {
       <td style={{ textAlign: 'right', background: SALARY_TINT }} onClick={cell('e20DriverSalary')}><PriceCell value={rp.e20DriverSalary} /></td>
       <td style={{ textAlign: 'right', background: SALARY_TINT }} onClick={cell('e40DriverSalary')}><PriceCell value={rp.e40DriverSalary} /></td>
 
-      <td onClick={cell('workType')}><OpBadge type={rp.workType} /></td>
+      <td
+        onClick={cell('workType')}
+        style={{
+          position: 'sticky',
+          right: COL.actions,
+          background: 'var(--surface)',
+          zIndex: 1,
+          borderLeft: '1px solid var(--line)',
+        }}
+      >
+        <OpBadge type={rp.workType} />
+      </td>
 
-      <td style={{ width: 32 }}>
+      <td
+        style={{
+          width: 32,
+          position: 'sticky',
+          right: 0,
+          background: 'var(--surface)',
+          zIndex: 1,
+        }}
+      >
         <button
           onClick={(e) => { e.stopPropagation(); onDelete() }}
           className="opacity-0 group-hover:opacity-100 flex items-center justify-center rounded transition-opacity"
@@ -450,44 +496,7 @@ export function RoutePricingTable({
 
   return (
     <div className="nepo-table-scroll overflow-x-auto">
-      {/* Group label band — aligned with the column groups below */}
-      <div
-        className="flex"
-        style={{
-          minWidth: TABLE_MIN_WIDTH,
-          borderBottom: '1px solid var(--line)',
-          background: 'var(--surface-2)',
-        }}
-      >
-        <div style={{ width: LEFT_GROUP_WIDTH }} />
-        <div
-          className="flex items-center justify-center gap-1.5 text-[10.5px] font-semibold uppercase"
-          style={{
-            width: FARE_GROUP_WIDTH,
-            padding: '8px 0',
-            color: '#1d4ed8',
-            letterSpacing: '0.07em',
-          }}
-        >
-          <span className="inline-block rounded-sm" style={{ width: 8, height: 8, background: '#3b82f6' }} />
-          Cước (Khách)
-        </div>
-        <div
-          className="flex items-center justify-center gap-1.5 text-[10.5px] font-semibold uppercase"
-          style={{
-            width: SALARY_GROUP_WIDTH,
-            padding: '8px 0',
-            color: '#b45309',
-            letterSpacing: '0.07em',
-            background: SALARY_TINT,
-            borderLeft: SALARY_BORDER,
-          }}
-        >
-          <span className="inline-block rounded-sm" style={{ width: 8, height: 8, background: '#d97706' }} />
-          Lương sản lượng
-        </div>
-        <div style={{ width: RIGHT_GROUP_WIDTH }} />
-      </div>
+
       <table
         className="nepo-table"
         style={{ minWidth: TABLE_MIN_WIDTH, width: TABLE_MIN_WIDTH, tableLayout: 'fixed', borderCollapse: 'collapse' }}
@@ -514,16 +523,16 @@ export function RoutePricingTable({
             <th className="text-left">Chủ hàng</th>
             <th className="text-left">Điểm đi</th>
             <th className="text-left">Điểm đến</th>
-            <th className="text-right" style={{ color: '#3b82f6' }}>F20</th>
-            <th className="text-right" style={{ color: '#3b82f6' }}>F40</th>
-            <th className="text-right" style={{ color: '#6366f1' }}>E20</th>
-            <th className="text-right" style={{ color: '#6366f1' }}>E40</th>
-            <th className="text-right" style={{ color: '#d97706', background: SALARY_TINT, borderLeft: SALARY_BORDER }}>F20</th>
-            <th className="text-right" style={{ color: '#d97706', background: SALARY_TINT }}>F40</th>
-            <th className="text-right" style={{ color: '#b45309', background: SALARY_TINT }}>E20</th>
-            <th className="text-right" style={{ color: '#b45309', background: SALARY_TINT }}>E40</th>
-            <th className="text-left">Tác nghiệp</th>
-            <th />
+            <th className="text-right" title="Cước chủ hàng" style={{ color: '#3b82f6' }}>Cước F20</th>
+            <th className="text-right" title="Cước chủ hàng" style={{ color: '#3b82f6' }}>Cước F40</th>
+            <th className="text-right" title="Cước chủ hàng" style={{ color: '#6366f1' }}>Cước E20</th>
+            <th className="text-right" title="Cước chủ hàng" style={{ color: '#6366f1' }}>Cước E40</th>
+            <th className="text-right" title="Lương sản lượng" style={{ color: '#d97706', background: SALARY_TINT, borderLeft: SALARY_BORDER }}>Lương F20</th>
+            <th className="text-right" title="Lương sản lượng" style={{ color: '#d97706', background: SALARY_TINT }}>Lương F40</th>
+            <th className="text-right" title="Lương sản lượng" style={{ color: '#b45309', background: SALARY_TINT }}>Lương E20</th>
+            <th className="text-right" title="Lương sản lượng" style={{ color: '#b45309', background: SALARY_TINT }}>Lương E40</th>
+            <th className="text-left" style={{ position: 'sticky', right: COL.actions, background: 'var(--surface-2)', zIndex: 2, borderLeft: '1px solid var(--line)' }}>Tác nghiệp</th>
+            <th style={{ position: 'sticky', right: 0, background: 'var(--surface-2)', zIndex: 2 }} />
           </tr>
         </thead>
         <tbody>
