@@ -164,7 +164,7 @@ function RoutePricingEditRow({
         ? { right: '100%', paddingRight: 4 }
         : { left: '100%', paddingLeft: 4 }),
     }}>
-      <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} />
+      <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} hintAlign={isLastCol ? 'right' : 'left'} />
     </div>
   )
 
@@ -459,7 +459,11 @@ export function RoutePricingTable({
   return (
     <div className="space-y-1.5">
       <div className="px-4 pt-3.5 text-[11px] font-medium flex items-center gap-1.5" style={{ color: 'var(--ink-3)' }}>
-        <span>💡 Cuộn sang phải để xem đầy đủ cột cước & lương • Nhấp vào ô bất kỳ để chỉnh sửa trực tiếp</span>
+        <span>
+          {isEditing
+            ? "💡 Nhấn Enter để xác nhận • Nhấn ESC để huỷ"
+            : "💡 Cuộn sang phải để xem đầy đủ cột cước & lương • Nhấp vào ô bất kỳ để chỉnh sửa trực tiếp"}
+        </span>
       </div>
       <div className="nepo-table-scroll overflow-x-auto">
 
