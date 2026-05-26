@@ -652,6 +652,7 @@
   z-index: 10;
   width: 100%;
   max-width: 380px;
+  margin: 0 auto;
   border-radius: 28px;
   overflow: hidden;
   font-family: var(--theme-font-body, "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif);

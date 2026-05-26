@@ -268,7 +268,7 @@ export function Login() {
       </div>
 
       {/* Single self-contained card (reveals on viewport entry) */}
-      <Reveal distance={16} delay={80}>
+      <Reveal distance={16} delay={80} className="w-full">
         <div className="login-card animate-fade-slide-up">
 
           {/* ── Green header band ── */}
@@ -299,7 +299,7 @@ export function Login() {
             <form onSubmit={handleSubmit} className="login-form" noValidate>
               <div className="login-field">
                 <label className="login-label">
-                  Số điện thoại / Email / Tên đăng nhập
+                  Tên đăng nhập
                 </label>
                 <div className="relative">
                   <User className="login-field-icon" style={{ color: 'var(--theme-text-muted)' }} />

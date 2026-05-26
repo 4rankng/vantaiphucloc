@@ -1,10 +1,11 @@
 .PHONY: help install migrate dev dev-infra dev-backend dev-frontend dev-worker lint seed stop clean \
         push-all deploy-all push-backend push-frontend deploy-backend deploy-frontend \
-        api-test test test-backend test-frontend
+        api-test test test-backend test-frontend backup
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 # Override with: make dev BACKEND_PORT=9000 FRONTEND_PORT=5180
 BACKEND_PORT  ?= 8100
+PROD_SERVER   := phucloc.tingting.vip
 FRONTEND_PORT ?= 5174
 ADMINER_PORT  ?= 8083
 POSTGRES_PORT ?= 5433
@@ -40,6 +41,7 @@ help:
 	@echo "  deploy-all       Pull & restart all services on droplet"
 	@echo "  deploy-backend   Pull & restart backend + worker on droplet"
 	@echo "  deploy-frontend  Pull & restart frontend on droplet"
+	@echo "  backup           Dump production PostgreSQL DB → OneDrive"
 
 # ── Install & DB ───────────────────────────────────────────────────────────────
 
@@ -189,3 +191,30 @@ deploy-frontend:
 
 ## deploy-all: Pull & restart all services on droplet
 deploy-all: deploy-backend deploy-frontend
+
+## backup: Dump production PostgreSQL DB to OneDrive
+backup:
+	@echo "💾 Starting database backup from production server..."
+	@TIMESTAMP=$$(date +%Y-%m-%d_%H%M%S) && \
+	BACKUP_DIR="/Users/dev/Library/CloudStorage/OneDrive-Personal/backup/phucloc_mysql_backup" && \
+	BACKUP_FILE="phucloc_pg_backup_$$TIMESTAMP.sql" && \
+	BACKUP_FILE_GZ="phucloc_pg_backup_$$TIMESTAMP.sql.gz" && \
+	echo "📁 Creating backup directory if it doesn't exist..." && \
+	mkdir -p "$$BACKUP_DIR" && \
+	echo "🔗 Connecting to production server ($(PROD_SERVER))..." && \
+	echo "📊 Creating PostgreSQL dump of vantaihanghoa database..." && \
+	ssh root@$(PROD_SERVER) \
+		"docker exec vantaiphucloc-postgres-1 \
+		pg_dump -U vantaiphucloc vantaihanghoa > /tmp/$$BACKUP_FILE" && \
+	echo "🗜️  Compressing backup file..." && \
+	ssh root@$(PROD_SERVER) "gzip /tmp/$$BACKUP_FILE" && \
+	echo "✅ Verifying backup file exists and is not empty..." && \
+	ssh root@$(PROD_SERVER) \
+		"if [ ! -s /tmp/$$BACKUP_FILE_GZ ]; then echo '❌ Backup file is empty!'; exit 1; fi" && \
+	echo "📥 Downloading backup to local machine..." && \
+	scp root@$(PROD_SERVER):/tmp/$$BACKUP_FILE_GZ "$$BACKUP_DIR/$$BACKUP_FILE_GZ" && \
+	echo "🧹 Cleaning up temp file on server..." && \
+	ssh root@$(PROD_SERVER) "rm -f /tmp/$$BACKUP_FILE_GZ" && \
+	echo "✅ Backup complete!" && \
+	echo "📂 Saved to: $$BACKUP_DIR/$$BACKUP_FILE_GZ" && \
+	echo "📊 Size: $$(du -h "$$BACKUP_DIR/$$BACKUP_FILE_GZ" | cut -f1)"
