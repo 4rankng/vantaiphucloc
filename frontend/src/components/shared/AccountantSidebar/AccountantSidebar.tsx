@@ -15,6 +15,9 @@ import {
   TrendingUp,
   MapPin,
   KeyRound,
+  Calendar,
+  Route,
+  Truck,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/components/shared/NotificationPanel/useUnreadCount'
@@ -68,10 +71,12 @@ const ACCOUNTANT_NAV_SECTIONS: SidebarSection[] = [
     ],
   },
   {
-    label: 'Hệ thống',
+    label: 'CÀI ĐẶT',
     items: [
       { label: 'Địa điểm', href: '/accountant/locations', icon: MapPin },
-      { label: 'Thiết lập', href: '/accountant/settings', icon: Settings },
+      { label: 'Kỳ lương', href: '/accountant/settings/ky-luong', icon: Calendar },
+      { label: 'Bảng giá cước', href: '/accountant/settings/cuoc-tuyen', icon: Route },
+      { label: 'Bảng phí thuê xe', href: '/accountant/settings/cuoc-tra-xe-ngoai', icon: Truck },
     ],
   },
 ]

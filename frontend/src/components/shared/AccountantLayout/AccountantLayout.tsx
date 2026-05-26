@@ -146,9 +146,10 @@ function resolveMobileTitle(pathname: string): string {
     '/accountant/drivers': 'Lái xe',
     '/accountant/transporters': 'Vận tải',
     '/accountant/doi-soat': 'Đối soát',
-    '/accountant/settings': 'Thiết lập',
+    '/accountant/settings': 'Cài đặt',
     '/accountant/settings/ky-luong': 'Kỳ lương',
-    '/accountant/settings/cuoc-tuyen': 'Cước tuyến',
+    '/accountant/settings/cuoc-tuyen': 'Bảng giá cước',
+    '/accountant/settings/cuoc-tra-xe-ngoai': 'Bảng phí thuê xe',
   }
   if (TITLES[pathname]) return TITLES[pathname]
   return ''
