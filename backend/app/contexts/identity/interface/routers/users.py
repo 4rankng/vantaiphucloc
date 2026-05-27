@@ -5,6 +5,10 @@ from __future__ import annotations
 import math
 
 from fastapi import APIRouter, Depends, Query
+from redis.asyncio import Redis
+
+from app.core.cache import CacheManager
+from app.core.redis import get_redis
 
 from app.contexts.identity.application import (
     ChangePassword,
@@ -66,6 +70,7 @@ async def update_own_profile(
     body: UserUpdate,
     current_user: UserORM = Depends(get_current_user),
     use_case: UpdateOwnProfile = Depends(get_update_own_profile),
+    redis: Redis = Depends(get_redis),
 ):
     payload = body.model_dump(exclude_unset=True)
     cmd = UpdateProfileInput(
@@ -77,6 +82,8 @@ async def update_own_profile(
     )
     try:
         user = await use_case.execute(cmd)
+        if user.role == UserRole.DRIVER:
+            await CacheManager(redis).invalidate_namespace("drivers")
     except IdentityDomainError as e:
         raise to_http(e)
     return UserOut.from_entity(user)
@@ -146,6 +153,7 @@ async def create_user(
     body: UserCreate,
     current_user: UserORM = Depends(require_permission("create", "User")),
     use_case: CreateUser = Depends(get_create_user),
+    redis: Redis = Depends(get_redis),
 ):
     cmd = CreateUserInput(
         username=body.username,
@@ -158,6 +166,8 @@ async def create_user(
     )
     try:
         user = await use_case.execute(cmd, actor_role=_actor_role(current_user))
+        if user.role == UserRole.DRIVER:
+            await CacheManager(redis).invalidate_namespace("drivers")
     except IdentityDomainError as e:
         raise to_http(e)
     return UserOut.from_entity(user)
@@ -169,6 +179,7 @@ async def update_user(
     body: UserUpdate,
     current_user: UserORM = Depends(require_permission("update", "User")),
     use_case: UpdateUser = Depends(get_update_user),
+    redis: Redis = Depends(get_redis),
 ):
     payload = body.model_dump(exclude_unset=True)
     new_role = payload.get("role")
@@ -185,6 +196,8 @@ async def update_user(
     )
     try:
         user = await use_case.execute(cmd, actor_role=_actor_role(current_user))
+        if user.role == UserRole.DRIVER:
+            await CacheManager(redis).invalidate_namespace("drivers")
     except IdentityDomainError as e:
         raise to_http(e)
     return UserOut.from_entity(user)
@@ -195,9 +208,15 @@ async def delete_user(
     user_id: int,
     current_user: UserORM = Depends(require_permission("delete", "User")),
     use_case: DeleteUser = Depends(get_delete_user),
+    repo: UserRepository = Depends(get_user_repository),
+    redis: Redis = Depends(get_redis),
 ):
+    user = await repo.get_by_id(UserId(user_id))
+    is_driver = user is not None and user.role == UserRole.DRIVER
     try:
         await use_case.execute(user_id, actor_role=_actor_role(current_user))
+        if is_driver:
+            await CacheManager(redis).invalidate_namespace("drivers")
     except IdentityDomainError as e:
         raise to_http(e)
 

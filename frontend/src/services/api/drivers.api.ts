@@ -71,3 +71,12 @@ export async function resetDriverPassword(
     return fail(err)
   }
 }
+
+export async function deleteDriver(id: number): Promise<ApiResponse<void>> {
+  try {
+    await api.delete(`/drivers/${id}`)
+    return ok(undefined)
+  } catch (err) {
+    return fail(err)
+  }
+}

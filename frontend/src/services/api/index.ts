@@ -116,6 +116,7 @@ export const apiClient = {
 
   // Vehicles
   getVehicles: vehiclesApi.getVehicles,
+  deleteVehicle: vehiclesApi.deleteVehicle,
 
   // Vehicle Drivers
   getVehicleDrivers: vehicleDriversApi.getVehicleDrivers,
@@ -132,6 +133,7 @@ export const apiClient = {
   createDriver: driversApi.createDriver,
   updateDriver: driversApi.updateDriver,
   resetDriverPassword: driversApi.resetDriverPassword,
+  deleteDriver: driversApi.deleteDriver,
 
   // Dashboard & Notifications
   getDashboardSummary: dashboardApi.getDashboardSummary,

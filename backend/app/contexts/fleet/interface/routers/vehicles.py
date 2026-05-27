@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user, require_permission
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import Vehicle
+from app.models.domain import Vehicle, VehicleDriver
 from app.schemas.domain import VehicleOut
 
 router = APIRouter()
@@ -52,3 +54,28 @@ async def create_vehicle(
     await db.flush()
     await db.refresh(vehicle)
     return vehicle
+
+
+@router.delete("/vehicles/{vehicle_id}", status_code=204)
+async def delete_vehicle(
+    vehicle_id: int,
+    _current_user: User = Depends(require_permission("delete", "Vehicle")),
+    db: AsyncSession = Depends(get_db),
+):
+    vehicle = (await db.execute(
+        select(Vehicle).where(Vehicle.id == vehicle_id)
+    )).scalar_one_or_none()
+    if vehicle is None:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    vehicle.is_active = False
+    active_assignments = (await db.execute(
+        select(VehicleDriver).where(
+            VehicleDriver.vehicle_id == vehicle_id,
+            VehicleDriver.is_active == True,  # noqa: E712
+        )
+    )).scalars().all()
+    for vd in active_assignments:
+        vd.is_active = False
+        vd.effective_to = date.today()
+    await db.commit()
+    return Response(status_code=204)

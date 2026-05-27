@@ -63,3 +63,19 @@ export function useUpdateDriver() {
   })
 }
 
+
+export function useDeleteDriver() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => apiClient.deleteDriver(id).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['drivers'] })
+      qc.invalidateQueries({ queryKey: ['drivers-paged'] })
+      qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
+      qc.invalidateQueries({ queryKey: ['vehicles'] })
+      qc.invalidateQueries({ queryKey: ['driver-earnings'] })
+      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
+    },
+  })
+}
+

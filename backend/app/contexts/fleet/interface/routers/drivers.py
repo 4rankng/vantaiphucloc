@@ -283,3 +283,32 @@ async def reset_driver_password(
     user.hashed_password = hasher.hash(body.new_password)
     await db.commit()
     return {"message": "Password reset successfully"}
+
+
+@router.delete("/drivers/{driver_id}", status_code=204)
+async def delete_driver(
+    driver_id: int,
+    _current_user: User = Depends(require_permission("delete", "Driver")),
+    db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
+    from datetime import date as _date
+
+    user = (await db.execute(
+        select(User).where(User.id == driver_id, User.role == "driver")
+    )).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    user.is_active = False
+    active_assignments = (await db.execute(
+        select(VehicleDriver).where(
+            VehicleDriver.driver_id == driver_id,
+            VehicleDriver.is_active == True,  # noqa: E712
+        )
+    )).scalars().all()
+    for vd in active_assignments:
+        vd.is_active = False
+        vd.effective_to = _date.today()
+    await db.commit()
+    await CacheManager(redis).invalidate_namespace("drivers")
+    return None

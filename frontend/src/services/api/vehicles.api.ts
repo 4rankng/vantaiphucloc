@@ -20,3 +20,12 @@ export async function getVehicles(activeOnly = true): Promise<ApiResponse<Vehicl
     return fail(err)
   }
 }
+
+export async function deleteVehicle(id: number): Promise<ApiResponse<void>> {
+  try {
+    await api.delete(`/vehicles/${id}`)
+    return ok(undefined)
+  } catch (err) {
+    return fail(err)
+  }
+}

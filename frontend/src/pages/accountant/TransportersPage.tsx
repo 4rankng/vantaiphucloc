@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef } from 'react'
 import {
-  Truck, Plus, User, X, Building2, AlertTriangle, Users, Key, Pencil,
+  Truck, Plus, User, X, Building2, AlertTriangle, Users, Key, Pencil, Trash2,
 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -20,6 +20,8 @@ import {
   useCreateVehicle,
   useCreateDriver,
   useUpdateDriver,
+  useDeleteVehicle,
+  useDeleteDriver,
   useVehicles,
 } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
@@ -150,10 +152,11 @@ function TransporterDriverEditRow({
   )
 }
 
-function TransporterDriverRow({ driver, onEdit, onResetPassword }: {
+function TransporterDriverRow({ driver, onEdit, onResetPassword, onDelete }: {
   driver: Driver
   onEdit: (field: FocusState) => void
   onResetPassword?: () => void
+  onDelete?: () => void
 }) {
   return (
     <tr className="cursor-pointer group">
@@ -169,21 +172,31 @@ function TransporterDriverRow({ driver, onEdit, onResetPassword }: {
       <td onClick={() => onEdit('plate')}>
         {driver.vehiclePlate ? <Plate>{driver.vehiclePlate}</Plate> : <span className="text-[13px]" style={{ color: 'var(--ink-3)' }}>—</span>}
       </td>
-      {onResetPassword && (
+      {(onResetPassword || onDelete) && (
         <td>
-          <button onClick={(e) => { e.stopPropagation(); onResetPassword() }} className="p-1 rounded hover:bg-gray-100 transition-colors" title="Đổi mật khẩu">
-            <Key className="h-3.5 w-3.5" style={{ color: 'var(--ink-3)' }} />
-          </button>
+          <div className="flex items-center gap-0.5">
+            {onResetPassword && (
+              <button onClick={(e) => { e.stopPropagation(); onResetPassword() }} className="p-1 rounded hover:bg-gray-100 transition-colors" title="Đổi mật khẩu">
+                <Key className="h-3.5 w-3.5" style={{ color: 'var(--ink-3)' }} />
+              </button>
+            )}
+            {onDelete && (
+              <button onClick={(e) => { e.stopPropagation(); onDelete() }} className="p-1 rounded hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100" title="Vô hiệu hoá">
+                <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--status-error, #e53)' }} />
+              </button>
+            )}
+          </div>
         </td>
       )}
     </tr>
   )
 }
 
-function DriverMobileCard({ driver, onEdit, onResetPassword }: {
+function DriverMobileCard({ driver, onEdit, onResetPassword, onDelete }: {
   driver: Driver
   onEdit: () => void
   onResetPassword?: () => void
+  onDelete?: () => void
 }) {
   return (
     <div
@@ -247,6 +260,16 @@ function DriverMobileCard({ driver, onEdit, onResetPassword }: {
               title="Đổi mật khẩu"
             >
               <Key className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
+              style={{ borderColor: 'var(--theme-border-default)', color: 'var(--status-error, #e53)' }}
+              title="Vô hiệu hoá"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
@@ -355,6 +378,8 @@ function FleetSection() {
   const updateDriver = useUpdateDriver()
   const addVehicleDriver = useAddVehicleDriver()
   const removeVehicleDriver = useRemoveVehicleDriver()
+  const deleteVehicle = useDeleteVehicle()
+  const deleteDriver = useDeleteDriver()
 
   const groups = useMemo(() => groupByVehicle(vdRows, vehicles), [vdRows, vehicles])
 
@@ -394,6 +419,9 @@ function FleetSection() {
   const [resetPwdSaving, setResetPwdSaving] = useState(false)
   const [resetPwdValue, setResetPwdValue] = useState('')
   const [usernameValue, setUsernameValue] = useState('')
+
+  const [deleteVehicleTarget, setDeleteVehicleTarget] = useState<{ id: number; plate: string } | null>(null)
+  const [deleteDriverTarget, setDeleteDriverTarget] = useState<{ id: number; name: string } | null>(null)
 
   const filteredGroups = useMemo(() => {
     const q = fleetSearch.trim()
@@ -497,6 +525,8 @@ function FleetSection() {
       else if (hasPwd) toast.success('Đã đổi mật khẩu')
       else toast.success('Đã đổi tên đăng nhập')
       qc.invalidateQueries({ queryKey: ['drivers'] })
+      qc.invalidateQueries({ queryKey: ['drivers-paged'] })
+      qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
       setResetPwdDriver(null)
       setResetPwdValue('')
     } catch {
@@ -504,6 +534,22 @@ function FleetSection() {
     } finally {
       setResetPwdSaving(false)
     }
+  }
+
+  const handleDeleteVehicle = () => {
+    if (!deleteVehicleTarget) return
+    deleteVehicle.mutate(deleteVehicleTarget.id, {
+      onSuccess: () => { toast.success('Đã vô hiệu hoá xe'); setDeleteVehicleTarget(null) },
+      onError: () => toast.error('Không thể xoá xe'),
+    })
+  }
+
+  const handleDeleteDriver = () => {
+    if (!deleteDriverTarget) return
+    deleteDriver.mutate(deleteDriverTarget.id, {
+      onSuccess: () => { toast.success('Đã vô hiệu hoá lái xe'); setDeleteDriverTarget(null) },
+      onError: () => toast.error('Không thể xoá lái xe'),
+    })
   }
 
   return (
@@ -543,11 +589,12 @@ function FleetSection() {
                       <tr>
                         <th className="text-left" style={{ width: 120 }}>Biển số</th>
                         <th className="text-left">Lái xe</th>
+                        <th className="w-10" />
                       </tr>
                     </thead>
                     <tbody>
                       {visibleGroups.map((g) => (
-                        <tr key={g.vehicleId}>
+                        <tr key={g.vehicleId} className="group">
                           <td><Plate>{g.plate}</Plate></td>
                           <td>
                             <div className="flex flex-wrap items-center gap-1.5">
@@ -573,6 +620,13 @@ function FleetSection() {
                                 className="nepo-driver-chip-add" aria-label="Thêm lái xe"
                               ><Plus className="h-3 w-3" /></button>
                             </div>
+                          </td>
+                          <td>
+                            <button
+                              onClick={() => setDeleteVehicleTarget({ id: g.vehicleId, plate: g.plate })}
+                              className="p-1 rounded hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                              title="Vô hiệu hoá xe"
+                            ><Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--status-error, #e53)' }} /></button>
                           </td>
                         </tr>
                       ))}
@@ -620,6 +674,7 @@ function FleetSection() {
                           driver={d}
                           onEdit={() => setEditingDriverId(d.id)}
                           onResetPassword={() => { setResetPwdDriver(d); setUsernameValue(d.username); setResetPwdValue('') }}
+                          onDelete={() => setDeleteDriverTarget({ id: d.id, name: d.fullName || d.username })}
                         />
                       )
                     })}
@@ -653,6 +708,7 @@ function FleetSection() {
                               driver={d}
                               onEdit={(field) => { setEditingDriverId(d.id); setEditingDriverField(field) }}
                               onResetPassword={() => { setResetPwdDriver(d); setUsernameValue(d.username); setResetPwdValue('') }}
+                              onDelete={() => setDeleteDriverTarget({ id: d.id, name: d.fullName || d.username })}
                             />
                           )
                         })}
@@ -790,6 +846,56 @@ function FleetSection() {
             <Button variant="outline" size="sm" onClick={() => { setResetPwdDriver(null); setResetPwdValue(''); setUsernameValue('') }}>Huỷ</Button>
             <Button size="sm" onClick={handleResetPassword} disabled={(!resetPwdValue.trim() && usernameValue.trim() === resetPwdDriver?.username) || resetPwdSaving}>
               {resetPwdSaving ? 'Đang lưu...' : 'Xác nhận'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Vehicle Dialog ── */}
+      <Dialog open={!!deleteVehicleTarget} onOpenChange={() => setDeleteVehicleTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Xoá xe?</DialogTitle></DialogHeader>
+          <div
+            className="flex items-start gap-3 rounded-lg px-3 py-2.5"
+            style={{
+              background: 'color-mix(in srgb, var(--status-error, #e53) 8%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--status-error, #e53) 15%, transparent)',
+            }}
+          >
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--status-error, #e53)' }} />
+            <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
+              <strong style={{ color: 'var(--ink)' }}>{deleteVehicleTarget?.plate}</strong> sẽ bị vô hiệu hoá. Tất cả phân công lái xe cũng sẽ bị gỡ.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setDeleteVehicleTarget(null)} className="flex-1">Huỷ</Button>
+            <Button size="sm" onClick={handleDeleteVehicle} variant="destructive" className="flex-1" disabled={deleteVehicle.isPending}>
+              {deleteVehicle.isPending ? 'Đang xoá...' : 'Vô hiệu hoá'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Driver Dialog ── */}
+      <Dialog open={!!deleteDriverTarget} onOpenChange={() => setDeleteDriverTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Vô hiệu hoá lái xe?</DialogTitle></DialogHeader>
+          <div
+            className="flex items-start gap-3 rounded-lg px-3 py-2.5"
+            style={{
+              background: 'color-mix(in srgb, var(--status-error, #e53) 8%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--status-error, #e53) 15%, transparent)',
+            }}
+          >
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--status-error, #e53)' }} />
+            <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
+              <strong style={{ color: 'var(--ink)' }}>{deleteDriverTarget?.name}</strong> sẽ bị vô hiệu hoá. Tài khoản không thể đăng nhập và tất cả phân công xe sẽ bị gỡ.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setDeleteDriverTarget(null)} className="flex-1">Huỷ</Button>
+            <Button size="sm" onClick={handleDeleteDriver} variant="destructive" className="flex-1" disabled={deleteDriver.isPending}>
+              {deleteDriver.isPending ? 'Đang xoá...' : 'Vô hiệu hoá'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -74,3 +74,15 @@ export function useRemoveVehicleDriver() {
   })
 }
 
+
+export function useDeleteVehicle() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => apiClient.deleteVehicle(id).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vehicles'] })
+      qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers })
+    },
+  })
+}
+
