@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef } from 'react'
 import {
-  Truck, Plus, User, X, Building2, AlertTriangle, Users, Key,
+  Truck, Plus, User, X, Building2, AlertTriangle, Users, Key, Pencil,
 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -37,6 +37,7 @@ import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
 import { useActiveField } from '@/components/shared/useActiveField'
 import { tdActive, tdHidden } from '@/components/shared/editCellStyles'
 import { StatPill } from '@/components/shared/StatPill'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 // ─── Transporter-specific driver row types ────────────────────────────────────
 
@@ -178,6 +179,159 @@ function TransporterDriverRow({ driver, onEdit, onResetPassword }: {
     </tr>
   )
 }
+
+function DriverMobileCard({ driver, onEdit, onResetPassword }: {
+  driver: Driver
+  onEdit: () => void
+  onResetPassword?: () => void
+}) {
+  return (
+    <div
+      onClick={onEdit}
+      className="p-4 rounded-xl border flex flex-col gap-3 transition-colors active:scale-[0.99] touch-manipulation cursor-pointer"
+      style={{
+        background: 'var(--theme-bg-secondary, #ffffff)',
+        borderColor: 'var(--theme-border-default, #e4e4e7)',
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <div
+            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+            style={{
+              background: 'var(--surface-3)',
+              color: 'var(--ink-2)',
+            }}
+          >
+            <User className="h-4.5 w-4.5" />
+          </div>
+          <div className="min-w-0 flex-1 leading-normal">
+            <span className="text-sm font-bold block" style={{ color: 'var(--ink)' }}>
+              {driver.fullName || driver.username}
+            </span>
+            <span className="block text-[11px] font-mono mt-0.5" style={{ color: 'var(--ink-3)' }}>
+              {driver.username}
+            </span>
+            {driver.phone && (
+              <a
+                href={`tel:${driver.phone}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs font-medium block mt-1 hover:underline tabular-nums"
+                style={{ color: 'var(--accent)' }}
+              >
+                {driver.phone}
+              </a>
+            )}
+            {driver.vehiclePlate && (
+              <div className="mt-1.5">
+                <Plate>{driver.vehiclePlate}</Plate>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={onEdit}
+            className="w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
+            style={{ borderColor: 'var(--theme-border-default)', color: 'var(--ink-2)' }}
+            title="Sửa"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          {onResetPassword && (
+            <button
+              onClick={onResetPassword}
+              className="w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
+              style={{ borderColor: 'var(--theme-border-default)', color: 'var(--ink-3)' }}
+              title="Đổi mật khẩu"
+            >
+              <Key className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DriverMobileEditCard({
+  driver, onSave, onCancel, saving, vehicles,
+}: {
+  driver: Driver
+  onSave: (data: DriverRowFormData) => void
+  onCancel: () => void
+  saving?: boolean
+  vehicles: { id: number; plate: string }[]
+}) {
+  const [fullName, setFullName] = useState(driver.fullName ?? '')
+  const [phone, setPhone] = useState(driver.phone ?? '')
+  const [plate, setPlate] = useState(driver.vehiclePlate ?? '')
+
+  const handleSave = () => {
+    onSave({ fullName, phone, plate })
+  }
+
+  return (
+    <div
+      className="p-4 rounded-xl border flex flex-col gap-4 animate-scale-pop text-left"
+      style={{
+        background: 'var(--accent-soft)',
+        borderColor: 'var(--accent)',
+      }}
+    >
+      <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--accent-ink)' }}>
+        Chỉnh sửa thông tin tài xế
+      </h3>
+
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold uppercase" style={{ color: 'var(--ink-2)' }}>Họ tên *</label>
+          <input
+            className="nepo-input text-xs w-full"
+            value={fullName}
+            onChange={e => setFullName(e.target.value)}
+            placeholder="Họ tên"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold uppercase" style={{ color: 'var(--ink-2)' }}>Số điện thoại</label>
+          <input
+            className="nepo-input text-xs w-full"
+            type="tel"
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
+            placeholder="Số điện thoại"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold uppercase" style={{ color: 'var(--ink-2)' }}>Biển số xe</label>
+          <select
+            className="nepo-input text-xs w-full"
+            value={plate}
+            onChange={e => setPlate(e.target.value)}
+            style={{ background: 'var(--surface)' }}
+          >
+            <option value="">—</option>
+            {vehicles.map(v => (
+              <option key={v.id} value={v.plate}>{v.plate}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="flex gap-2 justify-end mt-1 pt-3 border-t" style={{ borderColor: 'var(--theme-border-default)' }}>
+        <Button variant="outline" size="sm" onClick={onCancel} disabled={saving}>Hủy</Button>
+        <Button size="sm" onClick={handleSave} disabled={saving}>
+          {saving ? 'Đang lưu...' : 'Xác nhận'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const BATCH = 15
@@ -188,6 +342,7 @@ const BATCH = 15
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function FleetSection() {
+  const isMobile = useIsMobile(768)
   const toast = useToast()
   const qc = useQueryClient()
 
@@ -226,6 +381,7 @@ function FleetSection() {
   const [showCreateDriver, setShowCreateDriver] = useState(false)
   const [addingDriverFor, setAddingDriverFor] = useState<number | null>(null)
   const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null)
+  const [effectiveFrom, setEffectiveFrom] = useState(() => new Date().toISOString().slice(0, 10))
   const [removeDriverTarget, setRemoveDriverTarget] = useState<{ vdId: number; name: string } | null>(null)
 
   // Inline driver editing
@@ -237,6 +393,7 @@ function FleetSection() {
   const [resetPwdDriver, setResetPwdDriver] = useState<Driver | null>(null)
   const [resetPwdSaving, setResetPwdSaving] = useState(false)
   const [resetPwdValue, setResetPwdValue] = useState('')
+  const [usernameValue, setUsernameValue] = useState('')
 
   const filteredGroups = useMemo(() => {
     const q = fleetSearch.trim()
@@ -266,7 +423,7 @@ function FleetSection() {
 
   const handleAddVehicle = () => {
     if (!newPlate.trim()) return
-    createVehicle.mutate({ plate: newPlate.trim().toUpperCase() }, {
+    createVehicle.mutate(newPlate.trim().toUpperCase(), {
       onSuccess: () => { toast.success('Đã thêm xe'); setNewPlate(''); setShowAddVehicle(false) },
       onError: () => toast.error('Không thể thêm xe'),
     })
@@ -311,7 +468,7 @@ function FleetSection() {
 
   const handleAddDriverToVehicle = () => {
     if (!addingDriverFor || !selectedDriverId) return
-    addVehicleDriver.mutate({ vehicleId: addingDriverFor, driverId: selectedDriverId }, {
+    addVehicleDriver.mutate({ vehicleId: addingDriverFor, driverId: selectedDriverId, effectiveFrom }, {
       onSuccess: () => { toast.success('Đã thêm lái xe'); setAddingDriverFor(null); setSelectedDriverId(null) },
       onError: () => toast.error('Không thể thêm lái xe'),
     })
@@ -326,15 +483,24 @@ function FleetSection() {
   }
 
   const handleResetPassword = async () => {
-    if (!resetPwdDriver || !resetPwdValue.trim()) return
+    if (!resetPwdDriver) return
+    const hasPwd = resetPwdValue.trim().length > 0
+    const hasUser = usernameValue.trim() !== resetPwdDriver.username
+    if (!hasPwd && !hasUser) return
     setResetPwdSaving(true)
     try {
-      await apiClient.resetDriverPassword(resetPwdDriver.id, resetPwdValue.trim())
-      toast.success('Đã đổi mật khẩu')
+      const updates: Record<string, unknown> = {}
+      if (hasUser) updates.username = usernameValue.trim()
+      if (hasPwd) updates.password = resetPwdValue.trim()
+      await apiClient.updateUser(resetPwdDriver.id, updates)
+      if (hasPwd && hasUser) toast.success('Đã đổi mật khẩu & tên đăng nhập')
+      else if (hasPwd) toast.success('Đã đổi mật khẩu')
+      else toast.success('Đã đổi tên đăng nhập')
+      qc.invalidateQueries({ queryKey: ['drivers'] })
       setResetPwdDriver(null)
       setResetPwdValue('')
     } catch {
-      toast.error('Không thể đổi mật khẩu')
+      toast.error('Không thể lưu thay đổi')
     } finally {
       setResetPwdSaving(false)
     }
@@ -403,7 +569,7 @@ function FleetSection() {
                               ))}
                               <button
                                 type="button"
-                                onClick={() => { setAddingDriverFor(g.vehicleId); setSelectedDriverId(null) }}
+                                onClick={() => { setAddingDriverFor(g.vehicleId); setSelectedDriverId(null); setEffectiveFrom(new Date().toISOString().slice(0, 10)) }}
                                 className="nepo-driver-chip-add" aria-label="Thêm lái xe"
                               ><Plus className="h-3 w-3" /></button>
                             </div>
@@ -436,40 +602,64 @@ function FleetSection() {
               </div>
             ) : (
               <>
-                <div className="nepo-table-scroll overflow-x-auto">
-                  <table className="nepo-table w-full" style={{ minWidth: 340, borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr>
-                        <th className="text-left">Họ tên</th>
-                        <th className="text-left">SĐT</th>
-                        <th className="text-left">Biển số</th>
-                        <th className="w-10" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visibleDrivers.map((d) => {
-                        return editingDriverId === d.id ? (
-                          <TransporterDriverEditRow
-                            key={d.id}
-                            driver={d}
-                            onSave={(data) => handleUpdateDriver(d, data)}
-                            onCancel={() => setEditingDriverId(null)}
-                            saving={savingDriver}
-                            initialFocus={editingDriverField}
-                            vehicles={vehicles}
-                          />
-                        ) : (
-                          <TransporterDriverRow
-                            key={d.id}
-                            driver={d}
-                            onEdit={(field) => { setEditingDriverId(d.id); setEditingDriverField(field) }}
-                            onResetPassword={() => setResetPwdDriver(d)}
-                          />
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                {isMobile ? (
+                  <div className="flex flex-col gap-3 p-4">
+                    {visibleDrivers.map((d) => {
+                      return editingDriverId === d.id ? (
+                        <DriverMobileEditCard
+                          key={d.id}
+                          driver={d}
+                          onSave={(data) => handleUpdateDriver(d, data)}
+                          onCancel={() => setEditingDriverId(null)}
+                          saving={savingDriver}
+                          vehicles={vehicles}
+                        />
+                      ) : (
+                        <DriverMobileCard
+                          key={d.id}
+                          driver={d}
+                          onEdit={() => setEditingDriverId(d.id)}
+                          onResetPassword={() => { setResetPwdDriver(d); setUsernameValue(d.username); setResetPwdValue('') }}
+                        />
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="nepo-table-scroll overflow-x-auto">
+                    <table className="nepo-table w-full" style={{ minWidth: 340, borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          <th className="text-left">Họ tên</th>
+                          <th className="text-left">SĐT</th>
+                          <th className="text-left">Biển số</th>
+                          <th className="w-10" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visibleDrivers.map((d) => {
+                          return editingDriverId === d.id ? (
+                            <TransporterDriverEditRow
+                              key={d.id}
+                              driver={d}
+                              onSave={(data) => handleUpdateDriver(d, data)}
+                              onCancel={() => setEditingDriverId(null)}
+                              saving={savingDriver}
+                              initialFocus={editingDriverField}
+                              vehicles={vehicles}
+                            />
+                          ) : (
+                            <TransporterDriverRow
+                              key={d.id}
+                              driver={d}
+                              onEdit={(field) => { setEditingDriverId(d.id); setEditingDriverField(field) }}
+                              onResetPassword={() => { setResetPwdDriver(d); setUsernameValue(d.username); setResetPwdValue('') }}
+                            />
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
                 <LoadMoreSentinel sentinelRef={driverSentinel} hasMore={driverHasMore} />
               </>
             )}
@@ -532,6 +722,11 @@ function FleetSection() {
                 </button>
               ))}
             </div>
+            <div className="mt-3">
+              <label className="nepo-field-label">Ngày hiệu lực</label>
+              <input type="date" value={effectiveFrom} onChange={e => setEffectiveFrom(e.target.value)}
+                className="nepo-input w-full" />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setAddingDriverFor(null)}>Huỷ</Button>
@@ -568,22 +763,32 @@ function FleetSection() {
       </Dialog>
 
       {/* ── Reset Password Dialog ── */}
-      <Dialog open={!!resetPwdDriver} onOpenChange={() => { setResetPwdDriver(null); setResetPwdValue('') }}>
+      <Dialog open={!!resetPwdDriver} onOpenChange={() => { setResetPwdDriver(null); setResetPwdValue(''); setUsernameValue('') }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Đổi mật khẩu</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Cài đặt tài khoản</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
             <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
-              Đổi mật khẩu cho <strong style={{ color: 'var(--ink)' }}>{resetPwdDriver?.fullName || resetPwdDriver?.username}</strong>
+              Cài đặt cho <strong style={{ color: 'var(--ink)' }}>{resetPwdDriver?.fullName || resetPwdDriver?.username}</strong>
             </p>
-            <input
-              className="nepo-input" type="text" placeholder="Mật khẩu mới"
-              value={resetPwdValue} onChange={e => setResetPwdValue(e.target.value)} autoFocus
-              onKeyDown={e => { if (e.key === 'Enter') handleResetPassword() }}
-            />
+            <div>
+              <label className="nepo-field-label">Tên đăng nhập</label>
+              <input
+                className="nepo-input" type="text" placeholder="Tên đăng nhập"
+                value={usernameValue} onChange={e => setUsernameValue(e.target.value)} autoFocus
+              />
+            </div>
+            <div>
+              <label className="nepo-field-label">Mật khẩu mới</label>
+              <input
+                className="nepo-input" type="text" placeholder="Mật khẩu mới"
+                value={resetPwdValue} onChange={e => setResetPwdValue(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleResetPassword() }}
+              />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => { setResetPwdDriver(null); setResetPwdValue('') }}>Huỷ</Button>
-            <Button size="sm" onClick={handleResetPassword} disabled={!resetPwdValue.trim() || resetPwdSaving}>
+            <Button variant="outline" size="sm" onClick={() => { setResetPwdDriver(null); setResetPwdValue(''); setUsernameValue('') }}>Huỷ</Button>
+            <Button size="sm" onClick={handleResetPassword} disabled={(!resetPwdValue.trim() && usernameValue.trim() === resetPwdDriver?.username) || resetPwdSaving}>
               {resetPwdSaving ? 'Đang lưu...' : 'Xác nhận'}
             </Button>
           </DialogFooter>

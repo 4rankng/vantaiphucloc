@@ -15,6 +15,7 @@ import { useDebounce } from '@/hooks/use-debounce'
 import { useInfiniteScroll } from '@/components/shared/ListUtils'
 import type { Client } from '@/data/domain'
 import type { ClientSortBy } from '@/services/api/clients.api'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -113,9 +114,97 @@ function ClientRow({ client, onEdit, onDelete }: {
   )
 }
 
+function ClientMobileCard({ client, onEdit, onDelete }: {
+  client: Client
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const isCompany = client.type === 'company'
+
+  return (
+    <div
+      onClick={onEdit}
+      className="p-4 rounded-xl border flex flex-col gap-3 transition-colors active:scale-[0.99] touch-manipulation cursor-pointer"
+      style={{
+        background: 'var(--theme-bg-secondary, #ffffff)',
+        borderColor: 'var(--theme-border-default, #e4e4e7)',
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <div
+            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+            style={{
+              background: isCompany ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'var(--surface-3)',
+              color: isCompany ? 'var(--accent)' : 'var(--ink-3)',
+            }}
+          >
+            <Building2 className="h-4.5 w-4.5" />
+          </div>
+          <div className="min-w-0 flex-1 leading-normal">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-sm font-bold" style={{ color: 'var(--ink)' }}>
+                {client.name}
+              </span>
+              {client.code && (
+                <span
+                  className="font-mono text-[10px] font-bold tracking-wide px-1.5 py-0.5 rounded shrink-0"
+                  style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
+                >
+                  {client.code}
+                </span>
+              )}
+            </div>
+            {client.phone && (
+              <a
+                href={`tel:${client.phone}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs font-medium block mt-1 hover:underline tabular-nums"
+                style={{ color: 'var(--accent)' }}
+              >
+                {client.phone}
+              </a>
+            )}
+            {client.address && (
+              <p className="text-xs mt-1 truncate" style={{ color: 'var(--ink-2)' }}>
+                {client.address}
+              </p>
+            )}
+            {client.taxCode && (
+              <p className="text-[11px] mt-0.5 tabular-nums" style={{ color: 'var(--ink-3)' }}>
+                MST: {client.taxCode}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={onEdit}
+            className="w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
+            style={{ borderColor: 'var(--theme-border-default)', color: 'var(--ink-2)' }}
+            title="Sửa"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
+            style={{ borderColor: 'var(--theme-border-default)', color: 'var(--theme-status-error, #E32434)' }}
+            title="Xoá"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function ClientsPage() {
+  const isMobile = useIsMobile(768)
   const toast = useToast()
   const { data: allClients = [] } = useClients()
   const createClient = useCreateClient()
@@ -252,6 +341,25 @@ export function ClientsPage() {
                 ) : undefined}
               />
             </div>
+          ) : isMobile ? (
+            <>
+              <div className="px-4 py-1.5 animate-fade-in" style={{ borderBottom: '1px solid var(--line)' }}>
+                <span className="text-[11.5px]" style={{ color: 'var(--ink-4)' }}>
+                  Nhấp vào thẻ để sửa
+                </span>
+              </div>
+              <div className="flex flex-col gap-3 p-4">
+                {clients.map((c) => (
+                  <ClientMobileCard
+                    key={c.id}
+                    client={c}
+                    onEdit={() => openEditDialog(c)}
+                    onDelete={() => setDeleteTarget(c)}
+                  />
+                ))}
+              </div>
+              <LoadMoreSentinel sentinelRef={sentinel} hasMore={hasMore} />
+            </>
           ) : (
             <>
               <div className="nepo-table-scroll overflow-x-auto">

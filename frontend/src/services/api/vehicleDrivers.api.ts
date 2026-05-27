@@ -19,9 +19,13 @@ export async function getVehicleDrivers(params?: { activeOnly?: boolean; vehicle
   }
 }
 
-export async function addVehicleDriver(vehicleId: number, driverId: number): Promise<ApiResponse<VehicleDriverRow>> {
+export async function addVehicleDriver(vehicleId: number, driverId: number, effectiveFrom?: string): Promise<ApiResponse<VehicleDriverRow>> {
   try {
-    const res = await api.post('/vehicle-drivers', { vehicle_id: vehicleId, driver_id: driverId })
+    const res = await api.post('/vehicle-drivers', {
+      vehicle_id: vehicleId,
+      driver_id: driverId,
+      effective_from: effectiveFrom ?? new Date().toISOString().slice(0, 10),
+    })
     return ok(toCamel<VehicleDriverRow>(res.data))
   } catch (err) {
     return fail(err)

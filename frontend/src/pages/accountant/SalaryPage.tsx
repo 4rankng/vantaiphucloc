@@ -139,7 +139,12 @@ export function SalaryPage() {
         allowance: d.totalAllowance,
         note: null,
         matchedOrderCount: d.matchedOrderCount,
-        totalEarnings: d.totalEarnings,
+        // Compute the same way as the salaryRecords branch (basic + bonus + allowance)
+        // so the hero total never flashes a different number when one query
+        // resolves before the other. Previously this used the server-side
+        // `d.totalEarnings`, which is aggregated differently and produced a
+        // misleading flash on the "Tổng thực lĩnh" hero card.
+        totalEarnings: d.baseSalary + d.totalSalary + d.totalAllowance,
       }))
 
   const totalEarnings = rows.reduce((s, d) => s + d.totalEarnings, 0)

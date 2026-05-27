@@ -9,7 +9,7 @@
  * @returns boolean — true once element has entered viewport
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface UseInViewOptions {
   /** Fraction of element visible before firing (0–1). Default 0.15 */
@@ -71,19 +71,24 @@ export function useInView({
  */
 export function useInViewRef<T extends HTMLElement>(
   options: UseInViewOptions = {}
-): [React.RefObject<T>, boolean] {
+): [(node: T | null) => void, boolean] {
   const { threshold = 0.15, rootMargin = '0px', disabled = false } = options
   const [isInView, setIsInView] = useState(disabled)
-  const ref = useRef<T>(null)
+  // Use a callback ref so the effect runs the moment the DOM node is attached,
+  // not on the first render when ref.current is still null. The old
+  // useRef + useEffect combo raced with React's commit phase and sometimes
+  // left the observer unattached → wrappers stuck at opacity:0 forever
+  // (see Tổng quan accountant page blank-on-first-load regression).
+  const [node, setNode] = useState<T | null>(null)
+  const ref = useCallback((n: T | null) => setNode(n), [])
 
   useEffect(() => {
-    if (disabled || !ref.current) {
-      if (disabled) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setIsInView(true)
-      }
+    if (disabled) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsInView(true)
       return
     }
+    if (!node) return
 
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (prefersReduced) {
@@ -101,9 +106,22 @@ export function useInViewRef<T extends HTMLElement>(
       { threshold, rootMargin }
     )
 
-    observer.observe(ref.current)
-    return () => observer.disconnect()
-  }, [threshold, rootMargin, disabled])
+    observer.observe(node)
+
+    // Safety net: if for any reason the observer hasn't fired in 300ms
+    // (e.g. a layout race with sticky headers), force-reveal so the user
+    // never sees a permanently-blank section. The animation window has
+    // already elapsed by then.
+    const timeoutId = window.setTimeout(() => {
+      setIsInView(true)
+      observer.disconnect()
+    }, 300)
+
+    return () => {
+      observer.disconnect()
+      window.clearTimeout(timeoutId)
+    }
+  }, [node, threshold, rootMargin, disabled])
 
   return [ref, isInView]
 }

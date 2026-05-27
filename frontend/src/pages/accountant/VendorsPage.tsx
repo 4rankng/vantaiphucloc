@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Truck, Plus, Trash2 } from 'lucide-react'
+import { Truck, Plus, Trash2, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
 import { Panel } from '@/components/shared/Panel'
@@ -21,6 +21,7 @@ import {
 import { useToast } from '@/components/atoms/Toast'
 import { useDebounce } from '@/hooks/use-debounce'
 import type { Vendor } from '@/data/domain'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -245,9 +246,225 @@ function VendorRow({ vendor, onEdit, onDelete }: {
   )
 }
 
+function VendorMobileCard({ vendor, onEdit, onDelete }: {
+  vendor: Vendor
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const isCompany = vendor.type === 'company'
+  return (
+    <div
+      onClick={onEdit}
+      className="p-4 rounded-xl border flex flex-col gap-3 transition-colors active:scale-[0.99] touch-manipulation cursor-pointer"
+      style={{
+        background: 'var(--theme-bg-secondary, #ffffff)',
+        borderColor: 'var(--theme-border-default, #e4e4e7)',
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <div
+            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+            style={{
+              background: isCompany ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'var(--surface-3)',
+              color: isCompany ? 'var(--accent)' : 'var(--ink-3)',
+            }}
+          >
+            <Truck className="h-4.5 w-4.5" />
+          </div>
+          <div className="min-w-0 flex-1 leading-normal">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-sm font-bold" style={{ color: 'var(--ink)' }}>
+                {vendor.name}
+              </span>
+              <span
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
+              >
+                {vendor.type === 'company' ? 'Công ty' : 'Cá nhân'}
+              </span>
+            </div>
+            {vendor.phone && (
+              <a
+                href={`tel:${vendor.phone}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs font-medium block mt-1 hover:underline tabular-nums"
+                style={{ color: 'var(--accent)' }}
+              >
+                {vendor.phone}
+              </a>
+            )}
+            {vendor.address && (
+              <p className="text-xs mt-1 truncate" style={{ color: 'var(--ink-2)' }}>
+                {vendor.address}
+              </p>
+            )}
+            {vendor.contactPerson && (
+              <p className="text-xs mt-0.5" style={{ color: 'var(--ink-2)' }}>
+                LH: {vendor.contactPerson}
+              </p>
+            )}
+            {vendor.taxCode && (
+              <p className="text-[11px] mt-0.5 tabular-nums" style={{ color: 'var(--ink-3)' }}>
+                MST: {vendor.taxCode}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={onEdit}
+            className="w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
+            style={{ borderColor: 'var(--theme-border-default)', color: 'var(--ink-2)' }}
+            title="Sửa"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
+            style={{ borderColor: 'var(--theme-border-default)', color: 'var(--theme-status-error, #E32434)' }}
+            title="Xoá"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function VendorMobileEditCard({ initial, onSave, onCancel, saving }: {
+  initial: FormData
+  onSave: (data: FormData) => void
+  onCancel: () => void
+  saving?: boolean
+}) {
+  const [name, setName] = useState(initial.name)
+  const [type, setType] = useState(initial.type)
+  const [phone, setPhone] = useState(initial.phone)
+  const [taxCode, setTaxCode] = useState(initial.taxCode)
+  const [address, setAddress] = useState(initial.address)
+  const [contactPerson, setContactPerson] = useState(initial.contactPerson)
+
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const handleSave = () => {
+    const errs: Record<string, string> = {}
+    if (!name.trim()) errs.name = 'Bắt buộc'
+    if (taxCode && !VN_TAX_RE.test(taxCode)) errs.taxCode = 'MST không hợp lệ'
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      return
+    }
+    onSave({ name, type, phone, taxCode, address, contactPerson })
+  }
+
+  return (
+    <div
+      className="p-4 rounded-xl border flex flex-col gap-4 animate-scale-pop text-left"
+      style={{
+        background: 'var(--accent-soft)',
+        borderColor: 'var(--accent)',
+      }}
+    >
+      <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--accent-ink)' }}>
+        {initial.name ? 'Chỉnh sửa nhà thầu' : 'Thêm nhà thầu mới'}
+      </h3>
+
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold uppercase" style={{ color: 'var(--ink-2)' }}>Tên nhà thầu *</label>
+          <input
+            className="nepo-input text-xs w-full"
+            style={{ borderColor: errors.name ? 'var(--theme-status-error, #E32434)' : undefined }}
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Tên nhà thầu"
+          />
+          {errors.name && <p className="text-[10px]" style={{ color: 'var(--theme-status-error, #E32434)' }}>{errors.name}</p>}
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold uppercase" style={{ color: 'var(--ink-2)' }}>Loại</label>
+          <div className="flex gap-2">
+            {(['company', 'individual'] as const).map(t => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setType(t)}
+                className="flex-1 rounded py-1.5 text-xs font-medium transition-colors border"
+                style={{
+                  background: type === t ? 'var(--accent)' : 'var(--surface)',
+                  color: type === t ? '#fff' : 'var(--ink-2)',
+                  borderColor: type === t ? 'var(--accent)' : 'var(--theme-border-default)',
+                }}
+              >
+                {t === 'company' ? 'Công ty' : 'Cá nhân'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold uppercase" style={{ color: 'var(--ink-2)' }}>Số điện thoại</label>
+          <input
+            className="nepo-input text-xs w-full"
+            type="tel"
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
+            placeholder="Số điện thoại"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold uppercase" style={{ color: 'var(--ink-2)' }}>Địa chỉ</label>
+          <input
+            className="nepo-input text-xs w-full"
+            value={address}
+            onChange={e => setAddress(e.target.value)}
+            placeholder="Địa chỉ"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold uppercase" style={{ color: 'var(--ink-2)' }}>Người liên hệ</label>
+          <input
+            className="nepo-input text-xs w-full"
+            value={contactPerson}
+            onChange={e => setContactPerson(e.target.value)}
+            placeholder="Người liên hệ"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold uppercase" style={{ color: 'var(--ink-2)' }}>Mã số thuế</label>
+          <input
+            className="nepo-input text-xs w-full"
+            style={{ borderColor: errors.taxCode ? 'var(--theme-status-error, #E32434)' : undefined }}
+            value={taxCode}
+            onChange={e => setTaxCode(e.target.value)}
+            placeholder="Mã số thuế"
+          />
+          {errors.taxCode && <p className="text-[10px]" style={{ color: 'var(--theme-status-error, #E32434)' }}>{errors.taxCode}</p>}
+        </div>
+      </div>
+
+      <div className="flex gap-2 justify-end mt-1 pt-3 border-t" style={{ borderColor: 'var(--theme-border-default)' }}>
+        <Button variant="outline" size="sm" onClick={onCancel} disabled={saving}>Hủy</Button>
+        <Button size="sm" onClick={handleSave} disabled={saving}>
+          {saving ? 'Đang lưu...' : 'Xác nhận'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function VendorsPage() {
+  const isMobile = useIsMobile(768)
   const toast = useToast()
   // Keep useVendors for accurate stat counts (no search filter)
   const { data: allVendors = [] } = useVendors()
@@ -343,6 +560,50 @@ export function VendorsPage() {
                 ) : undefined}
               />
             </div>
+          ) : isMobile ? (
+            <>
+              <div className="px-4 py-1.5 animate-fade-in" style={{ borderBottom: '1px solid var(--line)' }}>
+                <span className="text-[11.5px]" style={{ color: 'var(--ink-4)' }}>
+                  Nhấp vào thẻ để sửa
+                </span>
+              </div>
+              <div className="flex flex-col gap-3 p-4">
+                {editingId === 'new' && (
+                  <VendorMobileEditCard
+                    initial={EMPTY_FORM}
+                    onSave={handleCreate}
+                    onCancel={() => setEditingId(null)}
+                    saving={createVendor.isPending}
+                  />
+                )}
+                {visible.map((v) =>
+                  editingId === v.id ? (
+                    <VendorMobileEditCard
+                      key={v.id}
+                      initial={{
+                        name: v.name,
+                        type: v.type ?? 'company',
+                        phone: v.phone ?? '',
+                        taxCode: v.taxCode ?? '',
+                        address: v.address ?? '',
+                        contactPerson: v.contactPerson ?? '',
+                      }}
+                      onSave={(data) => handleUpdate(v.id, data)}
+                      onCancel={() => setEditingId(null)}
+                      saving={updateVendor.isPending}
+                    />
+                  ) : (
+                    <VendorMobileCard
+                      key={v.id}
+                      vendor={v}
+                      onEdit={() => setEditingId(v.id)}
+                      onDelete={() => setDeleteTarget(v)}
+                    />
+                  )
+                )}
+              </div>
+              <LoadMoreSentinel sentinelRef={sentinel} hasMore={hasMore} />
+            </>
           ) : (
             <>
               <div className="nepo-table-scroll overflow-x-auto">

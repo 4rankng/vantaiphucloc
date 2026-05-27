@@ -28,6 +28,8 @@ interface EntityTableProps<T> {
   onEmptyAdd?: () => void
   emptyAddLabel?: string
   emptyHintKey?: string
+  /** Custom mobile card renderer for viewports < 1024px */
+  renderMobileCard?: (row: T, index: number) => ReactNode
 }
 
 export function EntityTable<T>({
@@ -45,6 +47,7 @@ export function EntityTable<T>({
   onEmptyAdd,
   emptyAddLabel = 'Thêm mới',
   emptyHintKey,
+  renderMobileCard,
 }: EntityTableProps<T>) {
   return (
     <div
@@ -124,7 +127,7 @@ export function EntityTable<T>({
           </div>
 
           {/* Data rows */}
-          <div>
+          <div className={renderMobileCard ? 'hidden lg:block' : ''}>
             {data.map((row, i) => (
               <div
                 key={rowKey(row)}
@@ -152,6 +155,30 @@ export function EntityTable<T>({
               </div>
             ))}
           </div>
+
+          {/* Mobile cards stack */}
+          {renderMobileCard && (
+            <div className="flex flex-col divide-y lg:hidden" style={{ borderColor: 'var(--theme-border-light)' }}>
+              {data.map((row, i) => (
+                <div
+                  key={rowKey(row)}
+                  onClick={() => onRowClick?.(row)}
+                  className={`entity-row-enter p-4 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
+                  style={{
+                    animationDelay: `${Math.min(i * 28, 280)}ms`,
+                  }}
+                  onMouseEnter={e => {
+                    if (onRowClick) (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)'
+                  }}
+                  onMouseLeave={e => {
+                    if (onRowClick) (e.currentTarget as HTMLElement).style.background = 'transparent'
+                  }}
+                >
+                  {renderMobileCard(row, i)}
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>

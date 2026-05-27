@@ -48,8 +48,8 @@ export function useVehicleDrivers() {
 export function useAddVehicleDriver() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ vehicleId, driverId }: { vehicleId: number; driverId: number }) => {
-      const res = await apiClient.addVehicleDriver(vehicleId, driverId)
+    mutationFn: async ({ vehicleId, driverId, effectiveFrom }: { vehicleId: number; driverId: number; effectiveFrom?: string }) => {
+      const res = await apiClient.addVehicleDriver(vehicleId, driverId, effectiveFrom)
       return unwrap(res)
     },
     onSuccess: () => {

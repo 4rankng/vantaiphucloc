@@ -1294,6 +1294,8 @@ textarea {
   left: 0;
   z-index: 2;
   background: var(--surface);
+  border-right: 1.5px solid var(--line-2, #D6D9DE) !important;
+  box-shadow: 2px 0 4px rgba(10, 10, 10, 0.03);
 }
 .nepo-table thead .nepo-th-sticky {
   z-index: 3;
@@ -1301,6 +1303,27 @@ textarea {
 }
 .nepo-table tfoot.nepo-tfoot .nepo-td-sticky {
   background: var(--surface-2);
+}
+
+/* Horizontal scroll visual cue */
+.nepo-table-scroll {
+  scrollbar-width: thin;
+  -ms-overflow-style: auto;
+  position: relative;
+}
+.nepo-table-scroll::-webkit-scrollbar {
+  height: 5px;
+  display: block;
+}
+.nepo-table-scroll::-webkit-scrollbar-track {
+  background: var(--surface-2);
+}
+.nepo-table-scroll::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 3px;
+}
+.nepo-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--line-3);
 }
 
 /* ─── Accent column (net pay / profit) ───────────────── */
