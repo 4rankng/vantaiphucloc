@@ -1,572 +1,147 @@
-import { useState, useMemo, useCallback, useRef } from 'react'
-import {
-  Truck, Plus, User, X, Building2, AlertTriangle, Users, Key, Pencil, Trash2,
-} from 'lucide-react'
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-  Button,
-} from '@/components/ui'
+import { useState } from 'react'
+import { Truck, Plus, User, X, Building2, Users, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui'
 
 import { Panel } from '@/components/shared/Panel'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Plate } from '@/components/shared/Plate'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
-import {
-  useDrivers,
-  useVehicleDrivers,
-  useAddVehicleDriver,
-  useRemoveVehicleDriver,
-  useCreateVehicle,
-  useCreateDriver,
-  useUpdateDriver,
-  useDeleteVehicle,
-  useDeleteDriver,
-  useVehicles,
-} from '@/hooks/use-queries'
-import { useToast } from '@/components/atoms/Toast'
-import { useQueryClient } from '@tanstack/react-query'
-import type { Driver } from '@/data/domain'
-import { api } from '@/services/api/client'
-import { apiClient } from '@/services/api'
-import { fuzzyMatch } from '@/lib/search-utils'
-import { groupByVehicle } from '@/lib/accounting-utils'
 import { VendorManagementDrawer } from '@/components/shared/VendorManagementDrawer'
 import { DriverFormDrawer } from '@/components/shared/DriverFormDrawer'
-import { InlineSelect } from '@/components/shared/InlineSelect'
-import { FieldActions, useInfiniteScroll, LoadMoreSentinel, SearchInput } from '@/components/shared/ListUtils'
-import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
-import { useActiveField } from '@/components/shared/useActiveField'
-import { tdActive, tdHidden } from '@/components/shared/editCellStyles'
+import { LoadMoreSentinel, SearchInput } from '@/components/shared/ListUtils'
 import { StatPill } from '@/components/shared/StatPill'
 import { useIsMobile } from '@/hooks/use-mobile'
 
-// ─── Transporter-specific driver row types ────────────────────────────────────
+import { useFleetManager, FocusState } from '@/hooks/use-fleet-manager'
+import type { Driver } from '@/data/domain'
 
-type FocusableField = 'fullName' | 'phone' | 'plate'
-type FocusState = FocusableField | null
-
-interface DriverRowFormData {
-  fullName: string
-  phone: string
-  plate: string
-}
-
-// ─── Transporter-specific driver edit row ─────────────────────────────────────
-
-function TransporterDriverEditRow({
-  driver, onSave, onCancel, saving, initialFocus, vehicles,
-}: {
-  driver: Driver
-  onSave: (data: DriverRowFormData) => void
-  onCancel: () => void
-  saving?: boolean
-  initialFocus?: FocusState
-  vehicles: { id: number; plate: string }[]
-}) {
-  const initial: DriverRowFormData = {
-    fullName: driver.fullName ?? '',
-    phone: driver.phone ?? '',
-    plate: driver.vehiclePlate ?? '',
-  }
-  const [plateInput, setPlateInput] = useState('')
-  const fullNameRef = useRef<HTMLInputElement>(null)
-  const phoneRef = useRef<HTMLInputElement>(null)
-
-  const { activeField, setActiveField } = useActiveField<FocusableField>(
-    initialFocus ?? 'fullName',
-    { fullName: fullNameRef, phone: phoneRef },
-  )
-
-  const { form, set, handleSave } = useInlineEditForm<DriverRowFormData>({
-    initial,
-    onSave,
-    onCancel,
-  })
-
-  const showCreatePlate =
-    plateInput.trim() &&
-    !vehicles.some(v => v.plate.toLowerCase() === plateInput.toLowerCase().trim())
-
-  const isLastColumn = activeField === 'plate'
-  const floatingActions = (
-    <div style={{
-      position: 'absolute',
-      top: '50%',
-      transform: 'translateY(-50%)',
-      zIndex: 20,
-      ...(isLastColumn
-        ? { right: '100%', paddingRight: 6 }
-        : { left: '100%', paddingLeft: 6 }),
-    }}>
-      <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} hintAlign={isLastColumn ? 'right' : 'left'} />
-    </div>
-  )
-
-  return (
-    <tr style={{ background: 'var(--accent-soft)' }}>
-      {activeField === 'fullName' ? (
-        <td style={tdActive}>
-          <input ref={fullNameRef} className="nepo-input text-[12px]" style={{ minWidth: 80, flex: 1 }}
-            value={form.fullName} onChange={e => set('fullName', e.target.value)} placeholder="Họ tên" />
-          {floatingActions}
-        </td>
-      ) : (
-        <td style={tdHidden} onClick={() => setActiveField('fullName')}>
-          <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{form.fullName || driver.username}</span>
-          {form.fullName && (
-            <span className="block text-[11px] font-mono" style={{ color: 'var(--ink-3)' }}>{driver.username}</span>
-          )}
-        </td>
-      )}
-
-      {activeField === 'phone' ? (
-        <td style={tdActive}>
-          <input ref={phoneRef} className="nepo-input text-[12px]" style={{ minWidth: 90, flex: 1 }} type="tel"
-            value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="SĐT" />
-          {floatingActions}
-        </td>
-      ) : (
-        <td style={tdHidden} onClick={() => setActiveField('phone')}>
-          <span className="text-[13px]" style={{ color: 'var(--ink-2)' }}>{form.phone || '—'}</span>
-        </td>
-      )}
-
-      {activeField === 'plate' ? (
-        <td style={tdActive}>
-          <div style={{ minWidth: 100 }}>
-            <InlineSelect placeholder="Chọn hoặc nhập" value={form.plate}
-              options={vehicles.map(v => ({ value: v.plate, label: v.plate }))}
-              onChange={v => set('plate', v)} onInputChange={v => setPlateInput(v)}
-              onCreateNew={showCreatePlate ? () => set('plate', plateInput.trim()) : undefined}
-              createNewLabel={showCreatePlate ? `Tạo mới "${plateInput.trim()}"` : undefined} />
-          </div>
-          {floatingActions}
-        </td>
-      ) : (
-        <td style={tdHidden} onClick={() => setActiveField('plate')}>
-          {form.plate ? <Plate>{form.plate}</Plate> : <span className="text-[13px]" style={{ color: 'var(--ink-3)' }}>—</span>}
-        </td>
-      )}
-    </tr>
-  )
-}
-
-function TransporterDriverRow({ driver, onEdit, onResetPassword, onDelete }: {
-  driver: Driver
-  onEdit: (field: FocusState) => void
-  onResetPassword?: () => void
-  onDelete?: () => void
-}) {
-  return (
-    <tr className="cursor-pointer group">
-      <td onClick={() => onEdit('fullName')}>
-        <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{driver.fullName || driver.username}</span>
-        {driver.fullName && (
-          <span className="block text-[11px] font-mono" style={{ color: 'var(--ink-3)' }}>{driver.username}</span>
-        )}
-      </td>
-      <td onClick={() => onEdit('phone')}>
-        <span className="text-[13px]" style={{ color: 'var(--ink-2)' }}>{driver.phone || '—'}</span>
-      </td>
-      <td onClick={() => onEdit('plate')}>
-        {driver.vehiclePlate ? <Plate>{driver.vehiclePlate}</Plate> : <span className="text-[13px]" style={{ color: 'var(--ink-3)' }}>—</span>}
-      </td>
-      {(onResetPassword || onDelete) && (
-        <td>
-          <div className="flex items-center gap-0.5">
-            {onResetPassword && (
-              <button onClick={(e) => { e.stopPropagation(); onResetPassword() }} className="p-1 rounded hover:bg-gray-100 transition-colors" title="Đổi mật khẩu">
-                <Key className="h-3.5 w-3.5" style={{ color: 'var(--ink-3)' }} />
-              </button>
-            )}
-            {onDelete && (
-              <button onClick={(e) => { e.stopPropagation(); onDelete() }} className="p-1 rounded hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100" title="Vô hiệu hoá">
-                <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--status-error, #e53)' }} />
-              </button>
-            )}
-          </div>
-        </td>
-      )}
-    </tr>
-  )
-}
-
-function DriverMobileCard({ driver, onEdit, onResetPassword, onDelete }: {
-  driver: Driver
-  onEdit: () => void
-  onResetPassword?: () => void
-  onDelete?: () => void
-}) {
-  return (
-    <div
-      onClick={onEdit}
-      className="p-4 rounded-xl border flex flex-col gap-3 transition-colors active:scale-[0.99] touch-manipulation cursor-pointer"
-      style={{
-        background: 'var(--theme-bg-secondary, #ffffff)',
-        borderColor: 'var(--theme-border-default, #e4e4e7)',
-      }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0 flex-1">
-          <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style={{
-              background: 'var(--surface-3)',
-              color: 'var(--ink-2)',
-            }}
-          >
-            <User className="h-4.5 w-4.5" />
-          </div>
-          <div className="min-w-0 flex-1 leading-normal">
-            <span className="text-sm font-bold block" style={{ color: 'var(--ink)' }}>
-              {driver.fullName || driver.username}
-            </span>
-            <span className="block text-[11px] font-mono mt-0.5" style={{ color: 'var(--ink-3)' }}>
-              {driver.username}
-            </span>
-            {driver.phone && (
-              <a
-                href={`tel:${driver.phone}`}
-                onClick={(e) => e.stopPropagation()}
-                className="text-xs font-medium block mt-1 hover:underline tabular-nums"
-                style={{ color: 'var(--accent)' }}
-              >
-                {driver.phone}
-              </a>
-            )}
-            {driver.vehiclePlate && (
-              <div className="mt-1.5">
-                <Plate>{driver.vehiclePlate}</Plate>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={onEdit}
-            className="w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
-            style={{ borderColor: 'var(--theme-border-default)', color: 'var(--ink-2)' }}
-            title="Sửa"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-          {onResetPassword && (
-            <button
-              onClick={onResetPassword}
-              className="w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
-              style={{ borderColor: 'var(--theme-border-default)', color: 'var(--ink-3)' }}
-              title="Đổi mật khẩu"
-            >
-              <Key className="h-3.5 w-3.5" />
-            </button>
-          )}
-          {onDelete && (
-            <button
-              onClick={onDelete}
-              className="w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
-              style={{ borderColor: 'var(--theme-border-default)', color: 'var(--status-error, #e53)' }}
-              title="Vô hiệu hoá"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function DriverMobileEditCard({
-  driver, onSave, onCancel, saving, vehicles,
-}: {
-  driver: Driver
-  onSave: (data: DriverRowFormData) => void
-  onCancel: () => void
-  saving?: boolean
-  vehicles: { id: number; plate: string }[]
-}) {
-  const [fullName, setFullName] = useState(driver.fullName ?? '')
-  const [phone, setPhone] = useState(driver.phone ?? '')
-  const [plate, setPlate] = useState(driver.vehiclePlate ?? '')
-
-  const handleSave = () => {
-    onSave({ fullName, phone, plate })
-  }
-
-  return (
-    <div
-      className="p-4 rounded-xl border flex flex-col gap-4 animate-scale-pop text-left"
-      style={{
-        background: 'var(--accent-soft)',
-        borderColor: 'var(--accent)',
-      }}
-    >
-      <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--accent-ink)' }}>
-        Chỉnh sửa thông tin tài xế
-      </h3>
-
-      <div className="space-y-3">
-        <div className="space-y-1">
-          <label className="text-[11px] font-semibold uppercase" style={{ color: 'var(--ink-2)' }}>Họ tên *</label>
-          <input
-            className="nepo-input text-xs w-full"
-            value={fullName}
-            onChange={e => setFullName(e.target.value)}
-            placeholder="Họ tên"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-[11px] font-semibold uppercase" style={{ color: 'var(--ink-2)' }}>Số điện thoại</label>
-          <input
-            className="nepo-input text-xs w-full"
-            type="tel"
-            value={phone}
-            onChange={e => setPhone(e.target.value)}
-            placeholder="Số điện thoại"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-[11px] font-semibold uppercase" style={{ color: 'var(--ink-2)' }}>Biển số xe</label>
-          <select
-            className="nepo-input text-xs w-full"
-            value={plate}
-            onChange={e => setPlate(e.target.value)}
-            style={{ background: 'var(--surface)' }}
-          >
-            <option value="">—</option>
-            {vehicles.map(v => (
-              <option key={v.id} value={v.plate}>{v.plate}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="flex gap-2 justify-end mt-1 pt-3 border-t" style={{ borderColor: 'var(--theme-border-default)' }}>
-        <Button variant="outline" size="sm" onClick={onCancel} disabled={saving}>Hủy</Button>
-        <Button size="sm" onClick={handleSave} disabled={saving}>
-          {saving ? 'Đang lưu...' : 'Xác nhận'}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const BATCH = 15
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── Main fleet section ────────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
+import {
+  AddVehicleDialog,
+  AssignDriverDialog,
+  ResetPasswordDialog,
+  DriverEditRow,
+  DriverRow,
+  DriverMobileCard,
+  DriverMobileEditCard,
+} from '@/components/shared'
+import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
 
 function FleetSection() {
   const isMobile = useIsMobile(768)
-  const toast = useToast()
-  const qc = useQueryClient()
 
-  const { data: vdRows = [], isLoading: vdLoading } = useVehicleDrivers()
-  const { data: driversList = [], isLoading: driversLoading } = useDrivers()
-  const { data: vehicles = [] } = useVehicles()
-
-  const createVehicle = useCreateVehicle()
-  const createDriver = useCreateDriver()
-  const updateDriver = useUpdateDriver()
-  const addVehicleDriver = useAddVehicleDriver()
-  const removeVehicleDriver = useRemoveVehicleDriver()
-  const deleteVehicle = useDeleteVehicle()
-  const deleteDriver = useDeleteDriver()
-
-  const groups = useMemo(() => groupByVehicle(vdRows, vehicles), [vdRows, vehicles])
-
-  const assignedDriverIds = useMemo(() => {
-    const set = new Set<number>()
-    for (const g of groups) for (const d of g.drivers) set.add(d.driverId)
-    return set
-  }, [groups])
-
-  const multiDriverVehicles = useMemo(() => groups.filter(g => g.drivers.length > 1).length, [groups])
-  const vehiclesWithoutDriver = useMemo(() => groups.filter(g => g.drivers.length === 0).length, [groups])
-  const driversWithoutVehicle = Math.max(0, driversList.length - assignedDriverIds.size)
-
-  const [fleetSearch, setFleetSearch] = useState('')
-  const [fleetLimit, setFleetLimit] = useState(BATCH)
-  const [driverSearch, setDriverSearch] = useState('')
-  const [driverLimit, setDriverLimit] = useState(BATCH)
-
-  const handleFleetSearch = useCallback((q: string) => { setFleetSearch(q); setFleetLimit(BATCH) }, [])
-  const handleDriverSearch = useCallback((q: string) => { setDriverSearch(q); setDriverLimit(BATCH) }, [])
+  const {
+    data: { vehicles, drivers },
+    stats: {
+      vehicleCount,
+      driverCount,
+      multiDriverVehicles,
+      vehiclesWithoutDriver,
+      driversWithoutVehicle,
+    },
+    fleet: {
+      search: fleetSearch,
+      setSearch: handleFleetSearch,
+      visibleGroups,
+      hasMore: fleetHasMore,
+      sentinel: fleetSentinel,
+    },
+    driverList: {
+      search: driverSearch,
+      setSearch: handleDriverSearch,
+      visibleDrivers,
+      hasMore: driverHasMore,
+      sentinel: driverSentinel,
+    },
+    actions: {
+      addVehicle,
+      createDriver,
+      updateDriver,
+      addDriverToVehicle,
+      removeDriver,
+      resetPassword,
+      deleteVehicle,
+      deleteDriver,
+    },
+    loading: {
+      vdLoading,
+      driversLoading,
+      addVehiclePending,
+      createDriverPending,
+      savingDriver,
+      deleteVehiclePending,
+      deleteDriverPending,
+    },
+  } = useFleetManager()
 
   const [showAddVehicle, setShowAddVehicle] = useState(false)
-  const [newPlate, setNewPlate] = useState('')
   const [showCreateDriver, setShowCreateDriver] = useState(false)
   const [addingDriverFor, setAddingDriverFor] = useState<number | null>(null)
-  const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null)
-  const [effectiveFrom, setEffectiveFrom] = useState(() => new Date().toISOString().slice(0, 10))
   const [removeDriverTarget, setRemoveDriverTarget] = useState<{ vdId: number; name: string } | null>(null)
-
-  // Inline driver editing
-  const [editingDriverId, setEditingDriverId] = useState<number | null>(null)
-  const [editingDriverField, setEditingDriverField] = useState<FocusState>(null)
-  const [savingDriver, setSavingDriver] = useState(false)
-
-  // Password reset
   const [resetPwdDriver, setResetPwdDriver] = useState<Driver | null>(null)
-  const [resetPwdSaving, setResetPwdSaving] = useState(false)
-  const [resetPwdValue, setResetPwdValue] = useState('')
-  const [usernameValue, setUsernameValue] = useState('')
-
   const [deleteVehicleTarget, setDeleteVehicleTarget] = useState<{ id: number; plate: string } | null>(null)
   const [deleteDriverTarget, setDeleteDriverTarget] = useState<{ id: number; name: string } | null>(null)
 
-  const filteredGroups = useMemo(() => {
-    const q = fleetSearch.trim()
-    if (!q) return groups
-    return groups.filter(g =>
-      fuzzyMatch(g.plate, q) || g.drivers.some(d => fuzzyMatch(d.driverName, q)),
-    )
-  }, [groups, fleetSearch])
+  const [editingDriverId, setEditingDriverId] = useState<number | null>(null)
+  const [editingDriverField, setEditingDriverField] = useState<FocusState>(null)
 
-  const visibleGroups = filteredGroups.slice(0, fleetLimit)
-  const fleetHasMore = fleetLimit < filteredGroups.length
-  const loadMoreFleet = useCallback(() => setFleetLimit(n => n + BATCH), [])
-  const fleetSentinel = useInfiniteScroll(loadMoreFleet)
-
-  const filteredDrivers = useMemo(() => {
-    const q = driverSearch.trim()
-    if (!q) return driversList
-    return driversList.filter(d =>
-      fuzzyMatch(d.fullName ?? d.username, q) || fuzzyMatch(d.phone ?? '', q) || fuzzyMatch(d.vehiclePlate ?? '', q),
-    )
-  }, [driversList, driverSearch])
-
-  const visibleDrivers = filteredDrivers.slice(0, driverLimit)
-  const driverHasMore = driverLimit < filteredDrivers.length
-  const loadMoreDrivers = useCallback(() => setDriverLimit(n => n + BATCH), [])
-  const driverSentinel = useInfiniteScroll(loadMoreDrivers)
-
-  const handleAddVehicle = () => {
-    if (!newPlate.trim()) return
-    createVehicle.mutate(newPlate.trim().toUpperCase(), {
-      onSuccess: () => { toast.success('Đã thêm xe'); setNewPlate(''); setShowAddVehicle(false) },
-      onError: () => toast.error('Không thể thêm xe'),
-    })
+  const handleAddVehicleConfirm = async (plate: string) => {
+    await addVehicle(plate)
+    setShowAddVehicle(false)
   }
 
-  const handleCreateDriver = async (data: { username: string; fullName: string; phone: string; plate: string; password?: string }) => {
-    createDriver.mutate({ username: data.username, fullName: data.fullName, phone: data.phone, password: data.password }, {
-      onSuccess: async (newDriver) => {
-        if (data.plate.trim() && newDriver?.id) {
-          try { await api.put(`/drivers/${newDriver.id}/vehicle`, { plate: data.plate.trim() }) } catch { /* non-critical */ }
-        }
-        toast.success('Đã thêm lái xe')
-        setShowCreateDriver(false)
-        qc.invalidateQueries({ queryKey: ['drivers'] })
-      },
-      onError: () => toast.error('Không thể thêm lái xe'),
-    })
+  const handleCreateDriverConfirm = async (data: {
+    username: string
+    fullName: string
+    phone: string
+    plate: string
+    password?: string
+  }) => {
+    await createDriver(data)
+    setShowCreateDriver(false)
   }
 
-  const handleUpdateDriver = useCallback(async (driver: Driver, data: DriverRowFormData) => {
-    setSavingDriver(true)
-    try {
-      const updates: Record<string, string> = {}
-      if (data.fullName !== (driver.fullName ?? '')) updates.full_name = data.fullName
-      if (data.phone !== (driver.phone ?? '')) updates.phone = data.phone
-      if (Object.keys(updates).length > 0) {
-        await updateDriver.mutateAsync({ id: driver.id, data: updates })
-      }
-      if (data.plate !== (driver.vehiclePlate ?? '') && data.plate) {
-        await api.put(`/drivers/${driver.id}/vehicle`, { plate: data.plate })
-      }
-      qc.invalidateQueries({ queryKey: ['drivers'] })
-      qc.invalidateQueries({ queryKey: ['vehicles'] })
-      toast.success('Đã lưu thay đổi')
-      setEditingDriverId(null)
-    } catch {
-      toast.error('Không thể lưu')
-    } finally {
-      setSavingDriver(false)
-    }
-  }, [updateDriver, qc, toast])
-
-  const handleAddDriverToVehicle = () => {
-    if (!addingDriverFor || !selectedDriverId) return
-    addVehicleDriver.mutate({ vehicleId: addingDriverFor, driverId: selectedDriverId, effectiveFrom }, {
-      onSuccess: () => { toast.success('Đã thêm lái xe'); setAddingDriverFor(null); setSelectedDriverId(null) },
-      onError: () => toast.error('Không thể thêm lái xe'),
-    })
+  const handleAssignDriverConfirm = async (data: { driverId: number; effectiveFrom: string }) => {
+    if (addingDriverFor === null) return
+    await addDriverToVehicle(addingDriverFor, data.driverId, data.effectiveFrom)
+    setAddingDriverFor(null)
   }
 
-  const confirmRemoveDriver = () => {
-    if (!removeDriverTarget) return
-    removeVehicleDriver.mutate(removeDriverTarget.vdId, {
-      onSuccess: () => { toast.success('Đã gỡ lái xe'); setRemoveDriverTarget(null) },
-      onError: () => toast.error('Không thể gỡ lái xe'),
-    })
-  }
-
-  const handleResetPassword = async () => {
+  const handleResetPasswordConfirm = async (data: { username: string; password: string }) => {
     if (!resetPwdDriver) return
-    const hasPwd = resetPwdValue.trim().length > 0
-    const hasUser = usernameValue.trim() !== resetPwdDriver.username
-    if (!hasPwd && !hasUser) return
-    setResetPwdSaving(true)
-    try {
-      const updates: Record<string, unknown> = {}
-      if (hasUser) updates.username = usernameValue.trim()
-      if (hasPwd) updates.password = resetPwdValue.trim()
-      await apiClient.updateUser(resetPwdDriver.id, updates)
-      if (hasPwd && hasUser) toast.success('Đã đổi mật khẩu & tên đăng nhập')
-      else if (hasPwd) toast.success('Đã đổi mật khẩu')
-      else toast.success('Đã đổi tên đăng nhập')
-      qc.invalidateQueries({ queryKey: ['drivers'] })
-      qc.invalidateQueries({ queryKey: ['drivers-paged'] })
-      qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
-      setResetPwdDriver(null)
-      setResetPwdValue('')
-    } catch {
-      toast.error('Không thể lưu thay đổi')
-    } finally {
-      setResetPwdSaving(false)
-    }
+    await resetPassword(resetPwdDriver.id, resetPwdDriver.username, data)
+    setResetPwdDriver(null)
   }
 
-  const handleDeleteVehicle = () => {
+  const handleRemoveDriverConfirm = async () => {
+    if (!removeDriverTarget) return
+    await removeDriver(removeDriverTarget.vdId)
+    setRemoveDriverTarget(null)
+  }
+
+  const handleDeleteVehicleConfirm = async () => {
     if (!deleteVehicleTarget) return
-    deleteVehicle.mutate(deleteVehicleTarget.id, {
-      onSuccess: () => { toast.success('Đã vô hiệu hoá xe'); setDeleteVehicleTarget(null) },
-      onError: () => toast.error('Không thể xoá xe'),
-    })
+    await deleteVehicle(deleteVehicleTarget.id)
+    setDeleteVehicleTarget(null)
   }
 
-  const handleDeleteDriver = () => {
+  const handleDeleteDriverConfirm = async () => {
     if (!deleteDriverTarget) return
-    deleteDriver.mutate(deleteDriverTarget.id, {
-      onSuccess: () => { toast.success('Đã vô hiệu hoá lái xe'); setDeleteDriverTarget(null) },
-      onError: () => toast.error('Không thể xoá lái xe'),
-    })
+    await deleteDriver(deleteDriverTarget.id)
+    setDeleteDriverTarget(null)
   }
 
   return (
     <div className="space-y-5">
-      {/* Stats */}
       <div className="flex items-center gap-1.5 flex-wrap">
-        <StatPill count={groups.length} label=" phương tiện" accent />
-        <StatPill count={driversList.length} label=" lái xe" />
+        <StatPill count={vehicleCount} label=" phương tiện" accent />
+        <StatPill count={driverCount} label=" lái xe" />
         {multiDriverVehicles > 0 && <StatPill count={multiDriverVehicles} label=" xe ghép lái" />}
         {vehiclesWithoutDriver > 0 && <StatPill count={vehiclesWithoutDriver} label=" xe chưa có lái" />}
         {driversWithoutVehicle > 0 && <StatPill count={driversWithoutVehicle} label=" lái chưa có xe" />}
       </div>
 
-      {/* Two-column on lg+ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-
-        {/* Phương tiện */}
         <section>
           <div className="flex items-center gap-2 mb-3">
             <SearchInput value={fleetSearch} onChange={handleFleetSearch} placeholder="Tìm biển số, lái xe…" />
@@ -577,7 +152,7 @@ function FleetSection() {
           <Panel flush>
             {vdLoading ? (
               <TableSkeleton />
-            ) : filteredGroups.length === 0 ? (
+            ) : visibleGroups.length === 0 ? (
               <div className="py-10">
                 <EmptyState icon={<Truck className="h-5 w-5" />} title={fleetSearch ? 'Không tìm thấy xe nào' : 'Chưa có xe nào'} compact />
               </div>
@@ -600,25 +175,34 @@ function FleetSection() {
                             <div className="flex flex-wrap items-center gap-1.5">
                               {g.drivers.length === 0 ? (
                                 <span className="text-[12.5px]" style={{ color: 'var(--ink-3)' }}>—</span>
-                              ) : g.drivers.map(d => (
-                                <span key={d.id} className="nepo-driver-chip"
-                                  style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}>
-                                  <User className="h-3 w-3" />
-                                  <span className="truncate max-w-[120px]">{d.driverName}</span>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); setRemoveDriverTarget({ vdId: d.id, name: d.driverName }) }}
-                                    className="nepo-driver-chip__x"
-                                    style={{ color: 'var(--ink-2)' }}
-                                    aria-label="Gỡ lái xe"
-                                  ><X className="h-2.5 w-2.5" /></button>
-                                </span>
-                              ))}
+                              ) : (
+                                g.drivers.map((d) => (
+                                  <span key={d.id} className="nepo-driver-chip" style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}>
+                                    <User className="h-3 w-3" />
+                                    <span className="truncate max-w-[120px]">{d.driverName}</span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setRemoveDriverTarget({ vdId: d.id, name: d.driverName })
+                                      }}
+                                      className="nepo-driver-chip__x"
+                                      style={{ color: 'var(--ink-2)' }}
+                                      aria-label="Gỡ lái xe"
+                                    >
+                                      <X className="h-2.5 w-2.5" />
+                                    </button>
+                                  </span>
+                                ))
+                              )}
                               <button
                                 type="button"
-                                onClick={() => { setAddingDriverFor(g.vehicleId); setSelectedDriverId(null); setEffectiveFrom(new Date().toISOString().slice(0, 10)) }}
-                                className="nepo-driver-chip-add" aria-label="Thêm lái xe"
-                              ><Plus className="h-3 w-3" /></button>
+                                onClick={() => setAddingDriverFor(g.vehicleId)}
+                                className="nepo-driver-chip-add"
+                                aria-label="Thêm lái xe"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </button>
                             </div>
                           </td>
                           <td>
@@ -626,7 +210,9 @@ function FleetSection() {
                               onClick={() => setDeleteVehicleTarget({ id: g.vehicleId, plate: g.plate })}
                               className="p-1 rounded hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
                               title="Vô hiệu hoá xe"
-                            ><Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--status-error, #e53)' }} /></button>
+                            >
+                              <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--theme-status-error, var(--status-error, #e53))' }} />
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -639,7 +225,6 @@ function FleetSection() {
           </Panel>
         </section>
 
-        {/* Lái xe */}
         <section>
           <div className="flex items-center gap-2 mb-3">
             <SearchInput value={driverSearch} onChange={handleDriverSearch} placeholder="Tìm tên, SĐT, biển số…" />
@@ -650,7 +235,7 @@ function FleetSection() {
           <Panel flush>
             {driversLoading ? (
               <TableSkeleton />
-            ) : filteredDrivers.length === 0 ? (
+            ) : visibleDrivers.length === 0 ? (
               <div className="py-10">
                 <EmptyState icon={<Users className="h-5 w-5" />} title={driverSearch.trim() ? 'Không tìm thấy lái xe' : 'Chưa có lái xe nào'} compact />
               </div>
@@ -663,7 +248,9 @@ function FleetSection() {
                         <DriverMobileEditCard
                           key={d.id}
                           driver={d}
-                          onSave={(data) => handleUpdateDriver(d, data)}
+                          onSave={(data) => {
+                            updateDriver(d, data).then(() => setEditingDriverId(null))
+                          }}
                           onCancel={() => setEditingDriverId(null)}
                           saving={savingDriver}
                           vehicles={vehicles}
@@ -673,7 +260,7 @@ function FleetSection() {
                           key={d.id}
                           driver={d}
                           onEdit={() => setEditingDriverId(d.id)}
-                          onResetPassword={() => { setResetPwdDriver(d); setUsernameValue(d.username); setResetPwdValue('') }}
+                          onResetPassword={() => setResetPwdDriver(d)}
                           onDelete={() => setDeleteDriverTarget({ id: d.id, name: d.fullName || d.username })}
                         />
                       )
@@ -693,21 +280,26 @@ function FleetSection() {
                       <tbody>
                         {visibleDrivers.map((d) => {
                           return editingDriverId === d.id ? (
-                            <TransporterDriverEditRow
+                            <DriverEditRow
                               key={d.id}
                               driver={d}
-                              onSave={(data) => handleUpdateDriver(d, data)}
+                              onSave={(data) => {
+                                updateDriver(d, data).then(() => setEditingDriverId(null))
+                              }}
                               onCancel={() => setEditingDriverId(null)}
                               saving={savingDriver}
                               initialFocus={editingDriverField}
                               vehicles={vehicles}
                             />
                           ) : (
-                            <TransporterDriverRow
+                            <DriverRow
                               key={d.id}
                               driver={d}
-                              onEdit={(field) => { setEditingDriverId(d.id); setEditingDriverField(field) }}
-                              onResetPassword={() => { setResetPwdDriver(d); setUsernameValue(d.username); setResetPwdValue('') }}
+                              onEdit={(field) => {
+                                setEditingDriverId(d.id)
+                                setEditingDriverField(field)
+                              }}
+                              onResetPassword={() => setResetPwdDriver(d)}
                               onDelete={() => setDeleteDriverTarget({ id: d.id, name: d.fullName || d.username })}
                             />
                           )
@@ -723,199 +315,76 @@ function FleetSection() {
         </section>
       </div>
 
-      {/* ── Add Vehicle Dialog ── */}
-      <Dialog open={showAddVehicle} onOpenChange={() => setShowAddVehicle(false)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Thêm xe mới</DialogTitle></DialogHeader>
-          <div className="space-y-3 mt-2">
-            <div>
-              <label className="nepo-field-label" htmlFor="new-plate">Biển số</label>
-              <input
-                id="new-plate" value={newPlate} onChange={e => setNewPlate(e.target.value)}
-                placeholder="15C-12345" className="nepo-input" autoFocus
-                onKeyDown={e => { if (e.key === 'Enter') handleAddVehicle() }}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setShowAddVehicle(false)}>Huỷ</Button>
-            <Button size="sm" onClick={handleAddVehicle} disabled={!newPlate.trim() || createVehicle.isPending}>
-              Thêm xe
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddVehicleDialog
+        open={showAddVehicle}
+        onClose={() => setShowAddVehicle(false)}
+        onConfirm={handleAddVehicleConfirm}
+        loading={addVehiclePending}
+      />
 
-      {/* ── Assign Driver Dialog ── */}
-      <Dialog open={addingDriverFor !== null} onOpenChange={() => setAddingDriverFor(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Gán lái xe</DialogTitle></DialogHeader>
-          <div className="space-y-2 mt-2">
-            <label className="nepo-field-label">Chọn lái xe</label>
-            <div className="max-h-64 overflow-y-auto" style={{ border: '1px solid var(--line)', borderRadius: 'var(--r-sm)' }}>
-              {driversList.length === 0 ? (
-                <div className="flex items-center justify-center py-8">
-                  <p className="text-[13px]" style={{ color: 'var(--ink-3)' }}>Chưa có lái xe nào</p>
-                </div>
-              ) : driversList.map((d: Driver, i: number) => (
-                <button key={d.id} type="button" onClick={() => setSelectedDriverId(d.id)}
-                  className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors"
-                  style={{
-                    borderBottom: i < driversList.length - 1 ? '1px solid var(--line)' : 'none',
-                    background: selectedDriverId === d.id ? 'var(--accent-soft)' : 'transparent',
-                  }}
-                >
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-                    style={{
-                      background: selectedDriverId === d.id ? 'var(--accent)' : 'var(--surface-3)',
-                      color: selectedDriverId === d.id ? '#fff' : 'var(--ink-2)',
-                    }}
-                  ><User className="h-3.5 w-3.5" /></div>
-                  <span className="flex-1 text-[13.5px] font-medium" style={{ color: 'var(--ink)' }}>
-                    {d.fullName ?? d.username}
-                  </span>
-                  {d.vehiclePlate && <Plate>{d.vehiclePlate}</Plate>}
-                </button>
-              ))}
-            </div>
-            <div className="mt-3">
-              <label className="nepo-field-label">Ngày hiệu lực</label>
-              <input type="date" value={effectiveFrom} onChange={e => setEffectiveFrom(e.target.value)}
-                className="nepo-input w-full" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setAddingDriverFor(null)}>Huỷ</Button>
-            <Button size="sm" onClick={handleAddDriverToVehicle} disabled={!selectedDriverId}>Gán</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AssignDriverDialog
+        open={addingDriverFor !== null}
+        onClose={() => setAddingDriverFor(null)}
+        onConfirm={handleAssignDriverConfirm}
+        drivers={drivers}
+      />
 
-      {/* ── Create Driver Drawer ── */}
       {showCreateDriver && (
-        <DriverFormDrawer open={showCreateDriver} onClose={() => setShowCreateDriver(false)} onSave={handleCreateDriver} saving={createDriver.isPending} />
+        <DriverFormDrawer
+          open={showCreateDriver}
+          onClose={() => setShowCreateDriver(false)}
+          onSave={handleCreateDriverConfirm}
+          saving={createDriverPending}
+        />
       )}
 
-      <Dialog open={!!removeDriverTarget} onOpenChange={() => setRemoveDriverTarget(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Gỡ lái xe?</DialogTitle></DialogHeader>
-          <div
-            className="flex items-start gap-3 rounded-lg px-3 py-2.5"
-            style={{
-              background: 'color-mix(in srgb, var(--status-error, #e53) 8%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--status-error, #e53) 15%, transparent)',
-            }}
-          >
-            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--status-error, #e53)' }} />
-            <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
-              Gỡ <strong style={{ color: 'var(--ink)' }}>{removeDriverTarget?.name}</strong> khỏi xe này?
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setRemoveDriverTarget(null)} className="flex-1">Huỷ</Button>
-            <Button size="sm" onClick={confirmRemoveDriver} variant="destructive" className="flex-1">Gỡ</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ResetPasswordDialog
+        open={!!resetPwdDriver}
+        onClose={() => setResetPwdDriver(null)}
+        onConfirm={handleResetPasswordConfirm}
+        driver={resetPwdDriver}
+      />
 
-      {/* ── Reset Password Dialog ── */}
-      <Dialog open={!!resetPwdDriver} onOpenChange={() => { setResetPwdDriver(null); setResetPwdValue(''); setUsernameValue('') }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Cài đặt tài khoản</DialogTitle></DialogHeader>
-          <div className="space-y-3 mt-2">
-            <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
-              Cài đặt cho <strong style={{ color: 'var(--ink)' }}>{resetPwdDriver?.fullName || resetPwdDriver?.username}</strong>
-            </p>
-            <div>
-              <label className="nepo-field-label">Tên đăng nhập</label>
-              <input
-                className="nepo-input" type="text" placeholder="Tên đăng nhập"
-                value={usernameValue} onChange={e => setUsernameValue(e.target.value)} autoFocus
-              />
-            </div>
-            <div>
-              <label className="nepo-field-label">Mật khẩu mới</label>
-              <input
-                className="nepo-input" type="text" placeholder="Mật khẩu mới"
-                value={resetPwdValue} onChange={e => setResetPwdValue(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleResetPassword() }}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => { setResetPwdDriver(null); setResetPwdValue(''); setUsernameValue('') }}>Huỷ</Button>
-            <Button size="sm" onClick={handleResetPassword} disabled={(!resetPwdValue.trim() && usernameValue.trim() === resetPwdDriver?.username) || resetPwdSaving}>
-              {resetPwdSaving ? 'Đang lưu...' : 'Xác nhận'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DangerConfirmDialog
+        open={!!removeDriverTarget}
+        onClose={() => setRemoveDriverTarget(null)}
+        onConfirm={handleRemoveDriverConfirm}
+        title="Gỡ lái xe?"
+        entityName={removeDriverTarget?.name ?? ''}
+        warningText="sẽ bị gỡ khỏi xe này."
+        confirmLabel="Gỡ"
+      />
 
-      {/* ── Delete Vehicle Dialog ── */}
-      <Dialog open={!!deleteVehicleTarget} onOpenChange={() => setDeleteVehicleTarget(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Xoá xe?</DialogTitle></DialogHeader>
-          <div
-            className="flex items-start gap-3 rounded-lg px-3 py-2.5"
-            style={{
-              background: 'color-mix(in srgb, var(--status-error, #e53) 8%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--status-error, #e53) 15%, transparent)',
-            }}
-          >
-            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--status-error, #e53)' }} />
-            <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
-              <strong style={{ color: 'var(--ink)' }}>{deleteVehicleTarget?.plate}</strong> sẽ bị vô hiệu hoá. Tất cả phân công lái xe cũng sẽ bị gỡ.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setDeleteVehicleTarget(null)} className="flex-1">Huỷ</Button>
-            <Button size="sm" onClick={handleDeleteVehicle} variant="destructive" className="flex-1" disabled={deleteVehicle.isPending}>
-              {deleteVehicle.isPending ? 'Đang xoá...' : 'Vô hiệu hoá'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DangerConfirmDialog
+        open={!!deleteVehicleTarget}
+        onClose={() => setDeleteVehicleTarget(null)}
+        onConfirm={handleDeleteVehicleConfirm}
+        title="Xoá xe?"
+        entityName={deleteVehicleTarget?.plate ?? ''}
+        warningText="sẽ bị vô hiệu hoá. Tất cả phân công lái xe cũng sẽ bị gỡ."
+        confirmLabel="Vô hiệu hoá"
+        loading={deleteVehiclePending}
+      />
 
-      {/* ── Delete Driver Dialog ── */}
-      <Dialog open={!!deleteDriverTarget} onOpenChange={() => setDeleteDriverTarget(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Vô hiệu hoá lái xe?</DialogTitle></DialogHeader>
-          <div
-            className="flex items-start gap-3 rounded-lg px-3 py-2.5"
-            style={{
-              background: 'color-mix(in srgb, var(--status-error, #e53) 8%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--status-error, #e53) 15%, transparent)',
-            }}
-          >
-            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--status-error, #e53)' }} />
-            <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
-              <strong style={{ color: 'var(--ink)' }}>{deleteDriverTarget?.name}</strong> sẽ bị vô hiệu hoá. Tài khoản không thể đăng nhập và tất cả phân công xe sẽ bị gỡ.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setDeleteDriverTarget(null)} className="flex-1">Huỷ</Button>
-            <Button size="sm" onClick={handleDeleteDriver} variant="destructive" className="flex-1" disabled={deleteDriver.isPending}>
-              {deleteDriver.isPending ? 'Đang xoá...' : 'Vô hiệu hoá'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DangerConfirmDialog
+        open={!!deleteDriverTarget}
+        onClose={() => setDeleteDriverTarget(null)}
+        onConfirm={handleDeleteDriverConfirm}
+        title="Vô hiệu hoá lái xe?"
+        entityName={deleteDriverTarget?.name ?? ''}
+        warningText="sẽ bị vô hiệu hoá. Tài khoản không thể đăng nhập và tất cả phân công xe sẽ bị gỡ."
+        confirmLabel="Vô hiệu hoá"
+        loading={deleteDriverPending}
+      />
     </div>
   )
 }
-
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── Main Page ────────────────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
 
 export function TransportersPage() {
   const [showVendorMgmt, setShowVendorMgmt] = useState(false)
 
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* ── Header ── */}
       <PageHeader
         title="Vận tải"
         subtitle="Quản lý đội xe, tài xế và nhà thầu vận chuyển"
@@ -928,10 +397,8 @@ export function TransportersPage() {
         }
       />
 
-      {/* ── Fleet section ── */}
       <FleetSection />
 
-      {/* ── Vendor management drawer ── */}
       <VendorManagementDrawer open={showVendorMgmt} onClose={() => setShowVendorMgmt(false)} />
     </div>
   )
