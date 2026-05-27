@@ -645,11 +645,12 @@ function SuggestionChips({
 
 /** Render `candidate` with characters that differ from `original` in brand color. */
 function DiffText({ original, candidate }: { original: string; candidate: string }) {
-  const orig = original.toUpperCase().replace(/-/g, '')
+  const orig = (original || '').toUpperCase().replace(/-/g, '')
+  const cand = candidate || ''
   return (
     <span>
-      {candidate.split('').map((ch, i) => {
-        const changed = orig[i] !== ch
+      {cand.split('').map((ch, i) => {
+        const changed = orig ? orig.charAt(i) !== ch : false
         return (
           <span
             key={i}
