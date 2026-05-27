@@ -94,6 +94,7 @@ export function useUpdateDeliveredTrip() {
     mutationFn: ({ id, data }: { id: number; data: DeliveredTripUpdatePayload }) => apiClient.updateDeliveredTrip(id, data).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
       qc.invalidateQueries({ queryKey: ['suggest-matches'] })
       qc.invalidateQueries({ queryKey: ['suggest-wos'] })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })

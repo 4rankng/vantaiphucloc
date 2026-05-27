@@ -1,16 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Drawer } from '@/components/shared/Drawer'
 import { Pill, type PillVariant } from '@/components/shared/Pill'
 import { Button } from '@/components/ui'
 import { InlineEditable } from '@/components/shared/InlineEditable/InlineEditable'
 import {
   useUpdateDeliveredTrip,
-  useUpdateBookedTrip,
   useClients,
   useLocations,
-  useBookedTrip,
 } from '@/hooks/use-queries'
-import type { DeliveredTrip, BookedTrip, ContType } from '@/data/domain'
+import type { DeliveredTrip, ContType } from '@/data/domain'
 import { CONT_TYPES } from '@/data/domain'
 import { CriteriaEditRow } from './CriteriaEditRow'
 import { InlineSelect } from './InlineSelect'
@@ -33,21 +31,8 @@ export function DeliveredTripDetailDrawer({
   const [trip, setTrip] = useState<DeliveredTrip>(initialTrip)
   const [showAISuggest, setShowAISuggest] = useState(false)
   const _updateTrip = useUpdateDeliveredTrip()
-  const _updateBookedTrip = useUpdateBookedTrip()
   const { data: clients = [] } = useClients()
   const { data: locations = [] } = useLocations()
-
-  const { data: fetchedBookedTrip } = useBookedTrip(
-    trip.bookedTripId,
-  )
-  const [bookedTrip, setBookedTrip] = useState<BookedTrip | null>(null)
-
-  useEffect(() => {
-    if (fetchedBookedTrip && !bookedTrip) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setBookedTrip(fetchedBookedTrip)
-    }
-  }, [fetchedBookedTrip, bookedTrip])
 
   const updateTrip = {
     ...(_updateTrip),
@@ -58,18 +43,6 @@ export function DeliveredTripDetailDrawer({
     mutateAsync: async (args: Parameters<typeof _updateTrip.mutateAsync>[0]) => {
       const updated = await _updateTrip.mutateAsync(args)
       setTrip(updated)
-      return updated
-    },
-  }
-  const updateBookedTrip = {
-    ...(_updateBookedTrip),
-    mutate: (args: Parameters<typeof _updateBookedTrip.mutate>[0]) =>
-      _updateBookedTrip.mutate(args, {
-        onSuccess: (updated) => setBookedTrip(updated),
-      }),
-    mutateAsync: async (args: Parameters<typeof _updateBookedTrip.mutateAsync>[0]) => {
-      const updated = await _updateBookedTrip.mutateAsync(args)
-      setBookedTrip(updated)
       return updated
     },
   }
@@ -97,6 +70,9 @@ export function DeliveredTripDetailDrawer({
         }
       >
         <div className="space-y-5">
+          <p className="text-[11.5px]" style={{ color: 'var(--ink-4)' }}>
+            Nhấp vào giá trị để chỉnh sửa · Enter để lưu · Esc để huỷ
+          </p>
           <div className="rounded-xl border border-[var(--line)] overflow-hidden shadow-sm bg-[var(--surface)]">
             <div className="grid grid-cols-2">
               <CriteriaEditRow label="Container" className="col-span-1 border-b border-r border-[var(--line)]">
@@ -108,9 +84,9 @@ export function DeliveredTripDetailDrawer({
                   }
                   value={trip.contNumber ?? ''}
                   placeholder="Số container"
-                  onSave={(v) => {
+                  onSave={async (v) => {
                     const normalized = v.trim().toUpperCase().replace(/-/g, '')
-                    return updateTrip.mutateAsync({ id: trip.id, data: { contNumber: normalized || null } })
+                    await updateTrip.mutateAsync({ id: trip.id, data: { contNumber: normalized || null } })
                   }}
                 />
               </CriteriaEditRow>
@@ -133,7 +109,7 @@ export function DeliveredTripDetailDrawer({
                   }
                   value={trip.vehiclePlate ?? ''}
                   placeholder="Biển số xe"
-                  onSave={(v) => updateTrip.mutateAsync({ id: trip.id, data: { vehiclePlate: v || null } })}
+                  onSave={async (v) => { await updateTrip.mutateAsync({ id: trip.id, data: { vehiclePlate: v || null } }) }}
                 />
               </CriteriaEditRow>
 
@@ -146,7 +122,7 @@ export function DeliveredTripDetailDrawer({
                   }
                   value={trip.vessel ?? ''}
                   placeholder="Số tàu"
-                  onSave={(v) => updateTrip.mutateAsync({ id: trip.id, data: { vessel: v || null } })}
+                  onSave={async (v) => { await updateTrip.mutateAsync({ id: trip.id, data: { vessel: v || null } }) }}
                 />
               </CriteriaEditRow>
 
@@ -176,6 +152,34 @@ export function DeliveredTripDetailDrawer({
                   onChange={(id) => updateTrip.mutate({ id: trip.id, data: { clientId: id } })}
                 />
               </CriteriaEditRow>
+
+              <CriteriaEditRow label="Cước" className="col-span-1 border-t border-r border-[var(--line)]">
+                <InlineEditable
+                  display={
+                    <span className="tabular-nums" style={{ color: trip.revenue ? 'var(--ink)' : 'var(--ink-4)', fontFamily: 'var(--theme-font-mono)' }}>
+                      {trip.revenue ? trip.revenue.toLocaleString('vi-VN') : '—'}
+                    </span>
+                  }
+                  value={trip.revenue ? String(trip.revenue) : ''}
+                  inputType="number"
+                  placeholder="Nhập cước"
+                  onSave={async (v) => { await updateTrip.mutateAsync({ id: trip.id, data: { revenue: v ? Number(v) : 0 } }) }}
+                />
+              </CriteriaEditRow>
+
+              <CriteriaEditRow label="Lương SL" className="col-span-1 border-t border-[var(--line)]">
+                <InlineEditable
+                  display={
+                    <span className="tabular-nums" style={{ color: trip.driverSalary ? 'var(--ink)' : 'var(--ink-4)', fontFamily: 'var(--theme-font-mono)' }}>
+                      {trip.driverSalary ? trip.driverSalary.toLocaleString('vi-VN') : '—'}
+                    </span>
+                  }
+                  value={trip.driverSalary ? String(trip.driverSalary) : ''}
+                  inputType="number"
+                  placeholder="Nhập lương SL"
+                  onSave={async (v) => { await updateTrip.mutateAsync({ id: trip.id, data: { driverSalary: v ? Number(v) : 0 } }) }}
+                />
+              </CriteriaEditRow>
             </div>
           </div>
 
@@ -192,98 +196,6 @@ export function DeliveredTripDetailDrawer({
                 </svg>
                 AI Đề xuất
               </button>
-            </div>
-          )}
-
-          {trip.bookedTripId && bookedTrip && (
-            <div className="space-y-2 pt-2" style={{ borderTop: '1px solid var(--line)' }}>
-              <p
-                className="text-[12px] m-0 font-medium"
-                style={{ color: 'var(--ink-3)' }}
-              >
-                Chuyến khách gửi
-              </p>
-              <div className="rounded-xl border border-[var(--line)] overflow-hidden shadow-sm bg-[var(--surface)]">
-                <div className="grid grid-cols-2">
-                  <CriteriaEditRow label="Container" className="col-span-1 border-b border-r border-[var(--line)]">
-                    <InlineEditable
-                      display={
-                        <span style={{ color: bookedTrip.contNumber ? 'var(--ink)' : 'var(--ink-4)' }}>
-                          {bookedTrip.contNumber ?? 'bất kỳ'}
-                        </span>
-                      }
-                      value={bookedTrip.contNumber ?? ''}
-                      placeholder="Số container"
-                      onSave={(v) => {
-                        const normalized = v.trim().toUpperCase().replace(/-/g, '')
-                        return updateBookedTrip.mutateAsync({ id: bookedTrip.id, data: { contNumber: normalized || null } })
-                      }}
-                    />
-                  </CriteriaEditRow>
-
-                  <CriteriaEditRow label="Loại cont" className="col-span-1 border-b border-[var(--line)]">
-                    <InlineSelect
-                      value={bookedTrip.contType ?? null}
-                      displayValue={bookedTrip.contType}
-                      options={CONT_TYPES.map((t) => ({ value: t, label: t }))}
-                      onChange={(v) => updateBookedTrip.mutate({ id: bookedTrip.id, data: { contType: v as ContType } })}
-                    />
-                  </CriteriaEditRow>
-
-                  <CriteriaEditRow label="Số xe" className="col-span-1 border-b border-r border-[var(--line)]">
-                    <InlineEditable
-                      display={
-                        <span style={{ color: bookedTrip.vehiclePlate ? 'var(--ink)' : 'var(--ink-4)' }}>
-                          {bookedTrip.vehiclePlate ?? 'bất kỳ'}
-                        </span>
-                      }
-                      value={bookedTrip.vehiclePlate ?? ''}
-                      placeholder="Biển số xe"
-                      onSave={(v) => updateBookedTrip.mutateAsync({ id: bookedTrip.id, data: { vehiclePlate: v || null } })}
-                    />
-                  </CriteriaEditRow>
-
-                  <CriteriaEditRow label="Số tàu" className="col-span-1 border-b border-[var(--line)]">
-                    <InlineEditable
-                      display={
-                        <span style={{ color: bookedTrip.vessel ? 'var(--ink)' : 'var(--ink-4)' }}>
-                          {bookedTrip.vessel ?? 'bất kỳ'}
-                        </span>
-                      }
-                      value={bookedTrip.vessel ?? ''}
-                      placeholder="Số tàu"
-                      onSave={(v) => updateBookedTrip.mutateAsync({ id: bookedTrip.id, data: { vessel: v || null } })}
-                    />
-                  </CriteriaEditRow>
-
-                  <CriteriaEditRow label="Điểm đi" className="col-span-1 border-b border-r border-[var(--line)]">
-                    <InlineSelect
-                      value={bookedTrip.pickupLocation?.id ?? null}
-                      displayValue={bookedTrip.pickupLocation?.name}
-                      options={locations.map((l) => ({ value: l.id, label: l.name }))}
-                      onChange={(id) => updateBookedTrip.mutate({ id: bookedTrip.id, data: { pickupLocationId: id as number } })}
-                    />
-                  </CriteriaEditRow>
-
-                  <CriteriaEditRow label="Điểm đến" className="col-span-1 border-b border-[var(--line)]">
-                    <InlineSelect
-                      value={bookedTrip.dropoffLocation?.id ?? null}
-                      displayValue={bookedTrip.dropoffLocation?.name}
-                      options={locations.map((l) => ({ value: l.id, label: l.name }))}
-                      onChange={(id) => updateBookedTrip.mutate({ id: bookedTrip.id, data: { dropoffLocationId: id as number } })}
-                    />
-                  </CriteriaEditRow>
-
-                  <CriteriaEditRow label="Khách hàng" className="col-span-2">
-                    <InlineSelect
-                      value={bookedTrip.client?.id ?? null}
-                      displayValue={bookedTrip.client?.name}
-                      options={clients.map((c) => ({ value: c.id, label: c.name }))}
-                      onChange={(id) => updateBookedTrip.mutate({ id: bookedTrip.id, data: { clientId: id as number } })}
-                    />
-                  </CriteriaEditRow>
-                </div>
-              </div>
             </div>
           )}
 

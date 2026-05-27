@@ -29,6 +29,7 @@ export function useCreateLocation() {
       qc.invalidateQueries({ queryKey: ['routes'] })
       qc.invalidateQueries({ queryKey: ['pricings'] })
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
     },
   })
@@ -45,6 +46,7 @@ export function useUpdateLocation() {
       qc.invalidateQueries({ queryKey: ['routes'] })
       qc.invalidateQueries({ queryKey: ['pricings'] })
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
     },
   })
@@ -61,6 +63,7 @@ export function useDeleteLocation() {
       qc.invalidateQueries({ queryKey: ['routes'] })
       qc.invalidateQueries({ queryKey: ['pricings'] })
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
     },
   })
@@ -120,6 +123,7 @@ export function useMergeLocations() {
       qc.invalidateQueries({ queryKey: ['routes'] })
       qc.invalidateQueries({ queryKey: ['pricings'] })
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
     },
   })

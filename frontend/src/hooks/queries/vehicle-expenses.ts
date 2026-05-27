@@ -58,6 +58,7 @@ export function useCreateVehicleExpense() {
       apiClient.createVehicleExpense(payload).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vehicle-expenses'] })
+      qc.invalidateQueries({ queryKey: ['vehicle-expenses-infinite'] })
       qc.invalidateQueries({ queryKey: ['vehicle-pnl'] })
       qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
       qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
@@ -73,6 +74,7 @@ export function useUpdateVehicleExpense() {
       apiClient.updateVehicleExpense(id, payload).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vehicle-expenses'] })
+      qc.invalidateQueries({ queryKey: ['vehicle-expenses-infinite'] })
       qc.invalidateQueries({ queryKey: ['vehicle-pnl'] })
       qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
       qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
@@ -88,6 +90,7 @@ export function useDeleteVehicleExpense() {
       apiClient.deleteVehicleExpense(id).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vehicle-expenses'] })
+      qc.invalidateQueries({ queryKey: ['vehicle-expenses-infinite'] })
       qc.invalidateQueries({ queryKey: ['vehicle-pnl'] })
       qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
       qc.invalidateQueries({ queryKey: ['dashboard-summary'] })

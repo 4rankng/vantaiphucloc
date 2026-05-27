@@ -4,6 +4,11 @@ import { getWorkTypeLabel } from '@/data/domain'
 import { formatMatchDate as formatDate } from '@/lib/match-utils'
 import type { DeliveredTrip } from '@/data/domain'
 
+function money(val: number | undefined | null): string {
+  if (!val) return '—'
+  return val.toLocaleString('vi-VN')
+}
+
 export interface DeliveredTripColumnsOptions {
   onUnmatch: (tripId: number) => void
   isUnmatchPending: boolean
@@ -205,6 +210,40 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
           <span style={{ color: 'var(--ink-4)' }}>—</span>
         )
       },
+    },
+    {
+      key: 'revenue',
+      header: 'Cước',
+      width: 90,
+      sortKey: 'revenue',
+      render: (t) => (
+        <span
+          className="tabular-nums whitespace-nowrap text-[13px]"
+          style={{
+            color: t.revenue ? 'var(--ink)' : 'var(--ink-4)',
+            fontFamily: 'var(--theme-font-mono)',
+          }}
+        >
+          {money(t.revenue)}
+        </span>
+      ),
+    },
+    {
+      key: 'driverSalary',
+      header: 'Lương SL',
+      width: 90,
+      sortKey: 'driver_salary',
+      render: (t) => (
+        <span
+          className="tabular-nums whitespace-nowrap text-[13px]"
+          style={{
+            color: t.driverSalary ? 'var(--ink)' : 'var(--ink-4)',
+            fontFamily: 'var(--theme-font-mono)',
+          }}
+        >
+          {money(t.driverSalary)}
+        </span>
+      ),
     },
   ]
 }

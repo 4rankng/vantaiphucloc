@@ -51,6 +51,7 @@ export function useCreateBookedTrip() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
       qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
       qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
@@ -65,6 +66,8 @@ export function useUpdateBookedTrip() {
     mutationFn: ({ id, data }: { id: number; data: BookedTripUpdatePayload }) => apiClient.updateBookedTrip(id, data).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
       qc.invalidateQueries({ queryKey: ['suggest-matches'] })
       qc.invalidateQueries({ queryKey: ['suggest-wos'] })
       qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
