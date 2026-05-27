@@ -85,10 +85,9 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
     {
       key: 'vessel',
       header: 'Số tàu',
-      width: 90,
       sortKey: 'vessel',
       render: (t) => (
-        <span className="text-[13px] truncate block" style={{ color: 'var(--ink-2)' }}>
+        <span className="text-[13px] whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
           {t.vessel || '—'}
         </span>
       ),
@@ -96,10 +95,9 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
     {
       key: 'client',
       header: 'Chủ hàng',
-      width: 100,
       sortKey: 'client_code',
       render: (t) => (
-        <span className="text-[13px] font-semibold truncate block" style={{ color: 'var(--ink)' }}>
+        <span className="text-[13px] font-semibold whitespace-nowrap" style={{ color: 'var(--ink)' }}>
           {t.client?.code || '—'}
         </span>
       ),
@@ -133,7 +131,7 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
       header: 'Lái xe',
       width: 130,
       render: (t) => (
-        <span className="text-[13px] whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
+        <span className="text-[13px] truncate block" style={{ color: 'var(--ink-2)' }}>
           {t.driver?.name || '—'}
         </span>
       ),

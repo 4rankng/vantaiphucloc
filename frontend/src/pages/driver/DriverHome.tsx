@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { Plus } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { DeliveredTripCard } from '@/components/shared/DeliveredTripCard'
@@ -20,9 +20,19 @@ export function DriverHome() {
 function MobileDriverHome() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { data: _deliveredTrips, isLoading: loading } = useDeliveredTrips({ driverId: Number(user!.id) })
   const deliveredTrips = useMemo(() => _deliveredTrips?.items ?? [], [_deliveredTrips])
-  const [filter, setFilter] = useState<FilterTab>('all')
+
+  // Filter persisted in URL (?filter=pending). Survives navigate(-1) back from trip detail.
+  const filter = (searchParams.get('filter') as FilterTab | null) ?? 'all'
+  const setFilter = useCallback((tab: FilterTab) => {
+    setSearchParams(
+      prev => { const n = new URLSearchParams(prev); if (tab === 'all') n.delete('filter'); else n.set('filter', tab); return n },
+      { replace: true },
+    )
+  }, [setSearchParams])
+
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -34,7 +44,19 @@ function MobileDriverHome() {
     () => getSalaryPeriodDates(now, { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }),
     [now, config?.fromDay, config?.toDay],
   )
-  const [periodStart, setPeriodStart] = useState<Date>(defaultPeriod.startDate)
+
+  // PeriodStart persisted in URL (?from=2026-04-21). Survives navigate(-1) back from trip detail.
+  const periodStartParam = searchParams.get('from')
+  const [periodStart, _setPeriodStartState] = useState<Date>(() =>
+    periodStartParam ? new Date(periodStartParam) : defaultPeriod.startDate,
+  )
+  const setPeriodStart = useCallback((date: Date) => {
+    _setPeriodStartState(date)
+    setSearchParams(
+      prev => { const n = new URLSearchParams(prev); n.set('from', toISODate(date)); return n },
+      { replace: true },
+    )
+  }, [setSearchParams])
 
   // Recompute end date from start + config
   const currentPeriod = useMemo(
@@ -42,22 +64,39 @@ function MobileDriverHome() {
     [periodStart, config?.fromDay, config?.toDay],
   )
 
+  // Always keep ?from= in sync with the DISPLAYED period start (currentPeriod.startDate).
+  // This covers the case where the user never manually navigates months — on initial
+  // load the period is computed from config (which may not be cached yet), so ?from=
+  // might not be set. Once currentPeriod.startDate is known, we write it to the URL
+  // so that navigate(-1) from trip detail always restores the correct period.
+  const currentPeriodStartISO = toISODate(currentPeriod.startDate)
+  useEffect(() => {
+    setSearchParams(
+      prev => {
+        if (prev.get('from') === currentPeriodStartISO) return prev
+        const n = new URLSearchParams(prev)
+        n.set('from', currentPeriodStartISO)
+        return n
+      },
+      { replace: true },
+    )
+  }, [currentPeriodStartISO, setSearchParams])
+
   // Fetch driver earnings for current period
-  const startISO = toISODate(currentPeriod.startDate)
+  const startISO = currentPeriodStartISO
   const endISO = toISODate(currentPeriod.endDate)
   const { data: myEarnings } = useMyEarnings(startISO, endISO)
 
   // Reset visible count when period or filter changes
-  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
- setVisibleCount(PAGE_SIZE) }, [periodStart, filter])
+  useEffect(() => { setVisibleCount(PAGE_SIZE) }, [periodStart, filter])
 
   const handlePrevPeriod = useCallback(() => {
     setPeriodStart(getSalaryPeriodDates(dayBefore(currentPeriod.startDate), { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }).startDate)
-  }, [currentPeriod.startDate, config?.fromDay, config?.toDay])
+  }, [currentPeriod.startDate, config?.fromDay, config?.toDay, setPeriodStart])
 
   const handleNextPeriod = useCallback(() => {
     setPeriodStart(getSalaryPeriodDates(dayAfter(currentPeriod.endDate), { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }).startDate)
-  }, [currentPeriod.endDate, config?.fromDay, config?.toDay])
+  }, [currentPeriod.endDate, config?.fromDay, config?.toDay, setPeriodStart])
 
   // Trips in the current pay period — used by the monthly stat card (always
   // reflects the period total regardless of the active list filter).

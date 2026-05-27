@@ -19,7 +19,7 @@ export function useDeliveredTripsInfinite(filters?: {
   return useInfiniteQuery<PaginatedResult<DeliveredTrip>, Error>({
     queryKey: [
       'delivered-trips-infinite',
-      filters?.clientId ?? '', filters?.vendorId ?? '',
+      filters?.clientId ?? '', filters?.driverId ?? '', filters?.vendorId ?? '',
       filters?.dateFrom ?? '', filters?.dateTo ?? '',
       String(filters?.matched ?? ''), filters?.search ?? '',
       filters?.sortBy ?? '', filters?.sortOrder ?? '',
@@ -28,6 +28,7 @@ export function useDeliveredTripsInfinite(filters?: {
       const res = await apiClient.getDeliveredTrips({ ...filters, page: pageParam as number, pageSize: PAGE_SIZE })
       return unwrap(res)
     },
+    refetchOnMount: 'always',
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
@@ -58,6 +59,7 @@ export function useDeliveredTrips(filters?: { clientId?: number; driverId?: numb
       }
       return res.data
     },
+    gcTime: 0,
   })
 }
 
@@ -70,6 +72,7 @@ export function useDeliveredTrip(id: number) {
       return res.success ? res.data : null
     },
     enabled: !!id,
+    refetchOnMount: 'always',
   })
 }
 

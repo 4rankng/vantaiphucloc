@@ -17,8 +17,8 @@ import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 import { ExcelImportDrawer } from '@/components/shared/ExcelImportDrawer'
 import { DeliveredTripDetailDrawer } from '@/components/shared/DeliveredTripDetailDrawer'
 import { AutoMatchDialog, AutoMatchDateDialog } from '@/components/shared/AutoMatchDialog'
+import { ExportDoiSoatDialog } from '@/components/shared/ExportDoiSoatDialog'
 import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
-import { FilterTabs } from '@/components/shared/FilterTabs'
 import { useInfiniteScroll, LoadMoreSentinel } from '@/components/shared/ListUtils'
 import { getDeliveredTripColumns } from '@/components/shared/DeliveredTripColumns'
 import { useMonthParams } from './use-month-params'
@@ -65,6 +65,7 @@ export function DoiSoatPage() {
   const [driverIdFilter, setDriverIdFilter] = useState<string>('ALL')
   const [sortBy, setSortBy] = useState<DeliveredTripSortBy>('trip_date')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
+  const [showExportDialog, setShowExportDialog] = useState(false)
 
   const exportDoiSoat = useExportDoiSoatExcel()
   const { data: clients = [] } = useClients()
@@ -123,6 +124,27 @@ export function DoiSoatPage() {
     setSortOrder(order)
   }, [])
 
+  const handleExportConfirm = useCallback(
+    (clientId: number, from: string, to: string) => {
+      exportDoiSoat.mutate(
+        { clientId, dateFrom: from, dateTo: to },
+        {
+          onSuccess: (blob) => {
+            const client = clients.find(c => c.id === clientId)
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `doi-soat-${client?.code ?? 'export'}-${from}-${to}.xlsx`
+            a.click()
+            URL.revokeObjectURL(url)
+            setShowExportDialog(false)
+          },
+        },
+      )
+    },
+    [exportDoiSoat, clients]
+  )
+
   const {
     data: infiniteData,
     isLoading,
@@ -159,13 +181,6 @@ export function DoiSoatPage() {
   const globalPending = dailyStats?.pending ?? 0
   const globalInternal = dailyStats?.internalCount ?? 0
   const globalVendor = dailyStats?.vendorCount ?? 0
-  const globalMatchedPct = globalTotal > 0 ? Math.round((globalMatched / globalTotal) * 100) : 0
-
-  const statusCounts: Record<StatusFilter, number> = {
-    ALL: globalTotal,
-    PENDING: globalPending,
-    MATCHED: globalMatched,
-  }
 
   const filtered = trips
 
@@ -197,7 +212,7 @@ export function DoiSoatPage() {
             label="Tổng chuyến"
             total={globalTotal.toLocaleString('vi-VN')}
             items={[
-              { label: 'Đã ghép', value: `${globalMatched.toLocaleString('vi-VN')} (${globalMatchedPct}%)` },
+              { label: 'Đã ghép', value: globalMatched.toLocaleString('vi-VN') },
               { label: 'Chờ ghép', value: globalPending.toLocaleString('vi-VN') },
             ]}
           />
@@ -222,54 +237,14 @@ export function DoiSoatPage() {
               Chuyến đã đi
             </h2>
           </div>
-          <div className="flex items-center gap-2">
-            <InlineSelect
-              placeholder="Tất cả chủ hàng"
-              value={doiSoatClientId}
-              options={[
-                { value: 'ALL', label: 'Tất cả chủ hàng' },
-                ...clients.map((c) => ({ value: String(c.id), label: c.code ? `${c.code} — ${c.name}` : c.name })),
-              ]}
-              onChange={(val) => {
-                setDoiSoatClientId(val)
-                setStatusFilter('ALL')
-              }}
-              style={{ width: 185, height: 32, fontSize: 12.5 }}
-            />
-            <InlineSelect
-              placeholder="Tất cả lái xe"
-              value={driverIdFilter}
-              options={[
-                { value: 'ALL', label: 'Tất cả lái xe' },
-                ...drivers.map((d) => ({ value: String(d.id), label: d.fullName || d.username })),
-              ]}
-              onChange={(val) => setDriverIdFilter(val)}
-              style={{ width: 160, height: 32, fontSize: 12.5 }}
-            />
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="outline"
               size="sm"
-              title={doiSoatClientId === 'ALL' || !doiSoatClientId ? 'Chọn chủ hàng để xuất file đối soát' : 'Xuất Excel đối soát cho chủ hàng đã chọn'}
-              onClick={() => {
-                if (!doiSoatClientId || doiSoatClientId === 'ALL') return
-                exportDoiSoat.mutate(
-                  { clientId: Number(doiSoatClientId), dateFrom, dateTo },
-                  {
-                    onSuccess: (blob) => {
-                      const client = clients.find(c => c.id === Number(doiSoatClientId))
-                      const url = URL.createObjectURL(blob)
-                      const a = document.createElement('a')
-                      a.href = url
-                      a.download = `doi-soat-${client?.code ?? 'export'}-${dateFrom}-${dateTo}.xlsx`
-                      a.click()
-                      URL.revokeObjectURL(url)
-                    },
-                  },
-                )
-              }}
-              disabled={!doiSoatClientId || doiSoatClientId === 'ALL' || exportDoiSoat.isPending}
+              title="Xuất Excel đối soát"
+              onClick={() => setShowExportDialog(true)}
             >
-              {exportDoiSoat.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
+              <FileSpreadsheet className="h-3.5 w-3.5" />
               Xuất đối soát
             </Button>
             <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
@@ -292,25 +267,46 @@ export function DoiSoatPage() {
           </div>
         </div>
 
-        {/* Row 2: search + filter tabs in a card */}
+        {/* Row 2: search + filter dropdowns in a card */}
         <Panel flush className="mb-2">
           <div className="flex items-center gap-3 px-4 py-2.5">
             <ToolbarSearch
               value={search}
               onChange={setSearch}
               placeholder="Tìm chủ hàng, tàu, tuyến, cont…"
-              width={320}
+              width={280}
             />
             <div className="flex-1" />
-            <FilterTabs<StatusFilter>
-              tabs={[
+            <InlineSelect
+              placeholder="Tất cả chủ hàng"
+              value={doiSoatClientId}
+              options={[
+                { value: 'ALL', label: 'Tất cả chủ hàng' },
+                ...clients.map((c) => ({ value: String(c.id), label: c.code ? `${c.code} — ${c.name}` : c.name })),
+              ]}
+              onChange={setDoiSoatClientId}
+              style={{ width: 185, height: 32, fontSize: 12.5 }}
+            />
+            <InlineSelect
+              placeholder="Tất cả lái xe"
+              value={driverIdFilter}
+              options={[
+                { value: 'ALL', label: 'Tất cả lái xe' },
+                ...drivers.map((d) => ({ value: String(d.id), label: d.fullName || d.username })),
+              ]}
+              onChange={setDriverIdFilter}
+              style={{ width: 160, height: 32, fontSize: 12.5 }}
+            />
+            <InlineSelect
+              placeholder="Trạng thái"
+              value={statusFilter}
+              options={[
                 { value: 'ALL', label: 'Tất cả' },
                 { value: 'PENDING', label: 'Chờ ghép' },
                 { value: 'MATCHED', label: 'Đã ghép' },
               ]}
-              value={statusFilter}
-              onChange={setStatusFilter}
-              counts={statusCounts}
+              onChange={(val) => setStatusFilter(val as StatusFilter)}
+              style={{ width: 130, height: 32, fontSize: 12.5 }}
             />
           </div>
         </Panel>
@@ -401,6 +397,18 @@ export function DoiSoatPage() {
           isLoading={!autoMatchReady}
           isConfirming={confirmMatch.isPending}
           onConfirm={handleConfirmMatch}
+        />
+      )}
+
+      {/* ── Export dialog ── */}
+      {showExportDialog && (
+        <ExportDoiSoatDialog
+          open={showExportDialog}
+          onClose={() => setShowExportDialog(false)}
+          defaultDateFrom={dateFrom}
+          defaultDateTo={dateTo}
+          isPending={exportDoiSoat.isPending}
+          onConfirm={handleExportConfirm}
         />
       )}
 

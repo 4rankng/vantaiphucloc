@@ -48,6 +48,7 @@ export default defineConfig(({ mode }) => {
     }),
   ],
   resolve: {
+    dedupe: ['react', 'react-dom'],
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@ui': path.resolve(__dirname, './src/components/ui'),

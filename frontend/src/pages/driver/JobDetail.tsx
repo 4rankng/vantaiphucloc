@@ -1,85 +1,59 @@
-import {
-  Calendar, Building2, Ship, Package2, CheckCircle2, Clock,
-  MapPin, ArrowRight, Pencil, Wrench, Trash2,
-} from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { formatCurrencyFull, getWorkTypeLabel } from '@/data/domain'
 import { useDeliveredTrip, useDeleteDeliveredTrip } from '@/hooks/use-queries'
+import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
 
-// ── Group card with a small uppercase label above ─────────────────────────────
-function GroupCard({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-1.5">
-      <p
-        className="text-[10px] font-bold uppercase tracking-[0.12em] px-1"
-        style={{ color: 'var(--theme-text-muted)' }}
+// ─── Status pill ──────────────────────────────────────────────────────────────
+function StatusPill({ booked }: { booked: boolean }) {
+  if (booked) {
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-bold"
+        style={{ background: 'rgba(0,90,45,0.12)', color: 'var(--brand, #005A2D)' }}
       >
-        {label}
-      </p>
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          background: 'var(--theme-bg-secondary)',
-          boxShadow: 'var(--theme-shadow-card)',
-          border: '1px solid var(--theme-border-default)',
-        }}
-      >
-        {children}
-      </div>
-    </section>
-  )
-}
-
-// ── Simple label+value row ─────────────────────────────────────────────────────
-function Field({
-  icon: Icon,
-  label,
-  value,
-  mono = false,
-  last = false,
-}: {
-  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>
-  label: string
-  value: React.ReactNode
-  mono?: boolean
-  last?: boolean
-}) {
+        <span
+          className="w-1.5 h-1.5 rounded-full"
+          style={{ background: 'var(--brand, #005A2D)' }}
+        />
+        Đã ghép
+      </span>
+    )
+  }
   return (
-    <div
-      className="flex items-start gap-3 px-4 py-3"
-      style={last ? undefined : { borderBottom: '1px solid var(--theme-border-light)' }}
+    <span
+      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-bold"
+      style={{ background: '#FFF1DC', color: '#B6701A' }}
     >
-      <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-        style={{ background: 'var(--theme-bg-tertiary)' }}
-      >
-        <Icon className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
-        <p
-          className={`text-sm font-semibold mt-0.5 ${mono ? 'font-mono tracking-wide' : ''}`}
-          style={{ color: value ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}
-        >
-          {value || '—'}
-        </p>
-      </div>
-    </div>
-  )
-}
-
-// ── Route icon (two map pins with arrow) ──────────────────────────────────────
-function RouteIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
-  return (
-    <span className={`inline-flex items-center gap-px ${className ?? ''}`} style={style}>
-      <MapPin className="w-3 h-3" />
-      <ArrowRight className="w-2.5 h-2.5" />
+      <span className="w-1.5 h-1.5 rounded-full status-dot-amber" style={{ background: '#B6701A' }} />
+      Chờ ghép
     </span>
   )
 }
 
+// ─── Section wrapper ───────────────────────────────────────────────────────────
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <section className="px-4 mb-[18px]">
+      <p
+        className="text-[10.5px] font-bold uppercase tracking-[0.14em] px-1.5 pb-2.5"
+        style={{ color: 'var(--text-3, #8A938F)' }}
+      >
+        {label}
+      </p>
+      {children}
+    </section>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
+
+function getContSize(contType: string | null): string | null {
+  if (!contType) return null
+  const m = contType.match(/(\d+)/)
+  return m ? m[1] : null
+}
 
 export function JobDetail() {
   const { jobId: jobIdStr } = useParams<{ jobId: string }>()
@@ -88,9 +62,14 @@ export function JobDetail() {
   const { data: job = null, isLoading: loading } = useDeliveredTrip(jobId)
   const deleteTrip = useDeleteDeliveredTrip()
   const [deleting, setDeleting] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const isMatched = !!job?.bookedTripId
 
   function handleDelete() {
-    if (!window.confirm('Bạn có chắc muốn xóa chuyến này không?')) return
+    setDeleteDialogOpen(true)
+  }
+
+  function confirmDelete() {
     setDeleting(true)
     deleteTrip.mutate(jobId, {
       onSuccess: () => navigate(-1),
@@ -101,9 +80,9 @@ export function JobDetail() {
   if (loading) {
     return (
       <div className="animate-pulse space-y-3 p-4">
-        <div className="h-10 rounded-xl w-1/3" style={{ background: 'var(--theme-bg-tertiary)' }} />
-        <div className="h-64 rounded-xl" style={{ background: 'var(--theme-bg-tertiary)' }} />
-        <div className="h-16 rounded-xl" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        <div className="h-32 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        <div className="h-48 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        <div className="h-20 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }} />
       </div>
     )
   }
@@ -120,141 +99,401 @@ export function JobDetail() {
   const dateStr = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
   const canEdit = !job.bookedTripId
   const contTypeLabel = job.contType ?? null
+  const contSize = getContSize(job.contType)
   const workTypeLabel = getWorkTypeLabel(job.workType) ?? job.workType ?? null
 
   return (
     <>
-      {/* Back button */}
+      {/* Pulse animation */}
+      <style>{`
+        @keyframes amberPulse {
+          0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(182,112,26,0.5); }
+          50%      { opacity:.9; box-shadow:0 0 0 5px rgba(182,112,26,0); }
+        }
+        .status-dot-amber { animation: amberPulse 1.6s infinite; }
+      `}</style>
+
+      {/* Back nav */}
       <button
         onClick={() => navigate(-1)}
-        className="inline-flex items-center gap-1.5 text-sm mb-4"
-        style={{ color: 'var(--theme-text-secondary)' }}
+        className="inline-flex items-center gap-2 text-[15px] font-semibold px-5 pt-[18px] pb-2 mb-1"
+        style={{ color: 'var(--brand, #005A2D)' }}
       >
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
         Quay lại
       </button>
 
-      <div className="space-y-3 pb-28">
+      <div className="space-y-0 pb-28">
 
-        {/* ── Hero: cont number + type + status ── */}
-        <section className="space-y-1.5">
-          <p
-            className="text-[10px] font-bold uppercase tracking-[0.12em] px-1"
-            style={{ color: 'var(--theme-text-muted)' }}
+        {/* ── HERO: light card with container + status ── */}
+        <div className="px-4 mb-[18px]">
+          <div
+            className="rounded-[20px] px-5 py-[18px] relative overflow-hidden"
+            style={{
+              background: 'radial-gradient(circle at 92% -10%, rgba(0,90,45,0.08) 0%, transparent 45%), linear-gradient(180deg, #FFFFFF 0%, #F0F7F3 100%)',
+              boxShadow: '0 10px 28px rgba(0,90,45,0.08)',
+              border: '1px solid var(--line, #ECEFEC)',
+            }}
           >
-            Container
-          </p>
-        <div
-          className="rounded-xl px-4 py-3.5 flex items-center justify-between gap-3"
-          style={{
-            background: 'var(--theme-bg-secondary)',
-            border: '1px solid var(--theme-border-default)',
-            boxShadow: 'var(--theme-shadow-card)',
-          }}
-        >
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span
-              className="text-[22px] font-bold font-mono tracking-wide"
-              style={{ color: job.contNumber ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}
-            >
-              {job.contNumber || '—'}
-            </span>
-            {contTypeLabel && (
-              <span
-                className="text-xs font-bold px-2 py-0.5 rounded-md shrink-0"
-                style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 12%, transparent)', color: 'var(--theme-brand-primary)' }}
+            {/* dot grid */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(0,90,45,0.06) 1px, transparent 0)',
+                backgroundSize: '16px 16px',
+                maskImage: 'linear-gradient(to left, black, transparent 60%)',
+                WebkitMaskImage: 'linear-gradient(to left, black, transparent 60%)',
+              }}
+            />
+
+            <div className="relative z-10">
+              {/* top row */}
+              <div className="flex items-center justify-between mb-3.5">
+                <span
+                  className="text-[10.5px] font-bold uppercase tracking-[0.16em]"
+                  style={{ color: 'var(--text-3, #8A938F)' }}
+                >
+                  Container
+                </span>
+                <StatusPill booked={isMatched} />
+              </div>
+
+              {/* container number */}
+              <div
+                className="text-[28px] font-bold leading-none tracking-[0.5px]"
+                style={{
+                  color: job.contNumber ? 'var(--ink, #0F1714)' : 'rgba(15,23,20,0.3)',
+                  fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+                }}
               >
-                {contTypeLabel}
+                {job.contNumber || '—'}
+              </div>
+
+              {/* type chip + label */}
+              {contTypeLabel && (
+                <div className="flex items-center gap-2.5 mt-3.5">
+                  <span
+                    className="px-2.5 py-[5px] rounded-[7px] text-[11px] font-bold tracking-[0.5px]"
+                    style={{
+                      background: 'var(--brand-soft, #E6F2EB)',
+                      color: 'var(--brand, #005A2D)',
+                      fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+                    }}
+                  >
+                    {contTypeLabel}
+                  </span>
+                  <span className="text-[12px] font-medium" style={{ color: 'var(--text-2, #5B6661)' }}>
+                    Loại container{contSize ? ` · ${contSize} feet` : ''}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── JOURNEY ── */}
+        <Section label="Lịch trình">
+          <div
+            className="rounded-[18px] px-5 py-5"
+            style={{
+              background: 'var(--card, #FFFFFF)',
+              border: '1px solid var(--line, #ECEFEC)',
+              boxShadow: '0 1px 2px rgba(15,23,20,0.04)',
+            }}
+          >
+            {/* date row */}
+            <div className="flex items-center gap-2.5 mb-4">
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: 'var(--brand-soft, #E6F2EB)', color: 'var(--brand, #005A2D)' }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+                </svg>
+              </div>
+              <span className="text-[14px] font-bold" style={{ color: 'var(--text, #0F1714)' }}>
+                {dateStr}
               </span>
+              <span className="text-[11px] font-medium ml-auto" style={{ color: 'var(--text-3, #8A938F)' }}>
+                Ngày đi
+              </span>
+            </div>
+
+            {/* route visualisation */}
+            <div className="grid items-center mb-[18px]" style={{ gridTemplateColumns: '1fr auto 1fr', gap: '10px' }}>
+              {/* origin */}
+              <div className="text-center">
+                <div
+                  className="w-3.5 h-3.5 rounded-full mx-auto mb-2"
+                  style={{
+                    background: 'var(--brand, #005A2D)',
+                    boxShadow: '0 0 0 4px var(--brand-soft, #E6F2EB)',
+                  }}
+                />
+                <div className="text-[16px] font-extrabold leading-tight tracking-[0.3px]" style={{ color: 'var(--text, #0F1714)' }}>
+                  {job.pickupLocation.name}
+                </div>
+                <div
+                  className="text-[10px] font-semibold uppercase tracking-wide mt-1"
+                  style={{ color: 'var(--text-3, #8A938F)' }}
+                >
+                  Điểm đi
+                </div>
+              </div>
+
+              {/* middle truck icon */}
+              <div className="flex flex-col items-center" style={{ transform: 'translateY(-12px)' }}>
+                <div
+                  className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center"
+                  style={{
+                    background: 'var(--brand, #005A2D)',
+                    color: '#fff',
+                    boxShadow: '0 4px 10px rgba(0,90,45,0.3)',
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 18H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v11" />
+                    <path d="M14 9h4l4 4v5h-2" />
+                    <path d="M9 18h6" />
+                    <circle cx="7" cy="18" r="2" />
+                    <circle cx="17" cy="18" r="2" />
+                  </svg>
+                </div>
+                {/* dashed line */}
+                <div
+                  className="mt-1.5"
+                  style={{
+                    height: 2,
+                    width: 60,
+                    backgroundImage: 'linear-gradient(to right, var(--brand, #005A2D) 50%, transparent 50%)',
+                    backgroundSize: '6px 2px',
+                    backgroundRepeat: 'repeat-x',
+                  }}
+                />
+              </div>
+
+              {/* destination */}
+              <div className="text-center">
+                <div
+                  className="w-3.5 h-3.5 rounded-full mx-auto mb-2"
+                  style={{
+                    background: '#fff',
+                    border: '3px solid var(--brand, #005A2D)',
+                  }}
+                />
+                <div className="text-[16px] font-extrabold leading-tight tracking-[0.3px]" style={{ color: 'var(--text, #0F1714)' }}>
+                  {job.dropoffLocation.name}
+                </div>
+                <div
+                  className="text-[10px] font-semibold uppercase tracking-wide mt-1"
+                  style={{ color: 'var(--text-3, #8A938F)' }}
+                >
+                  Điểm đến
+                </div>
+              </div>
+            </div>
+
+            {/* vessel row */}
+            {job.vessel && (
+              <div
+                className="flex items-center gap-3 rounded-xl px-3.5 py-3"
+                style={{
+                  background: '#FAFBFA',
+                  border: '1px solid var(--line, #ECEFEC)',
+                }}
+              >
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                  style={{
+                    background: '#fff',
+                    border: '1px solid var(--line, #ECEFEC)',
+                    color: 'var(--brand, #005A2D)',
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+                    <path d="M19.4 13l-.5-2.4a2 2 0 0 0-1.9-1.6H6.9a2 2 0 0 0-1.9 1.6L4.6 13" />
+                    <path d="M21 13c-1.2 1.2-3 2-5 2H8c-2 0-3.8-.8-5-2" />
+                  </svg>
+                </div>
+                <div>
+                  <div
+                    className="text-[10.5px] font-semibold uppercase tracking-wide"
+                    style={{ color: 'var(--text-3, #8A938F)' }}
+                  >
+                    Số tàu
+                  </div>
+                  <div
+                    className="text-[14px] font-bold mt-0.5 tracking-[0.3px]"
+                    style={{
+                      color: 'var(--text, #0F1714)',
+                      fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+                    }}
+                  >
+                    {job.vessel}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
-          {job.bookedTripId ? (
-            <span className="flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full shrink-0"
-              style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}>
-              <CheckCircle2 className="w-3.5 h-3.5" /> Đã ghép
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full shrink-0"
-              style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
-              <Clock className="w-3.5 h-3.5" /> Chờ ghép
-            </span>
-          )}
-        </div>
-        </section>
+        </Section>
 
-        {/* ── Lịch trình group ── */}
-        <GroupCard label="Lịch trình">
-          <Field icon={Calendar} label="Ngày đi" value={dateStr} />
-          <Field icon={Ship}     label="Số tàu"  value={job.vessel ?? null} />
-          {/* Combined route row — last in the group, no border */}
-          <div className="flex items-start gap-3 px-4 py-3">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-              style={{ background: 'var(--theme-bg-tertiary)' }}
-            >
-              <RouteIcon style={{ color: 'var(--theme-text-muted)' }} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>Tuyến đường</p>
-              <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--theme-text-primary)' }}>
-                {job.pickupLocation.name}
-                <span className="mx-1.5 font-normal" style={{ color: 'var(--theme-text-muted)' }}>→</span>
-                {job.dropoffLocation.name}
-              </p>
+        {/* ── CUSTOMER & OPERATION — 2-col grid ── */}
+        <Section label="Khách hàng & Tác nghiệp">
+          <div
+            className="rounded-[18px] overflow-hidden p-1"
+            style={{
+              background: 'var(--card, #FFFFFF)',
+              border: '1px solid var(--line, #ECEFEC)',
+              boxShadow: '0 1px 2px rgba(15,23,20,0.04)',
+            }}
+          >
+            <div className="grid grid-cols-2">
+              {/* client */}
+              <div className="px-3.5 py-4">
+                <div
+                  className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wide mb-2"
+                  style={{ color: 'var(--text-3, #8A938F)' }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4" />
+                    <path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01" />
+                  </svg>
+                  Chủ hàng
+                </div>
+                <div
+                  className="text-[13.5px] font-bold leading-snug"
+                  style={{ color: 'var(--text, #0F1714)' }}
+                >
+                  {job.client.name || '—'}
+                </div>
+              </div>
+
+              {/* operation */}
+              <div
+                className="px-3.5 py-4"
+                style={{ borderLeft: '1px solid var(--line, #ECEFEC)' }}
+              >
+                <div
+                  className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wide mb-2"
+                  style={{ color: 'var(--text-3, #8A938F)' }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                  </svg>
+                  Tác nghiệp
+                </div>
+                <div
+                  className="text-[14px] font-bold leading-snug"
+                  style={{ color: 'var(--text, #0F1714)' }}
+                >
+                  {workTypeLabel || '—'}
+                </div>
+              </div>
             </div>
           </div>
-        </GroupCard>
+        </Section>
 
-        {/* ── Khách hàng & Tác nghiệp group ── */}
-        <GroupCard label="Khách hàng & Tác nghiệp">
-          <Field icon={Building2} label="Chủ hàng"   value={job.client.name} />
-          <Field icon={Wrench}    label="Tác nghiệp" value={workTypeLabel} last />
-        </GroupCard>
+        {/* ── INCOME — only for matched trips ── */}
+        {isMatched && (
+          <Section label="Thu nhập">
+            <div
+              className="rounded-[18px] px-5 py-[18px] relative overflow-hidden"
+              style={{
+                background: job.driverSalary > 0
+                  ? 'linear-gradient(135deg, #007E3E 0%, #005A2D 60%, #003E1F 100%)'
+                  : 'var(--brand-softer, #F0F7F3)',
+                boxShadow: job.driverSalary > 0
+                  ? '0 10px 24px rgba(0,90,45,0.25)'
+                  : 'none',
+                border: job.driverSalary > 0
+                  ? 'none'
+                  : '1px solid rgba(0,90,45,0.12)',
+              }}
+            >
+              {/* gloss overlays */}
+              {job.driverSalary > 0 && (
+                <>
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background: 'radial-gradient(circle at 90% 10%, rgba(255,255,255,0.18) 0%, transparent 40%), radial-gradient(circle at 0% 100%, rgba(255,255,255,0.08) 0%, transparent 50%)',
+                    }}
+                  />
+                  <div
+                    className="absolute pointer-events-none"
+                    style={{
+                      top: '-50%', right: '-10%',
+                      width: 200, height: 200,
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: '50%',
+                    }}
+                  />
+                </>
+              )}
 
-        {/* ── Earning card ── */}
-        <section className="space-y-1.5">
-          <p
-            className="text-[10px] font-bold uppercase tracking-[0.12em] px-1"
-            style={{ color: 'var(--theme-text-muted)' }}
-          >
-            Thu nhập
-          </p>
-        <div
-          className="rounded-xl p-4 flex items-center justify-between"
-          style={{
-            background: job.driverSalary > 0
-              ? 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)'
-              : 'var(--theme-status-warning-light)',
-            border: `1px solid ${job.driverSalary > 0
-              ? 'color-mix(in srgb, var(--theme-brand-primary) 20%, transparent)'
-              : 'color-mix(in srgb, var(--theme-status-warning) 20%, transparent)'}`,
-          }}
-        >
-          <p className="text-xs font-semibold"
-            style={{ color: job.driverSalary > 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-warning)' }}>
-            Thu nhập chuyến
-          </p>
-          {job.driverSalary > 0 ? (
-            <p className="text-2xl font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
-              {formatCurrencyFull(job.driverSalary)}
-            </p>
-          ) : (
-            <span className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa tính</span>
-          )}
-        </div>
-        </section>
+              <div className="relative z-10 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{
+                      background: job.driverSalary > 0
+                        ? 'rgba(255,255,255,0.15)'
+                        : 'rgba(0,90,45,0.08)',
+                      color: job.driverSalary > 0 ? '#fff' : 'var(--brand, #005A2D)',
+                    }}
+                  >
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div
+                      className="text-[10.5px] font-semibold uppercase tracking-[0.1em]"
+                      style={{ color: job.driverSalary > 0 ? 'rgba(255,255,255,0.7)' : 'var(--brand, #005A2D)' }}
+                    >
+                      Thu nhập
+                    </div>
+                    <div
+                      className="text-[13px] font-semibold mt-0.5"
+                      style={{ color: job.driverSalary > 0 ? 'rgba(255,255,255,0.9)' : 'var(--text-2, #5B6661)' }}
+                    >
+                      Chuyến này
+                    </div>
+                  </div>
+                </div>
+
+                {job.driverSalary > 0 ? (
+                  <div className="flex items-baseline gap-0.5">
+                    <span
+                      className="text-[22px] font-extrabold tabular-nums leading-none"
+                      style={{ color: '#fff', letterSpacing: '-0.3px' }}
+                    >
+                      {formatCurrencyFull(job.driverSalary)}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-sm font-semibold" style={{ color: 'var(--text-3, #8A938F)' }}>
+                    Chưa tính
+                  </span>
+                )}
+              </div>
+            </div>
+          </Section>
+        )}
+
       </div>
 
       {/* ── Sticky action bar ── */}
       <div
         className="fixed bottom-0 left-0 right-0 z-30 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         style={{
-          background: 'color-mix(in srgb, var(--theme-bg-primary, #fff) 92%, transparent)',
+          background: 'color-mix(in srgb, var(--card, #fff) 92%, transparent)',
           backdropFilter: 'blur(14px) saturate(140%)',
           WebkitBackdropFilter: 'blur(14px) saturate(140%)',
-          borderTop: '1px solid var(--theme-border-default)',
+          borderTop: '1px solid var(--line, #ECEFEC)',
         }}
       >
         {canEdit ? (
@@ -262,13 +501,13 @@ export function JobDetail() {
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="rounded-xl font-bold flex items-center justify-center gap-2 touch-manipulation transition-all active:scale-[0.98] shrink-0"
+              className="rounded-[14px] flex items-center justify-center shrink-0 transition-all active:scale-[0.97]"
               style={{
-                height: '52px',
-                width: '52px',
-                background: 'color-mix(in srgb, var(--theme-status-danger, #dc2626) 10%, transparent)',
-                color: 'var(--theme-status-danger, #dc2626)',
-                border: '1px solid color-mix(in srgb, var(--theme-status-danger, #dc2626) 20%, transparent)',
+                height: 52,
+                width: 52,
+                background: '#fff',
+                color: 'var(--danger, #C0392B)',
+                border: '1.5px solid #FDECEA',
                 opacity: deleting ? 0.5 : 1,
               }}
             >
@@ -276,18 +515,31 @@ export function JobDetail() {
             </button>
             <button
               onClick={() => navigate(`/driver/delivered-trips/${job.id}/edit`)}
-              className="flex-1 rounded-xl text-base font-bold flex items-center justify-center gap-2 touch-manipulation transition-all active:scale-[0.98]"
-              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', height: '52px' }}
+              className="flex-1 rounded-[14px] text-[15px] font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+              style={{
+                background: 'var(--brand, #005A2D)',
+                color: '#fff',
+                height: 52,
+                boxShadow: '0 8px 20px rgba(0,90,45,0.28)',
+              }}
             >
               <Pencil className="w-4 h-4" /> Sửa chuyến
             </button>
           </div>
         ) : (
-          <p className="text-center text-xs py-2" style={{ color: 'var(--theme-text-muted)' }}>
+          <p className="text-center text-xs py-2" style={{ color: 'var(--text-3, #8A938F)' }}>
             Chuyến đã được ghép — không thể chỉnh sửa
           </p>
         )}
       </div>
+      <DangerConfirmDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="Xoá chuyến"
+        entityName={job.contNumber || 'chuyến này'}
+        loading={deleting}
+      />
     </>
   )
 }

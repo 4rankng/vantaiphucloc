@@ -65,6 +65,9 @@ class DeliveredTripRepository(ABC):
         date_from: date | None = None,
         date_to: date | None = None,
         matched: bool | None = None,
+        sort_by: str | None = None,
+        sort_order: str = 'desc',
+        search: str | None = None,
     ) -> tuple[Sequence[DeliveredTrip], int]: ...
 
     @abstractmethod
