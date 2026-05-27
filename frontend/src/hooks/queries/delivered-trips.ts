@@ -105,6 +105,21 @@ export function useUpdateDeliveredTrip() {
 }
 
 
+export function useDeleteDeliveredTrip() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => apiClient.deleteDeliveredTrip(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+    },
+  })
+}
+
+
 export function useExportDeliveredTripsExcel() {
   return useMutation({
     mutationFn: (filters?: { dateFrom?: string; dateTo?: string; status?: string }) =>

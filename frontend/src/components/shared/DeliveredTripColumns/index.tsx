@@ -10,7 +10,14 @@ function money(val: number | undefined | null): string {
 }
 
 export interface DeliveredTripColumnsOptions {
-  onUnmatch: (tripId: number) => void
+  /**
+   * Requests the unmatch of a delivered trip. The host page is responsible
+   * for confirming the destructive action (e.g. via DangerConfirmDialog)
+   * before actually calling the unmatch mutation. The trip object is passed
+   * in full so the confirm dialog can show identifying details
+   * (cont number, route, date) to the user.
+   */
+  onUnmatch: (trip: DeliveredTrip) => void
   isUnmatchPending: boolean
   unmatchVariables?: number
 }
@@ -33,7 +40,7 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
             onClick={(e) => {
               e.stopPropagation()
               if (opts.isUnmatchPending) return
-              opts.onUnmatch(t.id)
+              opts.onUnmatch(t)
             }}
             disabled={opts.isUnmatchPending}
             className="group relative flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200 ease-out hover:scale-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -118,6 +125,16 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
       render: (t) => (
         <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>
           {t.vehiclePlate || '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'driverName',
+      header: 'Lái xe',
+      width: 130,
+      render: (t) => (
+        <span className="text-[13px] whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
+          {t.driver?.name || '—'}
         </span>
       ),
     },

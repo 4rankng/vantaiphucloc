@@ -13,7 +13,7 @@ import { LoadMoreSentinel, SearchInput } from '@/components/shared/ListUtils'
 import { StatPill } from '@/components/shared/StatPill'
 import { useIsMobile } from '@/hooks/use-mobile'
 
-import { useFleetManager, FocusState } from '@/hooks/use-fleet-manager'
+import { useFleetManager, type FocusState } from '@/hooks/use-fleet-manager'
 import type { Driver } from '@/data/domain'
 
 import {

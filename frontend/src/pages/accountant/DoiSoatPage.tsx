@@ -17,6 +17,7 @@ import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 import { ExcelImportDrawer } from '@/components/shared/ExcelImportDrawer'
 import { DeliveredTripDetailDrawer } from '@/components/shared/DeliveredTripDetailDrawer'
 import { AutoMatchDialog, AutoMatchDateDialog } from '@/components/shared/AutoMatchDialog'
+import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
 import { FilterTabs } from '@/components/shared/FilterTabs'
 import { useInfiniteScroll, LoadMoreSentinel } from '@/components/shared/ListUtils'
 import { getDeliveredTripColumns } from '@/components/shared/DeliveredTripColumns'
@@ -28,6 +29,7 @@ import {
   useDeliveredTripsInfinite,
   useExportDoiSoatExcel,
   useClients,
+  useDrivers,
   useTripDailyStats,
   useAutoMatchPreview,
   useConfirmAutoMatch,
@@ -60,11 +62,13 @@ export function DoiSoatPage() {
   const [matchTarget, setMatchTarget] = useState<DeliveredTrip | null>(null)
   const [doiSoatClientId, setDoiSoatClientId] = useState<string>('ALL')
   const [vendorId] = useState<string>('ALL')
+  const [driverIdFilter, setDriverIdFilter] = useState<string>('ALL')
   const [sortBy, setSortBy] = useState<DeliveredTripSortBy>('trip_date')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
 
   const exportDoiSoat = useExportDoiSoatExcel()
   const { data: clients = [] } = useClients()
+  const { data: drivers = [] } = useDrivers()
 
   // Auto-match
   const [showAutoMatchDate, setShowAutoMatchDate] = useState(false)
@@ -73,6 +77,12 @@ export function DoiSoatPage() {
   const autoMatchPreview = useAutoMatchPreview()
   const confirmMatch = useConfirmAutoMatch()
   const unmatch = useUnmatchTrip()
+
+  // Unmatch confirmation — destructive action, must confirm (consistency with
+  // "Gỡ lái xe" / "Xoá địa điểm" patterns elsewhere in the app). Previously
+  // the icon click fired mutate() instantly, so a single misclick on a 28×28
+  // icon would silently break a real match — no undo, no toast.
+  const [unmatchTarget, setUnmatchTarget] = useState<DeliveredTrip | null>(null)
 
   const handleAutoMatchConfirm = useCallback(
     (from: string, to: string) => {
@@ -123,6 +133,7 @@ export function DoiSoatPage() {
     dateFrom,
     dateTo,
     clientId: doiSoatClientId !== 'ALL' && doiSoatClientId !== '' ? Number(doiSoatClientId) : undefined,
+    driverId: driverIdFilter !== 'ALL' && driverIdFilter !== '' ? Number(driverIdFilter) : undefined,
     vendorId: vendorId !== 'ALL' && vendorId !== '' ? Number(vendorId) : undefined,
     matched: statusFilter !== 'ALL' ? (statusFilter === 'MATCHED') : undefined,
     search: debouncedSearch || undefined,
@@ -159,7 +170,7 @@ export function DoiSoatPage() {
   const filtered = trips
 
   const columns = useMemo(() => getDeliveredTripColumns({
-    onUnmatch: (id) => unmatch.mutate(id),
+    onUnmatch: (trip) => setUnmatchTarget(trip),
     isUnmatchPending: unmatch.isPending,
     unmatchVariables: unmatch.variables as number | undefined,
   }), [unmatch])
@@ -224,6 +235,16 @@ export function DoiSoatPage() {
                 setStatusFilter('ALL')
               }}
               style={{ width: 185, height: 32, fontSize: 12.5 }}
+            />
+            <InlineSelect
+              placeholder="Tất cả lái xe"
+              value={driverIdFilter}
+              options={[
+                { value: 'ALL', label: 'Tất cả lái xe' },
+                ...drivers.map((d) => ({ value: String(d.id), label: d.fullName || d.username })),
+              ]}
+              onChange={(val) => setDriverIdFilter(val)}
+              style={{ width: 160, height: 32, fontSize: 12.5 }}
             />
             <Button
               variant="outline"
@@ -382,6 +403,30 @@ export function DoiSoatPage() {
           onConfirm={handleConfirmMatch}
         />
       )}
+
+      {/* ── Unmatch confirmation (destructive) ── */}
+      <DangerConfirmDialog
+        open={!!unmatchTarget}
+        onClose={() => setUnmatchTarget(null)}
+        onConfirm={() => {
+          if (!unmatchTarget) return
+          const id = unmatchTarget.id
+          setUnmatchTarget(null)
+          unmatch.mutate(id)
+        }}
+        title="Bỏ ghép chuyến?"
+        entityName={
+          unmatchTarget
+            ? [
+                unmatchTarget.contNumber || `Chuyến #${unmatchTarget.id}`,
+                unmatchTarget.tripDate ? `(${unmatchTarget.tripDate})` : '',
+              ].filter(Boolean).join(' ')
+            : ''
+        }
+        warningText="sẽ được tách khỏi đơn hàng đã ghép và quay lại danh sách chờ ghép."
+        confirmLabel="Bỏ ghép"
+        loading={unmatch.isPending}
+      />
     </div>
   )
 }

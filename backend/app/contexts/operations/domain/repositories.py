@@ -77,3 +77,6 @@ class DeliveredTripRepository(ABC):
 
     @abstractmethod
     async def save(self, w: DeliveredTrip) -> DeliveredTrip: ...
+
+    @abstractmethod
+    async def delete(self, wid: DeliveredTripId) -> None: ...

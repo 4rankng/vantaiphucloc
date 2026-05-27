@@ -72,6 +72,7 @@ export const apiClient = {
   getDeliveredTrips: deliveredTripsApi.getDeliveredTrips,
   createDeliveredTrip: deliveredTripsApi.createDeliveredTrip,
   updateDeliveredTrip: deliveredTripsApi.updateDeliveredTrip,
+  deleteDeliveredTrip: deliveredTripsApi.deleteDeliveredTrip,
   ocrContainer: deliveredTripsApi.ocrContainer,
   validateContainer: deliveredTripsApi.validateContainer,
   getSuggestedRoutes: deliveredTripsApi.getSuggestedRoutes,

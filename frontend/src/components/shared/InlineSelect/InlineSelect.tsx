@@ -161,11 +161,11 @@ export function InlineSelect({
                   }}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className={`${isCompactDropdown ? 'text-xs' : 'text-sm'} font-medium truncate`} style={{ color: 'var(--theme-text-primary)' }}>
+                    <p className={`${isCompactDropdown ? 'text-xs' : 'text-sm'} font-medium whitespace-nowrap`} style={{ color: 'var(--theme-text-primary)' }}>
                       {opt.label}
                     </p>
                     {opt.sublabel && (
-                      <p className={`${isCompactDropdown ? 'text-[10px]' : 'text-xs'} mt-0.5 truncate`} style={{ color: 'var(--theme-text-muted)' }}>
+                      <p className={`${isCompactDropdown ? 'text-[10px]' : 'text-xs'} mt-0.5 whitespace-nowrap`} style={{ color: 'var(--theme-text-muted)' }}>
                         {opt.sublabel}
                       </p>
                     )}

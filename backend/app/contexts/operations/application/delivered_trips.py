@@ -199,6 +199,32 @@ class UpdateDeliveredTrip:
         return await self.repo.get_by_id(DeliveredTripId(wid))
 
 
+class DeleteDeliveredTrip:
+    def __init__(
+        self,
+        repo: DeliveredTripRepository,
+        session: AsyncSession,
+    ) -> None:
+        self.repo = repo
+        self.session = session
+
+    async def __call__(self, wid: int, user: CurrentUserContext) -> None:
+        w = await self.repo.get_by_id(DeliveredTripId(wid))
+        if w is None:
+            raise NotFound("DeliveredTrip", wid)
+
+        if user.role == "driver":
+            if w.driver_id != user.id:
+                raise PermissionError("You can only delete your own work orders")
+            if w.matched:
+                raise AlreadyMatched("DeliveredTrip", wid)
+        elif user.role not in ("accountant", "director", "superadmin"):
+            raise PermissionError("Ban khong co quyen thuc hien thao tac nay")
+
+        await self.repo.delete(DeliveredTripId(wid))
+        await self.session.commit()
+
+
 class BatchCreateDeliveredTrips:
     """Create N DeliveredTrips, each in its own savepoint so partial
     failures don't roll back the whole batch."""

@@ -14,6 +14,7 @@ from fastapi.responses import StreamingResponse
 from app.contexts.operations.application import (
     CreateDeliveredTrip,
     CurrentUserContext,
+    DeleteDeliveredTrip,
     GetDeliveredTrip,
     ListDeliveredTrips,
     UpdateDeliveredTrip,
@@ -26,6 +27,7 @@ from app.contexts.operations.application.dto import (
 from app.contexts.operations.domain.entities import DeliveredTrip
 from app.contexts.operations.interface.dependencies import (
     get_create_delivered_trip,
+    get_delete_delivered_trip,
     get_get_delivered_trip,
     get_list_delivered_trips,
     get_update_delivered_trip,
@@ -322,6 +324,18 @@ async def update_delivered_trip(
         return await _load_one(use_case.session, w)
     except Exception as exc:
         _logger.exception("Failed to load WO#%s after update", delivered_trip_id)
+        raise translate(exc)
+
+
+@router.delete("/delivered-trips/{delivered_trip_id:int}", status_code=204)
+async def delete_delivered_trip(
+    delivered_trip_id: int,
+    current_user: User = Depends(get_current_user),
+    use_case: DeleteDeliveredTrip = Depends(get_delete_delivered_trip),
+):
+    try:
+        await use_case(delivered_trip_id, _user_ctx(current_user))
+    except Exception as exc:
         raise translate(exc)
 
 

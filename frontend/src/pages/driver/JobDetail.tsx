@@ -1,10 +1,11 @@
 import {
   Calendar, Building2, Ship, Package2, CheckCircle2, Clock,
-  MapPin, ArrowRight, Pencil, Wrench,
+  MapPin, ArrowRight, Pencil, Wrench, Trash2,
 } from 'lucide-react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { formatCurrencyFull, getWorkTypeLabel } from '@/data/domain'
-import { useDeliveredTrip } from '@/hooks/use-queries'
+import { useDeliveredTrip, useDeleteDeliveredTrip } from '@/hooks/use-queries'
 
 // ── Group card with a small uppercase label above ─────────────────────────────
 function GroupCard({ label, children }: { label: string; children: React.ReactNode }) {
@@ -85,6 +86,17 @@ export function JobDetail() {
   const navigate = useNavigate()
   const jobId = Number(jobIdStr)
   const { data: job = null, isLoading: loading } = useDeliveredTrip(jobId)
+  const deleteTrip = useDeleteDeliveredTrip()
+  const [deleting, setDeleting] = useState(false)
+
+  function handleDelete() {
+    if (!window.confirm('Bạn có chắc muốn xóa chuyến này không?')) return
+    setDeleting(true)
+    deleteTrip.mutate(jobId, {
+      onSuccess: () => navigate(-1),
+      onError: () => setDeleting(false),
+    })
+  }
 
   if (loading) {
     return (
@@ -235,39 +247,47 @@ export function JobDetail() {
         </section>
       </div>
 
-      {/* ── Sticky edit button ── */}
-      {canEdit ? (
-        <div
-          className="fixed bottom-0 left-0 right-0 z-30 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
-          style={{
-            background: 'color-mix(in srgb, var(--theme-bg-primary, #fff) 92%, transparent)',
-            backdropFilter: 'blur(14px) saturate(140%)',
-            WebkitBackdropFilter: 'blur(14px) saturate(140%)',
-            borderTop: '1px solid var(--theme-border-default)',
-          }}
-        >
-          <button
-            onClick={() => navigate(`/driver/delivered-trips/${job.id}/edit`)}
-            className="w-full rounded-xl text-base font-bold flex items-center justify-center gap-2 touch-manipulation transition-all active:scale-[0.98]"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', height: '52px' }}
-          >
-            <Pencil className="w-4 h-4" /> Sửa chuyến
-          </button>
-        </div>
-      ) : (
-        <div
-          className="fixed bottom-0 left-0 right-0 z-30 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
-          style={{
-            background: 'color-mix(in srgb, var(--theme-bg-primary, #fff) 92%, transparent)',
-            backdropFilter: 'blur(14px)',
-            borderTop: '1px solid var(--theme-border-default)',
-          }}
-        >
+      {/* ── Sticky action bar ── */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-30 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        style={{
+          background: 'color-mix(in srgb, var(--theme-bg-primary, #fff) 92%, transparent)',
+          backdropFilter: 'blur(14px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(14px) saturate(140%)',
+          borderTop: '1px solid var(--theme-border-default)',
+        }}
+      >
+        {canEdit ? (
+          <div className="flex gap-2">
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="rounded-xl font-bold flex items-center justify-center gap-2 touch-manipulation transition-all active:scale-[0.98] shrink-0"
+              style={{
+                height: '52px',
+                width: '52px',
+                background: 'color-mix(in srgb, var(--theme-status-danger, #dc2626) 10%, transparent)',
+                color: 'var(--theme-status-danger, #dc2626)',
+                border: '1px solid color-mix(in srgb, var(--theme-status-danger, #dc2626) 20%, transparent)',
+                opacity: deleting ? 0.5 : 1,
+              }}
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => navigate(`/driver/delivered-trips/${job.id}/edit`)}
+              className="flex-1 rounded-xl text-base font-bold flex items-center justify-center gap-2 touch-manipulation transition-all active:scale-[0.98]"
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', height: '52px' }}
+            >
+              <Pencil className="w-4 h-4" /> Sửa chuyến
+            </button>
+          </div>
+        ) : (
           <p className="text-center text-xs py-2" style={{ color: 'var(--theme-text-muted)' }}>
             Chuyến đã được ghép — không thể chỉnh sửa
           </p>
-        </div>
-      )}
+        )}
+      </div>
     </>
   )
 }

@@ -11,6 +11,7 @@ from app.contexts.operations.application import (
     CreateBookedTripFromImport,
     CreateDeliveredTrip,
     DeleteBookedTrip,
+    DeleteDeliveredTrip,
     GetBookedTrip,
     GetDeliveredTrip,
     ListBookedTrips,
@@ -114,6 +115,13 @@ def get_update_delivered_trip(
     db: AsyncSession = Depends(get_db),
 ) -> UpdateDeliveredTrip:
     return UpdateDeliveredTrip(repo, db)
+
+
+def get_delete_delivered_trip(
+    repo: DeliveredTripRepository = Depends(get_delivered_trip_repository),
+    db: AsyncSession = Depends(get_db),
+) -> DeleteDeliveredTrip:
+    return DeleteDeliveredTrip(repo, db)
 
 
 def get_batch_create_delivered_trips(

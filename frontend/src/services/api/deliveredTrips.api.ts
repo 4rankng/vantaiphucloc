@@ -161,6 +161,15 @@ export async function ocrContainer(imageDataUrl: string, containerIndex: number)
   }
 }
 
+export async function deleteDeliveredTrip(id: number): Promise<ApiResponse<void>> {
+  try {
+    await api.delete(`/delivered-trips/${id}`)
+    return ok(undefined as unknown as void)
+  } catch (err) {
+    return fail(err)
+  }
+}
+
 export async function updateDeliveredTrip(id: number, data: DeliveredTripUpdatePayload): Promise<ApiResponse<DeliveredTrip>> {
   try {
     const res = await api.put(`/delivered-trips/${id}`, toSnake(data))

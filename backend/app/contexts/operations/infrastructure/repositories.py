@@ -244,3 +244,12 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         delivered_trip_to_orm(w, existing)
         await self.session.flush()
         return await self._hydrate(existing)
+
+    async def delete(self, wid: DeliveredTripId) -> None:
+        orm = (await self.session.execute(
+            select(DeliveredTripORM).where(DeliveredTripORM.id == int(wid))
+        )).scalar_one_or_none()
+        if orm is None:
+            return
+        await self.session.delete(orm)
+        await self.session.flush()
