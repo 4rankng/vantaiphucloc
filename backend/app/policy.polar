@@ -91,6 +91,13 @@ allow(user, "export", "Salary") if role_allow(user, "accountant");
 # driver can read own salary periods
 allow(user, "read_own_salary", "Salary") if role_allow(user, "driver");
 
+# ── Vehicles ────────────────────────────────────────────────────────
+
+allow(user, "read", "Vehicle") if role_allow(user, "driver");
+allow(user, "create", "Vehicle") if role_allow(user, "accountant");
+allow(user, "update", "Vehicle") if role_allow(user, "accountant");
+allow(user, "delete", "Vehicle") if role_allow(user, "accountant");
+
 # ── Salary Config ─────────────────────────────────────────────────
 
 allow(user, "read", "SalaryConfig") if role_allow(user, "driver");
