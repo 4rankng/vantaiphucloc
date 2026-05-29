@@ -28,7 +28,7 @@ function pad(n: number): string {
   return String(n).padStart(2, '0')
 }
 
-export type DateFormat = 'full' | 'short' | 'compact' | 'month'
+export type DateFormat = 'full' | 'short' | 'compact' | 'month' | 'datetime'
 
 /**
  * Format a date string for display.
@@ -36,6 +36,7 @@ export type DateFormat = 'full' | 'short' | 'compact' | 'month'
  * - `'full'`    → `DD/MM/YYYY`  e.g. "15/03/2026"
  * - `'short'`   → `DD/MM`       e.g. "15/03"
  * - `'compact'` → `DD/MM` if current year, `DD/MM/YYYY` otherwise
+ * - `'datetime'` → `DD/MM HH:mm` e.g. "15/03 14:30"
  * - `'month'`   → `MM/YYYY`     e.g. "03/2026"
  *
  * Returns `'—'` for null/undefined/invalid input.
@@ -58,6 +59,8 @@ export function formatDate(
       return `${dd}/${mm}`
     case 'compact':
       return yyyy === new Date().getFullYear() ? `${dd}/${mm}` : `${dd}/${mm}/${yyyy}`
+    case 'datetime':
+      return `${dd}/${mm} ${pad(d.getHours())}:${pad(d.getMinutes())}`
     case 'month':
       return `${mm}/${yyyy}`
   }
