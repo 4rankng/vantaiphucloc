@@ -21,8 +21,6 @@ function MobileDriverHome() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { data: _deliveredTrips, isLoading: loading } = useDeliveredTrips({ driverId: Number(user!.id) })
-  const deliveredTrips = useMemo(() => _deliveredTrips?.items ?? [], [_deliveredTrips])
 
   // Filter persisted in URL (?filter=pending). Survives navigate(-1) back from trip detail.
   const filter = (searchParams.get('filter') as FilterTab | null) ?? 'all'
@@ -60,17 +58,24 @@ function MobileDriverHome() {
     )
   }, [setSearchParams])
 
+  // When config first loads, reset periodStart to the correct default.
+  // Without this, a stale URL param (?from=2026-05-21) persists even after
+  // config reveals the correct period should be April 21 → May 20.
+  const configLoaded = useRef(false)
+  useEffect(() => {
+    if (config && !configLoaded.current) {
+      configLoaded.current = true
+      _setPeriodStartState(defaultPeriod.startDate)
+    }
+  }, [config, defaultPeriod.startDate])
+
   // Recompute end date from start + config
   const currentPeriod = useMemo(
     () => getSalaryPeriodDates(periodStart, { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }),
     [periodStart, config?.fromDay, config?.toDay],
   )
 
-  // Always keep ?from= in sync with the DISPLAYED period start (currentPeriod.startDate).
-  // This covers the case where the user never manually navigates months — on initial
-  // load the period is computed from config (which may not be cached yet), so ?from=
-  // might not be set. Once currentPeriod.startDate is known, we write it to the URL
-  // so that navigate(-1) from trip detail always restores the correct period.
+  // Sync URL with current period start (covers config-load correction and navigation)
   const currentPeriodStartISO = toISODate(currentPeriod.startDate)
   useEffect(() => {
     setSearchParams(
@@ -84,9 +89,17 @@ function MobileDriverHome() {
     )
   }, [currentPeriodStartISO, setSearchParams])
 
-  // Fetch driver earnings for current period
+  // Fetch trips WITH date range so the API returns only the current period
   const startISO = currentPeriodStartISO
   const endISO = toISODate(currentPeriod.endDate)
+  const { data: _deliveredTrips, isLoading: loading } = useDeliveredTrips({
+    driverId: Number(user!.id),
+    dateFrom: startISO,
+    dateTo: endISO,
+  })
+  const deliveredTrips = useMemo(() => _deliveredTrips?.items ?? [], [_deliveredTrips])
+
+  // Fetch driver earnings for current period
   const { data: myEarnings } = useMyEarnings(startISO, endISO)
 
   // Reset visible count when period or filter changes
@@ -100,17 +113,9 @@ function MobileDriverHome() {
     setPeriodStart(getSalaryPeriodDates(dayAfter(currentPeriod.endDate), { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }).startDate)
   }, [currentPeriod.endDate, config?.fromDay, config?.toDay, setPeriodStart])
 
-  // Trips in the current pay period — used by the monthly stat card (always
-  // reflects the period total regardless of the active list filter).
+  // Trips in the current pay period (already filtered by API date range).
   // Uses tripDate (actual execution date) rather than createdAt (seed date).
-  const periodJobs = useMemo(() => {
-    const startDate = toISODate(currentPeriod.startDate)
-    const endDate = toISODate(currentPeriod.endDate)
-    return deliveredTrips.filter(w => {
-      const d = (w.tripDate ?? w.createdAt.slice(0, 10))
-      return d >= startDate && d <= endDate
-    })
-  }, [deliveredTrips, currentPeriod])
+  const periodJobs = deliveredTrips
 
   // Trips that match BOTH the period and the active list filter — used by the list.
   const filteredJobs = useMemo(() => {
