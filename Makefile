@@ -26,7 +26,7 @@ help:
 	@echo "  dev-worker       Start arq background worker"
 	@echo "  stop             Stop all Docker infra services"
 	@echo "  clean            Kill stale dev processes"
-	@echo "  api-test         Run integration tests against live dev backend"
+	@echo "  api-test         Run integration + smoke tests against live dev backend"
 	@echo "  lint             Run ruff (backend) and eslint (frontend)"
 	@echo "  test             Run all checks (backend lint+format+tests, frontend lint+build+tests)"
 	@echo ""
@@ -135,8 +135,11 @@ clean:
 		fi; \
 	done
 
-## api-test: Run integration tests against the live dev backend (localhost:8100)
+## api-test: Run integration + smoke tests against the live dev backend (localhost:8100)
 api-test:
+	@echo "Running API smoke tests against http://localhost:$(BACKEND_PORT)..."
+	cd tests && python api_tests.py
+	@echo ""
 	@echo "Running integration tests against http://localhost:$(BACKEND_PORT)..."
 	cd tests && pytest integration/ -v --tb=short -s
 
