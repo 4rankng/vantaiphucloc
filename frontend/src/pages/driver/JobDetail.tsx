@@ -49,12 +49,6 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-function getContSize(contType: string | null): string | null {
-  if (!contType) return null
-  const m = contType.match(/(\d+)/)
-  return m ? m[1] : null
-}
-
 export function JobDetail() {
   const { jobId: jobIdStr } = useParams<{ jobId: string }>()
   const navigate = useNavigate()
@@ -99,7 +93,6 @@ export function JobDetail() {
   const dateStr = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
   const canEdit = !job.bookedTripId
   const contTypeLabel = job.contType ?? null
-  const contSize = getContSize(job.contType)
   const workTypeLabel = getWorkTypeLabel(job.workType) ?? job.workType ?? null
 
   return (
@@ -151,12 +144,26 @@ export function JobDetail() {
             <div className="relative z-10">
               {/* top row */}
               <div className="flex items-center justify-between mb-3.5">
-                <span
-                  className="text-[10.5px] font-bold uppercase tracking-[0.16em]"
-                  style={{ color: 'var(--text-3, #8A938F)' }}
-                >
-                  Container
-                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-[10.5px] font-bold uppercase tracking-[0.16em]"
+                    style={{ color: 'var(--text-3, #8A938F)' }}
+                  >
+                    Container
+                  </span>
+                  {contTypeLabel && (
+                    <span
+                      className="px-2 py-[3px] rounded-[6px] text-[11px] font-bold tracking-[0.6px]"
+                      style={{
+                        background: 'var(--brand-soft, #E6F2EB)',
+                        color: 'var(--brand, #005A2D)',
+                        fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+                      }}
+                    >
+                      {contTypeLabel}
+                    </span>
+                  )}
+                </div>
                 <StatusPill booked={isMatched} />
               </div>
 
@@ -170,25 +177,6 @@ export function JobDetail() {
               >
                 {job.contNumber || '—'}
               </div>
-
-              {/* type chip + label */}
-              {contTypeLabel && (
-                <div className="flex items-center gap-2.5 mt-3.5">
-                  <span
-                    className="px-2.5 py-[5px] rounded-[7px] text-[11px] font-bold tracking-[0.5px]"
-                    style={{
-                      background: 'var(--brand-soft, #E6F2EB)',
-                      color: 'var(--brand, #005A2D)',
-                      fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-                    }}
-                  >
-                    {contTypeLabel}
-                  </span>
-                  <span className="text-[12px] font-medium" style={{ color: 'var(--text-2, #5B6661)' }}>
-                    Loại container{contSize ? ` · ${contSize} feet` : ''}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         </div>

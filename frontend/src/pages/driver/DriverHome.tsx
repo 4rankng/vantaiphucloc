@@ -170,8 +170,8 @@ function MobileDriverHome() {
 
   // Use on-the-fly earnings from backend if available, otherwise fallback to local calc
   const earningsValue = myEarnings?.totalEarnings ?? totalEarnings
-  const displayMonth = currentPeriod.startDate.getMonth() + 1
-  const displayYear = currentPeriod.startDate.getFullYear()
+  const displayMonth = currentPeriod.endDate.getMonth() + 1
+  const displayYear = currentPeriod.endDate.getFullYear()
 
   return (
     <div className="space-y-4">
