@@ -6,7 +6,7 @@ import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { DeliveredTripCard } from '@/components/shared/DeliveredTripCard'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { useMyEarnings, useSalaryConfig, useDeliveredTrips } from '@/hooks/use-queries'
-import { getSalaryPeriodDates, dayBefore, dayAfter, toISODate } from '@/utils/salaryPeriod'
+import { getSalaryPeriodDates, getSalaryPeriodForMonth, dayBefore, dayAfter, toISODate } from '@/utils/salaryPeriod'
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
 
 const PAGE_SIZE = 10
@@ -40,10 +40,12 @@ function MobileDriverHome() {
   // Salary period config + navigation
   const { data: config } = useSalaryConfig()
   const now = useMemo(() => new Date(), [])
-  const defaultPeriod = useMemo(
-    () => getSalaryPeriodDates(now, { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }),
-    [now, config?.fromDay, config?.toDay],
-  )
+  const defaultPeriod = useMemo(() => {
+    if (!config) return getSalaryPeriodDates(now, { fromDay: 1, toDay: 31 })
+    // Use the salary month whose toDay falls in the current calendar month.
+    // e.g. today=May 29, fromDay=21, toDay=20 → salary month = May → April 21 → May 20
+    return getSalaryPeriodForMonth(now.getFullYear(), now.getMonth() + 1, config)
+  }, [now, config])
 
   // PeriodStart persisted in URL (?from=2026-04-21). Survives navigate(-1) back from trip detail.
   const periodStartParam = searchParams.get('from')
