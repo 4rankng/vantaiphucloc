@@ -9,7 +9,7 @@ import {
   type AISuggestionResponse,
   type UnmatchResponse,
 } from '@/services/api/autoMatch.api'
-import { queryKeys } from '@/hooks/query-keys'
+import { queryKeys, invalidateDeliveredTripDeps } from '@/hooks/query-keys'
 
 export function useAutoMatchPreview() {
   return useMutation<AutoMatchPreviewResponse, Error, { dateFrom?: string; dateTo?: string }>({
@@ -33,14 +33,7 @@ export function useConfirmAutoMatch() {
       if (!res.success) throw new Error(res.error || 'Confirm matches failed')
       return res.data
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
-      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
-      qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
-    },
+    onSuccess: () => invalidateDeliveredTripDeps(qc),
   })
 }
 
@@ -62,12 +55,6 @@ export function useUnmatchTrip() {
       if (!res.success) throw new Error(res.error || 'Unmatch failed')
       return res.data
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
-      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
-      qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-    },
+    onSuccess: () => invalidateDeliveredTripDeps(qc),
   })
 }

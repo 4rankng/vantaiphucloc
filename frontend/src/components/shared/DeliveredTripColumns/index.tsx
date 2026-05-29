@@ -1,8 +1,8 @@
 import { Loader2, Unlink } from 'lucide-react'
 import { type Column } from '@/components/shared/DataTable'
 import { getWorkTypeLabel } from '@/data/domain'
-import { formatMatchDate as formatDate } from '@/lib/match-utils'
-import { formatDate as formatDateTime } from '@/lib/format'
+import { formatMatchDate } from '@/lib/match-utils'
+import { formatDate } from '@/lib/format'
 import type { DeliveredTrip } from '@/data/domain'
 
 function money(val: number | undefined | null): string {
@@ -79,7 +79,7 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
           className="tabular-nums"
           style={{ color: 'var(--ink-2)', fontFamily: 'var(--theme-font-mono)', fontSize: 12.5 }}
         >
-          {formatDate(t.tripDate)}
+          {formatMatchDate(t.tripDate)}
         </span>
       ),
     },
@@ -271,7 +271,7 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
           className="tabular-nums"
           style={{ color: 'var(--ink-2)', fontFamily: 'var(--theme-font-mono)', fontSize: 12.5 }}
         >
-          {formatDateTime(t.createdAt, 'datetime')}
+          {formatDate(t.createdAt, 'datetime')}
         </span>
       ),
     },

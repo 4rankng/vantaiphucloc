@@ -1,6 +1,5 @@
 import { api } from './client'
 import { toCamel, toSnake, ok, fail, isNetworkError, unwrapPaginated } from './utils'
-import { setCache, getCache } from '@/lib/offline-db'
 import { offlineQueue } from '@/lib/offline-queue'
 import type { DeliveredTrip, ApiResponse, PaginatedResult } from '@/data/domain'
 
@@ -70,7 +69,6 @@ export async function getDeliveredTrip(id: number): Promise<ApiResponse<Delivere
 }
 
 export async function getDeliveredTrips(filters?: DeliveredTripFilters): Promise<ApiResponse<PaginatedResult<DeliveredTrip>>> {
-  const cacheKey = `delivered-trips:${filters?.clientId || ''}:${filters?.driverId || ''}:${filters?.vendorId || ''}:${filters?.matched ?? ''}:${filters?.dateFrom || ''}:${filters?.dateTo || ''}:${filters?.search || ''}:p${filters?.page || 1}:s${filters?.pageSize || 50}:sb${filters?.sortBy || ''}:so${filters?.sortOrder || ''}`
   try {
     const params: Record<string, string> = {}
     if (filters?.clientId) params.client_id = String(filters.clientId)
@@ -86,11 +84,8 @@ export async function getDeliveredTrips(filters?: DeliveredTripFilters): Promise
     params.page_size = String(filters?.pageSize ?? 50)
     const res = await api.get('/delivered-trips', { params })
     const result = unwrapPaginated<DeliveredTrip>(res.data, (raw) => toCamel<DeliveredTrip>(raw))
-    await setCache(cacheKey, result)
     return ok(result)
   } catch (err) {
-    const cached = await getCache<PaginatedResult<DeliveredTrip>>(cacheKey)
-    if (isNetworkError(err) && cached) return ok(cached)
     return fail(err)
   }
 }
@@ -101,13 +96,7 @@ export async function createDeliveredTrip(
   const snakeBody = toSnake(data)
   try {
     const res = await api.post('/delivered-trips', snakeBody)
-    const wo = toCamel<DeliveredTrip>(res.data)
-    const cacheKey = `delivered-trips:${data.driverId || ''}:${data.clientId || ''}`
-    const cached = await getCache<DeliveredTrip[]>(cacheKey)
-    if (cached) {
-      await setCache(cacheKey, [wo, ...cached])
-    }
-    return ok(wo)
+    return ok(toCamel<DeliveredTrip>(res.data))
   } catch (err) {
     if (isNetworkError(err)) {
       await offlineQueue.enqueue({
@@ -118,6 +107,7 @@ export async function createDeliveredTrip(
       // Offline path: enqueue and return a placeholder; server will fill in
       // the canonical (nested) shape when it syncs back. We don't fabricate
       // ClientSummary/DriverSummary/LocationSummary here.
+      const now = new Date().toISOString()
       return ok({
         id: -Date.now(),
         contNumber: data.contNumber ?? null,
@@ -125,11 +115,14 @@ export async function createDeliveredTrip(
         client: { id: data.clientId, name: '', code: null },
         pickupLocation: { id: data.pickupLocationId, name: '' },
         dropoffLocation: { id: data.dropoffLocationId, name: '' },
-        driver: { id: data.driverId, name: '' },
-        vessel: data.vessel ?? undefined,
+        driver: data.driverId ? { id: data.driverId, name: '' } : null,
+        vessel: data.vessel ?? null,
+        workType: data.workType ?? null,
+        tripDate: data.tripDate ?? null,
         revenue: 0,
         driverSalary: 0,
-        createdAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
         bookedTripId: null,
         pendingSync: true,
       } satisfies DeliveredTrip)

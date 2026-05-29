@@ -22,6 +22,8 @@ export type { UserAccount, UserProfile }
 
 // ─── Query key factories ─────────────────────────────────────────────────────
 
+import type { QueryClient } from '@tanstack/react-query'
+
 export const queryKeys = {
   clients: ['clients'] as const,
   client: (id: number) => ['clients', id] as const,
@@ -64,4 +66,18 @@ export const queryKeys = {
   vendorRoutePricings: ['vendor-route-pricings'] as const,
   vendorRoutePricingsFiltered: (filters?: { vendorId?: number; workType?: string }) =>
     ['vendor-route-pricings', filters] as const,
+}
+
+/**
+ * Invalidate all query caches that depend on delivered-trip data.
+ * Call this after any mutation that changes delivered trips (create, update,
+ * delete, match, unmatch, import).
+ */
+export function invalidateDeliveredTripDeps(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
+  qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
+  qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
+  qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+  qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
+  qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
 }

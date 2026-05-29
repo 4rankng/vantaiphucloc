@@ -1,6 +1,6 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { queryKeys } from '../query-keys'
+import { queryKeys, invalidateDeliveredTripDeps } from '../query-keys'
 import type { ApiResponse, DeliveredTrip, PaginatedResult } from '@/data/domain'
 import type { DeliveredTripSortBy, SortOrder } from '@/services/api/deliveredTrips.api'
 
@@ -26,7 +26,8 @@ export function useDeliveredTripsInfinite(filters?: {
     ],
     queryFn: async ({ pageParam }) => {
       const res = await apiClient.getDeliveredTrips({ ...filters, page: pageParam as number, pageSize: PAGE_SIZE })
-      return unwrap(res)
+      if (res.success) return res.data
+      return { items: [], total: 0, page: pageParam as number, pageSize: PAGE_SIZE, totalPages: 0 }
     },
     refetchOnMount: 'always',
     initialPageParam: 1,
@@ -81,12 +82,7 @@ export function useCreateDeliveredTrip() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: Parameters<typeof apiClient.createDeliveredTrip>[0]) => apiClient.createDeliveredTrip(data).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
-    },
+    onSuccess: () => invalidateDeliveredTripDeps(qc),
   })
 }
 
@@ -96,13 +92,9 @@ export function useUpdateDeliveredTrip() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: DeliveredTripUpdatePayload }) => apiClient.updateDeliveredTrip(id, data).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
+      invalidateDeliveredTripDeps(qc)
       qc.invalidateQueries({ queryKey: ['suggest-matches'] })
       qc.invalidateQueries({ queryKey: ['suggest-wos'] })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
     },
   })
 }
@@ -112,13 +104,7 @@ export function useDeleteDeliveredTrip() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => apiClient.deleteDeliveredTrip(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
-    },
+    onSuccess: () => invalidateDeliveredTripDeps(qc),
   })
 }
 

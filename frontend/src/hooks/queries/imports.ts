@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
+import { invalidateDeliveredTripDeps } from '@/hooks/query-keys'
 import type { ApiResponse } from '@/data/domain'
 
 function unwrap<T>(res: ApiResponse<T>): T {
@@ -12,13 +13,7 @@ export function useBulkImportAndMatch() {
   return useMutation({
     mutationFn: ({ file, clientId }: { file: File; clientId?: number }) =>
       apiClient.bulkImportAndMatch(file, clientId).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
-    },
+    onSuccess: () => invalidateDeliveredTripDeps(qc),
   })
 }
 
@@ -47,13 +42,7 @@ export function useCommitCustomerExcel() {
   return useMutation({
     mutationFn: (body: Parameters<typeof apiClient.commitCustomerExcel>[0]) =>
       apiClient.commitCustomerExcel(body),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
-    },
+    onSuccess: () => invalidateDeliveredTripDeps(qc),
   })
 }
 
@@ -62,13 +51,7 @@ export function useUploadVendorReconciliation() {
   return useMutation({
     mutationFn: ({ file, vendorId }: { file: File; vendorId: number }) =>
       apiClient.uploadVendorReconciliation(file, vendorId).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
-    },
+    onSuccess: () => invalidateDeliveredTripDeps(qc),
   })
 }
 
@@ -84,13 +67,7 @@ export function useCommitVendorReconciliation() {
   return useMutation({
     mutationFn: (body: { vendorId: number; rows: Record<string, unknown>[] }) =>
       apiClient.commitVendorReconciliation(body.vendorId, body.rows).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
-    },
+    onSuccess: () => invalidateDeliveredTripDeps(qc),
   })
 }
 
@@ -99,13 +76,7 @@ export function useUploadDriverReconciliation() {
   return useMutation({
     mutationFn: ({ file }: { file: File }) =>
       apiClient.uploadDriverReconciliation(file).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
-    },
+    onSuccess: () => invalidateDeliveredTripDeps(qc),
   })
 }
 
@@ -121,13 +92,7 @@ export function useCommitDriverReconciliation() {
   return useMutation({
     mutationFn: (body: { rows: Record<string, unknown>[] }) =>
       apiClient.commitDriverReconciliation(body.rows).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
-    },
+    onSuccess: () => invalidateDeliveredTripDeps(qc),
   })
 }
 
@@ -151,4 +116,3 @@ export function useToggleTripConfirmation() {
     },
   })
 }
-
