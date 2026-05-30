@@ -237,7 +237,7 @@ export function useFleetManager() {
     async (id: number) => {
       try {
         await deleteVehicle.mutateAsync(id)
-        toast.success('Đã vô hiệu hoá xe')
+        toast.success('Đã xoá xe')
       } catch {
         toast.error('Không thể xoá xe')
       }
@@ -249,7 +249,7 @@ export function useFleetManager() {
     async (id: number) => {
       try {
         await deleteDriver.mutateAsync(id)
-        toast.success('Đã vô hiệu hoá lái xe')
+        toast.success('Đã xoá lái xe')
       } catch {
         toast.error('Không thể xoá lái xe')
       }

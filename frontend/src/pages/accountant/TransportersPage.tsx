@@ -361,8 +361,8 @@ function FleetSection() {
         onConfirm={handleDeleteVehicleConfirm}
         title="Xoá xe?"
         entityName={deleteVehicleTarget?.plate ?? ''}
-        warningText="sẽ bị vô hiệu hoá. Tất cả phân công lái xe cũng sẽ bị gỡ."
-        confirmLabel="Vô hiệu hoá"
+        warningText="sẽ bị xoá vĩnh viễn khỏi hệ thống. Tất cả phân công lái xe cũng sẽ bị xoá."
+        confirmLabel="Xoá"
         loading={deleteVehiclePending}
       />
 
@@ -370,10 +370,10 @@ function FleetSection() {
         open={!!deleteDriverTarget}
         onClose={() => setDeleteDriverTarget(null)}
         onConfirm={handleDeleteDriverConfirm}
-        title="Vô hiệu hoá lái xe?"
+        title="Xoá lái xe?"
         entityName={deleteDriverTarget?.name ?? ''}
-        warningText="sẽ bị vô hiệu hoá. Tài khoản không thể đăng nhập và tất cả phân công xe sẽ bị gỡ."
-        confirmLabel="Vô hiệu hoá"
+        warningText="sẽ bị xoá vĩnh viễn khỏi hệ thống. Tất cả phân công xe cũng sẽ bị xoá."
+        confirmLabel="Xoá"
         loading={deleteDriverPending}
       />
     </div>

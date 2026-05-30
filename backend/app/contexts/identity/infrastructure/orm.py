@@ -33,7 +33,7 @@ class UserORM(Base):
     id = Column(Integer, primary_key=True, index=True)
     phone = Column(String(20), unique=True, index=True, nullable=True)
     email = Column(String(255), unique=True, nullable=True, index=True)
-    username = Column(String(100), nullable=False, index=True)
+    username = Column(String(100), nullable=False, unique=True, index=True)
     full_name = Column(String(200), nullable=True)
     cccd = Column(String(12), unique=True, nullable=True, index=True)
     hashed_password = Column(String(255), nullable=False)

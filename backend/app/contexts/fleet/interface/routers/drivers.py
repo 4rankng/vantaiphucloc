@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import math
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.exc import IntegrityError
 from redis.asyncio import Redis
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -33,7 +34,7 @@ from app.database import get_db
 from app.core.deps import get_current_user, require_permission
 from app.core.redis import get_redis
 from app.models.base import User
-from app.models.domain import Vehicle, VehicleDriver
+from app.models.domain import DeliveredTrip, Vehicle, VehicleDriver
 from app.schemas.base import PaginatedResponse
 
 router = APIRouter()
@@ -119,7 +120,15 @@ async def create_driver(
         full_name=body.full_name,
         password=body.password,
     )
-    dto = await use_case(payload)
+    try:
+        dto = await use_case(payload)
+    except IntegrityError as e:
+        await db.rollback()
+        if "username" in str(e.orig):
+            raise HTTPException(status_code=409, detail="Tên đăng nhập đã tồn tại")
+        if "phone" in str(e.orig):
+            raise HTTPException(status_code=409, detail="Số điện thoại đã tồn tại")
+        raise HTTPException(status_code=409, detail="Thông tin bị trùng lặp")
 
     # Optionally assign vehicle plate in the same transaction
     assigned_plate: str | None = None
@@ -166,8 +175,6 @@ async def update_driver(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    from fastapi import HTTPException
-
     user = (await db.execute(
         select(User).where(User.id == driver_id, User.role == "driver")
     )).scalar_one_or_none()
@@ -181,8 +188,16 @@ async def update_driver(
     if body.phone is not None:
         user.phone = body.phone
 
-    await db.commit()
-    await db.refresh(user)
+    try:
+        await db.commit()
+        await db.refresh(user)
+    except IntegrityError as e:
+        await db.rollback()
+        if "username" in str(e.orig):
+            raise HTTPException(status_code=409, detail="Tên đăng nhập đã tồn tại")
+        if "phone" in str(e.orig):
+            raise HTTPException(status_code=409, detail="Số điện thoại đã tồn tại")
+        raise HTTPException(status_code=409, detail="Thông tin bị trùng lặp")
 
     plate_row = await resolve_driver_plate(db, driver_id)
 
@@ -277,8 +292,11 @@ async def delete_driver(
     )).scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="Driver not found")
-    user.is_active = False
-    await deactivate_existing_assignments(db, driver_id)
+    # Null out FK references that don't cascade
+    await db.execute(update(Vehicle).where(Vehicle.driver_id == driver_id).values(driver_id=None))
+    await db.execute(update(DeliveredTrip).where(DeliveredTrip.driver_id == driver_id).values(driver_id=None))
+    # Hard delete — VehicleDriver, DriverSalaryConfig, DriverSalary cascade via ondelete="CASCADE"
+    await db.delete(user)
     await db.commit()
     await CacheManager(redis).invalidate_namespace("drivers")
     return None
