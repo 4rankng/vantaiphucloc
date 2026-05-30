@@ -27,16 +27,18 @@ export function DriverEditRow({
 }: DriverEditRowProps) {
   const initial: DriverRowFormData = {
     fullName: driver.fullName ?? '',
+    username: driver.username ?? '',
     phone: driver.phone ?? '',
     plate: driver.vehiclePlate ?? '',
   }
   const [plateInput, setPlateInput] = useState('')
   const fullNameRef = useRef<HTMLInputElement>(null)
+  const usernameRef = useRef<HTMLInputElement>(null)
   const phoneRef = useRef<HTMLInputElement>(null)
 
   const { activeField, setActiveField } = useActiveField<FocusableField>(
     initialFocus ?? 'fullName',
-    { fullName: fullNameRef, phone: phoneRef }
+    { fullName: fullNameRef, username: usernameRef, phone: phoneRef }
   )
 
   const { form, set, handleSave } = useInlineEditForm<DriverRowFormData>({
@@ -51,7 +53,7 @@ export function DriverEditRow({
       (v) => v.plate.toLowerCase() === plateInput.toLowerCase().trim()
     )
 
-  const isLastColumn = activeField === 'plate'
+  const isLastColumn = activeField === 'plate' || activeField === 'phone'
   const floatingActions = (
     <div
       style={{
@@ -89,20 +91,29 @@ export function DriverEditRow({
         </td>
       ) : (
         <td style={tdHidden} onClick={() => setActiveField('fullName')}>
-          <span
-            className="text-[13px] font-semibold"
-            style={{ color: 'var(--ink)' }}
-          >
-            {form.fullName || driver.username}
+          <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>
+            {form.fullName || '—'}
           </span>
-          {form.fullName && (
-            <span
-              className="block text-[11px] font-mono"
-              style={{ color: 'var(--ink-3)' }}
-            >
-              {driver.username}
-            </span>
-          )}
+        </td>
+      )}
+
+      {activeField === 'username' ? (
+        <td style={tdActive}>
+          <input
+            ref={usernameRef}
+            className="nepo-input text-[12px] font-mono"
+            style={{ minWidth: 70, flex: 1 }}
+            value={form.username}
+            onChange={(e) => set('username', e.target.value)}
+            placeholder="Tài khoản"
+          />
+          {floatingActions}
+        </td>
+      ) : (
+        <td style={tdHidden} onClick={() => setActiveField('username')}>
+          <span className="text-[12px] font-mono" style={{ color: 'var(--ink-2)' }}>
+            {form.username}
+          </span>
         </td>
       )}
 

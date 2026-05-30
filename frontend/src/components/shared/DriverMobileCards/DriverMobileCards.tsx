@@ -132,11 +132,12 @@ export function DriverMobileEditCard({
   vehicles,
 }: DriverMobileEditCardProps) {
   const [fullName, setFullName] = useState(driver.fullName ?? '')
+  const [username, setUsername] = useState(driver.username ?? '')
   const [phone, setPhone] = useState(driver.phone ?? '')
   const [plate, setPlate] = useState(driver.vehiclePlate ?? '')
 
   const handleSave = () => {
-    onSave({ fullName, phone, plate })
+    onSave({ fullName, username, phone, plate })
   }
 
   return (
@@ -160,13 +161,28 @@ export function DriverMobileEditCard({
             className="text-[11px] font-semibold uppercase"
             style={{ color: 'var(--ink-2)' }}
           >
-            Họ tên *
+            Họ tên
           </label>
           <input
             className="nepo-input text-xs w-full"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="Họ tên"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label
+            className="text-[11px] font-semibold uppercase"
+            style={{ color: 'var(--ink-2)' }}
+          >
+            Tài khoản *
+          </label>
+          <input
+            className="nepo-input text-xs w-full font-mono"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Tên đăng nhập"
           />
         </div>
 

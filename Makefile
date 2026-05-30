@@ -42,6 +42,7 @@ help:
 	@echo "  deploy-backend   Pull & restart backend + worker on droplet"
 	@echo "  deploy-frontend  Pull & restart frontend on droplet"
 	@echo "  backup           Dump production PostgreSQL DB → OneDrive"
+	@echo "  restore          Restore latest backup to local dev DB"
 
 # ── Install & DB ───────────────────────────────────────────────────────────────
 
@@ -194,6 +195,25 @@ deploy-frontend:
 
 ## deploy-all: Pull & restart all services on droplet
 deploy-all: deploy-backend deploy-frontend
+
+## restore: Restore latest backup from OneDrive to local dev PostgreSQL
+restore:
+	@BACKUP_DIR="/Users/dev/Library/CloudStorage/OneDrive-Personal/backup/phucloc_mysql_backup" && \
+	LATEST=$$(ls -t "$$BACKUP_DIR"/phucloc_pg_backup_*.sql.gz 2>/dev/null | head -1) && \
+	if [ -z "$$LATEST" ]; then echo "❌ No backup files found in $$BACKUP_DIR"; exit 1; fi && \
+	echo "📂 Using backup: $$LATEST" && \
+	echo "📊 Size: $$(du -h "$$LATEST" | cut -f1)" && \
+	echo "⏳ Decompressing..." && \
+	gunzip -k -f "$$LATEST" && \
+	SQL_FILE="$${LATEST%.gz}" && \
+	echo "🗑️  Dropping and recreating local database..." && \
+	docker exec vantai_postgres psql -U postgres -c "DROP DATABASE IF EXISTS vantaihanghoa;" && \
+	docker exec vantai_postgres psql -U postgres -c "CREATE DATABASE vantaihanghoa;" && \
+	echo "📥 Restoring backup into local database..." && \
+	docker exec -i vantai_postgres psql -U postgres -d vantaihanghoa < "$$SQL_FILE" && \
+	echo "🧹 Cleaning up decompressed file..." && \
+	rm -f "$$SQL_FILE" && \
+	echo "✅ Restore complete!"
 
 ## backup: Dump production PostgreSQL DB to OneDrive
 backup:

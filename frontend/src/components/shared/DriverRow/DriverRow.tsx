@@ -23,16 +23,13 @@ export function DriverRow({
           className="text-[13px] font-semibold"
           style={{ color: 'var(--ink)' }}
         >
-          {driver.fullName || driver.username}
+          {driver.fullName || '—'}
         </span>
-        {driver.fullName && (
-          <span
-            className="block text-[11px] font-mono"
-            style={{ color: 'var(--ink-3)' }}
-          >
-            {driver.username}
-          </span>
-        )}
+      </td>
+      <td onClick={() => onEdit('username')}>
+        <span className="text-[12px] font-mono" style={{ color: 'var(--ink-2)' }}>
+          {driver.username}
+        </span>
       </td>
       <td onClick={() => onEdit('phone')}>
         <span className="text-[13px]" style={{ color: 'var(--ink-2)' }}>

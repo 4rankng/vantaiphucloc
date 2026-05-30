@@ -141,7 +141,7 @@ function FleetSection() {
         {driversWithoutVehicle > 0 && <StatPill count={driversWithoutVehicle} label=" lái chưa có xe" />}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-6 items-start">
         <section>
           <div className="flex items-center gap-2 mb-3">
             <SearchInput value={fleetSearch} onChange={handleFleetSearch} placeholder="Tìm biển số, lái xe…" />
@@ -272,6 +272,7 @@ function FleetSection() {
                       <thead>
                         <tr>
                           <th className="text-left">Họ tên</th>
+                          <th className="text-left">Tài khoản</th>
                           <th className="text-left">SĐT</th>
                           <th className="text-left">Biển số</th>
                           <th className="w-10" />

@@ -20,11 +20,12 @@ import { groupByVehicle } from '@/lib/accounting-utils'
 import { useInfiniteScroll } from '@/components/shared/ListUtils'
 import type { Driver } from '@/data/domain'
 
-export type FocusableField = 'fullName' | 'phone' | 'plate'
+export type FocusableField = 'fullName' | 'username' | 'phone' | 'plate'
 export type FocusState = FocusableField | null
 
 export interface DriverRowFormData {
   fullName: string
+  username: string
   phone: string
   plate: string
 }
@@ -145,6 +146,9 @@ export function useFleetManager() {
         const updates: Record<string, string> = {}
         if (data.fullName !== (driver.fullName ?? '')) {
           updates.full_name = data.fullName
+        }
+        if (data.username !== (driver.username ?? '')) {
+          updates.username = data.username
         }
         if (data.phone !== (driver.phone ?? '')) {
           updates.phone = data.phone
