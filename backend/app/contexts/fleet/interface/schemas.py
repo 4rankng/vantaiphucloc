@@ -12,6 +12,7 @@ class DriverCreateIn(BaseModel):
     phone: str | None = None
     full_name: str | None = None
     password: str | None = None
+    plate: str | None = None
 
 
 class DriverResetPasswordIn(BaseModel):

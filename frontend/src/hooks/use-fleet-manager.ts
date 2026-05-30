@@ -109,39 +109,31 @@ export function useFleetManager() {
 
   const addVehicle = useCallback(
     async (plate: string) => {
-      await createVehicle.mutateAsync(plate, {
-        onSuccess: () => {
-          toast.success('Đã thêm xe')
-          qc.invalidateQueries({ queryKey: ['vehicles'] })
-          qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
-        },
-        onError: () => toast.error('Không thể thêm xe'),
-      })
+      try {
+        await createVehicle.mutateAsync(plate)
+        toast.success('Đã thêm xe')
+      } catch {
+        toast.error('Không thể thêm xe')
+      }
     },
-    [createVehicle, toast, qc]
+    [createVehicle, toast]
   )
 
   const handleCreateDriver = useCallback(
     async (data: { username: string; fullName: string; phone: string; plate: string; password?: string }) => {
-      await createDriver.mutateAsync(
-        { username: data.username, fullName: data.fullName, phone: data.phone, password: data.password },
-        {
-          onSuccess: async (newDriver) => {
-            if (data.plate.trim() && newDriver?.id) {
-              try {
-                await api.put(`/drivers/${newDriver.id}/vehicle`, { plate: data.plate.trim() })
-              } catch {
-                // non-critical
-              }
-            }
-            toast.success('Đã thêm lái xe')
-            qc.invalidateQueries({ queryKey: ['drivers'] })
-            qc.invalidateQueries({ queryKey: ['vehicles'] })
-            qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
-          },
-          onError: () => toast.error('Không thể thêm lái xe'),
-        }
-      )
+      try {
+        await createDriver.mutateAsync({
+          username: data.username,
+          fullName: data.fullName,
+          phone: data.phone,
+          password: data.password,
+          plate: data.plate.trim() || undefined,
+        })
+        toast.success('Đã thêm lái xe')
+        qc.invalidateQueries({ queryKey: ['vehicles'] })
+      } catch {
+        toast.error('Không thể thêm lái xe')
+      }
     },
     [createDriver, toast, qc]
   )
@@ -160,12 +152,22 @@ export function useFleetManager() {
         if (Object.keys(updates).length > 0) {
           await updateDriver.mutateAsync({ id: driver.id, data: updates })
         }
-        if (data.plate !== (driver.vehiclePlate ?? '')) {
-          await api.put(`/drivers/${driver.id}/vehicle`, { plate: data.plate })
-        }
+        // Refresh UI with name/phone changes before attempting vehicle update
         qc.invalidateQueries({ queryKey: ['drivers'] })
         qc.invalidateQueries({ queryKey: ['vehicles'] })
         qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
+
+        if (data.plate !== undefined && data.plate !== (driver.vehiclePlate ?? '')) {
+          try {
+            await api.put(`/drivers/${driver.id}/vehicle`, { plate: data.plate })
+          } catch {
+            // Vehicle update failed but name/phone were already saved
+            toast.error('Đã lưu thông tin, nhưng không thể cập nhật biển số xe')
+            qc.invalidateQueries({ queryKey: ['drivers'] })
+            qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
+            return
+          }
+        }
         toast.success('Đã lưu thay đổi')
       } catch {
         toast.error('Không thể lưu')
@@ -179,31 +181,26 @@ export function useFleetManager() {
 
   const handleAddDriverToVehicle = useCallback(
     async (vehicleId: number, driverId: number, effectiveFrom: string) => {
-      await addVehicleDriver.mutateAsync(
-        { vehicleId, driverId, effectiveFrom },
-        {
-          onSuccess: () => {
-            toast.success('Đã thêm lái xe')
-            qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
-            qc.invalidateQueries({ queryKey: ['drivers'] })
-          },
-          onError: () => toast.error('Không thể thêm lái xe'),
-        }
-      )
+      try {
+        await addVehicleDriver.mutateAsync({ vehicleId, driverId, effectiveFrom })
+        toast.success('Đã thêm lái xe')
+        qc.invalidateQueries({ queryKey: ['drivers'] })
+      } catch {
+        toast.error('Không thể thêm lái xe')
+      }
     },
     [addVehicleDriver, toast, qc]
   )
 
   const confirmRemoveDriver = useCallback(
     async (vdId: number) => {
-      await removeVehicleDriver.mutateAsync(vdId, {
-        onSuccess: () => {
-          toast.success('Đã gỡ lái xe')
-          qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
-          qc.invalidateQueries({ queryKey: ['drivers'] })
-        },
-        onError: () => toast.error('Không thể gỡ lái xe'),
-      })
+      try {
+        await removeVehicleDriver.mutateAsync(vdId)
+        toast.success('Đã gỡ lái xe')
+        qc.invalidateQueries({ queryKey: ['drivers'] })
+      } catch {
+        toast.error('Không thể gỡ lái xe')
+      }
     },
     [removeVehicleDriver, toast, qc]
   )
@@ -238,30 +235,26 @@ export function useFleetManager() {
 
   const handleDeleteVehicle = useCallback(
     async (id: number) => {
-      await deleteVehicle.mutateAsync(id, {
-        onSuccess: () => {
-          toast.success('Đã vô hiệu hoá xe')
-          qc.invalidateQueries({ queryKey: ['vehicles'] })
-          qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
-        },
-        onError: () => toast.error('Không thể xoá xe'),
-      })
+      try {
+        await deleteVehicle.mutateAsync(id)
+        toast.success('Đã vô hiệu hoá xe')
+      } catch {
+        toast.error('Không thể xoá xe')
+      }
     },
-    [deleteVehicle, toast, qc]
+    [deleteVehicle, toast]
   )
 
   const handleDeleteDriver = useCallback(
     async (id: number) => {
-      await deleteDriver.mutateAsync(id, {
-        onSuccess: () => {
-          toast.success('Đã vô hiệu hoá lái xe')
-          qc.invalidateQueries({ queryKey: ['drivers'] })
-          qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
-        },
-        onError: () => toast.error('Không thể xoá lái xe'),
-      })
+      try {
+        await deleteDriver.mutateAsync(id)
+        toast.success('Đã vô hiệu hoá lái xe')
+      } catch {
+        toast.error('Không thể xoá lái xe')
+      }
     },
-    [deleteDriver, toast, qc]
+    [deleteDriver, toast]
   )
 
   return {

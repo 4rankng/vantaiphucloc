@@ -38,7 +38,7 @@ export async function getDriversPaged(filters?: DriverFilters): Promise<ApiRespo
 }
 
 export async function createDriver(
-  data: { username: string; fullName?: string; phone: string; password?: string },
+  data: { username: string; fullName?: string; phone: string; password?: string; plate?: string },
 ): Promise<ApiResponse<Driver>> {
   try {
     const res = await api.post('/drivers', toSnake(data))

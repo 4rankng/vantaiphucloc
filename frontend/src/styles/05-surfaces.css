@@ -1,0 +1,71 @@
+/* ─── Glass overlay (header / bottom nav ONLY) ──────────── */
+.glass-overlay {
+  background: var(--theme-glass-bg, rgba(255, 255, 255, 0.85));
+  backdrop-filter: var(--theme-glass-blur, blur(12px) saturate(1.4));
+  -webkit-backdrop-filter: var(--theme-glass-blur, blur(12px) saturate(1.4));
+}
+
+/* ─── Card — solid, hairline border, flat ────────────── */
+.card {
+  background: var(--theme-bg-secondary, #ffffff);
+  border: 1px solid var(--theme-border-default, #e4e4e7);
+  border-radius: var(--theme-radius-lg, 10px);
+  transition: border-color 150ms ease;
+}
+.card:hover {
+  border-color: #d4d4d8;
+}
+
+/* Interactive variant — pressable */
+.card-interactive {
+  background: var(--theme-bg-secondary, #ffffff);
+  border: 1px solid var(--theme-border-default, #e4e4e7);
+  border-radius: var(--theme-radius-lg, 10px);
+  cursor: pointer;
+  transition: border-color 150ms ease;
+}
+.card-interactive:hover {
+  border-color: var(--theme-border-strong, #d4d4d8);
+}
+
+/* Legacy alias kept */
+.glass-card {
+  background: var(--theme-bg-secondary, #ffffff);
+  border: 1px solid var(--theme-border-default, #e4e4e7);
+  border-radius: var(--theme-radius-lg, 10px);
+}
+
+/* ─── Surface (page section without card chrome) ─────── */
+.surface {
+  background: var(--theme-bg-secondary, #ffffff);
+  border-radius: var(--theme-radius-lg, 10px);
+}
+
+/* ─── Section divider (Linear-style hairline) ────────── */
+.divider-h {
+  height: 1px;
+  background: var(--theme-border-default, #e4e4e7);
+  width: 100%;
+}
+.divider-v {
+  width: 1px;
+  background: var(--theme-border-default, #e4e4e7);
+  align-self: stretch;
+}
+
+/* ─── Page container — consistent padding/max-width ──── */
+.page-container {
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px;
+}
+@media (min-width: 768px) {
+  .page-container { padding: 20px 24px; }
+}
+@media (min-width: 1280px) {
+  .page-container {
+    padding: 24px 32px;
+    max-width: 1440px;
+  }
+}
+

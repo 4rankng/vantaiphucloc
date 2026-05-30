@@ -1,0 +1,138 @@
+/* ─── Safe areas ────────────────────────────────────────── */
+.safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* ─── Layout shell variables ──────────────────────────── */
+:root {
+  --shell-topbar-h: 4rem;
+  --shell-bottomnav-h: 3.5rem;
+  --shell-safe-top: env(safe-area-inset-top, 0px);
+  --shell-safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Typography fallbacks */
+  --theme-font-display: "Be Vietnam Pro", system-ui, sans-serif;
+  --theme-font-body: "Be Vietnam Pro", system-ui, sans-serif;
+  --theme-font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Glass tokens (kept for legacy consumers) */
+  --glass-bg: rgba(255, 255, 255, 0.70);
+  --glass-blur: blur(14px) saturate(140%);
+  --surface-bg: #ffffff;
+  --surface-border: rgba(0, 0, 0, 0.06);
+
+  /* Shadow tokens — flat design, no depth */
+  --theme-shadow-card: none;
+  --theme-shadow-sm: none;
+  --theme-shadow-elevated: none;
+
+  /* Subtle dashboard accents */
+  --gradient-primary: linear-gradient(135deg, #00B14F 0%, #008B3E 100%);
+  --gradient-subtle: linear-gradient(180deg, #F7F8FA 0%, #EEF0F4 100%);
+  --shadow-sm: 0 1px 2px 0 rgba(10, 10, 10, 0.04);
+  --shadow-md: 0 4px 14px rgba(10, 10, 10, 0.06), 0 1px 2px rgba(10, 10, 10, 0.03);
+  --shadow-glow: 0 8px 24px -8px rgba(0, 177, 79, 0.32);
+  --transition-smooth: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  --body-gradient: var(--theme-bg-primary);
+
+  /* ─── NEPO wireframe-native tokens (ported verbatim) ───
+     Use these directly in primitives that need full wireframe fidelity.
+     Color values mirror nepocorp/wireframe/nepo-accountant-wireframe.html. */
+  --ink: #0A0A0A;
+  --ink-2: #535963;
+  --ink-3: #8B919B;
+  --ink-4: #BABDC3;
+  --line: #EAECEF;
+  --line-2: #D6D9DE;
+  --line-3: #B8BCC4;
+  --surface: #FFFFFF;
+  --surface-2: #F7F8FA;
+  --surface-3: #EFF1F5;
+  --accent: #00B14F;
+  --accent-2: #008B3E;
+  --accent-soft: #E6F7EE;
+  --accent-ink: #004D22;
+  --success: #00B14F;
+  --success-soft: #E6F7EE;
+  --warning: #F5A623;
+  --warning-soft: #FFF4E0;
+  --danger: #E32434;
+  --danger-soft: #FFEAEC;
+  --info: #1E5BB8;
+  --info-soft: #DCE9FC;
+  --neutral-soft: #EFF1F5;
+  --r-sm: 8px;
+  --r: 12px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --sh-sm: 0 1px 2px rgba(10, 10, 10, 0.04);
+  --sh: 0 4px 14px rgba(10, 10, 10, 0.06), 0 1px 2px rgba(10, 10, 10, 0.03);
+  --sh-lg: 0 14px 44px rgba(10, 10, 10, 0.10), 0 4px 12px rgba(10, 10, 10, 0.04);
+  --sh-drawer: -20px 0 60px rgba(10, 10, 10, 0.15);
+  --sb-bg: #005A2D;
+  --sb-surface: rgba(255, 255, 255, 0.08);
+  --sb-line: rgba(255, 255, 255, 0.12);
+  --sb-text: rgba(255, 255, 255, 0.85);
+  --sb-text-muted: rgba(255, 255, 255, 0.55);
+  --sb-active: #FFFFFF;
+  --sb-active-bg: rgba(255, 255, 255, 0.15);
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  min-height: 100vh;
+}
+.shell-topbar {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--theme-header-border, rgba(0, 0, 0, 0.06));
+  color: var(--theme-text-primary);
+  padding-top: var(--shell-safe-top);
+}
+.shell-topbar-inner { height: var(--shell-topbar-h); }
+.shell-main { flex: 1; padding-bottom: calc(var(--shell-bottomnav-h) + var(--shell-safe-bottom)); }
+.shell-bottomnav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 50;
+  padding-bottom: var(--shell-safe-bottom);
+}
+
+/* ─── Sidebar scroll (hidden) ──────────────────────── */
+.sidebar-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.sidebar-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* ─── Touch targets ─────────────────────────────────────── */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+}
+
+/* ─── Skeleton shimmer ──────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(90deg,
+    var(--theme-skeleton-base, rgba(9,9,11,0.04)) 25%,
+    var(--theme-skeleton-shine, rgba(9,9,11,0.08)) 50%,
+    var(--theme-skeleton-base, rgba(9,9,11,0.04)) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* ─── Badge legacy ─────────────────────────────────────── */
+.badge-gold {
+  background: var(--theme-brand-primary, #059669);
+  color: white;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up { animation: slide-up 0.24s cubic-bezier(0.4, 0, 0.2, 1); }
+

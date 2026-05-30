@@ -2,9 +2,7 @@ import { useMemo } from 'react'
 import { ThemeProvider } from '@/themes'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ErrorBoundaryProvider } from '@/contexts/ErrorContext'
-import { OfflineProvider } from '@/contexts/OfflineContext'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
-import { OfflineIndicator } from '@/components/shared/OfflineIndicator'
 import { ToastProvider } from '@/components/atoms/Toast'
 import { RouterProvider } from 'react-router-dom'
 import { QueryProvider } from '@/contexts/QueryContext'
@@ -20,14 +18,11 @@ export default function App() {
       <AuthProvider>
         <QueryProvider>
           <ErrorBoundaryProvider>
-            <OfflineProvider>
-              <ToastProvider>
-                <ErrorBoundary component="App" level="app">
-                  <RouterProvider router={router} />
-                  <OfflineIndicator />
-                </ErrorBoundary>
-              </ToastProvider>
-            </OfflineProvider>
+            <ToastProvider>
+              <ErrorBoundary component="App" level="app">
+                <RouterProvider router={router} />
+              </ErrorBoundary>
+            </ToastProvider>
           </ErrorBoundaryProvider>
         </QueryProvider>
       </AuthProvider>

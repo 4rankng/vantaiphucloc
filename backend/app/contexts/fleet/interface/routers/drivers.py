@@ -22,6 +22,12 @@ from app.contexts.fleet.interface.dependencies import (
 )
 from app.contexts.identity.interface.dependencies import get_password_hasher
 from app.contexts.fleet.interface.schemas import DriverCreateIn, DriverOut, DriverResetPasswordIn
+from app.models.vehicle_helpers import (
+    deactivate_existing_assignments,
+    ensure_vehicle,
+    resolve_driver_plate,
+    resolve_driver_plates_batch,
+)
 from app.core.cache import CacheManager
 from app.database import get_db
 from app.core.deps import get_current_user, require_permission
@@ -78,19 +84,7 @@ async def list_drivers(
 
     # Load vehicle plates for these drivers via VehicleDriver
     driver_ids = [d.id for d in result.items]
-    plate_map: dict[int, str | None] = {}
-    if driver_ids:
-        vd_rows = (await db.execute(
-            select(VehicleDriver.driver_id, Vehicle.plate)
-            .join(Vehicle, Vehicle.id == VehicleDriver.vehicle_id)
-            .where(
-                VehicleDriver.driver_id.in_(driver_ids),
-                VehicleDriver.is_active == True,  # noqa: E712
-                Vehicle.is_active == True,  # noqa: E712
-            )
-        )).all()
-        for did, plate in vd_rows:
-            plate_map[did] = plate
+    plate_map = await resolve_driver_plates_batch(db, driver_ids)
 
     response = PaginatedResponse[DriverOut](
         items=[_to_out(d, plate_map.get(d.id)) for d in result.items],
@@ -117,21 +111,34 @@ async def create_driver(
     _current_user: User = Depends(require_permission("create", "Driver")),
     use_case: CreateDriver = Depends(get_create_driver),
     redis: Redis = Depends(get_redis),
+    db: AsyncSession = Depends(get_db),
 ):
-    if body.phone is None:
-        # Pre-DDD constraint: drivers' default password = phone, so phone is required.
-        from fastapi import HTTPException
-
-        raise HTTPException(status_code=400, detail="phone is required")
     payload = CreateDriverInput(
         username=body.username,
-        phone=body.phone,
+        phone=(body.phone.strip() if body.phone else None) or None,
         full_name=body.full_name,
         password=body.password,
     )
     dto = await use_case(payload)
+
+    # Optionally assign vehicle plate in the same transaction
+    assigned_plate: str | None = None
+    if body.plate and body.plate.strip():
+        from datetime import date as _date
+
+        plate = body.plate.strip().upper()
+        vehicle = await ensure_vehicle(db, plate)
+        await deactivate_existing_assignments(db, dto.id)
+        db.add(VehicleDriver(
+            vehicle_id=vehicle.id,
+            driver_id=dto.id,
+            effective_from=_date.today(),
+            is_active=True,
+        ))
+        assigned_plate = plate
+
     await CacheManager(redis).invalidate_namespace("drivers")
-    return _to_out(dto)
+    return _to_out(dto, plate=assigned_plate)
 
 
 # ── PUT /drivers/{id}/vehicle ─────────────────────────────────────────────────
@@ -177,15 +184,7 @@ async def update_driver(
     await db.commit()
     await db.refresh(user)
 
-    plate_row = (await db.execute(
-        select(Vehicle.plate)
-        .join(VehicleDriver, VehicleDriver.vehicle_id == Vehicle.id)
-        .where(
-            VehicleDriver.driver_id == driver_id,
-            VehicleDriver.is_active == True,  # noqa: E712
-            Vehicle.is_active == True,  # noqa: E712
-        )
-    )).scalar_one_or_none()
+    plate_row = await resolve_driver_plate(db, driver_id)
 
     await CacheManager(redis).invalidate_namespace("drivers")
     return DriverOut(
@@ -223,27 +222,8 @@ async def set_driver_vehicle(
         raise HTTPException(status_code=404, detail="Driver not found")
 
     plate = body.plate.strip().upper()
-
-    # Find or create the vehicle
-    vehicle = (await db.execute(
-        select(Vehicle).where(Vehicle.plate == plate, Vehicle.is_active == True)  # noqa: E712
-    )).scalar_one_or_none()
-    if vehicle is None:
-        vehicle = Vehicle(plate=plate, is_active=True)
-        db.add(vehicle)
-        await db.flush()
-
-    # Deactivate any existing active PRIMARY assignment for this driver
-    existing_vd = (await db.execute(
-        select(VehicleDriver).where(
-            VehicleDriver.driver_id == driver_id,
-            VehicleDriver.is_active == True,  # noqa: E712
-        )
-    )).scalars().all()
-    for vd in existing_vd:
-        vd.is_active = False
-        vd.effective_to = _date.today()
-
+    vehicle = await ensure_vehicle(db, plate)
+    await deactivate_existing_assignments(db, driver_id)
     db.add(VehicleDriver(
         vehicle_id=vehicle.id,
         driver_id=driver_id,
@@ -292,23 +272,13 @@ async def delete_driver(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    from datetime import date as _date
-
     user = (await db.execute(
         select(User).where(User.id == driver_id, User.role == "driver")
     )).scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="Driver not found")
     user.is_active = False
-    active_assignments = (await db.execute(
-        select(VehicleDriver).where(
-            VehicleDriver.driver_id == driver_id,
-            VehicleDriver.is_active == True,  # noqa: E712
-        )
-    )).scalars().all()
-    for vd in active_assignments:
-        vd.is_active = False
-        vd.effective_to = _date.today()
+    await deactivate_existing_assignments(db, driver_id)
     await db.commit()
     await CacheManager(redis).invalidate_namespace("drivers")
     return None

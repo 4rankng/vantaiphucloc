@@ -17,10 +17,12 @@ interface TripSummaryDialogProps {
   onClose: () => void
   contNumber?: string | null
   contType?: WorkType | null
+  workType?: WorkType | null
   clientName: string
   vessel?: string
   pickupLocation: string
   dropoffLocation: string
+  tripDate?: string
 }
 
 export function TripSummaryDialog({
@@ -29,10 +31,12 @@ export function TripSummaryDialog({
   onClose,
   contNumber,
   contType,
+  workType,
   clientName,
   vessel,
   pickupLocation,
   dropoffLocation,
+  tripDate,
 }: TripSummaryDialogProps) {
   const handleConfirm = () => {
     hapticSuccess()
@@ -62,6 +66,18 @@ export function TripSummaryDialog({
                     {contType}
                   </span>
                 )}
+              </p>
+            </div>
+          )}
+
+          {/* Operation / work type */}
+          {workType && (
+            <div>
+              <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                Tác nghiệp
+              </p>
+              <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+                {workType}
               </p>
             </div>
           )}
@@ -97,6 +113,18 @@ export function TripSummaryDialog({
               {pickupLocation} → {dropoffLocation}
             </p>
           </div>
+
+          {/* Trip date */}
+          {tripDate && (
+            <div>
+              <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                Ngày
+              </p>
+              <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+                {tripDate}
+              </p>
+            </div>
+          )}
         </div>
 
         <DialogFooter>

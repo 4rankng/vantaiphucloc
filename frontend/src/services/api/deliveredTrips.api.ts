@@ -1,6 +1,5 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, isNetworkError, unwrapPaginated } from './utils'
-import { offlineQueue } from '@/lib/offline-queue'
+import { toCamel, toSnake, ok, fail, unwrapPaginated } from './utils'
 import type { DeliveredTrip, ApiResponse, PaginatedResult } from '@/data/domain'
 
 export interface SuggestedRoute {
@@ -55,6 +54,7 @@ export interface DeliveredTripUpdatePayload {
   vehiclePlate?: string | null
   vessel?: string | null
   workType?: string | null
+  tripDate?: string | null
   revenue?: number
   driverSalary?: number
 }
@@ -93,40 +93,10 @@ export async function getDeliveredTrips(filters?: DeliveredTripFilters): Promise
 export async function createDeliveredTrip(
   data: DeliveredTripCreatePayload,
 ): Promise<ApiResponse<DeliveredTrip>> {
-  const snakeBody = toSnake(data)
   try {
-    const res = await api.post('/delivered-trips', snakeBody)
+    const res = await api.post('/delivered-trips', toSnake(data))
     return ok(toCamel<DeliveredTrip>(res.data))
   } catch (err) {
-    if (isNetworkError(err)) {
-      await offlineQueue.enqueue({
-        endpoint: '/api/v1/delivered-trips',
-        method: 'POST',
-        body: snakeBody,
-      })
-      // Offline path: enqueue and return a placeholder; server will fill in
-      // the canonical (nested) shape when it syncs back. We don't fabricate
-      // ClientSummary/DriverSummary/LocationSummary here.
-      const now = new Date().toISOString()
-      return ok({
-        id: -Date.now(),
-        contNumber: data.contNumber ?? null,
-        contType: data.contType ?? null,
-        client: { id: data.clientId, name: '', code: null },
-        pickupLocation: { id: data.pickupLocationId, name: '' },
-        dropoffLocation: { id: data.dropoffLocationId, name: '' },
-        driver: data.driverId ? { id: data.driverId, name: '' } : null,
-        vessel: data.vessel ?? null,
-        workType: data.workType ?? null,
-        tripDate: data.tripDate ?? null,
-        revenue: 0,
-        driverSalary: 0,
-        createdAt: now,
-        updatedAt: now,
-        bookedTripId: null,
-        pendingSync: true,
-      } satisfies DeliveredTrip)
-    }
     return fail(err)
   }
 }

@@ -1,9 +1,10 @@
 import { Pencil, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { formatCurrencyFull, getWorkTypeLabel } from '@/data/domain'
-import { useDeliveredTrip, useDeleteDeliveredTrip } from '@/hooks/use-queries'
+import { useDeliveredTrip, useDeleteDeliveredTrip, useUpdateDeliveredTrip } from '@/hooks/use-queries'
 import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
+import { DateNavigator } from '@/components/shared/DateNavigator'
 
 // ─── Status pill ──────────────────────────────────────────────────────────────
 function StatusPill({ booked }: { booked: boolean }) {
@@ -55,9 +56,45 @@ export function JobDetail() {
   const jobId = Number(jobIdStr)
   const { data: job = null, isLoading: loading } = useDeliveredTrip(jobId)
   const deleteTrip = useDeleteDeliveredTrip()
+  const updateTrip = useUpdateDeliveredTrip()
   const [deleting, setDeleting] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const isMatched = !!job?.bookedTripId
+
+  // Local trip date state — synced from server data, persisted on change
+  const [tripDate, setTripDate] = useState<string>('')
+  const [tripDateOriginal, setTripDateOriginal] = useState<string>('')
+
+  // Sync local date when job loads
+  useEffect(() => {
+    if (job) {
+      const iso = (job.tripDate ?? job.createdAt).slice(0, 10)
+      setTripDate(iso)
+      setTripDateOriginal(iso)
+    }
+  }, [job])
+
+  // Debounce date mutations — rapid arrow tapping only sends the final value
+  const dateDebounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+  useEffect(() => {
+    return () => { if (dateDebounceRef.current) clearTimeout(dateDebounceRef.current) }
+  }, [])
+
+  const handleDateChange = useCallback((newDate: string) => {
+    const prev = tripDate
+    setTripDate(newDate)
+
+    // Clear any pending mutation from a previous tap
+    if (dateDebounceRef.current) clearTimeout(dateDebounceRef.current)
+
+    // Debounce: only fire the API call after 300ms of inactivity
+    dateDebounceRef.current = setTimeout(() => {
+      updateTrip.mutate(
+        { id: jobId, data: { tripDate: newDate } },
+        { onError: () => setTripDate(prev) },
+      )
+    }, 300)
+  }, [jobId, updateTrip, tripDate])
 
   function handleDelete() {
     setDeleteDialogOpen(true)
@@ -89,8 +126,6 @@ export function JobDetail() {
     )
   }
 
-  const date = new Date(job.tripDate ?? job.createdAt)
-  const dateStr = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
   const canEdit = !job.bookedTripId
   const contTypeLabel = job.contType ?? null
   const workTypeLabel = getWorkTypeLabel(job.workType) ?? job.workType ?? null
@@ -191,22 +226,17 @@ export function JobDetail() {
               boxShadow: '0 1px 2px rgba(15,23,20,0.04)',
             }}
           >
-            {/* date row */}
-            <div className="flex items-center gap-2.5 mb-4">
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: 'var(--brand-soft, #E6F2EB)', color: 'var(--brand, #005A2D)' }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
-                </svg>
-              </div>
-              <span className="text-[14px] font-bold" style={{ color: 'var(--text, #0F1714)' }}>
-                {dateStr}
-              </span>
-              <span className="text-[11px] font-medium ml-auto" style={{ color: 'var(--text-3, #8A938F)' }}>
-                Ngày đi
-              </span>
+            {/* date navigator */}
+            <div className="mb-4">
+              <DateNavigator
+                value={tripDate}
+                onChange={handleDateChange}
+                originalLabel={tripDate !== tripDateOriginal ? (() => {
+                  const [y, m, d] = tripDateOriginal.split('-')
+                  return `${d}/${m}/${y}`
+                })() : null}
+                compact
+              />
             </div>
 
             {/* route visualisation */}

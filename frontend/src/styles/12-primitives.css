@@ -1,0 +1,123 @@
+/* ─── Modern button primitive (utility-style) ─────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  background: var(--theme-brand-primary);
+  color: var(--theme-text-on-brand);
+  border: 1px solid var(--theme-brand-primary);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+.btn-primary:hover:not(:disabled) { background: var(--theme-brand-primary-dark); border-color: var(--theme-brand-primary-dark); box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+.btn-primary:active:not(:disabled) { transform: scale(0.97); box-shadow: 0 1px 1px rgba(0,0,0,0.04); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1;
+  background: var(--theme-bg-secondary);
+  color: var(--theme-text-secondary);
+  border: 1px solid var(--theme-border-default);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+.btn-secondary:hover:not(:disabled) { background: var(--theme-bg-tertiary); }
+.btn-secondary:active:not(:disabled) { transform: scale(0.97); }
+.btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1;
+  background: transparent;
+  color: var(--theme-text-secondary);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+.btn-ghost:hover:not(:disabled) { background: var(--theme-bg-tertiary); color: var(--theme-text-primary); }
+.btn-ghost:active:not(:disabled) { transform: scale(0.97); }
+
+/* ─── Modern data table primitive ──────────────────────── */
+.table-modern {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.8125rem;
+}
+.table-modern thead th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--theme-text-muted);
+  border-bottom: 1px solid var(--theme-border-default);
+  background: var(--theme-bg-primary);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.table-modern tbody td {
+  padding: 12px;
+  font-size: 0.875rem;
+  color: var(--theme-text-primary);
+  border-bottom: 1px solid var(--theme-border-light);
+  vertical-align: middle;
+}
+.table-modern tbody tr:hover td { background: var(--theme-bg-tertiary); }
+.table-modern tbody tr:last-child td { border-bottom: none; }
+
+/* ─── Modern chip ──────────────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--theme-bg-tertiary);
+  color: var(--theme-text-secondary);
+  border: 1px solid var(--theme-border-default);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.chip-success { background: var(--theme-status-success-light); color: var(--theme-status-success-text); border-color: color-mix(in srgb, var(--theme-status-success) 18%, transparent); }
+.chip-warning { background: var(--theme-status-warning-light); color: var(--theme-status-warning-text); border-color: color-mix(in srgb, var(--theme-status-warning) 18%, transparent); }
+.chip-error   { background: var(--theme-status-error-light);   color: var(--theme-status-error-text);   border-color: color-mix(in srgb, var(--theme-status-error) 18%, transparent); }
+.chip-info    { background: var(--theme-status-info-light);    color: var(--theme-status-info-text);    border-color: color-mix(in srgb, var(--theme-status-info) 18%, transparent); }
+.chip-brand   { background: var(--theme-brand-primary-light);  color: var(--theme-brand-primary-dark); border-color: color-mix(in srgb, var(--theme-brand-primary) 22%, transparent); }
+

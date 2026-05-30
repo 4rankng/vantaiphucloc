@@ -104,7 +104,7 @@ export function DeliveredTripDetailDrawer({
                 <InlineEditable
                   display={
                     <span style={{ color: trip.vehiclePlate ? 'var(--ink)' : 'var(--ink-4)' }}>
-                      {trip.vehiclePlate ?? 'bất kỳ'}
+                      {trip.vehiclePlate || 'bất kỳ'}
                     </span>
                   }
                   value={trip.vehiclePlate ?? ''}

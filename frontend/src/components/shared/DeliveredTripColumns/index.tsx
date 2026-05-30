@@ -1,4 +1,4 @@
-import { Loader2, Unlink } from 'lucide-react'
+import { Loader2, Unlink, Trash2 } from 'lucide-react'
 import { type Column } from '@/components/shared/DataTable'
 import { getWorkTypeLabel } from '@/data/domain'
 import { formatMatchDate } from '@/lib/match-utils'
@@ -21,6 +21,10 @@ export interface DeliveredTripColumnsOptions {
   onUnmatch: (trip: DeliveredTrip) => void
   isUnmatchPending: boolean
   unmatchVariables?: number
+  /** Requests deletion of an unmatched trip — host confirms before mutating. */
+  onDelete: (trip: DeliveredTrip) => void
+  isDeletePending: boolean
+  deleteVariables?: number
 }
 
 export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Column<DeliveredTrip>[] {
@@ -32,7 +36,39 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
       render: (t) => {
         if (!t.bookedTripId) {
           return (
-            <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ml-3" style={{ background: '#f59e0b', opacity: 0.85 }} />
+            <button
+              title="Xoá chuyến này"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (opts.isDeletePending) return
+                opts.onDelete(t)
+              }}
+              disabled={opts.isDeletePending}
+              className="relative flex items-center justify-center w-7 h-7 rounded-lg transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ color: 'transparent', background: 'transparent' }}
+              onMouseEnter={e => {
+                const el = e.currentTarget
+                el.style.color = '#ef4444'
+                el.style.background = 'rgba(239,68,68,0.10)'
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget
+                el.style.color = 'transparent'
+                el.style.background = 'transparent'
+              }}
+            >
+              {opts.isDeletePending && opts.deleteVariables === t.id
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: '#ef4444' }} />
+                : (
+                  <>
+                    <span
+                      className="delete-dot absolute inline-block w-1.5 h-1.5 rounded-full"
+                      style={{ background: '#f59e0b' }}
+                    />
+                    <Trash2 className="delete-trash h-3.5 w-3.5" />
+                  </>
+                )}
+            </button>
           )
         }
         return (

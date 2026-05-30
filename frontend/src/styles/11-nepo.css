@@ -1,0 +1,557 @@
+/* ─── NEPO driver chip + editable cell ────────────────── */
+.nepo-driver-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 4px 3px 8px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.nepo-driver-chip__x {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--accent-ink);
+  opacity: 0.45;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.nepo-driver-chip__x:hover {
+  opacity: 1;
+  background: rgba(0, 77, 34, 0.12);
+}
+.nepo-driver-chip-add {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1.5px dashed var(--line-2);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.nepo-driver-chip-add:hover {
+  border-color: var(--accent);
+  border-style: solid;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.nepo-editable-cell {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  cursor: pointer;
+  text-align: right;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.nepo-editable-cell:hover {
+  border-color: var(--line-2);
+  background: var(--surface);
+}
+
+/* ─── NEPO dropzone (Excel import) ────────────────────── */
+.nepo-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  text-align: center;
+  background: var(--surface-2);
+  border: 2px dashed var(--line-2);
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.nepo-dropzone:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.nepo-dropzone.has-file {
+  border-color: var(--accent);
+  border-style: solid;
+  background: var(--accent-soft);
+}
+.nepo-dropzone.is-dragging {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ─── NEPO row action button (icon-only in table rows) ─── */
+.nepo-row-action {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--ink-3);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+  padding: 6px;
+  box-sizing: content-box;
+}
+.nepo-row-action:hover {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+.nepo-row-action:active { transform: scale(0.94); }
+
+/* ─── NEPO location row (button-as-row) ───────────────── */
+.nepo-location-row {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  min-height: 56px;
+}
+.nepo-location-row:hover { background: var(--surface-2); }
+
+/* ─── NEPO form primitives ───────────────────────────── */
+.nepo-field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+  letter-spacing: -0.005em;
+}
+.nepo-input,
+.nepo-select,
+.nepo-textarea {
+  display: block;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  font-size: 13.5px;
+  font-family: var(--theme-font-body);
+  color: var(--ink);
+  line-height: 1.4;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  min-height: 40px;
+}
+.nepo-input::placeholder,
+.nepo-textarea::placeholder {
+  color: var(--ink-3);
+}
+.nepo-input:focus,
+.nepo-select:focus,
+.nepo-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.nepo-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238B919B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+.nepo-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* ─── NEPO MonthNavigator button ─────────────────────── */
+.nepo-month-nav-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--ink-2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.nepo-month-nav-btn:hover {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+.nepo-month-nav-btn:active { transform: scale(0.96); }
+
+/* ─── NEPO Drawer ─────────────────────────────────────── */
+.nepo-drawer-close:hover {
+  background: var(--surface-3) !important;
+  color: var(--ink) !important;
+}
+.nepo-drawer-tab {
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-3);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+.nepo-drawer-tab:hover { color: var(--ink-2); }
+.nepo-drawer-tab.is-active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+/* ─── NEPO DataTable ──────────────────────────────────── */
+.nepo-table {
+  font-size: 13.5px;
+  letter-spacing: -0.008em; /* slight tightening — denser data reads better */
+  color: var(--ink);
+  width: 100%;
+}
+.nepo-table thead th {
+  padding: 10px 16px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line-2);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-2);  /* was --ink-3, slightly higher contrast improves readability */
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.nepo-table tbody td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+  color: var(--ink-2);
+  white-space: nowrap;
+  /* Numeric columns (right-aligned) get tabular figures automatically */
+}
+/* Right-aligned cells — assume numeric, apply tabular nums + mono feel */
+.nepo-table tbody td.text-right {
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.01em;
+}
+.nepo-table tbody tr {
+  transition: background 0.12s ease;
+}
+.nepo-table tbody tr:hover:not(.is-selected):not(.nepo-tr-expanded) {
+  background: var(--surface-2);
+}
+.nepo-table tbody tr:hover:not(.is-selected) td {
+  color: var(--ink);
+}
+.nepo-table tbody tr.is-selected {
+  background: var(--accent-soft);
+}
+.nepo-table tbody tr.row-pending {
+  background: rgba(255, 250, 205, 0.35);
+}
+/* Delete button: show trash icon on row hover, hide dot */
+.nepo-table tbody tr.row-pending .delete-dot {
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+.nepo-table tbody tr.row-pending:hover .delete-dot {
+  opacity: 0;
+}
+.nepo-table tbody tr.row-pending .delete-trash {
+  opacity: 0;
+  color: #ef4444;
+  transition: opacity 0.15s;
+}
+.nepo-table tbody tr.row-pending:hover .delete-trash {
+  opacity: 1;
+}
+.nepo-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.nepo-table tbody tr.nepo-tr-expanded {
+  background: var(--surface-2);
+}
+.nepo-table tbody tr.nepo-tr-expanded td {
+  padding: 0;
+  border-bottom: 1px solid var(--line);
+}
+.nepo-table tfoot.nepo-tfoot td {
+  padding: 13px 16px;
+  border-top: 2px solid var(--line-2);
+  font-weight: 700;
+  font-size: 13.5px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ─── Optional zebra striping — add class nepo-table--zebra ── */
+.nepo-table--zebra tbody tr:nth-child(even) td {
+  background: var(--surface-2);
+}
+.nepo-table--zebra tbody tr:nth-child(even).is-selected td {
+  background: var(--accent-soft);
+}
+.nepo-th-sticky,
+.nepo-td-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-right: 1.5px solid var(--line-2, #D6D9DE) !important;
+  box-shadow: 2px 0 4px rgba(10, 10, 10, 0.03);
+}
+.nepo-table thead .nepo-th-sticky {
+  z-index: 3;
+  background: var(--surface-2);
+}
+.nepo-table tfoot.nepo-tfoot .nepo-td-sticky {
+  background: var(--surface-2);
+}
+
+/* Horizontal scroll visual cue */
+.nepo-table-scroll {
+  scrollbar-width: thin;
+  -ms-overflow-style: auto;
+  position: relative;
+}
+.nepo-table-scroll::-webkit-scrollbar {
+  height: 5px;
+  display: block;
+}
+.nepo-table-scroll::-webkit-scrollbar-track {
+  background: var(--surface-2);
+}
+.nepo-table-scroll::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 3px;
+}
+.nepo-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--line-3);
+}
+
+/* ─── Accent column (net pay / profit) ───────────────── */
+.nepo-col-net {
+  border-left: 2px solid var(--line-2) !important;
+}
+.nepo-table thead th.nepo-col-net {
+  color: var(--ink-2);
+}
+
+/* ─── NEPO Toolbar primitives ─────────────────────────── */
+.nepo-filter-pill {
+  padding: 7px 11px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+.nepo-filter-pill:hover:not(.is-active) {
+  border-color: var(--line-2);
+  background: var(--surface);
+}
+.nepo-filter-pill svg { color: var(--ink-3); }
+.nepo-filter-pill.is-active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+.nepo-filter-pill.is-active svg { color: rgba(255,255,255,0.6); }
+
+.nepo-toolbar-search input {
+  padding: 7px 11px 7px 32px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 12.5px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.nepo-toolbar-search input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.nepo-toolbar-search input::placeholder { color: var(--ink-3); }
+
+/* ─── NEPO KPI grid + hover ───────────────────────────── */
+.nepo-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 1100px) {
+  .nepo-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .nepo-kpi-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.nepo-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sh);
+}
+
+/* ─── NEPO KPI card — responsive typography via container queries ── */
+.nepo-kpi { container-type: inline-size; }
+
+.nepo-kpi__label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+}
+.nepo-kpi__value {
+  font-family: var(--theme-font-display);
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-bottom: 6px;
+  color: var(--ink);
+}
+.nepo-kpi__unit {
+  margin-left: 2px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.nepo-kpi__meta {
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+/* Card ≤ 260px wide — e.g. 4-col on a 1100px viewport */
+@container (max-width: 260px) {
+  .nepo-kpi__value { font-size: 26px; }
+  .nepo-kpi__unit  { font-size: 13px; }
+  .nepo-kpi__label { font-size: 11px; }
+  .nepo-kpi__meta  { font-size: 10.5px; }
+}
+/* Card ≤ 200px wide — narrow 4-col or compact layout */
+@container (max-width: 200px) {
+  .nepo-kpi__value { font-size: 20px; letter-spacing: -0.02em; }
+  .nepo-kpi__unit  { font-size: 11px; }
+  .nepo-kpi__label { font-size: 10px; }
+  .nepo-kpi__meta  { font-size: 10px; }
+}
+
+/* ─── Director Dashboard KPI card — container-query font scaling ── */
+.dir-kpi-value { font-size: 34px; }
+.dir-kpi-unit  { font-size: 12px; }
+
+/* 4-col at xl (≥1280px): cards ~270px — slightly tighter */
+@container (max-width: 300px) {
+  .dir-kpi-value { font-size: 26px; }
+  .dir-kpi-unit  { font-size: 11px; }
+}
+/* Very narrow cards */
+@container (max-width: 220px) {
+  .dir-kpi-value { font-size: 20px; letter-spacing: -0.015em; }
+  .dir-kpi-unit  { font-size: 10px; }
+}
+
+/* ─── NEPO Sidebar (dark green) ───────────────���───────── */
+.nepo-sidebar-section-label {
+  /* Body font — mono was wrong here; labels are navigation text, not code */
+  font-family: var(--theme-font-body);
+  font-size: 10.5px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--sb-text-muted);
+}
+.nepo-nav-item {
+  position: relative;
+  color: var(--sb-text);
+  background: transparent;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.nepo-nav-item:hover {
+  background: var(--sb-active-bg);
+  color: var(--sb-active);
+}
+.nepo-nav-item.is-active {
+  background: var(--sb-active-bg);
+  color: var(--sb-active);
+  font-weight: 600;
+}
+.nepo-nav-item.is-active::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  background: #FFFFFF;
+  border-radius: 0 3px 3px 0;
+}
+.nepo-sidebar-footer-btn {
+  color: var(--sb-text-muted);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.nepo-sidebar-footer-btn:hover {
+  background: var(--sb-active-bg);
+  color: #FFFFFF;
+}
+.nepo-sidebar-brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  font-family: var(--theme-font-display);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: -0.04em;
+  flex-shrink: 0;
+}
+
+/* ─── NEPO Button hover overrides (style-prop friendly) ───
+   The Button primitive sets background/border/color via inline style
+   for theming. These selectors win because they're more specific
+   than the style attribute, since style attrs are technically inline. */
+.nepo-btn-default:hover:not(:disabled) {
+  background: var(--theme-brand-primary-dark) !important;
+}
+.nepo-btn-outline:hover:not(:disabled),
+.nepo-btn-secondary:hover:not(:disabled) {
+  background: var(--theme-bg-tertiary) !important;
+  border-color: var(--ink-3) !important;
+}
+.nepo-btn-danger:hover:not(:disabled) {
+  background: var(--danger-soft) !important;
+}
+.nepo-btn-ghost:hover:not(:disabled) {
+  background: var(--theme-bg-tertiary) !important;
+  color: var(--theme-text-primary) !important;
+}
+.nepo-btn-muted:hover:not(:disabled) {
+  background: var(--surface-3) !important;
+  color: var(--theme-text-primary) !important;
+}
+

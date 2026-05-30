@@ -1,0 +1,80 @@
+/* ─── Animations ────────────────────────────────────────── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.animate-slide-in     { animation: slideInRight 0.24s cubic-bezier(0.4, 0, 0.2, 1); }
+.animate-fade-slide-up { animation: fadeSlideUp 0.28s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.animate-fade-in       { animation: fadeIn 0.2s ease both; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .entity-row-enter {
+    animation: fadeSlideUp 260ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+}
+
+@keyframes pill-appear {
+  from { transform: translateY(-50%) scaleY(0); }
+  to   { transform: translateY(-50%) scaleY(1); }
+}
+.animate-pill-appear { animation: pill-appear 0.18s cubic-bezier(0.4, 0, 0.2, 1); }
+
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.65; }
+}
+.animate-badge-pulse { animation: badge-pulse 2s ease-in-out infinite; }
+
+.stagger-1 { animation-delay: 0.04s; }
+.stagger-2 { animation-delay: 0.08s; }
+.stagger-3 { animation-delay: 0.12s; }
+.stagger-4 { animation-delay: 0.16s; }
+.stagger-5 { animation-delay: 0.20s; }
+.stagger-6 { animation-delay: 0.24s; }
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-page-enter {
+  animation: page-enter 280ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes scale-pop {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-scale-pop {
+  animation: scale-pop 220ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.card-hover-lift {
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.card-hover-lift:hover {
+  border-color: var(--theme-border-strong, rgba(9,9,11,0.18)) !important;
+}
+
+/* ─── Container scanner video (kept) ──────────────────── */
+.scanner-video { width: 100%; height: 100%; overflow: hidden; }
+.scanner-video > div { width: 100% !important; height: 100% !important; }
+.scanner-video video {
+  object-fit: cover !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+}
+

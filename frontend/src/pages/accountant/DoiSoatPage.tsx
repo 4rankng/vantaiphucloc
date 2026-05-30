@@ -34,6 +34,7 @@ import {
   useAutoMatchPreview,
   useConfirmAutoMatch,
   useUnmatchTrip,
+  useDeleteDeliveredTrip,
 } from '@/hooks/use-queries'
 
 // ─── Status filter type ───────────────────────────────────────────────────────
@@ -78,6 +79,10 @@ export function DoiSoatPage() {
   const autoMatchPreview = useAutoMatchPreview()
   const confirmMatch = useConfirmAutoMatch()
   const unmatch = useUnmatchTrip()
+  const deleteTrip = useDeleteDeliveredTrip()
+
+  // Delete confirmation — only available for unmatched trips
+  const [deleteTarget, setDeleteTarget] = useState<DeliveredTrip | null>(null)
 
   // Unmatch confirmation — destructive action, must confirm (consistency with
   // "Gỡ lái xe" / "Xoá địa điểm" patterns elsewhere in the app). Previously
@@ -188,7 +193,10 @@ export function DoiSoatPage() {
     onUnmatch: (trip) => setUnmatchTarget(trip),
     isUnmatchPending: unmatch.isPending,
     unmatchVariables: unmatch.variables as number | undefined,
-  }), [unmatch])
+    onDelete: (trip) => setDeleteTarget(trip),
+    isDeletePending: deleteTrip.isPending,
+    deleteVariables: deleteTrip.variables as number | undefined,
+  }), [unmatch, deleteTrip])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -434,6 +442,30 @@ export function DoiSoatPage() {
         warningText="sẽ được tách khỏi đơn hàng đã ghép và quay lại danh sách chờ ghép."
         confirmLabel="Bỏ ghép"
         loading={unmatch.isPending}
+      />
+
+      {/* ── Delete confirmation (destructive) ── */}
+      <DangerConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (!deleteTarget) return
+          const id = deleteTarget.id
+          setDeleteTarget(null)
+          deleteTrip.mutate(id)
+        }}
+        title="Xoá chuyến đã đi?"
+        entityName={
+          deleteTarget
+            ? [
+                deleteTarget.contNumber || `Chuyến #${deleteTarget.id}`,
+                deleteTarget.tripDate ? `(${deleteTarget.tripDate})` : '',
+              ].filter(Boolean).join(' ')
+            : ''
+        }
+        warningText="sẽ bị xoá vĩnh viễn và không thể khôi phục."
+        confirmLabel="Xoá"
+        loading={deleteTrip.isPending}
       />
     </div>
   )

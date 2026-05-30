@@ -3,7 +3,6 @@ import { Bell, UserCircle, ArrowLeft, Menu } from 'lucide-react'
 import { NotificationPanel } from '@/components/shared/NotificationPanel/NotificationPanel'
 import { useUnreadCount } from '@/components/shared/NotificationPanel/useUnreadCount'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
-import { OfflineTopBarIcon } from '@/components/shared/OfflineIndicator/OfflineIndicator'
 
 /**
  * AppTopBar — top bar used across all mobile app screens.
@@ -129,9 +128,6 @@ export function AppTopBar(props: AppTopBarProps) {
         {/* ── Right ── */}
         <div className="flex items-center gap-2 shrink-0">
           {props.actions}
-
-          {/* Offline icon */}
-          <OfflineTopBarIcon />
 
           {/* Bell */}
           <button

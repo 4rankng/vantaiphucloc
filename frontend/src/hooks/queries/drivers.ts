@@ -35,7 +35,7 @@ export function useDriversPaged(filters?: DriverFilters) {
 export function useCreateDriver() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { username: string; fullName?: string; phone: string; password?: string }) =>
+    mutationFn: (data: { username: string; fullName?: string; phone: string; password?: string; plate?: string }) =>
       apiClient.createDriver(data).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['drivers'] })

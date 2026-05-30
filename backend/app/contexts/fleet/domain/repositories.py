@@ -27,7 +27,7 @@ class DriverRepository(ABC):
         self,
         *,
         username: str,
-        phone: str,
+        phone: str | None,
         hashed_password: str,
         full_name: str | None = None,
     ) -> Driver: ...

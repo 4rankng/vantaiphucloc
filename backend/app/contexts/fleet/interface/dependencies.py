@@ -26,4 +26,5 @@ def get_create_driver(
     repo: DriverRepository = Depends(get_driver_repository),
     hasher=Depends(get_password_hasher),
 ) -> CreateDriver:
-    return CreateDriver(repo, password_hasher=hasher)
+    from app.config import settings
+    return CreateDriver(repo, password_hasher=hasher, default_password=settings.DEFAULT_DRIVER_PASSWORD)

@@ -62,12 +62,14 @@ class CreateDriver:
         repo: DriverRepository,
         *,
         password_hasher,
+        default_password: str,
     ) -> None:
         self.repo = repo
         self.hasher = password_hasher
+        self.default_password = default_password
 
     async def __call__(self, payload: CreateDriverInput) -> DriverDTO:
-        raw_password = payload.password or payload.phone
+        raw_password = payload.password or self.default_password
         hashed = self.hasher.hash(raw_password)
         driver = await self.repo.create(
             username=payload.username,

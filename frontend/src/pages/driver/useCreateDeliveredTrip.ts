@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { useOffline } from '@/contexts/OfflineContext'
 import { apiClient } from '@/services/api'
 import { useLocations, useProfile } from '@/hooks/use-queries'
+import { useRecentValues } from '@/hooks/use-recent-values'
 import type { PhotoMeta } from '@/components/shared/ContainerScanner'
 import type { Client, ContType, WorkType, DeliveredTrip } from '@/data/domain'
 import { CONT_TYPES } from '@/data/domain'
+import { toISODate, shiftISODate, formatISODate } from '@/utils/salaryPeriod'
 
 /**
  * ContainerForm — per-container row of the create-trip form.
@@ -72,7 +73,6 @@ function woToContainers(wo: DeliveredTrip): ContainerForm[] {
 export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | null) {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { isOnline } = useOffline()
   const isEdit = !!existingDeliveredTrip
 
   // Reference data
@@ -80,6 +80,11 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   const [recentOrders, setRecentOrders] = useState<DeliveredTrip[]>([])
   const { data: locations = [] } = useLocations()
   const { data: profile } = useProfile()
+
+  // Recent vessel values (per-driver, stored in localStorage)
+  const { recentValues: recentVessels, addRecent: addRecentVessel } = useRecentValues(
+    `ttransport_recent_vessels_${user?.id ?? 'anon'}`
+  )
 
   // Form state — pre-populate from existing WO when editing
   const [containers, setContainers] = useState<ContainerForm[]>(
@@ -89,6 +94,11 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   const [vessel, setVessel] = useState(existingDeliveredTrip?.vessel ?? '')
   const [pickupLocation, setPickupLocation] = useState(existingDeliveredTrip?.pickupLocation.name ?? '')
   const [dropoffLocation, setDropoffLocation] = useState(existingDeliveredTrip?.dropoffLocation.name ?? '')
+  const [tripDate, setTripDate] = useState<string>(
+    existingDeliveredTrip?.tripDate
+      ? existingDeliveredTrip.tripDate.slice(0, 10)
+      : toISODate(new Date())
+  )
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
 
   // UI state
@@ -152,12 +162,10 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     const idx = activeContIdx
     setContainers(prev => prev.map((c, i) =>
       i === idx
-        ? { ...c, photoTaken: true, photoDataUrl: imageSrc, photoLat: meta.lat, photoLng: meta.lng, photoTimestamp: meta.timestamp, ocrLoading: isOnline, ocrError: undefined }
+        ? { ...c, photoTaken: true, photoDataUrl: imageSrc, photoLat: meta.lat, photoLng: meta.lng, photoTimestamp: meta.timestamp, ocrLoading: true, ocrError: undefined }
         : c,
     ))
     setScannerOpen(false)
-
-    if (!isOnline) return
 
     apiClient.ocrContainer(imageSrc, idx)
       .then((result) => {
@@ -176,7 +184,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
           i === idx ? { ...c, ocrLoading: false, ocrError: 'Lỗi kết nối AI' } : c,
         ))
       })
-  }, [activeContIdx, isOnline])
+  }, [activeContIdx])
 
   // Container management
   const validateTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
@@ -354,6 +362,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       }
 
       const firstCont = containers[0]
+      // Let backend auto-resolve vehicle_plate from driver's VehicleDriver assignment
       if (isEdit && existingDeliveredTrip) {
         await apiClient.updateDeliveredTrip(existingDeliveredTrip.id, {
           contNumber: firstCont?.containerNumber.trim() || null,
@@ -363,9 +372,11 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
           pickupLocationId: pickupId,
           dropoffLocationId: dropoffId,
           vessel: vessel || null,
-          vehiclePlate: profile?.vehiclePlate ?? null,
+          vehiclePlate: null,
+          tripDate,
         })
         setShowSuccess(true)
+        if (vessel.trim()) addRecentVessel(vessel.trim())
         setTimeout(() => {
           setShowSuccess(false)
           navigate('/driver')
@@ -380,9 +391,11 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
           dropoffLocationId: dropoffId,
           driverId: Number(user!.id),
           vessel: vessel || null,
-          vehiclePlate: profile?.vehiclePlate ?? null,
+          vehiclePlate: null,
+          tripDate,
         })
         setShowSuccess(true)
+        if (vessel.trim()) addRecentVessel(vessel.trim())
         setTimeout(() => {
           setShowSuccess(false)
           navigate('/driver')
@@ -392,23 +405,22 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       console.error('Submit failed:', err)
       setSubmitting(false)
     }
-  }, [containers, clientId, vessel, pickupLocation, dropoffLocation, locations, user, profile, navigate, isEdit, existingDeliveredTrip])
+  }, [containers, clientId, vessel, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingDeliveredTrip, addRecentVessel, tripDate])
 
-  const onRequestSubmit = useCallback(async () => {
+  const onRequestSubmit = useCallback(async (): Promise<'offline' | 'validation-error' | undefined> => {
     if (!canSubmit) return
+    // Require network — all validation and submission goes to the backend
+    if (!navigator.onLine) return 'offline'
     // Validate container numbers via backend
     const errors: Record<number, string> = {}
-    const isOnlineFlag = navigator.onLine
-    if (isOnlineFlag) {
-      await Promise.all(containers.map(async (c, idx) => {
-        try {
-          const res = await apiClient.validateContainer(c.containerNumber.trim())
-          if (!res.success || !res.data?.valid) {
-            errors[idx] = res.data?.error ?? 'Số container không hợp lệ'
-          }
-        } catch { /* skip validation on error */ }
-      }))
-    }
+    await Promise.all(containers.map(async (c, idx) => {
+      try {
+        const res = await apiClient.validateContainer(c.containerNumber.trim())
+        if (!res.success || !res.data?.valid) {
+          errors[idx] = res.data?.error ?? 'Số container không hợp lệ'
+        }
+      } catch { /* skip validation on error */ }
+    }))
     setContainerErrors(errors)
     if (Object.keys(errors).length > 0) return
     // Edit mode: skip the summary dialog — driver already reviewed on the detail page
@@ -425,11 +437,11 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     [containers],
   )
 
-  // Summary chip shows the cont type when set, else the operation, else null.
-  const summaryContType = useMemo(() => {
-    const c = containers[0]
-    return c?.contType ?? c?.workType ?? null
-  }, [containers])
+  // Summary chip shows only the cont type (E20/E40/F20/F40).
+  const summaryContType = useMemo(() => containers[0]?.contType ?? null, [containers])
+
+  // Summary operation shown separately from contType.
+  const summaryWorkType = useMemo(() => containers[0]?.workType ?? null, [containers])
 
   const summaryClientName = useMemo(() => {
     const client = clients.find(c => String(c.id) === clientId)
@@ -449,7 +461,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       contType = workType as ContType
       workType = null
     }
-    const tripDate = new Date(existingDeliveredTrip.tripDate ?? existingDeliveredTrip.createdAt)
+    const tripDateRaw = existingDeliveredTrip.tripDate ?? existingDeliveredTrip.createdAt
     return {
       contNumber: existingDeliveredTrip.contNumber ?? '',
       contType,
@@ -459,7 +471,8 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       vessel: existingDeliveredTrip.vessel ?? '',
       pickupLocation: existingDeliveredTrip.pickupLocation.name,
       dropoffLocation: existingDeliveredTrip.dropoffLocation.name,
-      tripDateLabel: tripDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      tripDateISO: tripDateRaw.slice(0, 10),
+      tripDateLabel: formatISODate(tripDateRaw.slice(0, 10)),
     }
   }, [existingDeliveredTrip])
 
@@ -472,22 +485,28 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     // Reference data
     clients, recentOrders,
 
+    // Recent vessel suggestions (localStorage-backed)
+    recentVessels,
+
     // Form state
-    containers, clientId, vessel, pickupLocation, dropoffLocation,
+    containers, clientId, vessel, pickupLocation, dropoffLocation, tripDate,
     selectedTripId,
 
     // UI state
-    submitting, scannerOpen, isOnline, summaryOpen, showSuccess,
+    submitting, scannerOpen, summaryOpen, showSuccess,
     forceManualEntry, missingFields, containerErrors, containerSuggestions, suggestionLoading,
 
     // Derived
-    canSubmit, summaryContNumber, summaryContType, summaryClientName,
+    canSubmit, summaryContNumber, summaryContType, summaryWorkType, summaryClientName,
+    tripDateLabel: formatISODate(tripDate),
 
     // Actions
     setClientId: (v: string) => { setSelectedTripId(null); setClientId(v) },
     setVessel,
     setPickupLocation: (v: string) => { setSelectedTripId(null); setPickupLocation(v) },
     setDropoffLocation: (v: string) => { setSelectedTripId(null); setDropoffLocation(v) },
+    setTripDate,
+    shiftTripDate: (days: number) => setTripDate(prev => shiftISODate(prev, days)),
     openScanner, handleScanComplete, setScannerOpen,
     updateContainer, addContainer, removeContainer, validateContainerOnBlur,
     applyContainerSuggestion,

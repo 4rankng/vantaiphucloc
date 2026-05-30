@@ -7,6 +7,10 @@ from datetime import date, datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.vehicle_helpers import (
+    resolve_driver_plate,
+    resolve_driver_plates_batch,
+)
 from app.contexts.operations.application.dto import (
     DeliveredTripCreateInput,
     DeliveredTripListFilters,
@@ -95,6 +99,11 @@ class CreateDeliveredTrip:
 
         driver_id = user.id if user.role == "driver" else data.driver_id
 
+        # Auto-resolve vehicle_plate from driver's assignment when not provided
+        vehicle_plate = data.vehicle_plate
+        if not vehicle_plate and driver_id is not None:
+            vehicle_plate = await resolve_driver_plate(self.session, driver_id)
+
         w = DeliveredTrip(
             id=None,
             client_id=data.client_id,
@@ -102,7 +111,7 @@ class CreateDeliveredTrip:
             dropoff_location_id=data.dropoff_location_id,
             driver_id=driver_id,
             vendor_id=data.vendor_id,
-            vehicle_plate=data.vehicle_plate or "",
+            vehicle_plate=vehicle_plate or "",
             vessel=data.vessel,
             work_type=work_type,
             cont_number=data.cont_number,
@@ -184,6 +193,8 @@ class UpdateDeliveredTrip:
             w.cont_number = data.cont_number
         if data.cont_type is not None:
             w.cont_type = data.cont_type
+        if data.trip_date is not None:
+            w.trip_date = data.trip_date
         if data.revenue is not None:
             w.revenue = int(data.revenue)
         if data.driver_salary is not None:
@@ -243,6 +254,17 @@ class BatchCreateDeliveredTrips:
         user: CurrentUserContext,
     ) -> list[tuple[int, int | None, str | None]]:
         results: list[tuple[int, int | None, str | None]] = []
+        # Pre-resolve all driver plates in one query to avoid N+1
+        items_needing_plate = [
+            item for item in items if not item.vehicle_plate
+        ]
+        driver_ids_batch = list({
+            user.id if user.role == "driver" else item.driver_id
+            for item in items_needing_plate
+            if (user.id if user.role == "driver" else item.driver_id) is not None
+        })
+        plate_map = await resolve_driver_plates_batch(self.session, driver_ids_batch)
+
         async with self.session.begin():
             for i, item in enumerate(items):
                 async with self.session.begin_nested():
@@ -253,6 +275,10 @@ class BatchCreateDeliveredTrips:
                         driver_id = (
                             user.id if user.role == "driver" else item.driver_id
                         )
+                        # Use pre-resolved plate from batch query
+                        batch_plate = item.vehicle_plate or (
+                            plate_map.get(driver_id) if driver_id else None
+                        )
                         w = DeliveredTrip(
                             id=None,
                             client_id=item.client_id,
@@ -260,12 +286,13 @@ class BatchCreateDeliveredTrips:
                             dropoff_location_id=item.dropoff_location_id,
                             driver_id=driver_id,
                             vendor_id=item.vendor_id,
-                            vehicle_plate=item.vehicle_plate or "",
+                            vehicle_plate=batch_plate or "",
                             vessel=item.vessel,
                             work_type=work_type,
                             cont_number=item.cont_number,
                             cont_type=item.cont_type,
                             revenue=0, driver_salary=0,
+                            trip_date=item.trip_date if item.trip_date else date.today(),
                         )
                         saved = await self.repo.add(w)
                         saved = await self.repo.save(saved)

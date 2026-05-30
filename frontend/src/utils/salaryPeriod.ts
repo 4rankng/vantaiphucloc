@@ -84,6 +84,22 @@ export function toISODate(date: Date): string {
   return `${yyyy}-${mm}-${dd}`
 }
 
+/** Shift an ISO date string (YYYY-MM-DD) by N days using local timezone.
+ * Avoids UTC offset bugs in GMT+7 where toISOString() would return the wrong day. */
+export function shiftISODate(iso: string, days: number): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  date.setDate(date.getDate() + days)
+  return toISODate(date)
+}
+
+/** Format an ISO date string (YYYY-MM-DD) as DD/MM/YYYY for display.
+ * Pure string manipulation — no timezone risk. */
+export function formatISODate(iso: string): string {
+  const [y, m, d] = iso.split('-')
+  return `${d}/${m}/${y}`
+}
+
 /**
  * Returns the (startDate, endDate) of the salary period for a given calendar month and year.
  * e.g. For month=5 (May) and config={fromDay: 21, toDay: 20}, returns 21/04 -> 20/05.

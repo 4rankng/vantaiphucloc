@@ -1,0 +1,15 @@
+/* ─── Modern search pill ────────────────────────────────── */
+.search-pill {
+  border-radius: 8px;
+  padding: 9px 14px 9px 38px;
+  font-size: 14px;
+  background: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-border-default);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.search-pill:focus {
+  border-color: var(--theme-brand-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-brand-primary) 15%, transparent);
+  outline: none;
+}
+

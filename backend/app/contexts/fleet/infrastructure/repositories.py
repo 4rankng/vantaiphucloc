@@ -69,7 +69,7 @@ class SqlDriverRepository(DriverRepository):
         self,
         *,
         username: str,
-        phone: str,
+        phone: str | None,
         hashed_password: str,
         full_name: str | None = None,
     ) -> Driver:
@@ -82,6 +82,6 @@ class SqlDriverRepository(DriverRepository):
             is_active=True,
         )
         self.session.add(row)
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(row)
         return to_domain(row)

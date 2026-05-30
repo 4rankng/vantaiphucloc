@@ -1,0 +1,56 @@
+/* ─── Live indicator pulse ────────────────────────────── */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+.live-dot { animation: live-pulse 1.5s ease-in-out infinite; }
+
+@keyframes live-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.live-shimmer {
+  background: linear-gradient(90deg, transparent 0%, var(--theme-brand-primary-light) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: live-shimmer 3s ease-in-out infinite;
+}
+
+/* ─── Form input focus glow ─────────────────────────────── */
+/* Applied via CSS so inline-styled variants also pick it up */
+textarea.nepo-input:focus,
+textarea.nepo-textarea:focus,
+input.nepo-input:focus {
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Textarea — consistent with Input height model */
+textarea {
+  font-family: var(--theme-font-body, "Be Vietnam Pro", system-ui, sans-serif);
+  font-size: 13.5px;
+  letter-spacing: -0.008em;
+  line-height: 1.55;
+}
+
+/* ─── Tooltip refinement ───────────────────────────────── */
+[data-radix-tooltip-content] {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.003em;
+}
+
+/* ─── Dialog / Sheet scroll fix (iOS Safari) ───────────── */
+[data-radix-dialog-content] {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+[data-radix-dialog-content][data-side="bottom"],
+[data-radix-dialog-content].rounded-t-3xl,
+[data-radix-dialog-content].rounded-t-2xl {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+[data-radix-dialog-content] .overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+

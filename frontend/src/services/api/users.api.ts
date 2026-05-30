@@ -116,6 +116,7 @@ export interface UserProfile {
   fullName: string | null
   phone: string | null
   email: string | null
+  vehiclePlate: string | null
 }
 
 export async function getProfile(): Promise<ApiResponse<UserProfile>> {
@@ -126,6 +127,7 @@ export async function getProfile(): Promise<ApiResponse<UserProfile>> {
       fullName: res.data.full_name ?? null,
       phone: res.data.phone ?? null,
       email: res.data.email ?? null,
+      vehiclePlate: res.data.vehicle_plate ?? null,
     })
   } catch (err) {
     return fail(err)

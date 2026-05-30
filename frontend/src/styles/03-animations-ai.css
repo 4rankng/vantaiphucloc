@@ -1,0 +1,104 @@
+/* ─── AI animations ─────────────────────────────────────── */
+@keyframes aiGlowPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(99,102,241,0.25), 0 0 18px rgba(168,85,247,0.2), 0 2px 8px rgba(0,0,0,0.12); }
+  50%       { box-shadow: 0 0 14px rgba(99,102,241,0.45), 0 0 28px rgba(168,85,247,0.35), 0 2px 8px rgba(0,0,0,0.12); }
+}
+.ai-btn-glow { animation: aiGlowPulse 3s ease-in-out infinite; }
+
+@keyframes aiOrbit {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes aiOrbitReverse {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+@keyframes aiCorePulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(129,140,248,0.5), 0 0 24px rgba(167,139,250,0.3); transform: scale(1); }
+  50%       { box-shadow: 0 0 20px rgba(129,140,248,0.8), 0 0 40px rgba(167,139,250,0.5); transform: scale(1.06); }
+}
+@keyframes aiFloat {
+  0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.7; }
+  50%       { transform: translateY(-6px) rotate(15deg); opacity: 1; }
+}
+@keyframes aiScanLine {
+  0%   { top: 8%; opacity: 0; }
+  5%   { opacity: 1; }
+  95%  { opacity: 0.6; }
+  100% { top: 92%; opacity: 0; }
+}
+@keyframes aiStarTwinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50%       { opacity: 1;   transform: scale(1.2); }
+}
+.ai-orbit         { animation: aiOrbit 4s linear infinite; }
+.ai-orbit-reverse { animation: aiOrbitReverse 2.8s linear infinite; }
+.ai-core-pulse    { animation: aiCorePulse 2.5s ease-in-out infinite; }
+.ai-float         { animation: aiFloat 3s ease-in-out infinite; }
+.ai-scan-line     { animation: aiScanLine 2.5s ease-in-out infinite; }
+.ai-twinkle       { animation: aiStarTwinkle 2s ease-in-out infinite; }
+
+@keyframes aiBarBounce {
+  0%, 100% { transform: scaleY(0.3); }
+  50%       { transform: scaleY(1); }
+}
+@keyframes aiCursorBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.ai-cursor { animation: aiCursorBlink 0.7s ease-in-out infinite; }
+
+@keyframes radarSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes radarPing {
+  0%        { transform: scale(0.4); opacity: 0.8; }
+  100%      { transform: scale(2.2); opacity: 0; }
+}
+@keyframes scanTextFade {
+  0%,100%   { opacity: 0; transform: translateY(6px); }
+  15%, 85%  { opacity: 1; transform: translateY(0); }
+}
+.radar-spin { animation: radarSpin 2s linear infinite; }
+.radar-ping { animation: radarPing 2s ease-out infinite; }
+
+@keyframes robotBlink {
+  0%, 80%, 100% { transform: scaleY(1); }
+  88%            { transform: scaleY(0.07); }
+}
+@keyframes robotAntenna {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.3); }
+}
+@keyframes robotAntennaBlink {
+  0%, 100% { opacity: 1;   transform: scale(1.35); }
+  50%      { opacity: 0.1; transform: scale(0.9); }
+}
+@keyframes robotAntennaThink {
+  0%, 100% { opacity: 1;   transform: scale(1.5); }
+  50%      { opacity: 0.05; transform: scale(0.85); }
+}
+@keyframes robotAntennaRadiant {
+  0%       { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 0;    transform: scale(2.4); }
+  100%     { opacity: 0.55; transform: scale(1); }
+}
+@keyframes robotEyeGlow {
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1; }
+}
+.robot-eye      { transform-box: fill-box; transform-origin: center; animation: robotBlink 4s ease-in-out infinite; }
+.robot-eye-r    { transform-box: fill-box; transform-origin: center; animation: robotBlink 4s ease-in-out 0.18s infinite; }
+@keyframes robotMouthTalk {
+  0%, 49% { transform: scaleY(1);    }   /* open  = rectangle */
+  50%, 99%{ transform: scaleY(0.15); }   /* closed = flat line */
+}
+.robot-mouth      { transform-box: fill-box; transform-origin: center; transform: scaleY(0.15); }
+.robot-mouth-talk { animation: robotMouthTalk calc(14ms * 10) steps(1, end) infinite; }
+.robot-antenna         { transform-box: fill-box; transform-origin: center; animation: robotAntenna 1.4s ease-in-out infinite; }
+.robot-antenna-blink   { animation: robotAntennaBlink 0.45s ease-in-out infinite !important; }
+.robot-antenna-think   { animation: robotAntennaThink 0.16s ease-in-out infinite !important; }
+.robot-antenna-radiant { transform-box: fill-box; transform-origin: center; animation: robotAntennaRadiant 0.16s ease-in-out infinite; }
+.robot-eye-glow { animation: robotEyeGlow 1.2s ease-in-out infinite; }
+

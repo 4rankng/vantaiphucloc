@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   ScanLine, RotateCcw, Trash2, AlertCircle, Loader2, Plus,
   ChevronLeft, CheckCircle2, Container as ContainerIcon, Ship, MapPin,
-  WifiOff, Sparkles, Calendar, Lock,
+  Sparkles,
 } from 'lucide-react'
 import { getWorkTypeLabel } from '@/data/domain'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
@@ -12,7 +12,9 @@ import { SuccessOverlay } from '@/components/shared/SuccessOverlay'
 import { AIScanningOverlay } from '@/components/shared/AIScanningOverlay'
 import { RecentTripSuggestions } from '@/components/shared/RecentTripSuggestions'
 import { InlineSelect } from '@/components/shared/InlineSelect'
+import { RecentValuesInput } from '@/components/shared/RecentValuesInput'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
+import { DateNavigator } from '@/components/shared/DateNavigator'
 import { useCreateDeliveredTrip } from './useCreateDeliveredTrip'
 import { useToast } from '@/components/atoms/Toast'
 import type { DeliveredTrip } from '@/data/domain'
@@ -31,12 +33,14 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
   const {
     isEdit, original,
     clients, recentOrders,
-    containers, clientId, vessel, pickupLocation, dropoffLocation,
+    recentVessels,
+    containers, clientId, vessel, pickupLocation, dropoffLocation, tripDate,
     selectedTripId,
-    submitting, scannerOpen, isOnline, summaryOpen, showSuccess,
+    submitting, scannerOpen, summaryOpen, showSuccess,
     forceManualEntry, missingFields, containerErrors, containerSuggestions, suggestionLoading,
-    canSubmit, summaryContNumber, summaryContType, summaryClientName,
-    setClientId, setVessel, setPickupLocation, setDropoffLocation,
+    canSubmit, summaryContNumber, summaryContType, summaryWorkType, summaryClientName,
+    tripDateLabel,
+    setClientId, setVessel, setPickupLocation, setDropoffLocation, setTripDate,
     openScanner, handleScanComplete, setScannerOpen,
     updateContainer, addContainer, removeContainer, validateContainerOnBlur,
     applyContainerSuggestion,
@@ -99,40 +103,14 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
               {isEdit ? 'Cập nhật thông tin chuyến đã giao' : 'Nhập thông tin chuyến vừa giao xong'}
             </p>
           </div>
-          {!isOnline && (
-            <span
-              className="flex items-center gap-1 h-7 px-2 rounded-full text-[10px] font-bold uppercase tracking-wide"
-              style={{ background: 'var(--theme-status-warning-light, #fef3c7)', color: 'var(--theme-status-warning, #b45309)' }}
-            >
-              <WifiOff className="w-3 h-3" /> Offline
-            </span>
-          )}
         </div>
 
-        {/* Edit mode: show the locked Ngày đi so driver knows the date can't be changed here */}
-        {isEdit && original && (
-          <div
-            className="flex items-center gap-2 px-3 py-2 rounded-lg"
-            style={{
-              background: 'var(--theme-bg-secondary)',
-              border: '1px solid var(--theme-border-default)',
-            }}
-          >
-            <Calendar className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-            <span className="text-[11px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-              Ngày đi:
-            </span>
-            <span className="text-[13px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-              {original.tripDateLabel}
-            </span>
-            <span
-              className="ml-auto flex items-center gap-1 text-[10px] font-semibold"
-              style={{ color: 'var(--theme-text-muted)' }}
-            >
-              <Lock className="w-3 h-3" /> Không thể đổi
-            </span>
-          </div>
-        )}
+        {/* Ngày đi — left/right navigator for easy mobile use */}
+        <DateNavigator
+          value={tripDate}
+          onChange={setTripDate}
+          originalLabel={isEdit && original && tripDate !== original.tripDateISO ? original.tripDateLabel : null}
+        />
       </div>
 
       <div className="px-4 pt-2 space-y-6">
@@ -337,9 +315,10 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
           label="Tàu"
           hint="Số tàu (nếu có)"
         >
-          <input
+          <RecentValuesInput
             value={vessel}
-            onChange={e => setVessel(e.target.value)}
+            onChange={setVessel}
+            suggestions={recentVessels}
             placeholder="VD: SITC HAKATA V.2451N"
             className="w-full h-12 rounded-xl px-4 text-sm font-medium"
             style={{
@@ -458,7 +437,12 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button
-              onClick={onRequestSubmit}
+              onClick={async () => {
+                const result = await onRequestSubmit()
+                if (result === 'offline') {
+                  toast.error('Không có mạng — vui lòng thử lại khi có kết nối')
+                }
+              }}
               disabled={!canSubmit || submitting}
               type="button"
               className="flex-1 h-12 rounded-xl text-sm font-bold touch-manipulation transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:cursor-not-allowed"
@@ -476,10 +460,8 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                 <><Loader2 className="w-4 h-4 animate-spin" /> Đang gửi...</>
               ) : isEdit ? (
                 <><CheckCircle2 className="w-4 h-4" /> Cập nhật chuyến</>
-              ) : isOnline ? (
-                <><CheckCircle2 className="w-4 h-4" /> Xác nhận chuyến</>
               ) : (
-                <><WifiOff className="w-4 h-4" /> Lưu offline</>
+                <><CheckCircle2 className="w-4 h-4" /> Xác nhận chuyến</>
               )}
             </button>
           </div>
@@ -493,10 +475,12 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
         onClose={() => setSummaryOpen(false)}
         contNumber={summaryContNumber}
         contType={summaryContType}
+        workType={summaryWorkType}
         clientName={summaryClientName}
         vessel={vessel}
         pickupLocation={pickupLocation}
         dropoffLocation={dropoffLocation}
+        tripDate={tripDateLabel}
       />
 
       {/* AI scanning overlay — visible while backend OCR is in flight */}

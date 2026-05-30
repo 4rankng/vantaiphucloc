@@ -6,7 +6,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/components/shared/NotificationPanel/useUnreadCount'
 import { NotificationPanel } from '@/components/shared/NotificationPanel/NotificationPanel'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
-import { OfflineTopBarIcon } from '@/components/shared/OfflineIndicator/OfflineIndicator'
 import type { LucideIcon } from 'lucide-react'
 
 export interface TopNavItem {
@@ -54,8 +53,6 @@ export function TopNavBar({ items, backLabel, onBack }: TopNavBarProps) {
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            <OfflineTopBarIcon />
-
             <button
               onClick={() => setNotifOpen(true)}
               className="w-8 h-8 flex items-center justify-center rounded-full relative touch-manipulation"

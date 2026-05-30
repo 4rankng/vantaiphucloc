@@ -1,0 +1,56 @@
+/* ─── Base reset ────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  * {
+    -webkit-tap-highlight-color: transparent;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  *::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: transparent; }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+  body {
+    margin: 0;
+    font-family: var(--theme-font-body, "Be Vietnam Pro", system-ui, sans-serif);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: var(--theme-text-primary, #09090B);
+    background: var(--theme-bg-primary, #FAFAFA);
+    line-height: 1.5;
+    letter-spacing: -0.011em;
+  }
+  html, body, #root {
+    height: 100%;
+    min-height: 100dvh;
+  }
+
+  /* Headings tighter */
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.02em;
+    font-weight: 600;
+    color: var(--theme-text-primary, #09090B);
+  }
+
+  /* Tabular nums for any element with .tabular */
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+
+  /* Selection */
+  ::selection {
+    background: color-mix(in srgb, var(--theme-brand-primary, #059669) 22%, transparent);
+    color: var(--theme-text-primary, #09090B);
+  }
+
+  /* Native focus-visible — Modern SaaS subtle ring */
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--theme-brand-primary, #059669) 60%, transparent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+

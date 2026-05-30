@@ -59,10 +59,17 @@ async def get_own_profile(
     current_user: UserORM = Depends(get_current_user),
     repo: UserRepository = Depends(get_user_repository),
 ):
+    from app.models.vehicle_helpers import resolve_driver_plate
+
     user = await repo.get_by_id(UserId(current_user.id))
     if user is None:  # pragma: no cover
         raise to_http(IdentityDomainError("User not found"))
-    return UserOut.from_entity(user)
+
+    plate = None
+    if user.role == UserRole.DRIVER and user.id is not None:
+        plate = await resolve_driver_plate(repo.session, int(user.id))
+
+    return UserOut.from_entity(user, vehicle_plate=plate)
 
 
 @router.put("/users/me", response_model=UserOut)
@@ -70,8 +77,11 @@ async def update_own_profile(
     body: UserUpdate,
     current_user: UserORM = Depends(get_current_user),
     use_case: UpdateOwnProfile = Depends(get_update_own_profile),
+    repo: UserRepository = Depends(get_user_repository),
     redis: Redis = Depends(get_redis),
 ):
+    from app.models.vehicle_helpers import resolve_driver_plate
+
     payload = body.model_dump(exclude_unset=True)
     cmd = UpdateProfileInput(
         user_id=current_user.id,
@@ -86,7 +96,12 @@ async def update_own_profile(
             await CacheManager(redis).invalidate_namespace("drivers")
     except IdentityDomainError as e:
         raise to_http(e)
-    return UserOut.from_entity(user)
+
+    plate = None
+    if user.role == UserRole.DRIVER and user.id is not None:
+        plate = await resolve_driver_plate(repo.session, int(user.id))
+
+    return UserOut.from_entity(user, vehicle_plate=plate)
 
 
 _VALID_USER_SORT = {'username', 'full_name', 'role', 'phone'}
@@ -102,6 +117,7 @@ async def list_users(
     page_size: int = Query(50, ge=1, le=1000),
     current_user: UserORM = Depends(require_permission("list", "User")),
     use_case: ListUsers = Depends(get_list_users),
+    repo: UserRepository = Depends(get_user_repository),
 ):
     role_filter = UserRole.from_str(role) if role else None
     exclude_superadmin = current_user.role == "director"
@@ -119,22 +135,10 @@ async def list_users(
     )
 
     # Batch-load vehicle plates for driver-role users
+    from app.models.vehicle_helpers import resolve_driver_plates_batch
+
     driver_ids = [int(u.id) for u in items if u.role == UserRole.DRIVER and u.id is not None]  # type: ignore[arg-type]
-    plate_map: dict[int, str] = {}
-    if driver_ids:
-        from sqlalchemy import select as sa_select
-        from app.models.domain import Vehicle, VehicleDriver
-        result = await use_case._users.session.execute(
-            sa_select(VehicleDriver.driver_id, Vehicle.plate)
-            .join(Vehicle, Vehicle.id == VehicleDriver.vehicle_id)
-            .where(
-                VehicleDriver.driver_id.in_(driver_ids),
-                VehicleDriver.is_active == True,  # noqa: E712
-                Vehicle.is_active == True,  # noqa: E712
-            )
-        )
-        for row in result.all():
-            plate_map[row[0]] = row[1]
+    plate_map = await resolve_driver_plates_batch(repo.session, driver_ids)
 
     return PaginatedResponse[UserOut](
         items=[

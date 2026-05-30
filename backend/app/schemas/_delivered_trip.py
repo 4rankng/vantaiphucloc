@@ -50,6 +50,7 @@ class DeliveredTripUpdate(BaseModel):
     work_type: str | None = None
     cont_number: str | None = None
     cont_type: str | None = None
+    trip_date: date | None = None
     revenue: int | None = None
     driver_salary: int | None = None
 

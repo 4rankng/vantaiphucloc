@@ -313,6 +313,7 @@ async def update_delivered_trip(
                 work_type=body.work_type,
                 cont_number=body.cont_number,
                 cont_type=body.cont_type,
+                trip_date=body.trip_date,
                 revenue=body.revenue,
                 driver_salary=body.driver_salary,
             ),
