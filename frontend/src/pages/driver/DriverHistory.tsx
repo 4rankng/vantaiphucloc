@@ -74,7 +74,7 @@ export function DriverHistory() {
           </div>
         ) : (
           filtered.map(wo => (
-            <DeliveredTripCard key={wo.id} variant="driver" data={wo} onClick={() => navigate(`/driver/delivered-trips/${wo.id}`)} />
+            <DeliveredTripCard key={wo.id} variant="driver" data={wo} onClick={() => navigate(`/driver/job/${wo.id}`)} />
           ))
         )}
       </div>

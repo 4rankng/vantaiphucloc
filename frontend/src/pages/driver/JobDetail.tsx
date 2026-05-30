@@ -220,7 +220,7 @@ export function JobDetail() {
                     boxShadow: '0 0 0 4px var(--brand-soft, #E6F2EB)',
                   }}
                 />
-                <div className="text-[16px] font-extrabold leading-tight tracking-[0.3px]" style={{ color: 'var(--text, #0F1714)' }}>
+                <div className="text-[13px] font-bold leading-tight tracking-[0.3px]" style={{ color: 'var(--text, #0F1714)' }}>
                   {job.pickupLocation.name}
                 </div>
                 <div
@@ -271,7 +271,7 @@ export function JobDetail() {
                     border: '3px solid var(--brand, #005A2D)',
                   }}
                 />
-                <div className="text-[16px] font-extrabold leading-tight tracking-[0.3px]" style={{ color: 'var(--text, #0F1714)' }}>
+                <div className="text-[13px] font-bold leading-tight tracking-[0.3px]" style={{ color: 'var(--text, #0F1714)' }}>
                   {job.dropoffLocation.name}
                 </div>
                 <div

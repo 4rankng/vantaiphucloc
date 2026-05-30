@@ -1,15 +1,24 @@
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useSalaryConfig } from '@/hooks/use-queries'
-import { getSalaryPeriodForMonth, toISODate } from '@/utils/salaryPeriod'
+import { getSalaryPeriodForMonth, getSalaryPeriodDates, toISODate } from '@/utils/salaryPeriod'
 
 export function useMonthParams() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { data: config } = useSalaryConfig()
 
   const now = useMemo(() => new Date(), [])
-  const defaultMonth = now.getMonth() + 1
-  const defaultYear = now.getFullYear()
+
+  // Derive the default month from which salary period TODAY falls in.
+  // e.g. today=May 30, fromDay=26, toDay=25 → period is May 26→Jun 25 → default month = June (6)
+  const todayPeriod = useMemo(() => {
+    const fromDay = config?.fromDay ?? 26
+    const toDay = config?.toDay ?? 25
+    return getSalaryPeriodDates(now, { fromDay, toDay })
+  }, [now, config])
+
+  const defaultMonth = todayPeriod.endDate.getMonth() + 1
+  const defaultYear = todayPeriod.endDate.getFullYear()
 
   const month = Number(searchParams.get('month')) || defaultMonth
   const year = Number(searchParams.get('year')) || defaultYear

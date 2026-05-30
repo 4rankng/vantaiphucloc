@@ -40,9 +40,9 @@ function MobileDriverHome() {
   const now = useMemo(() => new Date(), [])
   const defaultPeriod = useMemo(() => {
     if (!config) return getSalaryPeriodDates(now, { fromDay: 1, toDay: 31 })
-    // Use the salary month whose toDay falls in the current calendar month.
-    // e.g. today=May 29, fromDay=21, toDay=20 → salary month = May → April 21 → May 20
-    return getSalaryPeriodForMonth(now.getFullYear(), now.getMonth() + 1, config)
+    // Use the salary period that contains today (not the calendar month).
+    // e.g. today=May 30, fromDay=26, toDay=25 → period = May 26→Jun 25 (Tháng 06)
+    return getSalaryPeriodDates(now, config)
   }, [now, config])
 
   // PeriodStart persisted in URL (?from=2026-04-21). Survives navigate(-1) back from trip detail.

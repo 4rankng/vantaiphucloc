@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOffline } from '@/contexts/OfflineContext'
 import { apiClient } from '@/services/api'
-import { useLocations } from '@/hooks/use-queries'
+import { useLocations, useProfile } from '@/hooks/use-queries'
 import type { PhotoMeta } from '@/components/shared/ContainerScanner'
 import type { Client, ContType, WorkType, DeliveredTrip } from '@/data/domain'
 import { CONT_TYPES } from '@/data/domain'
@@ -79,6 +79,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   const [clients, setClients] = useState<Client[]>([])
   const [recentOrders, setRecentOrders] = useState<DeliveredTrip[]>([])
   const { data: locations = [] } = useLocations()
+  const { data: profile } = useProfile()
 
   // Form state — pre-populate from existing WO when editing
   const [containers, setContainers] = useState<ContainerForm[]>(
@@ -362,12 +363,12 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
           pickupLocationId: pickupId,
           dropoffLocationId: dropoffId,
           vessel: vessel || null,
+          vehiclePlate: profile?.vehiclePlate ?? null,
         })
         setShowSuccess(true)
         setTimeout(() => {
           setShowSuccess(false)
-          // Go back to detail so driver can verify the change
-          navigate(`/driver/delivered-trips/${existingDeliveredTrip.id}`)
+          navigate('/driver')
         }, 1500)
       } else {
         await apiClient.createDeliveredTrip({
@@ -379,6 +380,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
           dropoffLocationId: dropoffId,
           driverId: Number(user!.id),
           vessel: vessel || null,
+          vehiclePlate: profile?.vehiclePlate ?? null,
         })
         setShowSuccess(true)
         setTimeout(() => {
@@ -390,7 +392,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       console.error('Submit failed:', err)
       setSubmitting(false)
     }
-  }, [containers, clientId, vessel, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingDeliveredTrip])
+  }, [containers, clientId, vessel, pickupLocation, dropoffLocation, locations, user, profile, navigate, isEdit, existingDeliveredTrip])
 
   const onRequestSubmit = useCallback(async () => {
     if (!canSubmit) return
