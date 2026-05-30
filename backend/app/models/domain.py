@@ -46,8 +46,8 @@ class Vehicle(AuditableMixin, Base):
 
     id = Column(Integer, primary_key=True, index=True)
     plate = Column(String(20), nullable=False, unique=True, index=True)
-    driver_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=True, index=True)
+    driver_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    vendor_id = Column(Integer, ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True, index=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
@@ -119,7 +119,7 @@ class VehicleExpense(AuditableMixin, Base):
     expense_date = Column(Date, nullable=False, index=True)
     description = Column(String(500), nullable=True)
     receipt_url = Column(String(1000), nullable=True)
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
@@ -195,7 +195,7 @@ class Location(AuditableMixin, Base):
     geocode_source = Column(String(20), nullable=True)
     pending_geocode = Column(Boolean, default=True, nullable=False)
     created_via = Column(String(30), nullable=True)
-    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     location_review_needed = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
@@ -219,7 +219,7 @@ class LocationAlias(Base):
     alias_normalized = Column(String(255), nullable=False, unique=True)
     source = Column(String(30), nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
-    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
 
 # ---------------------------------------------------------------------------
@@ -366,8 +366,8 @@ class DeliveredTrip(AuditableMixin, Base):
     dropoff_location_id = Column(
         Integer, ForeignKey("locations.id"), nullable=False, index=True
     )
-    driver_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=True, index=True)
+    driver_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    vendor_id = Column(Integer, ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True, index=True)
     vessel = Column(String(100), nullable=True)
     work_type = Column(String(30), nullable=False)
     cont_number = Column(String(50), nullable=True, index=True)
@@ -463,7 +463,7 @@ class DriverSalaryConfig(AuditableMixin, Base):
     effective_from = Column(Date, nullable=False)
     note = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     __table_args__ = (
         UniqueConstraint(
@@ -508,6 +508,7 @@ class DriverSalary(AuditableMixin, Base):
     bonus_salary = Column(Integer, nullable=False, default=0)  # VND
     allowance = Column(Integer, nullable=False, default=0)  # VND
     note = Column(String(500), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False

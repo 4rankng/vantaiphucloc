@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { TripChartCard } from '@/components/shared/TripChartCard'
 import {
@@ -12,6 +12,7 @@ import { getAuditLogs } from '@/services/api/audit.api'
 import { formatActivityEntry, formatFinancialChange, SUBJECT_PREFIX } from '@/lib/activity-utils'
 import { pad } from '@/lib/accounting-utils'
 import { useMonthParams } from '@/pages/accountant/use-month-params'
+import { useInfiniteScroll } from '@/components/shared/ListUtils'
 
 // ─── Demo design tokens (scoped to this page) ─────────────────────────────────
 
@@ -286,27 +287,60 @@ export function DirectorDashboard() {
 
   const prevMonth = month === 1 ? 12 : month - 1
 
-  // Activity feed
+  // Activity feed — infinite scroll
+  const PAGE_SIZE = 15
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([])
+  const [auditPage, setAuditPage] = useState(1)
+  const [auditTotal, setAuditTotal] = useState(0)
+  const [auditLoading, setAuditLoading] = useState(false)
+  const cancelledRef = useRef(false)
+
   useEffect(() => {
-    let cancelled = false
-    getAuditLogs({ pageSize: 15 }).then(data => {
-      if (!cancelled) {
-        const deduped: typeof data.items = []
-        for (const entry of data.items) {
-          const prev = deduped[deduped.length - 1]
-          const prevTxt = prev ? formatActivityEntry(prev.action, prev.tableName) : ''
+    cancelledRef.current = false
+    setAuditLogs([])
+    setAuditPage(1)
+    setAuditTotal(0)
+    setAuditLoading(true)
+    getAuditLogs({ page: 1, pageSize: PAGE_SIZE }).then(data => {
+      if (cancelledRef.current) return
+      setAuditLogs(data.items)
+      setAuditTotal(data.total)
+    }).catch(() => {}).finally(() => {
+      if (!cancelledRef.current) setAuditLoading(false)
+    })
+    return () => { cancelledRef.current = true }
+  }, [])
+
+  const hasMore = auditLogs.length < auditTotal
+
+  const loadMore = useCallback(() => {
+    if (auditLoading || !hasMore) return
+    const nextPage = auditPage + 1
+    setAuditLoading(true)
+    getAuditLogs({ page: nextPage, pageSize: PAGE_SIZE }).then(data => {
+      if (cancelledRef.current) return
+      setAuditLogs(prev => {
+        const merged = [...prev, ...data.items]
+        const deduped: AuditLogEntry[] = []
+        for (const entry of merged) {
+          const last = deduped[deduped.length - 1]
+          const prevTxt = last ? formatActivityEntry(last.action, last.tableName) : ''
           const curTxt = formatActivityEntry(entry.action, entry.tableName)
-          const prevMs = prev ? new Date(prev.createdAt).getTime() : 0
+          const prevMs = last ? new Date(last.createdAt).getTime() : 0
           const curMs = new Date(entry.createdAt).getTime()
-          if (prev && prevTxt === curTxt && Math.abs(curMs - prevMs) < 2000) continue
+          if (last && prevTxt === curTxt && Math.abs(curMs - prevMs) < 2000) continue
           deduped.push(entry)
         }
-        setAuditLogs(deduped.slice(0, 10))
-      }
-    }).catch(() => {})
-    return () => { cancelled = true }
-  }, [])
+        return deduped
+      })
+      setAuditPage(nextPage)
+      setAuditTotal(data.total)
+    }).catch(() => {}).finally(() => {
+      if (!cancelledRef.current) setAuditLoading(false)
+    })
+  }, [auditPage, auditLoading, hasMore])
+
+  const sentinelRef = useInfiniteScroll(loadMore)
 
   // Fade-in keyframes (inject once)
   const fadeStyle = `
@@ -545,13 +579,22 @@ export function DirectorDashboard() {
               <div className="text-[15px] font-bold" style={{ color: T.ink, letterSpacing: '-0.01em' }}>Hoạt động gần đây</div>
             </div>
             <div className="px-3 pb-3.5">
-              {auditLogs.length === 0 ? (
+              {auditLogs.length === 0 && !auditLoading ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-2">
                   <Activity className="w-8 h-8" style={{ color: T.line }} />
                   <p className="text-sm" style={{ color: T.muted }}>Chưa có hoạt động nào</p>
                 </div>
               ) : (
-                auditLogs.map((log, i) => <ActivityItem key={log.id} log={log} isFirst={i === 0} />)
+                <>
+                  {auditLogs.map((log, i) => <ActivityItem key={log.id} log={log} isFirst={i === 0} />)}
+                  {hasMore && (
+                    <div ref={sentinelRef} className="flex items-center justify-center py-4">
+                      {auditLoading && (
+                        <span className="text-xs" style={{ color: T.muted }}>Đang tải…</span>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

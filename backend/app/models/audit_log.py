@@ -15,7 +15,7 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     action = Column(String(20), nullable=False, index=True)  # CREATE | UPDATE | CANCEL | CONFIRM | LOCK | MATCH | UNMATCH
     table_name = Column(String(100), nullable=False, index=True)
     record_id = Column(Integer, nullable=False)

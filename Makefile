@@ -1,6 +1,6 @@
 .PHONY: help install migrate dev dev-infra dev-backend dev-frontend dev-worker lint seed stop clean \
         push-all deploy-all push-backend push-frontend deploy-backend deploy-frontend \
-        api-test test test-backend test-frontend backup
+        api-test test test-backend test-frontend backup adminer-on adminer-off
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 # Override with: make dev BACKEND_PORT=9000 FRONTEND_PORT=5180
@@ -43,6 +43,8 @@ help:
 	@echo "  deploy-frontend  Pull & restart frontend on droplet"
 	@echo "  backup           Dump production PostgreSQL DB → OneDrive"
 	@echo "  restore          Restore latest backup to local dev DB"
+	@echo "  adminer-on       Enable adminer access on production (start container)"
+	@echo "  adminer-off      Disable adminer access on production (stop container)"
 
 # ── Install & DB ───────────────────────────────────────────────────────────────
 
@@ -206,7 +208,8 @@ restore:
 	echo "⏳ Decompressing..." && \
 	gunzip -k -f "$$LATEST" && \
 	SQL_FILE="$${LATEST%.gz}" && \
-	echo "🗑️  Dropping and recreating local database..." && \
+	echo "🗑️  Terminating active connections and recreating local database..." && \
+	docker exec vantai_postgres psql -U postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'vantaihanghoa' AND pid <> pg_backend_pid();" && \
 	docker exec vantai_postgres psql -U postgres -c "DROP DATABASE IF EXISTS vantaihanghoa;" && \
 	docker exec vantai_postgres psql -U postgres -c "CREATE DATABASE vantaihanghoa;" && \
 	echo "📥 Restoring backup into local database..." && \
@@ -241,3 +244,18 @@ backup:
 	echo "✅ Backup complete!" && \
 	echo "📂 Saved to: $$BACKUP_DIR/$$BACKUP_FILE_GZ" && \
 	echo "📊 Size: $$(du -h "$$BACKUP_DIR/$$BACKUP_FILE_GZ" | cut -f1)"
+
+# ── Adminer toggle ─────────────────────────────────────────────────────────────
+
+## adminer-on: Start adminer container on production (accessible via nginx /adminer with basic auth)
+adminer-on:
+	@echo "🔓 Enabling adminer on production..."
+	@ssh root@$(PROD_SERVER) "cd /opt/vantaiphucloc && docker compose start adminer"
+	@echo "✅ Adminer is now accessible at: https://$(PROD_SERVER)/adminer"
+	@echo "🔐 Login: check /etc/nginx/.htpasswd on server"
+
+## adminer-off: Stop adminer container on production (disables /adminer endpoint)
+adminer-off:
+	@echo "🔒 Disabling adminer on production..."
+	@ssh root@$(PROD_SERVER) "cd /opt/vantaiphucloc && docker compose stop adminer"
+	@echo "✅ Adminer container stopped — /adminer endpoint disabled"
