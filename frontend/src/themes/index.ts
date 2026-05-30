@@ -1,4 +1,4 @@
-export { grabTheme } from './grab';
+export { nepoTheme } from './nepo';
 export { ThemeProvider, useTheme } from './ThemeContext';
 export { themes } from './theme-registry';
 export { resolveToken, themeToCSSVars } from './tokens';

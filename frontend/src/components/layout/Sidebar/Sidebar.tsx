@@ -51,12 +51,12 @@ export function Sidebar({ items, basePath }: SidebarProps) {
       >
         <div
           className="w-8 h-8 rounded-[var(--theme-radius-md,8px)] overflow-hidden flex items-center justify-center"
-          style={{ background: '#fff' }}
+          style={{ background: 'var(--theme-bg-secondary)' }}
         >
           <img src="/logo.avif" alt="TTransport" className="w-full h-full object-cover" />
         </div>
         <div className="leading-tight">
-          <strong className="block text-sm font-bold tracking-tight" style={{ color: '#fff' }}>
+          <strong className="block text-sm font-bold tracking-tight" style={{ color: 'var(--theme-text-on-brand)' }}>
             TTransport
           </strong>
           <span
@@ -182,7 +182,7 @@ export function Sidebar({ items, basePath }: SidebarProps) {
             <User size={18} strokeWidth={1.8} />
           </div>
           <div className="min-w-0 flex-1 leading-tight">
-            <div className="text-[13px] font-semibold truncate" style={{ color: '#fff' }}>
+            <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--theme-text-on-brand)' }}>
               {roleLabel}
             </div>
             <div

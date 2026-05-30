@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { queryKeys } from '../query-keys'
+import { queryKeys, invalidateLocationDeps } from '../query-keys'
 import type { ApiResponse } from '@/data/domain'
 
 function unwrap<T>(res: ApiResponse<T>): T {
@@ -24,7 +24,10 @@ export function useCreateAlias() {
   return useMutation({
     mutationFn: ({ locationId, alias }: { locationId: number; alias: string }) =>
       apiClient.createAlias(locationId, alias).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['location-aliases'] }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['location-aliases'] })
+      qc.invalidateQueries({ queryKey: ['locations'] })
+    },
   })
 }
 
@@ -52,6 +55,7 @@ export function useDeleteAlias() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['location-aliases'] })
+      qc.invalidateQueries({ queryKey: ['locations'] })
       qc.invalidateQueries({ queryKey: ['pending-review-locations'] })
     },
   })
@@ -64,12 +68,7 @@ export function useMergeLocations() {
     mutationFn: ({ sourceLocationId, targetLocationId }: { sourceLocationId: number; targetLocationId: number }) =>
       apiClient.mergeLocations(sourceLocationId, targetLocationId).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['locations'] })
-      qc.invalidateQueries({ queryKey: ['location-aliases'] })
-      qc.invalidateQueries({ queryKey: ['routes'] })
-      qc.invalidateQueries({ queryKey: ['pricings'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      invalidateLocationDeps(qc)
       qc.invalidateQueries({ queryKey: ['pending-review-locations'] })
     },
   })

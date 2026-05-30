@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
-import { BackButton } from '@/components/shared/BackButton'
+import { BackButton } from '@/components/shared/navigation/BackButton'
 import { useDeliveredTrips } from '@/hooks/use-queries'
 
 export function DriverJobs() {

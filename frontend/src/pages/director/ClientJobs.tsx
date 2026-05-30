@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
-import { BackButton } from '@/components/shared/BackButton'
-import { MiniStatCard } from '@/components/shared/MiniStatCard'
+import { BackButton } from '@/components/shared/navigation/BackButton'
+import { MiniStatCard } from '@/components/shared/data-display/MiniStatCard'
 import { useDeliveredTrips, useClients, usePricings } from '@/hooks/use-queries'
 
 export function ClientJobs() {

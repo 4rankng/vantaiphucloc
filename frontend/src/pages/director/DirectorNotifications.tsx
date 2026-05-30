@@ -1,4 +1,4 @@
-import { NotificationList, type AppNotification } from '@/components/shared/NotificationList'
+import { NotificationList, type AppNotification } from '@/components/shared/data-display/NotificationList'
 import { useNotifications } from '@/hooks/use-queries'
 
 export function DirectorNotifications() {

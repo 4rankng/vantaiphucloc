@@ -12,7 +12,7 @@
 import { useState } from 'react'
 import { UserCircle, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui'
-import { Panel } from '@/components/shared/Panel'
+import { Panel } from '@/components/shared/overlays/Panel'
 import { DriverBaseSalaryDialog } from './DriverBaseSalaryDialog'
 import { useDrivers, useDriverBaseSalaryHistory } from '@/hooks/use-queries'
 import { formatCurrencyFull } from '@/data/domain'

@@ -13,16 +13,6 @@ import type { ApiResponse, PaginatedResult } from '@/data/domain'
 
 // ─── Case-conversion utilities ────────────────────────────────────────────────
 
-export function isNetworkError(err: unknown): boolean {
-  if (err && typeof err === 'object' && 'type' in err) {
-    return (err as { type: string }).type === 'network'
-  }
-  if (err instanceof Error) {
-    return err.message.includes('Network Error') || err.message.includes('timeout')
-  }
-  return !navigator.onLine
-}
-
 /** Convert a single snake_case string to camelCase */
 function snakeToCamel(s: string): string {
   return s.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase())

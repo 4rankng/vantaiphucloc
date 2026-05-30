@@ -1,6 +1,6 @@
 import { Calendar, Route, Settings, Truck } from 'lucide-react'
-import { SettingCard, type SettingCardItem } from '@/components/shared/SettingCard/SettingCard'
-import { PageHeader } from '@/components/shared/PageHeader'
+import { SettingCard, type SettingCardItem } from '@/components/shared/forms/SettingCard/SettingCard'
+import { PageHeader } from '@/components/shared/layouts/PageHeader'
 
 const SETTINGS_SECTIONS: SettingCardItem[] = [
   {
@@ -9,7 +9,7 @@ const SETTINGS_SECTIONS: SettingCardItem[] = [
     desc: 'Cấu hình ngày bắt đầu và kết thúc kỳ lương hàng tháng',
     icon: Calendar,
     path: '/accountant/settings/ky-luong',
-    color: '#6366f1',
+    color: 'var(--theme-ai-accent)',
   },
   {
     key: 'route-pricing',
@@ -17,7 +17,7 @@ const SETTINGS_SECTIONS: SettingCardItem[] = [
     desc: 'Quản lý bảng giá cước theo tuyến đường và loại hình tác nghiệp',
     icon: Route,
     path: '/accountant/settings/cuoc-tuyen',
-    color: '#0ea5e9',
+    color: 'var(--theme-status-info)',
   },
   {
     key: 'vendor-route-pricing',
@@ -25,7 +25,7 @@ const SETTINGS_SECTIONS: SettingCardItem[] = [
     desc: 'Quản lý bảng giá cước trả nhà thầu theo tuyến đường',
     icon: Truck,
     path: '/accountant/settings/cuoc-tra-xe-ngoai',
-    color: '#f97316',
+    color: 'var(--theme-status-warning)',
   },
 ]
 

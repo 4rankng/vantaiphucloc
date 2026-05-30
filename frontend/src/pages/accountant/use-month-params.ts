@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useSalaryConfig } from '@/hooks/use-queries'
-import { getSalaryPeriodForMonth, getSalaryPeriodDates, toISODate } from '@/utils/salaryPeriod'
+import { getSalaryPeriodForMonth, getSalaryPeriodDates, toISODate } from '@/lib/salaryPeriod'
 
 export function useMonthParams() {
   const [searchParams, setSearchParams] = useSearchParams()

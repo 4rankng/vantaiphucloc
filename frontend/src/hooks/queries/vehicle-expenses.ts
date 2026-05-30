@@ -1,6 +1,6 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { queryKeys } from '../query-keys'
+import { queryKeys, invalidateVehicleExpenseDeps } from '../query-keys'
 import type { ApiResponse } from '@/data/domain'
 import type { VehicleExpenseCategory, VehicleExpensePage } from '@/services/api/vehicleExpenses.api'
 
@@ -56,13 +56,7 @@ export function useCreateVehicleExpense() {
   return useMutation({
     mutationFn: (payload: Parameters<typeof apiClient.createVehicleExpense>[0]) =>
       apiClient.createVehicleExpense(payload).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vehicle-expenses'] })
-      qc.invalidateQueries({ queryKey: ['vehicle-expenses-infinite'] })
-      qc.invalidateQueries({ queryKey: ['vehicle-pnl'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-    },
+    onSuccess: () => { invalidateVehicleExpenseDeps(qc) },
   })
 }
 
@@ -72,13 +66,7 @@ export function useUpdateVehicleExpense() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: Parameters<typeof apiClient.updateVehicleExpense>[1] }) =>
       apiClient.updateVehicleExpense(id, payload).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vehicle-expenses'] })
-      qc.invalidateQueries({ queryKey: ['vehicle-expenses-infinite'] })
-      qc.invalidateQueries({ queryKey: ['vehicle-pnl'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-    },
+    onSuccess: () => { invalidateVehicleExpenseDeps(qc) },
   })
 }
 
@@ -88,13 +76,7 @@ export function useDeleteVehicleExpense() {
   return useMutation({
     mutationFn: (id: number) =>
       apiClient.deleteVehicleExpense(id).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vehicle-expenses'] })
-      qc.invalidateQueries({ queryKey: ['vehicle-expenses-infinite'] })
-      qc.invalidateQueries({ queryKey: ['vehicle-pnl'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-    },
+    onSuccess: () => { invalidateVehicleExpenseDeps(qc) },
   })
 }
 

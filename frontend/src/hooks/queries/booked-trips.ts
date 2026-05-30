@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { queryKeys } from '../query-keys'
+import { queryKeys, invalidateBookedTripDeps } from '../query-keys'
 import type { ApiResponse } from '@/data/domain'
 
 function unwrap<T>(res: ApiResponse<T>): T {
@@ -48,14 +48,7 @@ export function useCreateBookedTrip() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: BookedTripCreatePayload) => apiClient.createBookedTrip(data).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
-    },
+    onSuccess: () => { invalidateBookedTripDeps(qc) },
   })
 }
 
@@ -65,14 +58,9 @@ export function useUpdateBookedTrip() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: BookedTripUpdatePayload }) => apiClient.updateBookedTrip(id, data).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
+      invalidateBookedTripDeps(qc)
       qc.invalidateQueries({ queryKey: ['suggest-matches'] })
       qc.invalidateQueries({ queryKey: ['suggest-wos'] })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
     },
   })
 }

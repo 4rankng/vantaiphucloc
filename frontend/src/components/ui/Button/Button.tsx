@@ -56,7 +56,7 @@ const themeMap: Record<string, React.CSSProperties> = {
   },
   destructive: {
     background: 'var(--theme-status-error)',
-    color: '#fff',
+    color: 'var(--theme-text-on-brand)',
   },
   outline: {
     background: 'var(--theme-bg-secondary)',

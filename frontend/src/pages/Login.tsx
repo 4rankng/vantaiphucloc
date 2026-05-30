@@ -4,8 +4,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react'
-import { Reveal } from '@/components/shared/Reveal'
-import { CargoConstellationsCanvas } from '@/components/shared/CargoConstellationsCanvas'
+import { Reveal } from '@/components/shared/feedback/Reveal'
+import { CargoConstellationsCanvas } from '@/components/shared/feedback/CargoConstellationsCanvas'
 
 export function Login() {
   const { login } = useAuth()

@@ -81,3 +81,62 @@ export function invalidateDeliveredTripDeps(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
   qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
 }
+
+export function invalidateClientDeps(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: ['clients'] })
+  qc.invalidateQueries({ queryKey: ['clients-infinite'] })
+  qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+  qc.invalidateQueries({ queryKey: ['booked-trips'] })
+  qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+}
+
+export function invalidateVendorDeps(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: ['vendors'] })
+  qc.invalidateQueries({ queryKey: ['vendors-paged'] })
+}
+
+export function invalidatePricingDeps(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: ['pricings'] })
+}
+
+export function invalidateDriverDeps(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: ['drivers'] })
+  qc.invalidateQueries({ queryKey: ['drivers-paged'] })
+  qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
+  qc.invalidateQueries({ queryKey: ['driver-earnings'] })
+  qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
+}
+
+export function invalidateBookedTripDeps(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: ['booked-trips'] })
+  qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+  qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
+  qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+  qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
+  qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+}
+
+export function invalidateLocationDeps(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: ['locations'] })
+  qc.invalidateQueries({ queryKey: ['location-aliases'] })
+  qc.invalidateQueries({ queryKey: ['routes'] })
+  qc.invalidateQueries({ queryKey: ['pricings'] })
+  qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+  qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
+  qc.invalidateQueries({ queryKey: ['booked-trips'] })
+}
+
+export function invalidateSalaryDeps(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: ['driver-earnings'] })
+  qc.invalidateQueries({ queryKey: ['my-earnings'] })
+  qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
+  qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+}
+
+export function invalidateVehicleExpenseDeps(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: ['vehicle-expenses'] })
+  qc.invalidateQueries({ queryKey: ['vehicle-expenses-infinite'] })
+  qc.invalidateQueries({ queryKey: ['vehicle-pnl'] })
+  qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+  qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
+}

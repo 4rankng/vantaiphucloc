@@ -1,6 +1,6 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { queryKeys } from '../query-keys'
+import { queryKeys, invalidateClientDeps } from '../query-keys'
 import type { ApiResponse, Client, PaginatedResult } from '@/data/domain'
 import type { ClientSortBy, SortOrder } from '@/services/api/clients.api'
 
@@ -49,13 +49,7 @@ export function useCreateClient() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: Omit<Client, 'id'>) => apiClient.createClient(data).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['clients'] })
-      qc.invalidateQueries({ queryKey: ['clients-infinite'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-    },
+    onSuccess: () => { invalidateClientDeps(qc) },
   })
 }
 
@@ -64,13 +58,7 @@ export function useUpdateClient() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Client> }) => apiClient.updateClient(id, data).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['clients'] })
-      qc.invalidateQueries({ queryKey: ['clients-infinite'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-    },
+    onSuccess: () => { invalidateClientDeps(qc) },
   })
 }
 
@@ -79,12 +67,6 @@ export function useDeleteClient() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => apiClient.deleteClient(id).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['clients'] })
-      qc.invalidateQueries({ queryKey: ['clients-infinite'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
-      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
-    },
+    onSuccess: () => { invalidateClientDeps(qc) },
   })
 }

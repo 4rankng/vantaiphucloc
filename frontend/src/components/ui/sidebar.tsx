@@ -485,6 +485,7 @@ SidebarMenuButton.displayName = "SidebarMenuButton"
 
 /* eslint-disable react-refresh/only-export-components */
 export {
+  Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,

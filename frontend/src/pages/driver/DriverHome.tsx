@@ -2,12 +2,12 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { Plus } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { MonthNavigator } from '@/components/shared/MonthNavigator'
-import { DeliveredTripCard } from '@/components/shared/DeliveredTripCard'
-import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
+import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
+import { DeliveredTripCard } from '@/components/shared/cards/DeliveredTripCard'
+import { FloatingActionButton } from '@/components/shared/feedback/FloatingActionButton'
 import { useMyEarnings, useSalaryConfig, useDeliveredTrips } from '@/hooks/use-queries'
-import { getSalaryPeriodDates, getSalaryPeriodForMonth, dayBefore, dayAfter, toISODate } from '@/utils/salaryPeriod'
-import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
+import { getSalaryPeriodDates, getSalaryPeriodForMonth, dayBefore, dayAfter, toISODate } from '@/lib/salaryPeriod'
+import { AnimatedNumber } from '@/components/shared/data-display/AnimatedNumber'
 
 const PAGE_SIZE = 10
 
@@ -267,7 +267,7 @@ function MobileDriverHome() {
                 className="text-xs px-3 py-2 rounded-full font-medium transition-all touch-manipulation h-9 flex items-center shrink-0"
                 style={
                   filter === tab
-                    ? { background: 'var(--theme-brand-primary)', color: '#fff' }
+                    ? { background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }
                     : { background: 'transparent', color: 'var(--theme-text-muted)' }
                 }
               >

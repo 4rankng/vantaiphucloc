@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { TripChartCard } from '@/components/shared/TripChartCard'
+import { TripChartCard } from '@/components/shared/data-display/TripChartCard'
 import {
   TrendingUp, TrendingDown, ChevronLeft, ChevronRight,
   Activity, ArrowUpRight, Users,
@@ -12,36 +12,13 @@ import { getAuditLogs } from '@/services/api/audit.api'
 import { formatActivityEntry, formatFinancialChange, SUBJECT_PREFIX } from '@/lib/activity-utils'
 import { pad } from '@/lib/accounting-utils'
 import { useMonthParams } from '@/pages/accountant/use-month-params'
-import { useInfiniteScroll } from '@/components/shared/ListUtils'
-
-// ─── Demo design tokens (scoped to this page) ─────────────────────────────────
-
-const T = {
-  bg:          '#F6F7F5',
-  surface:     '#FFFFFF',
-  ink:         '#0F1A14',
-  ink2:        '#2A332D',
-  muted:       '#6B7771',
-  muted2:      '#9AA39E',
-  line:        '#E6EAE6',
-  lineSoft:    '#EEF1ED',
-  brand:       '#005A2D',
-  brandDeep:   '#003D1F',
-  brandTint:   '#E5EFE9',
-  brandSoft:   '#F1F7F3',
-  accent:      '#B8893A',
-  accentTint:  '#F5EEDF',
-  rose:        '#B23A48',
-  roseTint:    '#FBE9EB',
-} as const
+import { useInfiniteScroll } from '@/components/shared/data-display/ListUtils'
 
 const fontMono = "'JetBrains Mono', ui-monospace, monospace"
 const fontSans = "'Plus Jakarta Sans', 'Be Vietnam Pro', system-ui, sans-serif"
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
 function KpiCard({
-  label, value, unit, context, trend, accentColor = T.brand, accentTint = T.brandTint, delay,
+  label, value, unit, context, trend, accentColor = 'var(--theme-brand-primary)', accentTint = 'var(--theme-brand-primary-light)', delay,
 }: {
   label: string
   value: string
@@ -56,8 +33,8 @@ function KpiCard({
     <div
       className="group relative transition-all duration-200 hover:-translate-y-px dir-kpi-card"
       style={{
-        background: T.surface,
-        border: `1px solid ${T.line}`,
+        background: 'var(--theme-bg-secondary)',
+        border: '1px solid var(--theme-border-default)',
         borderRadius: 18,
         padding: '22px 24px 20px',
         boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)',
@@ -66,35 +43,34 @@ function KpiCard({
         containerType: 'inline-size',
       }}
     >
-      {/* Hover accent bar */}
       <div
         className="absolute top-[22px] left-0 h-[18px] w-[3px] rounded-r-[3px] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
         style={{ background: accentColor }}
       />
 
-      <p className="text-[11px] font-semibold uppercase" style={{ color: T.muted, letterSpacing: '0.1em' }}>
+      <p className="text-[11px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)', letterSpacing: '0.1em' }}>
         {label}
       </p>
 
-      <div className="mt-3.5 flex items-baseline gap-2.5 leading-none dir-kpi-value" style={{ fontFamily: fontMono, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em' }}>
+      <div className="mt-3.5 flex items-baseline gap-2.5 leading-none dir-kpi-value" style={{ fontFamily: fontMono, fontWeight: 500, color: 'var(--theme-text-primary)', letterSpacing: '-0.02em' }}>
         <span>{value}</span>
         {unit && (
-          <span className="dir-kpi-unit" style={{ fontFamily: fontSans, fontWeight: 600, color: T.muted, letterSpacing: '0.04em' }}>
+          <span className="dir-kpi-unit" style={{ fontFamily: fontSans, fontWeight: 600, color: 'var(--theme-text-muted)', letterSpacing: '0.04em' }}>
             {unit}
           </span>
         )}
       </div>
 
-      <div className="mt-3.5 flex items-center justify-between border-t border-dashed pt-3.5" style={{ borderColor: T.lineSoft }}>
-        <span className="text-xs" style={{ color: T.muted }}>{context ?? ' '}</span>
+      <div className="mt-3.5 flex items-center justify-between border-t border-dashed pt-3.5" style={{ borderColor: 'var(--theme-border-default)' }}>
+        <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{context ?? ' '}</span>
         {trend && (
           <span
             className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
             style={{
               fontFamily: fontMono,
               letterSpacing: '-0.01em',
-              background: trend.positive ? accentTint : T.roseTint,
-              color: trend.positive ? accentColor : T.rose,
+              background: trend.positive ? accentTint : 'var(--theme-status-error-light)',
+              color: trend.positive ? accentColor : 'var(--theme-status-error)',
             }}
           >
             {trend.positive ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
@@ -128,23 +104,22 @@ function VehiclePnLTable({ group, emptyHint }: { group: VehiclePnLGroup; emptyHi
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-6">
         <img src="/illustrations/empty-vendors.svg" alt="" className="h-24 w-auto opacity-80" draggable={false} />
-        <p className="text-xs text-center" style={{ color: T.muted }}>{emptyHint}</p>
+        <p className="text-xs text-center" style={{ color: 'var(--theme-text-muted)' }}>{emptyHint}</p>
       </div>
     )
   }
 
-  // Sort rows by lợi nhuận desc so the highest contributors are most visible.
   const sorted: VehiclePnLRow[] = [...rows].sort((a, b) => b.loiNhuan - a.loiNhuan)
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full" style={{ borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ borderBottom: `1px solid ${T.line}` }}>
-            <th style={{ textAlign: 'left',  padding: '8px 10px', color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Biển số</th>
-            <th style={{ textAlign: 'right', padding: '8px 10px', color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Doanh thu</th>
-            <th style={{ textAlign: 'right', padding: '8px 10px', color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Chi phí</th>
-            <th style={{ textAlign: 'right', padding: '8px 10px', color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Lợi nhuận</th>
+          <tr style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
+            <th style={{ textAlign: 'left',  padding: '8px 10px', color: 'var(--theme-text-muted)', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Biển số</th>
+            <th style={{ textAlign: 'right', padding: '8px 10px', color: 'var(--theme-text-muted)', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Doanh thu</th>
+            <th style={{ textAlign: 'right', padding: '8px 10px', color: 'var(--theme-text-muted)', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Chi phí</th>
+            <th style={{ textAlign: 'right', padding: '8px 10px', color: 'var(--theme-text-muted)', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Lợi nhuận</th>
           </tr>
         </thead>
         <tbody>
@@ -152,21 +127,21 @@ function VehiclePnLTable({ group, emptyHint }: { group: VehiclePnLGroup; emptyHi
             const cost = row.cpXe.total + row.cpLuongSanLuong + row.cpLuongCoBan + row.cpVendor
             const positive = row.loiNhuan >= 0
             return (
-              <tr key={row.vehicleId} style={{ borderBottom: `1px solid ${T.lineSoft}` }}>
-                <td style={{ padding: '8px 10px', color: T.ink, fontSize: 13, fontWeight: 600 }}>
+              <tr key={row.vehicleId} style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
+                <td style={{ padding: '8px 10px', color: 'var(--theme-text-primary)', fontSize: 13, fontWeight: 600 }}>
                   {row.plate}
                   {row.isVendor && row.vendorName && (
-                    <span className="ml-1.5 inline-block rounded px-1.5 py-0.5" style={{ fontSize: 10, color: T.muted, background: T.lineSoft, fontWeight: 500 }}>
+                    <span className="ml-1.5 inline-block rounded px-1.5 py-0.5" style={{ fontSize: 10, color: 'var(--theme-text-muted)', background: 'var(--theme-border-default)', fontWeight: 500 }}>
                       {row.vendorName}
                     </span>
                   )}
                 </td>
-                <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: fontMono, fontSize: 12.5, color: T.ink }}>{row.revenue.toLocaleString('vi-VN')}</td>
-                <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: fontMono, fontSize: 12.5, color: T.ink2 }}>{cost.toLocaleString('vi-VN')}</td>
+                <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: fontMono, fontSize: 12.5, color: 'var(--theme-text-primary)' }}>{row.revenue.toLocaleString('vi-VN')}</td>
+                <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: fontMono, fontSize: 12.5, color: 'var(--theme-text-secondary)' }}>{cost.toLocaleString('vi-VN')}</td>
                 <td style={{
                   padding: '8px 10px', textAlign: 'right',
                   fontFamily: fontMono, fontSize: 12.5, fontWeight: 600,
-                  color: positive ? T.brand : T.rose,
+                  color: positive ? 'var(--theme-brand-primary)' : 'var(--theme-status-error)',
                 }}>
                   {row.loiNhuan.toLocaleString('vi-VN')}
                 </td>
@@ -175,14 +150,14 @@ function VehiclePnLTable({ group, emptyHint }: { group: VehiclePnLGroup; emptyHi
           })}
         </tbody>
         <tfoot>
-          <tr style={{ borderTop: `1px solid ${T.line}` }}>
-            <td style={{ padding: '10px', color: T.ink, fontWeight: 700, fontSize: 12 }}>Tổng</td>
-            <td style={{ padding: '10px', textAlign: 'right', fontFamily: fontMono, fontWeight: 700, fontSize: 12.5, color: T.ink }}>{group.totalRevenue.toLocaleString('vi-VN')}</td>
-            <td style={{ padding: '10px', textAlign: 'right', fontFamily: fontMono, fontWeight: 700, fontSize: 12.5, color: T.ink2 }}>{group.totalCost.toLocaleString('vi-VN')}</td>
+          <tr style={{ borderTop: '1px solid var(--theme-border-default)' }}>
+            <td style={{ padding: '10px', color: 'var(--theme-text-primary)', fontWeight: 700, fontSize: 12 }}>Tổng</td>
+            <td style={{ padding: '10px', textAlign: 'right', fontFamily: fontMono, fontWeight: 700, fontSize: 12.5, color: 'var(--theme-text-primary)' }}>{group.totalRevenue.toLocaleString('vi-VN')}</td>
+            <td style={{ padding: '10px', textAlign: 'right', fontFamily: fontMono, fontWeight: 700, fontSize: 12.5, color: 'var(--theme-text-secondary)' }}>{group.totalCost.toLocaleString('vi-VN')}</td>
             <td style={{
               padding: '10px', textAlign: 'right',
               fontFamily: fontMono, fontWeight: 700, fontSize: 12.5,
-              color: group.totalProfit >= 0 ? T.brand : T.rose,
+              color: group.totalProfit >= 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-error)',
             }}>
               {group.totalProfit.toLocaleString('vi-VN')}
             </td>
@@ -213,43 +188,43 @@ function ActivityItem({ log, isFirst }: { log: AuditLogEntry; isFirst: boolean }
     <div
       className="flex gap-3 rounded-[10px] px-3.5 py-3 transition-colors duration-150 relative"
       style={{ background: 'transparent' }}
-      onMouseEnter={e => (e.currentTarget.style.background = T.brandSoft)}
+      onMouseEnter={e => (e.currentTarget.style.background = 'var(--theme-brand-primary-light)')}
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
       {!isFirst && (
-        <div style={{ position: 'absolute', top: 0, left: 28, width: 1, height: 12, background: T.line }} />
+        <div style={{ position: 'absolute', top: 0, left: 28, width: 1, height: 12, background: 'var(--theme-border-default)' }} />
       )}
       <div
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold relative"
         style={{
-          background: isCreate ? T.accentTint : T.brandTint,
-          color: isCreate ? '#7B5A1F' : T.brandDeep,
+          background: isCreate ? 'var(--theme-status-warning-light)' : 'var(--theme-brand-primary-light)',
+          color: isCreate ? 'var(--theme-status-warning)' : 'var(--theme-brand-primary)',
           letterSpacing: '0.02em',
         }}
       >
         {initials}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] leading-snug" style={{ color: T.ink2 }}>
-          <span className="font-semibold" style={{ color: T.ink }}>{actorLabel}</span>{' '}
-          <span className="font-semibold" style={{ color: isCreate ? '#8C6420' : T.brand }}>đã {activityText}</span>
+        <p className="text-[13px] leading-snug" style={{ color: 'var(--theme-text-secondary)' }}>
+          <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{actorLabel}</span>{' '}
+          <span className="font-semibold" style={{ color: isCreate ? 'var(--theme-status-warning)' : 'var(--theme-brand-primary)' }}>đã {activityText}</span>
           {log.subjectName && (
-            <span className="font-semibold" style={{ color: T.ink }}>
+            <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
               {(() => { const pfx = SUBJECT_PREFIX[log.tableName]; return pfx ? ` ${pfx} ` : ' ' })()}{log.subjectName}
             </span>
           )}
         </p>
-        <p className="mt-1" style={{ fontFamily: fontMono, fontSize: 10, color: T.muted2, letterSpacing: '0.02em' }}>
+        <p className="mt-1" style={{ fontFamily: fontMono, fontSize: 10, color: 'var(--theme-text-muted)', letterSpacing: '0.02em' }}>
           {timeStr} · {dateStr}
         </p>
         {changes && (
           <div className="flex flex-wrap gap-1.5 mt-1">
             {changes.map((c, ci) => (
-              <span key={ci} className="inline-flex items-center gap-1 text-[11px] rounded-md px-2 py-0.5" style={{ background: T.lineSoft, border: `1px solid ${T.line}` }}>
-                <span className="font-medium" style={{ color: T.muted }}>{c.label}:</span>
-                <span className="line-through" style={{ color: T.muted }}>{c.old.toLocaleString('vi-VN')}</span>
-                <ArrowUpRight className="h-2.5 w-2.5" style={{ color: T.muted }} />
-                <span className="font-bold" style={{ color: T.brand }}>{c.new.toLocaleString('vi-VN')}</span>
+              <span key={ci} className="inline-flex items-center gap-1 text-[11px] rounded-md px-2 py-0.5" style={{ background: 'var(--theme-border-default)', border: '1px solid var(--theme-border-default)' }}>
+                <span className="font-medium" style={{ color: 'var(--theme-text-muted)' }}>{c.label}:</span>
+                <span className="line-through" style={{ color: 'var(--theme-text-muted)' }}>{c.old.toLocaleString('vi-VN')}</span>
+                <ArrowUpRight className="h-2.5 w-2.5" style={{ color: 'var(--theme-text-muted)' }} />
+                <span className="font-bold" style={{ color: 'var(--theme-brand-primary)' }}>{c.new.toLocaleString('vi-VN')}</span>
               </span>
             ))}
           </div>
@@ -258,8 +233,6 @@ function ActivityItem({ log, isFirst }: { log: AuditLogEntry; isFirst: boolean }
     </div>
   )
 }
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 
 export function DirectorDashboard() {
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
@@ -287,7 +260,6 @@ export function DirectorDashboard() {
 
   const prevMonth = month === 1 ? 12 : month - 1
 
-  // Activity feed — infinite scroll
   const PAGE_SIZE = 15
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([])
   const [auditPage, setAuditPage] = useState(1)
@@ -342,10 +314,9 @@ export function DirectorDashboard() {
 
   const sentinelRef = useInfiniteScroll(loadMore)
 
-  // Fade-in keyframes (inject once)
   const fadeStyle = `
 @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-@keyframes pulse2 { 0%,100%{box-shadow:0 0 0 4px ${T.brandTint}} 50%{box-shadow:0 0 0 7px rgba(0,90,45,.08)} }
+@keyframes pulse2 { 0%,100%{box-shadow:0 0 0 4px var(--theme-brand-primary-light)} 50%{box-shadow:0 0 0 7px rgba(0,90,45,.08)} }
 `
 
   const pct = total > 0 ? Math.round((matched / total) * 100) : 0
@@ -362,48 +333,44 @@ export function DirectorDashboard() {
       <style>{fadeStyle}</style>
       <div style={{ padding: '32px 40px 48px', maxWidth: 1480, margin: '0 auto' }}>
 
-        {/* Page header — 3-col: title | month picker (center) | actions */}
         <div className="grid grid-cols-3 items-center mb-7" style={{ animation: 'fadeIn 0.5s ease both' }}>
-          {/* Left: title */}
           <div>
-            <h1 style={{ fontSize: 32, fontWeight: 700, color: T.ink, letterSpacing: '-0.025em', lineHeight: 1.1 }}>
+            <h1 style={{ fontSize: 32, fontWeight: 700, color: 'var(--theme-text-primary)', letterSpacing: '-0.025em', lineHeight: 1.1 }}>
               Tổng quan điều hành
             </h1>
-            <div className="flex items-center gap-2.5 mt-2 text-[13px]" style={{ color: T.muted }}>
+            <div className="flex items-center gap-2.5 mt-2 text-[13px]" style={{ color: 'var(--theme-text-muted)' }}>
               <span
                 className="inline-block h-[7px] w-[7px] rounded-full"
-                style={{ background: T.brand, boxShadow: `0 0 0 4px ${T.brandTint}`, animation: 'pulse2 2s ease-in-out infinite' }}
+                style={{ background: 'var(--theme-brand-primary)', boxShadow: '0 0 0 4px var(--theme-brand-primary-light)', animation: 'pulse2 2s ease-in-out infinite' }}
               />
               Cập nhật trực tiếp
             </div>
           </div>
 
-          {/* Center: month picker */}
           <div className="flex justify-center">
-          <div className="flex items-center gap-1 rounded-xl border p-1" style={{ background: T.surface, borderColor: T.line, borderRadius: 12 }}>
+          <div className="flex items-center gap-1 rounded-xl border p-1" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', borderRadius: 12 }}>
             <button onClick={onPrev} className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-[#F1F7F3]" aria-label="Tháng trước">
-              <ChevronLeft style={{ width: 14, height: 14, stroke: T.ink2 }} />
+              <ChevronLeft style={{ width: 14, height: 14, stroke: 'var(--theme-text-secondary)' }} />
             </button>
             <div className="px-3.5 text-center">
-              <div className="text-[13px] font-bold" style={{ color: T.ink, letterSpacing: '-0.005em' }}>
+              <div className="text-[13px] font-bold" style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.005em' }}>
                 Tháng {pad(month)} · {year}
               </div>
-              <div style={{ fontFamily: fontMono, fontSize: 10, color: T.muted, letterSpacing: '0.02em', marginTop: 1 }}>
+              <div style={{ fontFamily: fontMono, fontSize: 10, color: 'var(--theme-text-muted)', letterSpacing: '0.02em', marginTop: 1 }}>
                 {dateFrom.slice(5)} → {dateTo.slice(5)}
               </div>
             </div>
             <button onClick={onNext} className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-[#F1F7F3]" aria-label="Tháng sau">
-              <ChevronRight style={{ width: 14, height: 14, stroke: T.ink2 }} />
+              <ChevronRight style={{ width: 14, height: 14, stroke: 'var(--theme-text-secondary)' }} />
             </button>
           </div>
           </div>
 
-          {/* Right: actions */}
           <div className="flex justify-end">
             <Link
               to="/director/users"
               className="inline-flex items-center gap-2 h-10 px-4 rounded-xl text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
-              style={{ background: T.brand, color: '#fff', boxShadow: `0 1px 3px rgba(0,90,45,0.18)` }}
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', boxShadow: '0 1px 3px rgba(0,90,45,0.18)' }}
             >
               <Users style={{ width: 14, height: 14 }} strokeWidth={2.2} />
               Quản lý người dùng
@@ -411,7 +378,6 @@ export function DirectorDashboard() {
           </div>
         </div>
 
-        {/* KPIs */}
         <section className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
           <KpiCard
             label="Tổng chuyến"
@@ -426,8 +392,8 @@ export function DirectorDashboard() {
             unit="VNĐ"
             context={avgRev > 0 ? `Trung bình ${avgRev.toLocaleString('vi-VN')} / chuyến` : undefined}
             trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta >= 0 } : undefined}
-            accentColor={T.accent}
-            accentTint={T.accentTint}
+            accentColor='var(--theme-status-warning)'
+            accentTint='var(--theme-status-warning-light)'
             delay={120}
           />
           <KpiCard
@@ -436,8 +402,8 @@ export function DirectorDashboard() {
             unit="VNĐ"
             context={revenue > 0 ? `Tỷ lệ ${Math.round((totalCost / revenue) * 100)}% doanh thu` : undefined}
             trend={costDelta != null ? { value: `${Math.abs(costDelta)}%`, positive: costDelta <= 0 } : undefined}
-            accentColor={T.rose}
-            accentTint={T.roseTint}
+            accentColor='var(--theme-status-error)'
+            accentTint='var(--theme-status-error-light)'
             delay={180}
           />
           <KpiCard
@@ -446,13 +412,12 @@ export function DirectorDashboard() {
             unit="VNĐ"
             context={revenue > 0 ? `Biên ${Math.round((profit / revenue) * 100)}%` : undefined}
             trend={profitDelta != null ? { value: `${Math.abs(profitDelta)}%`, positive: profitDelta >= 0 } : undefined}
-            accentColor={profit >= 0 ? T.brand : T.rose}
-            accentTint={profit >= 0 ? T.brandTint : T.roseTint}
+            accentColor={profit >= 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-error)'}
+            accentTint={profit >= 0 ? 'var(--theme-brand-primary-light)' : 'var(--theme-status-error-light)'}
             delay={240}
           />
         </section>
 
-        {/* Chart */}
         <section className="mb-4" style={{ animation: 'fadeIn 0.5s ease both', animationDelay: '120ms' }}>
           <TripChartCard
             subtitle={`Tháng ${pad(month)} · ${year}`}
@@ -460,73 +425,63 @@ export function DirectorDashboard() {
           />
         </section>
 
-        {/* Bottom insights */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ animation: 'fadeIn 0.5s ease both', animationDelay: '240ms' }}>
 
-
-
-          {/* Top routes */}
-          <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 18, padding: '22px 24px', boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)' }}>
-            <p className="text-[11px] font-semibold uppercase" style={{ color: T.muted, letterSpacing: '0.1em' }}>Tuyến đường nổi bật</p>
+          <div style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', borderRadius: 18, padding: '22px 24px', boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)' }}>
+            <p className="text-[11px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)', letterSpacing: '0.1em' }}>Tuyến đường nổi bật</p>
             <div className="flex flex-col gap-3 mt-2.5">
               {topRoutes.length === 0 && (
-                <p className="text-xs py-4 text-center" style={{ color: T.muted }}>Chưa có dữ liệu</p>
+                <p className="text-xs py-4 text-center" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu</p>
               )}
               {topRoutes.map((r, i) => (
                 <div key={r.name} className="flex items-center gap-3">
-                  <span className="w-4 shrink-0 text-[10px] font-semibold" style={{ fontFamily: fontMono, color: T.muted2 }}>{String(i + 1).padStart(2, '0')}</span>
-                  <span className="flex-1 truncate text-[12.5px] font-semibold" style={{ color: T.ink2 }}>{r.name}</span>
-                  <div className="flex-[1.3] h-[5px] rounded-full overflow-hidden" style={{ background: T.lineSoft }}>
-                    <div className="h-full rounded-full" style={{ width: `${maxRouteCount > 0 ? (r.count / maxRouteCount) * 100 : 0}%`, background: `linear-gradient(90deg, ${T.brandDeep}, ${T.brand})` }} />
+                  <span className="w-4 shrink-0 text-[10px] font-semibold" style={{ fontFamily: fontMono, color: 'var(--theme-text-muted)' }}>{String(i + 1).padStart(2, '0')}</span>
+                  <span className="flex-1 truncate text-[12.5px] font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>{r.name}</span>
+                  <div className="flex-[1.3] h-[5px] rounded-full overflow-hidden" style={{ background: 'var(--theme-border-default)' }}>
+                    <div className="h-full rounded-full" style={{ width: `${maxRouteCount > 0 ? (r.count / maxRouteCount) * 100 : 0}%`, background: 'linear-gradient(90deg, var(--theme-brand-primary), var(--theme-brand-primary-dark))' }} />
                   </div>
-                  <span className="w-7 shrink-0 text-right text-[11px] font-semibold" style={{ fontFamily: fontMono, color: T.ink }}>{r.count}</span>
+                  <span className="w-7 shrink-0 text-right text-[11px] font-semibold" style={{ fontFamily: fontMono, color: 'var(--theme-text-primary)' }}>{r.count}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Top drivers */}
-          <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 18, padding: '22px 24px', boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)' }}>
-            <p className="text-[11px] font-semibold uppercase" style={{ color: T.muted, letterSpacing: '0.1em' }}>Lái xe dẫn đầu</p>
+          <div style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', borderRadius: 18, padding: '22px 24px', boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)' }}>
+            <p className="text-[11px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)', letterSpacing: '0.1em' }}>Lái xe dẫn đầu</p>
             <div className="flex flex-col gap-2.5 mt-2.5">
               {topDrivers.length === 0 && (
-                <p className="text-xs py-4 text-center" style={{ color: T.muted }}>Chưa có dữ liệu</p>
+                <p className="text-xs py-4 text-center" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu</p>
               )}
               {topDrivers.map((d, i) => (
-                <div key={d.name + d.plate} className="flex items-center gap-3" style={{ paddingTop: i > 0 ? 14 : undefined, borderTop: i > 0 ? `1px solid ${T.lineSoft}` : undefined }}>
+                <div key={d.name + d.plate} className="flex items-center gap-3" style={{ paddingTop: i > 0 ? 14 : undefined, borderTop: i > 0 ? '1px solid var(--theme-border-default)' : undefined }}>
                   <div className="flex-1 min-w-0">
-                    <p className="truncate text-[13px] font-semibold leading-tight" style={{ color: T.ink }}>{d.name}</p>
-                    <p className="truncate text-[11px] leading-tight mt-0.5" style={{ color: T.muted }}>{d.plate}</p>
+                    <p className="truncate text-[13px] font-semibold leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</p>
+                    <p className="truncate text-[11px] leading-tight mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{d.plate}</p>
                   </div>
-                  <span className="text-[13px] font-semibold" style={{ fontFamily: fontMono, color: T.ink, letterSpacing: '-0.01em' }}>{d.tripCount}</span>
+                  <span className="text-[13px] font-semibold" style={{ fontFamily: fontMono, color: 'var(--theme-text-primary)', letterSpacing: '-0.01em' }}>{d.tripCount}</span>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* PnL per vehicle — split between own fleet and from-vendor */}
         <section className="mt-4" style={{ animation: 'fadeIn 0.5s ease both', animationDelay: '300ms' }}>
-          <div style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 18, boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', borderRadius: 18, boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)', overflow: 'hidden' }}>
 
-            {/* Shared header */}
-            <div className="flex items-center justify-between px-6 pt-[22px] pb-4" style={{ borderBottom: `1px solid ${T.line}` }}>
-              <div className="text-[15px] font-bold" style={{ color: T.ink, letterSpacing: '-0.01em' }}>
+            <div className="flex items-center justify-between px-6 pt-[22px] pb-4" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
+              <div className="text-[15px] font-bold" style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.01em' }}>
                 Doanh thu &amp; Chi phí theo xe
               </div>
-              <span className="text-xs" style={{ color: T.muted }}>
+              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
                 {(ownFleetPnl.rows.length + vendorPnl.rows.length)} xe
               </span>
             </div>
 
-            {/* Two sub-sections side by side at xl */}
             <div className="grid grid-cols-1 lg:grid-cols-2">
 
-              {/* Own fleet */}
-              <div className="min-w-0" style={{ borderRight: `1px solid ${T.line}` }}>
-                {/* Sub-header */}
-                <div className="flex items-center justify-between px-6 py-3" style={{ borderBottom: `1px solid ${T.lineSoft}`, background: `color-mix(in srgb, ${T.brandSoft} 60%, transparent)` }}>
-                  <p className="text-[11px] font-semibold uppercase" style={{ color: T.muted, letterSpacing: '0.1em' }}>
+              <div className="min-w-0" style={{ borderRight: '1px solid var(--theme-border-default)' }}>
+                <div className="flex items-center justify-between px-6 py-3" style={{ borderBottom: '1px solid var(--theme-border-default)', background: 'color-mix(in srgb, var(--theme-brand-primary-light) 60%, transparent)' }}>
+                  <p className="text-[11px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)', letterSpacing: '0.1em' }}>
                     Xe nội bộ <span style={{ fontWeight: 400 }}>({ownFleetPnl.rows.length})</span>
                   </p>
                   <span
@@ -534,8 +489,8 @@ export function DirectorDashboard() {
                     style={{
                       fontFamily: fontMono,
                       letterSpacing: '-0.01em',
-                      background: ownFleetPnl.totalProfit >= 0 ? T.brandTint : T.roseTint,
-                      color:      ownFleetPnl.totalProfit >= 0 ? T.brand    : T.rose,
+                      background: ownFleetPnl.totalProfit >= 0 ? 'var(--theme-brand-primary-light)' : 'var(--theme-status-error-light)',
+                      color:      ownFleetPnl.totalProfit >= 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-error)',
                     }}
                   >
                     LN {ownFleetPnl.totalProfit.toLocaleString('vi-VN')}
@@ -544,11 +499,9 @@ export function DirectorDashboard() {
                 <VehiclePnLTable group={ownFleetPnl} emptyHint="Chưa có dữ liệu xe nhà" />
               </div>
 
-              {/* Vendor */}
               <div className="min-w-0">
-                {/* Sub-header */}
-                <div className="flex items-center justify-between px-6 py-3" style={{ borderBottom: `1px solid ${T.lineSoft}`, background: `color-mix(in srgb, ${T.brandSoft} 60%, transparent)` }}>
-                  <p className="text-[11px] font-semibold uppercase" style={{ color: T.muted, letterSpacing: '0.1em' }}>
+                <div className="flex items-center justify-between px-6 py-3" style={{ borderBottom: '1px solid var(--theme-border-default)', background: 'color-mix(in srgb, var(--theme-brand-primary-light) 60%, transparent)' }}>
+                  <p className="text-[11px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)', letterSpacing: '0.1em' }}>
                     Xe ngoài <span style={{ fontWeight: 400 }}>({vendorPnl.rows.length})</span>
                   </p>
                   <span
@@ -556,8 +509,8 @@ export function DirectorDashboard() {
                     style={{
                       fontFamily: fontMono,
                       letterSpacing: '-0.01em',
-                      background: vendorPnl.totalProfit >= 0 ? T.brandTint : T.roseTint,
-                      color:      vendorPnl.totalProfit >= 0 ? T.brand    : T.rose,
+                      background: vendorPnl.totalProfit >= 0 ? 'var(--theme-brand-primary-light)' : 'var(--theme-status-error-light)',
+                      color:      vendorPnl.totalProfit >= 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-error)',
                     }}
                   >
                     LN {vendorPnl.totalProfit.toLocaleString('vi-VN')}
@@ -570,19 +523,18 @@ export function DirectorDashboard() {
           </div>
         </section>
 
-        {/* Activity */}
         <section className="mt-4 mb-4">
           <div
-            style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 18, boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)', animation: 'fadeIn 0.5s ease both', animationDelay: '180ms' }}
+            style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', borderRadius: 18, boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)', animation: 'fadeIn 0.5s ease both', animationDelay: '180ms' }}
           >
             <div className="px-6 pt-[22px] pb-4">
-              <div className="text-[15px] font-bold" style={{ color: T.ink, letterSpacing: '-0.01em' }}>Hoạt động gần đây</div>
+              <div className="text-[15px] font-bold" style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.01em' }}>Hoạt động gần đây</div>
             </div>
             <div className="px-3 pb-3.5">
               {auditLogs.length === 0 && !auditLoading ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-2">
-                  <Activity className="w-8 h-8" style={{ color: T.line }} />
-                  <p className="text-sm" style={{ color: T.muted }}>Chưa có hoạt động nào</p>
+                  <Activity className="w-8 h-8" style={{ color: 'var(--theme-border-default)' }} />
+                  <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có hoạt động nào</p>
                 </div>
               ) : (
                 <>
@@ -590,7 +542,7 @@ export function DirectorDashboard() {
                   {hasMore && (
                     <div ref={sentinelRef} className="flex items-center justify-center py-4">
                       {auditLoading && (
-                        <span className="text-xs" style={{ color: T.muted }}>Đang tải…</span>
+                        <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Đang tải…</span>
                       )}
                     </div>
                   )}

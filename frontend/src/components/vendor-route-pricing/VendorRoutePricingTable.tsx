@@ -3,13 +3,13 @@ import { MapPin, Flag, Trash2 } from 'lucide-react'
 import { compactCurrency, WORK_TYPE_LABELS } from '@/data/domain'
 import type { VendorRoutePricing, WorkType } from '@/data/domain'
 export type { VendorRoutePricingFormData } from './useVendorRoutePricing'
-import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
-import { useActiveField } from '@/components/shared/useActiveField'
-import { tdActive, tdDimmed } from '@/components/shared/editCellStyles'
-import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
-import { FieldActions } from '@/components/shared/ListUtils'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
+import { useInlineEditForm } from '@/components/shared/forms/useInlineEditForm'
+import { useActiveField } from '@/components/shared/forms/useActiveField'
+import { tdActive, tdDimmed } from '@/components/shared/forms/editCellStyles'
+import { InlineSelect } from '@/components/shared/forms/InlineSelect/InlineSelect'
+import { FieldActions } from '@/components/shared/data-display/ListUtils'
+import { EmptyState } from '@/components/shared/feedback/EmptyState'
+import { TableSkeleton } from '@/components/shared/data-display/TableSkeleton/TableSkeleton'
 import { Route } from 'lucide-react'
 
 type FocusableField =
@@ -233,8 +233,8 @@ function VendorRoutePricingEditRow({
 
       {priceInput('f20Price', f20Ref, '#3b82f6')}
       {priceInput('f40Price', f40Ref, '#3b82f6')}
-      {priceInput('e20Price', e20Ref, '#6366f1')}
-      {priceInput('e40Price', e40Ref, '#6366f1')}
+      {priceInput('e20Price', e20Ref, 'var(--theme-express-color)')}
+      {priceInput('e40Price', e40Ref, 'var(--theme-express-color)')}
 
       {activeField === 'workType' ? (
         <td style={tdActive}>
@@ -366,8 +366,8 @@ export function VendorRoutePricingTable({
             <th className="text-left" style={{ minWidth: 140 }}>Điểm đến</th>
             <th className="text-right" style={{ width: 80, color: '#3b82f6' }}>F20</th>
             <th className="text-right" style={{ width: 80, color: '#3b82f6' }}>F40</th>
-            <th className="text-right" style={{ width: 80, color: '#6366f1' }}>E20</th>
-            <th className="text-right" style={{ width: 80, color: '#6366f1' }}>E40</th>
+            <th className="text-right" style={{ width: 80, color: 'var(--theme-express-color)' }}>E20</th>
+            <th className="text-right" style={{ width: 80, color: 'var(--theme-express-color)' }}>E40</th>
             <th className="text-left" style={{ width: workTypeWidth }}>Tác nghiệp</th>
           </tr>
         </thead>

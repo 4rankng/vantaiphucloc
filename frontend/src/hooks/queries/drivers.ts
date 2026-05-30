@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { queryKeys } from '../query-keys'
+import { queryKeys, invalidateDriverDeps } from '../query-keys'
 import type { ApiResponse, Driver } from '@/data/domain'
 import type { DriverFilters } from '@/services/api/drivers.api'
 
@@ -37,13 +37,7 @@ export function useCreateDriver() {
   return useMutation({
     mutationFn: (data: { username: string; fullName?: string; phone: string; password?: string; plate?: string }) =>
       apiClient.createDriver(data).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['drivers'] })
-      qc.invalidateQueries({ queryKey: ['drivers-paged'] })
-      qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
-      qc.invalidateQueries({ queryKey: ['driver-earnings'] })
-      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
-    },
+    onSuccess: () => { invalidateDriverDeps(qc) },
   })
 }
 
@@ -53,13 +47,7 @@ export function useUpdateDriver() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<{ fullName: string; phone: string; username: string }> }) =>
       apiClient.updateDriver(id, data).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['drivers'] })
-      qc.invalidateQueries({ queryKey: ['drivers-paged'] })
-      qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
-      qc.invalidateQueries({ queryKey: ['driver-earnings'] })
-      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
-    },
+    onSuccess: () => { invalidateDriverDeps(qc) },
   })
 }
 
@@ -69,12 +57,8 @@ export function useDeleteDriver() {
   return useMutation({
     mutationFn: (id: number) => apiClient.deleteDriver(id).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['drivers'] })
-      qc.invalidateQueries({ queryKey: ['drivers-paged'] })
-      qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
+      invalidateDriverDeps(qc)
       qc.invalidateQueries({ queryKey: ['vehicles'] })
-      qc.invalidateQueries({ queryKey: ['driver-earnings'] })
-      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
     },
   })
 }

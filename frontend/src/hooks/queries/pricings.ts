@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { queryKeys } from '../query-keys'
+import { queryKeys, invalidatePricingDeps } from '../query-keys'
 import type { ApiResponse } from '@/data/domain'
 
 function unwrap<T>(res: ApiResponse<T>): T {
@@ -23,7 +23,7 @@ export function useCreatePricing() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: PricingCreatePayload) => apiClient.createPricing(data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['pricings'] }) },
+    onSuccess: () => { invalidatePricingDeps(qc) },
   })
 }
 
@@ -47,7 +47,7 @@ export function useUpdatePricing() {
         }
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['pricings'] }) },
+    onSuccess: () => { invalidatePricingDeps(qc) },
   })
 }
 
@@ -56,7 +56,7 @@ export function useDeletePricing() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => apiClient.deletePricing(id).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['pricings'] }) },
+    onSuccess: () => { invalidatePricingDeps(qc) },
   })
 }
 
@@ -73,9 +73,7 @@ export function useCommitPricing() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body: PricingCommitRequest) => apiClient.commitCustomerPricing(body),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['pricings'] })
-    },
+    onSuccess: () => { invalidatePricingDeps(qc) },
   })
 }
 

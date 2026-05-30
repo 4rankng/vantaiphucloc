@@ -111,8 +111,7 @@ export function useToggleTripConfirmation() {
     mutationFn: (bookedTripId: number) => apiClient.toggleTripConfirmation(bookedTripId).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+      invalidateDeliveredTripDeps(qc)
     },
   })
 }

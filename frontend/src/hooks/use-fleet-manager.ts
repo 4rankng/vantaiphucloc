@@ -17,7 +17,8 @@ import { api } from '@/services/api/client'
 import { apiClient } from '@/services/api'
 import { fuzzyMatch } from '@/lib/search-utils'
 import { groupByVehicle } from '@/lib/accounting-utils'
-import { useInfiniteScroll } from '@/components/shared/ListUtils'
+import { useInfiniteScroll } from '@/components/shared/data-display/ListUtils'
+import { invalidateDriverDeps } from './query-keys'
 import type { Driver } from '@/data/domain'
 
 export type FocusableField = 'fullName' | 'username' | 'phone' | 'plate'
@@ -131,6 +132,7 @@ export function useFleetManager() {
           plate: data.plate.trim() || undefined,
         })
         toast.success('Đã thêm lái xe')
+        invalidateDriverDeps(qc)
         qc.invalidateQueries({ queryKey: ['vehicles'] })
       } catch {
         toast.error('Không thể thêm lái xe')
@@ -157,9 +159,8 @@ export function useFleetManager() {
           await updateDriver.mutateAsync({ id: driver.id, data: updates })
         }
         // Refresh UI with name/phone changes before attempting vehicle update
-        qc.invalidateQueries({ queryKey: ['drivers'] })
+        invalidateDriverDeps(qc)
         qc.invalidateQueries({ queryKey: ['vehicles'] })
-        qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
 
         if (data.plate !== undefined && data.plate !== (driver.vehiclePlate ?? '')) {
           try {
@@ -167,8 +168,7 @@ export function useFleetManager() {
           } catch {
             // Vehicle update failed but name/phone were already saved
             toast.error('Đã lưu thông tin, nhưng không thể cập nhật biển số xe')
-            qc.invalidateQueries({ queryKey: ['drivers'] })
-            qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
+            invalidateDriverDeps(qc)
             return
           }
         }
@@ -188,7 +188,7 @@ export function useFleetManager() {
       try {
         await addVehicleDriver.mutateAsync({ vehicleId, driverId, effectiveFrom })
         toast.success('Đã thêm lái xe')
-        qc.invalidateQueries({ queryKey: ['drivers'] })
+        invalidateDriverDeps(qc)
       } catch {
         toast.error('Không thể thêm lái xe')
       }
@@ -201,7 +201,7 @@ export function useFleetManager() {
       try {
         await removeVehicleDriver.mutateAsync(vdId)
         toast.success('Đã gỡ lái xe')
-        qc.invalidateQueries({ queryKey: ['drivers'] })
+        invalidateDriverDeps(qc)
       } catch {
         toast.error('Không thể gỡ lái xe')
       }
@@ -226,9 +226,7 @@ export function useFleetManager() {
         } else {
           toast.success('Đã đổi tên đăng nhập')
         }
-        qc.invalidateQueries({ queryKey: ['drivers'] })
-        qc.invalidateQueries({ queryKey: ['drivers-paged'] })
-        qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
+        invalidateDriverDeps(qc)
       } catch {
         toast.error('Không thể lưu thay đổi')
         throw new Error('Reset password failed')

@@ -7,14 +7,6 @@
     <meta name="theme-color" content="#0a1f33" />
     <meta name="app-version" content="2026.04.22.18" />
     <meta name="deployed-at" content="2026.04.22.18:32:00Z" />
-    <!-- Unregister stale service workers synchronously before any JS runs -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
-          regs.forEach(function(r) { r.unregister(); });
-        });
-      }
-    </script>
     <link rel="stylesheet" href="/fonts/fonts.css" />
     <title>TTransport — Quản lý vận tải hàng hóa</title>
   </head>

@@ -18,7 +18,7 @@ const SelectTrigger = React.forwardRef<
       "flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3",
       "text-[13.5px] tracking-[-0.008em] leading-none",
       "border-[var(--line)] bg-[var(--theme-bg-secondary)] text-[var(--ink)]",
-      "ring-offset-[var(--theme-bg-primary,#FAFAFA)]",
+      "ring-offset-[var(--theme-bg-primary)]",
       "hover:border-[var(--line-2)]",
       "focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:border-[var(--accent)]",
       "disabled:cursor-not-allowed disabled:opacity-50",

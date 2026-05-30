@@ -3,7 +3,7 @@ import { createElement, Fragment, Suspense, type ComponentType } from 'react'
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Login } from '@/pages/Login'
-import { ScrollToTop } from '@/components/shared/ScrollToTop'
+import { ScrollToTop } from '@/components/shared/navigation/ScrollToTop'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import * as R from '@/routes'
 

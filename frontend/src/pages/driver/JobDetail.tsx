@@ -3,8 +3,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { formatCurrencyFull, getWorkTypeLabel } from '@/data/domain'
 import { useDeliveredTrip, useDeleteDeliveredTrip, useUpdateDeliveredTrip } from '@/hooks/use-queries'
-import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
-import { DateNavigator } from '@/components/shared/DateNavigator'
+import { DangerConfirmDialog } from '@/components/shared/overlays/DangerConfirmDialog/DangerConfirmDialog'
+import { DateNavigator } from '@/components/shared/navigation/DateNavigator'
 
 // ─── Status pill ──────────────────────────────────────────────────────────────
 function StatusPill({ booked }: { booked: boolean }) {
@@ -12,11 +12,11 @@ function StatusPill({ booked }: { booked: boolean }) {
     return (
       <span
         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-bold"
-        style={{ background: 'rgba(0,90,45,0.12)', color: 'var(--brand, #005A2D)' }}
+        style={{ background: 'rgba(0,90,45,0.12)', color: 'var(--theme-brand-primary-dark)' }}
       >
         <span
           className="w-1.5 h-1.5 rounded-full"
-          style={{ background: 'var(--brand, #005A2D)' }}
+          style={{ background: 'var(--theme-brand-primary-dark)' }}
         />
         Đã ghép
       </span>
@@ -25,9 +25,9 @@ function StatusPill({ booked }: { booked: boolean }) {
   return (
     <span
       className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-bold"
-      style={{ background: '#FFF1DC', color: '#B6701A' }}
+        style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning-text)' }}
     >
-      <span className="w-1.5 h-1.5 rounded-full status-dot-amber" style={{ background: '#B6701A' }} />
+      <span className="w-1.5 h-1.5 rounded-full status-dot-amber" style={{ background: 'var(--theme-status-warning)' }} />
       Chờ ghép
     </span>
   )
@@ -39,7 +39,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
     <section className="px-4 mb-[18px]">
       <p
         className="text-[10.5px] font-bold uppercase tracking-[0.14em] px-1.5 pb-2.5"
-        style={{ color: 'var(--text-3, #8A938F)' }}
+        style={{ color: 'var(--theme-text-muted)' }}
       >
         {label}
       </p>
@@ -145,7 +145,7 @@ export function JobDetail() {
       <button
         onClick={() => navigate(-1)}
         className="inline-flex items-center gap-2 text-[15px] font-semibold px-5 pt-[18px] pb-2 mb-1"
-        style={{ color: 'var(--brand, #005A2D)' }}
+        style={{ color: 'var(--theme-brand-primary-dark)' }}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -160,9 +160,9 @@ export function JobDetail() {
           <div
             className="rounded-[20px] px-5 py-[18px] relative overflow-hidden"
             style={{
-              background: 'radial-gradient(circle at 92% -10%, rgba(0,90,45,0.08) 0%, transparent 45%), linear-gradient(180deg, #FFFFFF 0%, #F0F7F3 100%)',
+              background: 'radial-gradient(circle at 92% -10%, rgba(0,90,45,0.08) 0%, transparent 45%), linear-gradient(180deg, var(--theme-bg-secondary) 0%, var(--theme-brand-primary-light) 100%)',
               boxShadow: '0 10px 28px rgba(0,90,45,0.08)',
-              border: '1px solid var(--line, #ECEFEC)',
+              border: '1px solid var(--theme-border-default)',
             }}
           >
             {/* dot grid */}
@@ -182,7 +182,7 @@ export function JobDetail() {
                 <div className="flex items-center gap-2">
                   <span
                     className="text-[10.5px] font-bold uppercase tracking-[0.16em]"
-                    style={{ color: 'var(--text-3, #8A938F)' }}
+                    style={{ color: 'var(--theme-text-muted)' }}
                   >
                     Container
                   </span>
@@ -190,8 +190,8 @@ export function JobDetail() {
                     <span
                       className="px-2 py-[3px] rounded-[6px] text-[11px] font-bold tracking-[0.6px]"
                       style={{
-                        background: 'var(--brand-soft, #E6F2EB)',
-                        color: 'var(--brand, #005A2D)',
+                        background: 'var(--theme-brand-primary-light)',
+                        color: 'var(--theme-brand-primary-dark)',
                         fontFamily: "'JetBrains Mono', 'Courier New', monospace",
                       }}
                     >
@@ -206,7 +206,7 @@ export function JobDetail() {
               <div
                 className="text-[28px] font-bold leading-none tracking-[0.5px]"
                 style={{
-                  color: job.contNumber ? 'var(--ink, #0F1714)' : 'rgba(15,23,20,0.3)',
+                  color: job.contNumber ? 'var(--theme-text-primary)' : 'rgba(15,23,20,0.3)',
                   fontFamily: "'JetBrains Mono', 'Courier New', monospace",
                 }}
               >
@@ -221,8 +221,8 @@ export function JobDetail() {
           <div
             className="rounded-[18px] px-5 py-5"
             style={{
-              background: 'var(--card, #FFFFFF)',
-              border: '1px solid var(--line, #ECEFEC)',
+              background: 'var(--theme-bg-secondary)',
+              border: '1px solid var(--theme-border-default)',
               boxShadow: '0 1px 2px rgba(15,23,20,0.04)',
             }}
           >
@@ -246,16 +246,16 @@ export function JobDetail() {
                 <div
                   className="w-3.5 h-3.5 rounded-full mx-auto mb-2"
                   style={{
-                    background: 'var(--brand, #005A2D)',
-                    boxShadow: '0 0 0 4px var(--brand-soft, #E6F2EB)',
+                    background: 'var(--theme-brand-primary-dark)',
+                    boxShadow: '0 0 0 4px var(--theme-brand-primary-light)',
                   }}
                 />
-                <div className="text-[13px] font-bold leading-tight tracking-[0.3px]" style={{ color: 'var(--text, #0F1714)' }}>
+                <div className="text-[13px] font-bold leading-tight tracking-[0.3px]" style={{ color: 'var(--theme-text-primary)' }}>
                   {job.pickupLocation.name}
                 </div>
                 <div
                   className="text-[10px] font-semibold uppercase tracking-wide mt-1"
-                  style={{ color: 'var(--text-3, #8A938F)' }}
+                  style={{ color: 'var(--theme-text-muted)' }}
                 >
                   Điểm đi
                 </div>
@@ -266,8 +266,8 @@ export function JobDetail() {
                 <div
                   className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center"
                   style={{
-                    background: 'var(--brand, #005A2D)',
-                    color: '#fff',
+                    background: 'var(--theme-brand-primary-dark)',
+                    color: 'var(--theme-text-on-brand)',
                     boxShadow: '0 4px 10px rgba(0,90,45,0.3)',
                   }}
                 >
@@ -285,7 +285,7 @@ export function JobDetail() {
                   style={{
                     height: 2,
                     width: 60,
-                    backgroundImage: 'linear-gradient(to right, var(--brand, #005A2D) 50%, transparent 50%)',
+                    backgroundImage: 'linear-gradient(to right, var(--theme-brand-primary-dark) 50%, transparent 50%)',
                     backgroundSize: '6px 2px',
                     backgroundRepeat: 'repeat-x',
                   }}
@@ -297,16 +297,16 @@ export function JobDetail() {
                 <div
                   className="w-3.5 h-3.5 rounded-full mx-auto mb-2"
                   style={{
-                    background: '#fff',
-                    border: '3px solid var(--brand, #005A2D)',
+                    background: 'var(--theme-bg-secondary)',
+                    border: '3px solid var(--theme-brand-primary-dark)',
                   }}
                 />
-                <div className="text-[13px] font-bold leading-tight tracking-[0.3px]" style={{ color: 'var(--text, #0F1714)' }}>
+                <div className="text-[13px] font-bold leading-tight tracking-[0.3px]" style={{ color: 'var(--theme-text-primary)' }}>
                   {job.dropoffLocation.name}
                 </div>
                 <div
                   className="text-[10px] font-semibold uppercase tracking-wide mt-1"
-                  style={{ color: 'var(--text-3, #8A938F)' }}
+                  style={{ color: 'var(--theme-text-muted)' }}
                 >
                   Điểm đến
                 </div>
@@ -318,16 +318,16 @@ export function JobDetail() {
               <div
                 className="flex items-center gap-3 rounded-xl px-3.5 py-3"
                 style={{
-                  background: '#FAFBFA',
-                  border: '1px solid var(--line, #ECEFEC)',
+                  background: 'var(--theme-bg-tertiary)',
+                  border: '1px solid var(--theme-border-default)',
                 }}
               >
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                   style={{
-                    background: '#fff',
-                    border: '1px solid var(--line, #ECEFEC)',
-                    color: 'var(--brand, #005A2D)',
+                  background: 'var(--theme-bg-secondary)',
+                  border: '1px solid var(--theme-border-default)',
+                    color: 'var(--theme-brand-primary-dark)',
                   }}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -339,14 +339,14 @@ export function JobDetail() {
                 <div>
                   <div
                     className="text-[10.5px] font-semibold uppercase tracking-wide"
-                    style={{ color: 'var(--text-3, #8A938F)' }}
+                    style={{ color: 'var(--theme-text-muted)' }}
                   >
                     Số tàu
                   </div>
                   <div
                     className="text-[14px] font-bold mt-0.5 tracking-[0.3px]"
                     style={{
-                      color: 'var(--text, #0F1714)',
+                      color: 'var(--theme-text-primary)',
                       fontFamily: "'JetBrains Mono', 'Courier New', monospace",
                     }}
                   >
@@ -363,8 +363,8 @@ export function JobDetail() {
           <div
             className="rounded-[18px] overflow-hidden p-1"
             style={{
-              background: 'var(--card, #FFFFFF)',
-              border: '1px solid var(--line, #ECEFEC)',
+              background: 'var(--theme-bg-secondary)',
+              border: '1px solid var(--theme-border-default)',
               boxShadow: '0 1px 2px rgba(15,23,20,0.04)',
             }}
           >
@@ -373,7 +373,7 @@ export function JobDetail() {
               <div className="px-3.5 py-4">
                 <div
                   className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wide mb-2"
-                  style={{ color: 'var(--text-3, #8A938F)' }}
+                  style={{ color: 'var(--theme-text-muted)' }}
                 >
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4" />
@@ -383,7 +383,7 @@ export function JobDetail() {
                 </div>
                 <div
                   className="text-[13.5px] font-bold leading-snug"
-                  style={{ color: 'var(--text, #0F1714)' }}
+                  style={{ color: 'var(--theme-text-primary)' }}
                 >
                   {job.client.name || '—'}
                 </div>
@@ -392,11 +392,11 @@ export function JobDetail() {
               {/* operation */}
               <div
                 className="px-3.5 py-4"
-                style={{ borderLeft: '1px solid var(--line, #ECEFEC)' }}
+                style={{ borderLeft: '1px solid var(--theme-border-default)' }}
               >
                 <div
                   className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wide mb-2"
-                  style={{ color: 'var(--text-3, #8A938F)' }}
+                  style={{ color: 'var(--theme-text-muted)' }}
                 >
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
@@ -405,7 +405,7 @@ export function JobDetail() {
                 </div>
                 <div
                   className="text-[14px] font-bold leading-snug"
-                  style={{ color: 'var(--text, #0F1714)' }}
+                  style={{ color: 'var(--theme-text-primary)' }}
                 >
                   {workTypeLabel || '—'}
                 </div>
@@ -421,8 +421,8 @@ export function JobDetail() {
               className="rounded-[18px] px-5 py-[18px] relative overflow-hidden"
               style={{
                 background: job.driverSalary > 0
-                  ? 'linear-gradient(135deg, #007E3E 0%, #005A2D 60%, #003E1F 100%)'
-                  : 'var(--brand-softer, #F0F7F3)',
+                   ? 'linear-gradient(135deg, var(--theme-brand-primary) 0%, var(--theme-brand-primary-dark) 60%, color-mix(in srgb, var(--theme-brand-primary-dark) 60%, #000) 100%)'
+                   : 'var(--theme-brand-primary-light)',
                 boxShadow: job.driverSalary > 0
                   ? '0 10px 24px rgba(0,90,45,0.25)'
                   : 'none',
@@ -460,7 +460,7 @@ export function JobDetail() {
                       background: job.driverSalary > 0
                         ? 'rgba(255,255,255,0.15)'
                         : 'rgba(0,90,45,0.08)',
-                      color: job.driverSalary > 0 ? '#fff' : 'var(--brand, #005A2D)',
+                      color: job.driverSalary > 0 ? 'var(--theme-text-on-brand)' : 'var(--theme-brand-primary-dark)',
                     }}
                   >
                     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -470,13 +470,13 @@ export function JobDetail() {
                   <div>
                     <div
                       className="text-[10.5px] font-semibold uppercase tracking-[0.1em]"
-                      style={{ color: job.driverSalary > 0 ? 'rgba(255,255,255,0.7)' : 'var(--brand, #005A2D)' }}
+                      style={{ color: job.driverSalary > 0 ? 'rgba(255,255,255,0.7)' : 'var(--theme-brand-primary-dark)' }}
                     >
                       Thu nhập
                     </div>
                     <div
                       className="text-[13px] font-semibold mt-0.5"
-                      style={{ color: job.driverSalary > 0 ? 'rgba(255,255,255,0.9)' : 'var(--text-2, #5B6661)' }}
+                      style={{ color: job.driverSalary > 0 ? 'rgba(255,255,255,0.9)' : 'var(--theme-text-secondary)' }}
                     >
                       Chuyến này
                     </div>
@@ -487,13 +487,13 @@ export function JobDetail() {
                   <div className="flex items-baseline gap-0.5">
                     <span
                       className="text-[22px] font-extrabold tabular-nums leading-none"
-                      style={{ color: '#fff', letterSpacing: '-0.3px' }}
+                      style={{ color: 'var(--theme-text-on-brand)', letterSpacing: '-0.3px' }}
                     >
                       {formatCurrencyFull(job.driverSalary)}
                     </span>
                   </div>
                 ) : (
-                  <span className="text-sm font-semibold" style={{ color: 'var(--text-3, #8A938F)' }}>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
                     Chưa tính
                   </span>
                 )}
@@ -508,10 +508,10 @@ export function JobDetail() {
       <div
         className="fixed bottom-0 left-0 right-0 z-30 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         style={{
-          background: 'color-mix(in srgb, var(--card, #fff) 92%, transparent)',
+          background: 'color-mix(in srgb, var(--theme-bg-secondary) 92%, transparent)',
           backdropFilter: 'blur(14px) saturate(140%)',
           WebkitBackdropFilter: 'blur(14px) saturate(140%)',
-          borderTop: '1px solid var(--line, #ECEFEC)',
+          borderTop: '1px solid var(--theme-border-default)',
         }}
       >
         {canEdit ? (
@@ -523,9 +523,9 @@ export function JobDetail() {
               style={{
                 height: 52,
                 width: 52,
-                background: '#fff',
-                color: 'var(--danger, #C0392B)',
-                border: '1.5px solid #FDECEA',
+                background: 'var(--theme-bg-secondary)',
+                color: 'var(--theme-status-error)',
+                border: '1.5px solid var(--theme-status-error-light)',
                 opacity: deleting ? 0.5 : 1,
               }}
             >
@@ -535,8 +535,8 @@ export function JobDetail() {
               onClick={() => navigate(`/driver/delivered-trips/${job.id}/edit`)}
               className="flex-1 rounded-[14px] text-[15px] font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
               style={{
-                background: 'var(--brand, #005A2D)',
-                color: '#fff',
+                background: 'var(--theme-brand-primary-dark)',
+                color: 'var(--theme-text-on-brand)',
                 height: 52,
                 boxShadow: '0 8px 20px rgba(0,90,45,0.28)',
               }}
@@ -545,7 +545,7 @@ export function JobDetail() {
             </button>
           </div>
         ) : (
-          <p className="text-center text-xs py-2" style={{ color: 'var(--text-3, #8A938F)' }}>
+          <p className="text-center text-xs py-2" style={{ color: 'var(--theme-text-muted)' }}>
             Chuyến đã được ghép — không thể chỉnh sửa
           </p>
         )}

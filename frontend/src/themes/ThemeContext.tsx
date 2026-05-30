@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import type { ThemeDefinition } from './types';
-import { grabTheme } from './grab';
+import { nepoTheme } from './nepo';
 import { applyThemeToDOM } from './css';
 import { themes, themeMap } from './theme-registry';
 
@@ -8,9 +8,9 @@ const STORAGE_KEY = 'ttransport-theme';
 
 // Apply theme synchronously before first render so CSS vars are available immediately.
 const _initialThemeName = (() => {
-  try { return localStorage.getItem(STORAGE_KEY) || grabTheme.name; } catch { return grabTheme.name; }
+  try { return localStorage.getItem(STORAGE_KEY) || nepoTheme.name; } catch { return nepoTheme.name; }
 })()
-applyThemeToDOM(themeMap.get(_initialThemeName) ?? grabTheme)
+applyThemeToDOM(themeMap.get(_initialThemeName) ?? nepoTheme)
 
 interface ThemeContextValue {
   theme: ThemeDefinition;
@@ -22,11 +22,11 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themeName, setThemeName] = useState<string>(() => {
-    try { return localStorage.getItem(STORAGE_KEY) || grabTheme.name; }
-    catch { return grabTheme.name; }
+    try { return localStorage.getItem(STORAGE_KEY) || nepoTheme.name; }
+    catch { return nepoTheme.name; }
   });
 
-  const theme = useMemo(() => themeMap.get(themeName) || grabTheme, [themeName]);
+  const theme = useMemo(() => themeMap.get(themeName) || nepoTheme, [themeName]);
 
   useEffect(() => {
     applyThemeToDOM(theme);

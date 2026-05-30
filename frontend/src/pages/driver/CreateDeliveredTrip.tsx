@@ -5,16 +5,16 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { getWorkTypeLabel } from '@/data/domain'
-import { ContainerScanner } from '@/components/shared/ContainerScanner'
-import { ContainerTypeGrid } from '@/components/shared/ContainerTypeGrid'
-import { TripSummaryDialog } from '@/components/shared/TripSummaryDialog'
-import { SuccessOverlay } from '@/components/shared/SuccessOverlay'
-import { AIScanningOverlay } from '@/components/shared/AIScanningOverlay'
-import { RecentTripSuggestions } from '@/components/shared/RecentTripSuggestions'
-import { InlineSelect } from '@/components/shared/InlineSelect'
-import { RecentValuesInput } from '@/components/shared/RecentValuesInput'
-import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
-import { DateNavigator } from '@/components/shared/DateNavigator'
+import { ContainerScanner } from '@/components/shared/overlays/ContainerScanner'
+import { ContainerTypeGrid } from '@/components/shared/data-display/ContainerTypeGrid'
+import { TripSummaryDialog } from '@/components/shared/overlays/TripSummaryDialog'
+import { SuccessOverlay } from '@/components/shared/feedback/SuccessOverlay'
+import { AIScanningOverlay } from '@/components/shared/feedback/AIScanningOverlay'
+import { RecentTripSuggestions } from '@/components/shared/cards/RecentTripSuggestions'
+import { InlineSelect } from '@/components/shared/forms/InlineSelect'
+import { RecentValuesInput } from '@/components/shared/forms/RecentValuesInput'
+import { LocationSelect } from '@/components/shared/forms/LocationSelect/LocationSelect'
+import { DateNavigator } from '@/components/shared/navigation/DateNavigator'
 import { useCreateDeliveredTrip } from './useCreateDeliveredTrip'
 import { useToast } from '@/components/atoms/Toast'
 import type { DeliveredTrip } from '@/data/domain'
@@ -438,10 +438,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
             </button>
             <button
               onClick={async () => {
-                const result = await onRequestSubmit()
-                if (result === 'offline') {
-                  toast.error('Không có mạng — vui lòng thử lại khi có kết nối')
-                }
+                await onRequestSubmit()
               }}
               disabled={!canSubmit || submitting}
               type="button"

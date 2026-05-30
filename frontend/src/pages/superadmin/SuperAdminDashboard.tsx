@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Plus, Search, Phone, Building2, Eye, Pencil, Play } from 'lucide-react'
-import { EmptyState } from '@/components/shared/EmptyState/EmptyState'
+import { EmptyState } from '@/components/shared/feedback/EmptyState/EmptyState'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { ROLE_LABELS, type Role } from '@/data/domain'
 import { type UserAccount } from '@/services/api/users.api'
@@ -14,9 +14,9 @@ const ROLE_STYLE: Record<string, {
 }> = {
   superadmin: {
     avatarBg: 'var(--theme-text-primary)',
-    avatarColor: '#fff',
+    avatarColor: 'var(--theme-text-on-brand)',
     tagBg: 'var(--theme-text-primary)',
-    tagColor: '#fff',
+    tagColor: 'var(--theme-text-on-brand)',
   },
   director: {
     avatarBg: '#F1ECF9',
@@ -31,10 +31,10 @@ const ROLE_STYLE: Record<string, {
     tagColor: 'var(--theme-brand-primary)',
   },
   accountant: {
-    avatarBg: '#FFF5E1',
-    avatarColor: '#C77A00',
-    tagBg: '#FFF5E1',
-    tagColor: '#C77A00',
+    avatarBg: 'var(--theme-status-warning-light)',
+    avatarColor: 'var(--theme-status-warning)',
+    tagBg: 'var(--theme-status-warning-light)',
+    tagColor: 'var(--theme-status-warning)',
   },
 }
 
@@ -80,7 +80,7 @@ function UserCard({
       className="group relative flex flex-col gap-3.5 rounded-2xl border p-[18px] transition-all duration-200 hover:-translate-y-0.5"
       style={{
         background: inactive
-          ? 'linear-gradient(180deg,#FFFBFB 0%,#FFFFFF 60%)'
+          ? 'linear-gradient(180deg,#FFFBFB 0%,var(--theme-bg-secondary) 60%)'
           : 'var(--theme-bg-secondary)',
         border: '1px solid var(--theme-border-default)',
         boxShadow: 'none',
@@ -256,7 +256,7 @@ function UserCard({
             className="flex flex-1 items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition-all"
             style={{
               background: 'var(--theme-brand-primary)',
-              color: '#fff',
+              color: 'var(--theme-text-on-brand)',
             }}
             onMouseEnter={e => {
               (e.currentTarget as HTMLElement).style.opacity = '0.88'
@@ -274,7 +274,7 @@ function UserCard({
             className="flex flex-1 items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition-all"
             style={{
               background: 'var(--theme-brand-primary)',
-              color: '#fff',
+              color: 'var(--theme-text-on-brand)',
             }}
             onMouseEnter={e => {
               (e.currentTarget as HTMLElement).style.opacity = '0.88'
@@ -405,7 +405,7 @@ export function SuperAdminDashboard({
                 className="inline-flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-[13px] font-semibold transition-all duration-150"
                 style={{
                   background: active ? 'var(--theme-text-primary)' : 'transparent',
-                  color:      active ? '#fff' : 'var(--theme-text-muted)',
+                  color:      active ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
                 }}
               >
                 {tab.label}
@@ -415,7 +415,7 @@ export function SuperAdminDashboard({
                     background: active
                       ? 'rgba(255,255,255,0.18)'
                       : 'var(--theme-bg-tertiary)',
-                    color: active ? '#fff' : 'var(--theme-text-secondary)',
+                    color: active ? 'var(--theme-text-on-brand)' : 'var(--theme-text-secondary)',
                   }}
                 >
                   {count}

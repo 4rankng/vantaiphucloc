@@ -1,5 +1,5 @@
 import type { ThemeDefinition } from './types';
-import { grabTheme } from './grab';
+import { nepoTheme } from './nepo';
 
-export const themes: ThemeDefinition[] = [grabTheme];
+export const themes: ThemeDefinition[] = [nepoTheme];
 export const themeMap = new Map(themes.map(t => [t.name, t]));

@@ -1,16 +1,16 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { MapPin, Plus, AlertTriangle, Merge, Search, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui'
-import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { StatPill } from '@/components/shared/StatPill'
-import { PageHeader } from '@/components/shared/PageHeader'
+import { DangerConfirmDialog } from '@/components/shared/overlays/DangerConfirmDialog/DangerConfirmDialog'
+import { EmptyState } from '@/components/shared/feedback/EmptyState'
+import { StatPill } from '@/components/shared/data-display/StatPill'
+import { PageHeader } from '@/components/shared/layouts/PageHeader'
 import { useToast } from '@/components/atoms/Toast'
-import { LocationListItem } from '@/components/shared/LocationListItem'
-import { LocationDetailPanel } from '@/components/shared/LocationDetailPanel'
-import { NewLocationInput } from '@/components/shared/NewLocationInput'
-import { LocationMergeDialog } from '@/components/shared/LocationMergeDialog'
-import { LocationImportDrawer } from '@/components/shared/LocationImportDrawer'
+import { LocationListItem } from '@/components/shared/cards/LocationListItem'
+import { LocationDetailPanel } from '@/components/shared/cards/LocationDetailPanel'
+import { NewLocationInput } from '@/components/shared/cards/NewLocationInput'
+import { LocationMergeDialog } from '@/components/shared/overlays/LocationMergeDialog'
+import { LocationImportDrawer } from '@/components/shared/overlays/LocationImportDrawer'
 import { findDuplicateHint } from '@/lib/duplicate-detection'
 import {
   useLocations,
@@ -258,7 +258,7 @@ export function LocationAliasesPage() {
                 onClick={() => setCreating(true)}
                 disabled={creating}
                 className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[12px] font-medium transition-colors"
-                style={{ background: 'var(--accent)', color: '#fff', opacity: creating ? 0.5 : 1 }}
+                style={{ background: 'var(--accent)', color: 'var(--theme-text-on-brand)', opacity: creating ? 0.5 : 1 }}
               >
                 <Plus className="h-3.5 w-3.5" />
                 Thêm địa điểm
@@ -269,7 +269,7 @@ export function LocationAliasesPage() {
                   onClick={() => setShowOnlyDupes(v => !v)}
                   className="flex items-center gap-1 px-2 py-1.5 rounded text-[11px] font-medium transition-colors shrink-0"
                   style={showOnlyDupes
-                    ? { background: 'var(--warning)', color: '#fff', border: 'none' }
+                    ? { background: 'var(--warning)', color: 'var(--theme-text-on-brand)', border: 'none' }
                     : { background: 'var(--surface-3)', color: 'var(--ink-3)', border: 'none' }
                   }
                   title={showOnlyDupes ? 'Xem tất cả' : 'Chỉ hiện địa điểm có thể trùng'}

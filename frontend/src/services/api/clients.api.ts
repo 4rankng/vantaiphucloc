@@ -1,6 +1,5 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, isNetworkError, unwrapList, unwrapPaginated } from './utils'
-import { setCache, getCache } from '@/lib/offline-db'
+import { toCamel, toSnake, ok, fail, unwrapList, unwrapPaginated } from './utils'
 import type { Client, ApiResponse, PaginatedResult } from '@/data/domain'
 
 export type ClientSortBy = 'name' | 'code' | 'created_at'
@@ -27,11 +26,8 @@ export async function getClients(): Promise<ApiResponse<Client[]>> {
     const res = await api.get('/clients', { params: { page_size: 1000 } })
     const rawList = unwrapList(res.data) as Record<string, unknown>[]
     const data = rawList.map(mapClient)
-    await setCache('clients', data)
     return ok(data)
   } catch (err) {
-    const cached = await getCache<Client[]>('clients')
-    if (isNetworkError(err) && cached) return ok(cached)
     return fail(err)
   }
 }

@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import {
   Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, ArrowRight, X, ArrowLeft,
 } from 'lucide-react'
-import { Panel } from '@/components/shared/Panel'
-import { StepIndicator } from '@/components/shared/StepIndicator'
+import { Panel } from '@/components/shared/overlays/Panel'
+import { StepIndicator } from '@/components/shared/navigation/StepIndicator'
 import { Button } from '@/components/ui'
-import { InlineSelect } from '@/components/shared/InlineSelect'
-import { LinkButton } from '@/components/shared/LinkButton'
+import { InlineSelect } from '@/components/shared/forms/InlineSelect'
+import { LinkButton } from '@/components/shared/navigation/LinkButton'
 import { useBulkImportAndMatch, useParsePreview, useClients } from '@/hooks/use-queries'
 
 type Step = 'upload' | 'preview' | 'done'

@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiClient } from '@/services/api'
 import { useLocations, useProfile } from '@/hooks/use-queries'
 import { useRecentValues } from '@/hooks/use-recent-values'
-import type { PhotoMeta } from '@/components/shared/ContainerScanner'
+import type { PhotoMeta } from '@/components/shared/overlays/ContainerScanner'
 import type { Client, ContType, WorkType, DeliveredTrip } from '@/data/domain'
 import { CONT_TYPES } from '@/data/domain'
-import { toISODate, shiftISODate, formatISODate } from '@/utils/salaryPeriod'
+import { toISODate, shiftISODate, formatISODate } from '@/lib/salaryPeriod'
+import { invalidateDeliveredTripDeps } from '@/hooks/query-keys'
 
 /**
  * ContainerForm — per-container row of the create-trip form.
@@ -72,6 +74,7 @@ function woToContainers(wo: DeliveredTrip): ContainerForm[] {
 
 export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | null) {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const { user } = useAuth()
   const isEdit = !!existingDeliveredTrip
 
@@ -375,6 +378,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
           vehiclePlate: null,
           tripDate,
         })
+        invalidateDeliveredTripDeps(qc)
         setShowSuccess(true)
         if (vessel.trim()) addRecentVessel(vessel.trim())
         setTimeout(() => {
@@ -394,6 +398,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
           vehiclePlate: null,
           tripDate,
         })
+        invalidateDeliveredTripDeps(qc)
         setShowSuccess(true)
         if (vessel.trim()) addRecentVessel(vessel.trim())
         setTimeout(() => {
@@ -407,10 +412,8 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     }
   }, [containers, clientId, vessel, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingDeliveredTrip, addRecentVessel, tripDate])
 
-  const onRequestSubmit = useCallback(async (): Promise<'offline' | 'validation-error' | undefined> => {
+  const onRequestSubmit = useCallback(async (): Promise<'validation-error' | undefined> => {
     if (!canSubmit) return
-    // Require network — all validation and submission goes to the backend
-    if (!navigator.onLine) return 'offline'
     // Validate container numbers via backend
     const errors: Record<number, string> = {}
     await Promise.all(containers.map(async (c, idx) => {

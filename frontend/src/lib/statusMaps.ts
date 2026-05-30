@@ -1,4 +1,4 @@
-import type { BadgeVariant } from '@/components/shared/StatusBadge'
+import type { BadgeVariant } from '@/components/shared/data-display/StatusBadge'
 
 export const tripStatusVariant = (s: string): BadgeVariant =>
   s === 'IN_PROGRESS' ? 'success' : s === 'COMPLETED' ? 'info' : s === 'PLANNED' ? 'warning' : s === 'CANCELLED' ? 'danger' : 'neutral'

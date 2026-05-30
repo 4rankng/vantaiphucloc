@@ -5,10 +5,10 @@
 import { lazy } from 'react'
 
 // ─── Layouts ──────────────────────────────────────────────────────────────────
-export const DriverLayout     = lazy(() => import('@/components/shared/DriverLayout').then(m => ({ default: m.DriverLayout })))
-export const AccountantLayout = lazy(() => import('@/components/shared/AccountantLayout').then(m => ({ default: m.AccountantLayout })))
-export const DirectorLayout   = lazy(() => import('@/components/shared/DirectorLayout').then(m => ({ default: m.DirectorLayout })))
-export const SuperAdminLayout = lazy(() => import('@/components/shared/SuperAdminLayout').then(m => ({ default: m.SuperAdminLayout })))
+export const DriverLayout     = lazy(() => import('@/components/shared/layouts/DriverLayout').then(m => ({ default: m.DriverLayout })))
+export const AccountantLayout = lazy(() => import('@/components/shared/layouts/AccountantLayout').then(m => ({ default: m.AccountantLayout })))
+export const DirectorLayout   = lazy(() => import('@/components/shared/layouts/DirectorLayout').then(m => ({ default: m.DirectorLayout })))
+export const SuperAdminLayout = lazy(() => import('@/components/shared/layouts/SuperAdminLayout').then(m => ({ default: m.SuperAdminLayout })))
 
 // ─── Driver pages ─────────────────────────────────────────────────────────────
 export const DriverHome           = lazy(() => import('@/pages/driver/DriverHome').then(m => ({ default: m.DriverHome })))

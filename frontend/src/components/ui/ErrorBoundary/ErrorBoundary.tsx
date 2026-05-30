@@ -2,8 +2,8 @@
 
 import type { ErrorInfo, ReactNode } from 'react'
 import { Component } from 'react'
-import { InlineError } from '@/components/shared/InlineError'
-import { ErrorFallback } from '@/components/shared/ErrorFallback/ErrorFallback'
+import { InlineError } from '@/components/shared/forms/InlineError'
+import { ErrorFallback } from '@/components/shared/feedback/ErrorFallback/ErrorFallback'
 
 interface Props {
   children: ReactNode

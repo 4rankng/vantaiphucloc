@@ -1,17 +1,13 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, isNetworkError } from './utils'
-import { setCache, getCache } from '@/lib/offline-db'
+import { toCamel, toSnake, ok, fail } from './utils'
 import type { Location, LocationAlias, ApiResponse } from '@/data/domain'
 
 export async function getLocations(): Promise<ApiResponse<Location[]>> {
   try {
     const res = await api.get('/locations/all')
     const data = toCamel<Location[]>(res.data)
-    await setCache('locations', data)
     return ok(data)
   } catch (err) {
-    const cached = await getCache<Location[]>('locations')
-    if (isNetworkError(err) && cached) return ok(cached)
     return fail(err)
   }
 }

@@ -5,22 +5,22 @@ import {
   FileSpreadsheet,
   Unlink,
 } from 'lucide-react'
-import { MonthNavigator } from '@/components/shared/MonthNavigator'
-import { PageHeader } from '@/components/shared/PageHeader'
-import { StatBreakdownCard } from '@/components/shared/StatBreakdownCard'
-import { Panel } from '@/components/shared/Panel'
-import { DataTable } from '@/components/shared/DataTable'
-import { ToolbarSearch } from '@/components/shared/Toolbar'
-import { EmptyState } from '@/components/shared/EmptyState'
+import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
+import { PageHeader } from '@/components/shared/layouts/PageHeader'
+import { StatBreakdownCard } from '@/components/shared/data-display/StatBreakdownCard'
+import { Panel } from '@/components/shared/overlays/Panel'
+import { DataTable } from '@/components/shared/data-display/DataTable'
+import { ToolbarSearch } from '@/components/shared/navigation/Toolbar'
+import { EmptyState } from '@/components/shared/feedback/EmptyState'
 import { Button } from '@/components/ui'
-import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
-import { ExcelImportDrawer } from '@/components/shared/ExcelImportDrawer'
-import { DeliveredTripDetailDrawer } from '@/components/shared/DeliveredTripDetailDrawer'
-import { AutoMatchDialog, AutoMatchDateDialog } from '@/components/shared/AutoMatchDialog'
-import { ExportDoiSoatDialog } from '@/components/shared/ExportDoiSoatDialog'
-import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
-import { useInfiniteScroll, LoadMoreSentinel } from '@/components/shared/ListUtils'
-import { getDeliveredTripColumns } from '@/components/shared/DeliveredTripColumns'
+import { InlineSelect } from '@/components/shared/forms/InlineSelect/InlineSelect'
+import { ExcelImportDrawer } from '@/components/shared/overlays/ExcelImportDrawer'
+import { DeliveredTripDetailDrawer } from '@/components/shared/overlays/DeliveredTripDetailDrawer'
+import { AutoMatchDialog, AutoMatchDateDialog } from '@/components/shared/feedback/AutoMatchDialog'
+import { ExportDoiSoatDialog } from '@/components/shared/overlays/ExportDoiSoatDialog'
+import { DangerConfirmDialog } from '@/components/shared/overlays/DangerConfirmDialog/DangerConfirmDialog'
+import { useInfiniteScroll, LoadMoreSentinel } from '@/components/shared/data-display/ListUtils'
+import { getDeliveredTripColumns } from '@/components/shared/data-display/DeliveredTripColumns'
 import { useMonthParams } from './use-month-params'
 import { useDebounce } from '@/hooks/use-debounce'
 import type { DeliveredTrip } from '@/data/domain'
@@ -327,7 +327,7 @@ export function DoiSoatPage() {
             </p>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--ink-3)' }}>
-                <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#f59e0b', opacity: 0.85 }} />
+                <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: 'var(--theme-status-warning)', opacity: 0.85 }} />
                 Chờ ghép
               </span>
               <span className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--ink-3)' }}>

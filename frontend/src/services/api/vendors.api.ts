@@ -1,6 +1,5 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, isNetworkError, unwrapList } from './utils'
-import { setCache, getCache } from '@/lib/offline-db'
+import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
 import type { Vendor, ApiResponse, PaginatedResult } from '@/data/domain'
 
 export type VendorSortBy = 'name' | 'code' | 'created_at'
@@ -18,11 +17,8 @@ export async function getVendors(): Promise<ApiResponse<Vendor[]>> {
   try {
     const res = await api.get('/vendors')
     const data = toCamel<Vendor[]>(unwrapList(res.data?.items ?? res.data))
-    await setCache('vendors', data)
     return ok(data)
   } catch (err) {
-    const cached = await getCache<Vendor[]>('vendors')
-    if (isNetworkError(err) && cached) return ok(cached)
     return fail(err)
   }
 }

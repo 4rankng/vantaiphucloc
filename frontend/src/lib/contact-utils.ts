@@ -1,5 +1,5 @@
 import type { Client, Vendor } from '@/data/domain'
-import type { ContactRow } from '@/components/shared/ContactsTable'
+import type { ContactRow } from '@/components/shared/data-display/ContactsTable'
 
 export function toClientRow(c: Client): ContactRow {
   return { id: c.id, name: c.name, partnerType: 'client', type: 'company', phone: c.phone ?? '', taxCode: c.taxCode ?? '', address: c.address ?? '', contactPerson: c.contactPerson ?? '' }

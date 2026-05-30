@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { queryKeys } from '../query-keys'
+import { queryKeys, invalidateSalaryDeps } from '../query-keys'
 import type { ApiResponse } from '@/data/domain'
 import type { DriverSalaryUpdateInput } from '@/services/api/salary.api'
 
@@ -58,12 +58,7 @@ export function useCalculateSalary() {
   return useMutation({
     mutationFn: ({ driverId, startDate, endDate }: { driverId?: number; startDate: string; endDate: string }) =>
       apiClient.calculateSalary(driverId, startDate, endDate).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['driver-earnings'] })
-      qc.invalidateQueries({ queryKey: ['my-earnings'] })
-      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
-    },
+    onSuccess: () => { invalidateSalaryDeps(qc) },
   })
 }
 
@@ -85,10 +80,7 @@ export function useUpdateSalaryConfig() {
     mutationFn: (data: { from_day: number; to_day: number }) => apiClient.updateSalaryConfig(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.salaryConfig })
-      qc.invalidateQueries({ queryKey: ['driver-earnings'] })
-      qc.invalidateQueries({ queryKey: ['my-earnings'] })
-      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+      invalidateSalaryDeps(qc)
     },
   })
 }
@@ -125,10 +117,7 @@ export function useSetDriverBaseSalary() {
         .then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['driver-base-salary'] })
-      qc.invalidateQueries({ queryKey: ['driver-earnings'] })
-      qc.invalidateQueries({ queryKey: ['my-earnings'] })
-      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+      invalidateSalaryDeps(qc)
       qc.invalidateQueries({ queryKey: ['salary-period'] })
     },
   })
@@ -166,8 +155,7 @@ export function useUpsertDriverSalary() {
         .then(unwrap),
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: queryKeys.salaryPeriod(variables.fromDate, variables.toDate) })
-      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+      invalidateSalaryDeps(qc)
     },
   })
 }
@@ -180,8 +168,7 @@ export function useInitializeSalaryPeriod() {
       apiClient.initializeSalaryPeriod(fromDate, toDate).then(unwrap),
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: queryKeys.salaryPeriod(variables.fromDate, variables.toDate) })
-      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
-      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+      invalidateSalaryDeps(qc)
     },
   })
 }

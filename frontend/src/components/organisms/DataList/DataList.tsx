@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { LoadingState } from '@/components/shared/LoadingState'
+import { EmptyState } from '@/components/shared/feedback/EmptyState'
+import { LoadingState } from '@/components/shared/feedback/LoadingState'
 import { Inbox } from 'lucide-react'
 
 interface DataListProps<T> {

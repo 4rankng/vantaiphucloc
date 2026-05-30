@@ -76,6 +76,16 @@ export interface ThemeColors {
   // Badge
   badgeFrom: string;
   badgeTo: string;
+
+  aiAccent: string;
+  aiAccentLight: string;
+  aiAccentDark: string;
+  aiGradient: string;
+  aiGradientFrom: string;
+  aiGradientTo: string;
+
+  expressColor: string;
+  expressColorLight: string;
 }
 
 export interface ThemeTypography {

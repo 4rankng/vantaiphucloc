@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Calendar, AlertTriangle } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button } from '@/components/ui'
-import { Panel } from '@/components/shared/Panel'
-import { DayStepperInput } from '@/components/shared/DayStepperInput'
-import { PulseHint } from '@/components/shared/PulseHint'
+import { Panel } from '@/components/shared/overlays/Panel'
+import { DayStepperInput } from '@/components/shared/navigation/DayStepperInput'
+import { PulseHint } from '@/components/shared/feedback/PulseHint'
 import { useSalaryConfig, useUpdateSalaryConfig } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { useQueryClient } from '@tanstack/react-query'
-import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout/SettingsPageLayout'
+import { invalidateDeliveredTripDeps } from '@/hooks/query-keys'
+import { SettingsPageLayout } from '@/components/shared/layouts/SettingsPageLayout/SettingsPageLayout'
 import { DriverBaseSalaryTable } from '@/components/payroll/DriverBaseSalaryTable'
 
 function periodExample(fromDay: number, toDay: number) {
@@ -52,7 +53,11 @@ export function SalaryPeriodSettings() {
       onSuccess: () => {
         toast.success('Đã cập nhật kỳ lương')
         setShowConfirm(false)
-        qc.invalidateQueries()
+        qc.invalidateQueries({ queryKey: ['salary/config'] })
+        qc.invalidateQueries({ queryKey: ['driver-earnings'] })
+        qc.invalidateQueries({ queryKey: ['my-earnings'] })
+        qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
+        invalidateDeliveredTripDeps(qc)
       },
       onError: () => toast.error('Không thể cập nhật'),
     })

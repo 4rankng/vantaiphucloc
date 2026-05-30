@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react'
 import { Users, Briefcase, SlidersHorizontal } from 'lucide-react'
-import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
+import { InlineSelect } from '@/components/shared/forms/InlineSelect/InlineSelect'
 import { WORK_TYPE_LABELS } from '@/data/domain'
 import type { WorkType } from '@/data/domain'
 
@@ -58,7 +58,7 @@ export const VendorRoutePricingFilters = memo(function VendorRoutePricingFilters
               width: 18,
               height: 18,
               background: 'var(--theme-brand-primary)',
-              color: '#fff',
+              color: 'var(--theme-text-on-brand)',
               fontSize: 10,
             }}
           >

@@ -2,15 +2,15 @@ import { useState } from 'react'
 import { Truck, Plus, User, X, Building2, Users, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui'
 
-import { Panel } from '@/components/shared/Panel'
-import { PageHeader } from '@/components/shared/PageHeader'
-import { Plate } from '@/components/shared/Plate'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
-import { VendorManagementDrawer } from '@/components/shared/VendorManagementDrawer'
-import { DriverFormDrawer } from '@/components/shared/DriverFormDrawer'
-import { LoadMoreSentinel, SearchInput } from '@/components/shared/ListUtils'
-import { StatPill } from '@/components/shared/StatPill'
+import { Panel } from '@/components/shared/overlays/Panel'
+import { PageHeader } from '@/components/shared/layouts/PageHeader'
+import { Plate } from '@/components/shared/data-display/Plate'
+import { EmptyState } from '@/components/shared/feedback/EmptyState'
+import { TableSkeleton } from '@/components/shared/data-display/TableSkeleton/TableSkeleton'
+import { VendorManagementDrawer } from '@/components/shared/overlays/VendorManagementDrawer'
+import { DriverFormDrawer } from '@/components/shared/overlays/DriverFormDrawer'
+import { LoadMoreSentinel, SearchInput } from '@/components/shared/data-display/ListUtils'
+import { StatPill } from '@/components/shared/data-display/StatPill'
 import { useIsMobile } from '@/hooks/use-mobile'
 
 import { useFleetManager, type FocusState } from '@/hooks/use-fleet-manager'
@@ -25,7 +25,7 @@ import {
   DriverMobileCard,
   DriverMobileEditCard,
 } from '@/components/shared'
-import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
+import { DangerConfirmDialog } from '@/components/shared/overlays/DangerConfirmDialog/DangerConfirmDialog'
 
 function FleetSection() {
   const isMobile = useIsMobile(768)

@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { Wallet, Download, Coins, BadgePercent } from 'lucide-react'
 import { Button } from '@/components/ui'
-import { PageHeader } from '@/components/shared/PageHeader'
-import { MonthNavigator } from '@/components/shared/MonthNavigator'
-import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
-import { NepoTable } from '@/components/shared/NepoTable'
-import type { NepoColumn, NepoFooterCell } from '@/components/shared/NepoTable'
+import { PageHeader } from '@/components/shared/layouts/PageHeader'
+import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
+import { KpiHeroCard } from '@/components/shared/data-display/KpiHeroCard'
+import { NepoTable } from '@/components/shared/data-display/NepoTable'
+import type { NepoColumn, NepoFooterCell } from '@/components/shared/data-display/NepoTable'
 import { DriverBaseSalaryDialog } from '@/components/payroll/DriverBaseSalaryDialog'
 import {
   useSalaryPeriod,
@@ -17,7 +17,7 @@ import {
 import { useMonthParams } from './use-month-params'
 import { formatCurrency } from '@/data/domain'
 import { AnimatedNumber } from '@/components/shared'
-import { FieldActions } from '@/components/shared/ListUtils'
+import { FieldActions } from '@/components/shared/data-display/ListUtils'
 import type { DriverEarnings, DriverSalaryRecord } from '@/services/api/salary.api'
 
 const monoStyle = { fontFamily: 'var(--theme-font-mono)' } as React.CSSProperties

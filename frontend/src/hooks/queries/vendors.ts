@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { queryKeys } from '../query-keys'
+import { queryKeys, invalidateVendorDeps } from '../query-keys'
 import type { ApiResponse, Vendor } from '@/data/domain'
 import type { VendorFilters } from '@/services/api/vendors.api'
 
@@ -35,10 +35,7 @@ export function useCreateVendor() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: Omit<Vendor, 'id'>) => apiClient.createVendor(data).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vendors'] })
-      qc.invalidateQueries({ queryKey: ['vendors-paged'] })
-    },
+    onSuccess: () => { invalidateVendorDeps(qc) },
   })
 }
 
@@ -47,10 +44,7 @@ export function useUpdateVendor() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Vendor> }) => apiClient.updateVendor(id, data).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vendors'] })
-      qc.invalidateQueries({ queryKey: ['vendors-paged'] })
-    },
+    onSuccess: () => { invalidateVendorDeps(qc) },
   })
 }
 
@@ -59,10 +53,7 @@ export function useDeleteVendor() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => apiClient.deleteVendor(id).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vendors'] })
-      qc.invalidateQueries({ queryKey: ['vendors-paged'] })
-    },
+    onSuccess: () => { invalidateVendorDeps(qc) },
   })
 }
 

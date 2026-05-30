@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Truck, Plus, Trash2, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui'
-import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
-import { Panel } from '@/components/shared/Panel'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { useInfiniteScroll, LoadMoreSentinel, SearchInput, FieldActions } from '@/components/shared/ListUtils'
-import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
-import { useActiveField } from '@/components/shared/useActiveField'
-import { tdActive, tdDimmed } from '@/components/shared/editCellStyles'
-import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
-import { StatPill } from '@/components/shared/StatPill'
-import { PageHeader } from '@/components/shared/PageHeader'
+import { DangerConfirmDialog } from '@/components/shared/overlays/DangerConfirmDialog/DangerConfirmDialog'
+import { Panel } from '@/components/shared/overlays/Panel'
+import { EmptyState } from '@/components/shared/feedback/EmptyState'
+import { useInfiniteScroll, LoadMoreSentinel, SearchInput, FieldActions } from '@/components/shared/data-display/ListUtils'
+import { useInlineEditForm } from '@/components/shared/forms/useInlineEditForm'
+import { useActiveField } from '@/components/shared/forms/useActiveField'
+import { tdActive, tdDimmed } from '@/components/shared/forms/editCellStyles'
+import { TableSkeleton } from '@/components/shared/data-display/TableSkeleton/TableSkeleton'
+import { StatPill } from '@/components/shared/data-display/StatPill'
+import { PageHeader } from '@/components/shared/layouts/PageHeader'
 import {
   useVendors,
   useVendorsPaged,
@@ -118,7 +118,7 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
             {(['company', 'individual'] as const).map(t => (
               <button key={t} type="button" onClick={() => set('type', t)}
                 className="flex-1 rounded text-[11px] font-medium transition-colors"
-                style={{ padding: '3px 0', background: form.type === t ? 'var(--accent)' : 'var(--surface-3)', color: form.type === t ? '#fff' : 'var(--ink-2)' }}
+                style={{ padding: '3px 0', background: form.type === t ? 'var(--accent)' : 'var(--surface-3)', color: form.type === t ? 'var(--theme-text-on-brand)' : 'var(--ink-2)' }}
               >
                 {t === 'company' ? 'Cty' : 'CN'}
               </button>
@@ -397,7 +397,7 @@ function VendorMobileEditCard({ initial, onSave, onCancel, saving }: {
                 className="flex-1 rounded py-1.5 text-xs font-medium transition-colors border"
                 style={{
                   background: type === t ? 'var(--accent)' : 'var(--surface)',
-                  color: type === t ? '#fff' : 'var(--ink-2)',
+                  color: type === t ? 'var(--theme-text-on-brand)' : 'var(--ink-2)',
                   borderColor: type === t ? 'var(--accent)' : 'var(--theme-border-default)',
                 }}
               >

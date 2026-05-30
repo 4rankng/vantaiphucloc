@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { queryKeys } from '../query-keys'
+import { queryKeys, invalidateLocationDeps } from '../query-keys'
 import type { ApiResponse } from '@/data/domain'
 
 function unwrap<T>(res: ApiResponse<T>): T {
@@ -23,15 +23,7 @@ export function useCreateLocation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: { name: string }) => apiClient.createLocation(data).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['locations'] })
-      qc.invalidateQueries({ queryKey: ['location-aliases'] })
-      qc.invalidateQueries({ queryKey: ['routes'] })
-      qc.invalidateQueries({ queryKey: ['pricings'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
-    },
+    onSuccess: () => { invalidateLocationDeps(qc) },
   })
 }
 
@@ -40,15 +32,7 @@ export function useUpdateLocation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: { name?: string } }) => apiClient.updateLocation(id, data).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['locations'] })
-      qc.invalidateQueries({ queryKey: ['location-aliases'] })
-      qc.invalidateQueries({ queryKey: ['routes'] })
-      qc.invalidateQueries({ queryKey: ['pricings'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
-    },
+    onSuccess: () => { invalidateLocationDeps(qc) },
   })
 }
 
@@ -57,15 +41,7 @@ export function useDeleteLocation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => apiClient.deleteLocation(id).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['locations'] })
-      qc.invalidateQueries({ queryKey: ['location-aliases'] })
-      qc.invalidateQueries({ queryKey: ['routes'] })
-      qc.invalidateQueries({ queryKey: ['pricings'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
-    },
+    onSuccess: () => { invalidateLocationDeps(qc) },
   })
 }
 
@@ -117,15 +93,7 @@ export function useMergeLocations() {
   return useMutation({
     mutationFn: (data: { sourceLocationId: number; targetLocationId: number }) =>
       apiClient.mergeLocations(data).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['locations'] })
-      qc.invalidateQueries({ queryKey: ['location-aliases'] })
-      qc.invalidateQueries({ queryKey: ['routes'] })
-      qc.invalidateQueries({ queryKey: ['pricings'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
-      qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
-    },
+    onSuccess: () => { invalidateLocationDeps(qc) },
   })
 }
 
@@ -139,10 +107,7 @@ export function useCommitLocationImport() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (names: string[]) => apiClient.commitLocationImport(names).then(unwrap),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['locations'] })
-      qc.invalidateQueries({ queryKey: ['location-aliases'] })
-    },
+    onSuccess: () => { invalidateLocationDeps(qc) },
   })
 }
 

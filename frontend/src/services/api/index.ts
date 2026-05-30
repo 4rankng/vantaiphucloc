@@ -6,7 +6,7 @@
  */
 
 // Shared utilities — also available for direct import
-export { toCamel, toSnake, ok, fail, isNetworkError } from './utils'
+export { toCamel, toSnake, ok, fail } from './utils'
 
 // Domain modules
 import * as clientsApi from './clients.api'

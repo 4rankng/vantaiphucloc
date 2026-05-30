@@ -9,7 +9,7 @@ import {
   Input,
   Label,
 } from '@/components/ui'
-import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
+import { InlineSelect } from '@/components/shared/forms/InlineSelect/InlineSelect'
 import { WORK_TYPE_LABELS } from '@/data/domain'
 import type { WorkType } from '@/data/domain'
 import { Route, Banknote, Wallet, ArrowRight } from 'lucide-react'
