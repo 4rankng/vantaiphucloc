@@ -34,10 +34,6 @@ deploy:
 	ssh root@$(PROD_SERVER) "cd /opt/vantaiphucloc && docker compose -f deploy/docker-compose.prod.yml up -d --force-recreate --no-deps backend worker"
 	@echo "Running database migrations..."
 	ssh root@$(PROD_SERVER) "cd /opt/vantaiphucloc && docker compose -f deploy/docker-compose.prod.yml exec -T backend alembic upgrade head"
-	@echo "Backfilling trip pricing (safe to re-run)..."
-	ssh root@$(PROD_SERVER) "cd /opt/vantaiphucloc && docker compose -f deploy/docker-compose.prod.yml exec -T backend python -m app.fix_trip_pricing" || true
-	@echo "Backfilling trip_date on work orders (safe to re-run)..."
-	ssh root@$(PROD_SERVER) "cd /opt/vantaiphucloc && docker compose -f deploy/docker-compose.prod.yml exec -T backend python -m app.fix_trip_dates" || true
 	@echo "Cleaning up unused images..."
 	ssh root@$(PROD_SERVER) "docker image prune -f"
 	@echo "Backend deployment complete!"
