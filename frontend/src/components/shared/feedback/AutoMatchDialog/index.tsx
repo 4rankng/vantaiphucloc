@@ -31,7 +31,6 @@ const WORK_TYPE_LABELS: Record<string, string> = {
 type CriterionKey = 'tripDate' | 'contNumber' | 'clientName' | 'pickupName' | 'dropoffName' | 'workType' | 'vessel' | 'vehiclePlate'
 
 const CRITERIA: Array<{ key: CriterionKey; label: string; matchField: string }> = [
-  { key: 'tripDate', label: 'Ngày', matchField: 'trip_date' },
   { key: 'contNumber', label: 'Số Cont', matchField: 'container_number' },
   { key: 'clientName', label: 'Chủ hàng', matchField: 'client' },
   { key: 'pickupName', label: 'Điểm đi', matchField: 'pickup_location' },
@@ -39,6 +38,7 @@ const CRITERIA: Array<{ key: CriterionKey; label: string; matchField: string }> 
   { key: 'workType', label: 'Tác nghiệp', matchField: 'work_type' },
   { key: 'vessel', label: 'Số tàu', matchField: 'vessel' },
   { key: 'vehiclePlate', label: 'Số xe', matchField: 'vehicle_plate' },
+  { key: 'tripDate', label: 'Ngày đi', matchField: 'trip_date' },
 ]
 
 function fmtWorkType(wt: string | null): string {

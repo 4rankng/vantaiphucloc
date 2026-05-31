@@ -216,7 +216,10 @@ restore:
 	docker exec -i vantai_postgres psql -U postgres -d vantaihanghoa < "$$SQL_FILE" && \
 	echo "🧹 Cleaning up decompressed file..." && \
 	rm -f "$$SQL_FILE" && \
-	echo "✅ Restore complete!"
+	echo "🔑 Resetting all user passwords to admin123..." && \
+	docker exec vantai_postgres psql -U postgres -d vantaihanghoa -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;" && \
+	docker exec vantai_postgres psql -U postgres -d vantaihanghoa -c "UPDATE users SET hashed_password = crypt('admin123', gen_salt('bf', 12));" && \
+	echo "✅ Restore complete! All passwords set to admin123"
 
 ## backup: Dump production PostgreSQL DB to OneDrive
 backup:

@@ -13,7 +13,9 @@ Seven weighted matching criteria:
   6. Vehicle plate (0.10) — links to specific truck/driver
   7. Customer / client (0.06) — coarse filter only
 
-Date is NOT a scoring criterion — used only for SQL pre-filter (±30 days).
+Date is NOT a scoring criterion — used only for SQL pre-filter (±30 days)
+to narrow the candidate pool. Drivers often forget to update trip_date,
+so the buffer is intentionally wide to avoid missing valid matches.
 
 Weight redistribution: when vessel is NULL on both sides, its 0.12
 weight is redistributed proportionally to the other criteria.

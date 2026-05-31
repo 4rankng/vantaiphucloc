@@ -269,9 +269,9 @@ async def get_ai_match_suggestion(db: AsyncSession, delivered_trip_id: int) -> d
     if not wo:
         return {"error": "Delivered trip not found or already matched."}
 
-    # 2. Fetch candidate booked trips within ±15 days
-    date_from = wo.trip_date - timedelta(days=15) if wo.trip_date else None
-    date_to   = wo.trip_date + timedelta(days=15) if wo.trip_date else None
+    # 2. Fetch candidate booked trips within ±30 days
+    date_from = wo.trip_date - timedelta(days=30) if wo.trip_date else None
+    date_to   = wo.trip_date + timedelta(days=30) if wo.trip_date else None
 
     to_query = select(BookedTripORM)
     if date_from:
@@ -284,7 +284,7 @@ async def get_ai_match_suggestion(db: AsyncSession, delivered_trip_id: int) -> d
     if not booked_trips:
         return {
             "suggested_booked_trip_id": None,
-            "reasoning": "Không tìm thấy lệnh đặt nào trong khoảng thời gian 15 ngày quanh chuyến này.",
+            "reasoning": "Không tìm thấy lệnh đặt nào trong khoảng thời gian 30 ngày quanh chuyến này.",
             "confidence": "low",
         }
 
