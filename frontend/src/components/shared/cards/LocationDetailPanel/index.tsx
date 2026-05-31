@@ -72,7 +72,7 @@ export function LocationDetailPanel({
                 type="button"
                 onClick={onBack}
                 className="flex items-center gap-1 mb-2.5 text-[12px] font-medium transition-colors"
-                style={{ color: 'var(--accent)', background: 'none', border: 'none', padding: 0 }}
+                style={{ color: 'var(--accent)', background: 'none', border: 'none', padding: '6px 0', minHeight: 44 }}
               >
                 <ArrowLeft className="h-3.5 w-3.5" /> Quay lại
               </button>
