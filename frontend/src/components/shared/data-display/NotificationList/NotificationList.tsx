@@ -73,7 +73,7 @@ export function NotificationList({ notifications, typeConfig, emptyLabel = 'Khô
           <p className="typo-body font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
             {emptyLabel}
           </p>
-          <p className="typo-body-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+          <p className="typo-body-sm mt-1 mx-auto" style={{ color: 'var(--theme-text-muted)' }}>
             Thông báo mới sẽ xuất hiện ở đây
           </p>
         </div>

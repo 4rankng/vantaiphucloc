@@ -27,13 +27,13 @@ export function AliasChip({ alias, onPromote, onDelete, disabled }: AliasChipPro
           {alias.source}
         </span>
       )}
-      <span className="inline-flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-0.5">
+      <span className="inline-flex items-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity ml-0.5">
         <button
           type="button"
           onClick={onPromote}
           disabled={disabled}
           className="flex items-center justify-center rounded-full"
-          style={{ width: 18, height: 18, color: 'var(--accent)' }}
+          style={{ width: 28, height: 28, color: 'var(--accent)' }}
           title="Đặt làm tên chính"
         >
           <ArrowUp className="h-3 w-3" />
@@ -42,7 +42,7 @@ export function AliasChip({ alias, onPromote, onDelete, disabled }: AliasChipPro
           type="button"
           onClick={onDelete}
           className="flex items-center justify-center rounded-full"
-          style={{ width: 18, height: 18, color: 'var(--accent)' }}
+          style={{ width: 28, height: 28, color: 'var(--accent)' }}
           title="Xoá tên phụ"
         >
           <X className="h-3 w-3" />

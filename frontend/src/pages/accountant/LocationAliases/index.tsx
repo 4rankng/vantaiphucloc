@@ -201,7 +201,7 @@ export function LocationAliasesPage() {
     setMergeOpen(true)
   }
 
-  const panelHeight = isMobile ? 'calc(100dvh - 110px)' : 'calc(100dvh - 80px)'
+  const panelHeight = isMobile ? 'calc(100dvh - 140px)' : 'calc(100dvh - 80px)'
 
   return (
     <div className="animate-fade-in flex flex-col" style={{ height: panelHeight, maxHeight: panelHeight, overflow: 'hidden' }}>
@@ -241,11 +241,15 @@ export function LocationAliasesPage() {
         }}
       >
         {/* ── Left rail: list ── */}
-        {(!isMobile || !selected) && (
-          <aside
-            className="shrink-0 flex flex-col"
-            style={{ width: isMobile ? '100%' : 300, borderRight: isMobile ? 'none' : '1px solid var(--line)', background: 'var(--surface-2)' }}
-          >
+        <aside
+          className="shrink-0 flex flex-col"
+          style={{
+            width: isMobile ? '100%' : 300,
+            borderRight: isMobile ? 'none' : '1px solid var(--line)',
+            background: 'var(--surface-2)',
+            ...(isMobile && selected ? { display: 'none' } : {}),
+          }}
+        >
             {/* Search + add */}
             <div className="px-3 py-3 shrink-0" style={{ borderBottom: '1px solid var(--line)' }}>
               <div className="relative mb-2">
@@ -330,11 +334,15 @@ export function LocationAliasesPage() {
               </div>{/* end inner scroll */}
             </div>{/* end scroll-fade wrapper */}
           </aside>
-        )}
 
         {/* ── Right panel: detail ── */}
-        {(!isMobile || selected) && (
-          <main className="flex-1 min-w-0" style={{ background: 'var(--surface)' }}>
+        <main
+          className="flex-1 min-w-0"
+          style={{
+            background: 'var(--surface)',
+            ...(isMobile && !selected ? { display: 'none' } : {}),
+          }}
+        >
             {selected ? (
               <LocationDetailPanel
                 location={selected}
@@ -365,7 +373,6 @@ export function LocationAliasesPage() {
               </div>
             )}
           </main>
-        )}
       </div>
 
       {/* ── Delete confirmation ── */}

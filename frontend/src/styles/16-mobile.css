@@ -2,12 +2,13 @@
    Catches common patterns across all pages so each page doesn't need its own
    mobile branch. Imported LAST in index.css so these win in the cascade.
 
-   Strategy: phones (<= 640px) get tighter spacing, single-column collapses,
-   and explicit horizontal scroll on data tables. Specific page tweaks go in
+   Strategy: phones (<= 768px) get tighter spacing, single-column collapses,
+   and explicit horizontal scroll on data tables. Matches the useIsMobile(768)
+   JS hook so CSS and JS agree on the breakpoint. Specific page tweaks go in
    their own files; this file is for app-wide patterns.
    ───────────────────────────────────────────────────────────────────────── */
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   /* ── PageHeader band: tighten padding, hide the lg-only accent bar, scale
         the title icon down so it doesn't dominate a narrow viewport. */
   .page-header-band {

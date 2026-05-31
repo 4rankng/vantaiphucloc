@@ -275,7 +275,7 @@ export function DirectorDashboard() {
     setAuditPage(1)
     setAuditTotal(0)
     setAuditLoading(true)
-    getAuditLogs({ page: 1, pageSize: PAGE_SIZE }).then(data => {
+    getAuditLogs({ page: 1, pageSize: PAGE_SIZE, createdAfter: dateFrom }).then(data => {
       if (cancelledRef.current) return
       setAuditLogs(data.items)
       setAuditTotal(data.total)
@@ -283,7 +283,7 @@ export function DirectorDashboard() {
       if (!cancelledRef.current) setAuditLoading(false)
     })
     return () => { cancelledRef.current = true }
-  }, [])
+  }, [dateFrom])
 
   const hasMore = auditLogs.length < auditTotal
 
