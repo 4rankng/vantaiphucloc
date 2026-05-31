@@ -77,9 +77,9 @@ export function SalaryPeriodSettings() {
           </div>
         ) : (
           <div className="p-5 space-y-5">
-            <div className="flex items-end gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
               <DayStepperInput value={fromDay} onChange={setFromDay} label="Ngày bắt đầu" hint="Ngày đầu tiên của kỳ lương" />
-              <span className="pb-2.5 text-base" style={{ color: 'var(--ink-3)' }}>→</span>
+              <span className="hidden sm:inline pb-2.5 text-base" style={{ color: 'var(--ink-3)' }}>→</span>
               <DayStepperInput value={toDay} onChange={setToDay} label="Ngày kết thúc" hint="Ngày cuối cùng của kỳ lương" />
             </div>
 

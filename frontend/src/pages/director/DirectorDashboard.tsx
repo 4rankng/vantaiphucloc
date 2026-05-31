@@ -13,6 +13,7 @@ import { formatActivityEntry, formatFinancialChange, SUBJECT_PREFIX } from '@/li
 import { pad } from '@/lib/accounting-utils'
 import { useMonthParams } from '@/pages/accountant/use-month-params'
 import { useInfiniteScroll } from '@/components/shared/data-display/ListUtils'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 const fontMono = "'JetBrains Mono', ui-monospace, monospace"
 const fontSans = "'Plus Jakarta Sans', 'Be Vietnam Pro', system-ui, sans-serif"
@@ -236,6 +237,7 @@ function ActivityItem({ log, isFirst }: { log: AuditLogEntry; isFirst: boolean }
 
 export function DirectorDashboard() {
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
+  const isMobile = useIsMobile(768)
 
   const { data: stats } = useDirectorDashboard(dateFrom, dateTo)
 
@@ -331,11 +333,11 @@ export function DirectorDashboard() {
   return (
     <>
       <style>{fadeStyle}</style>
-      <div style={{ padding: '32px 40px 48px', maxWidth: 1480, margin: '0 auto' }}>
+      <div style={{ padding: isMobile ? '16px 12px 32px' : '32px 40px 48px', maxWidth: 1480, margin: '0 auto' }}>
 
-        <div className="grid grid-cols-3 items-center mb-7" style={{ animation: 'fadeIn 0.5s ease both' }}>
+        <div className="flex flex-col md:grid md:grid-cols-3 md:items-center mb-7 gap-4" style={{ animation: 'fadeIn 0.5s ease both' }}>
           <div>
-            <h1 style={{ fontSize: 32, fontWeight: 700, color: 'var(--theme-text-primary)', letterSpacing: '-0.025em', lineHeight: 1.1 }}>
+            <h1 style={{ fontSize: isMobile ? 26 : 32, fontWeight: 700, color: 'var(--theme-text-primary)', letterSpacing: '-0.025em', lineHeight: 1.1 }}>
               Tổng quan điều hành
             </h1>
             <div className="flex items-center gap-2.5 mt-2 text-[13px]" style={{ color: 'var(--theme-text-muted)' }}>
@@ -347,29 +349,29 @@ export function DirectorDashboard() {
             </div>
           </div>
 
-          <div className="flex justify-center">
-          <div className="flex items-center gap-1 rounded-xl border p-1" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', borderRadius: 12 }}>
-            <button onClick={onPrev} className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-[#F1F7F3]" aria-label="Tháng trước">
-              <ChevronLeft style={{ width: 14, height: 14, stroke: 'var(--theme-text-secondary)' }} />
-            </button>
-            <div className="px-3.5 text-center">
-              <div className="text-[13px] font-bold" style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.005em' }}>
-                Tháng {pad(month)} · {year}
+          <div className="flex justify-start md:justify-center w-full md:w-auto">
+            <div className="flex items-center gap-1 rounded-xl border p-1" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', borderRadius: 12 }}>
+              <button onClick={onPrev} className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-[#F1F7F3]" aria-label="Tháng trước">
+                <ChevronLeft style={{ width: 14, height: 14, stroke: 'var(--theme-text-secondary)' }} />
+              </button>
+              <div className="px-3.5 text-center">
+                <div className="text-[13px] font-bold" style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.005em' }}>
+                  Tháng {pad(month)} · {year}
+                </div>
+                <div style={{ fontFamily: fontMono, fontSize: 10, color: 'var(--theme-text-muted)', letterSpacing: '0.02em', marginTop: 1 }}>
+                  {dateFrom.slice(5)} → {dateTo.slice(5)}
+                </div>
               </div>
-              <div style={{ fontFamily: fontMono, fontSize: 10, color: 'var(--theme-text-muted)', letterSpacing: '0.02em', marginTop: 1 }}>
-                {dateFrom.slice(5)} → {dateTo.slice(5)}
-              </div>
+              <button onClick={onNext} className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-[#F1F7F3]" aria-label="Tháng sau">
+                <ChevronRight style={{ width: 14, height: 14, stroke: 'var(--theme-text-secondary)' }} />
+              </button>
             </div>
-            <button onClick={onNext} className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-[#F1F7F3]" aria-label="Tháng sau">
-              <ChevronRight style={{ width: 14, height: 14, stroke: 'var(--theme-text-secondary)' }} />
-            </button>
-          </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-start md:justify-end w-full md:w-auto">
             <Link
               to="/director/users"
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] w-full md:w-auto"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', boxShadow: '0 1px 3px rgba(0,90,45,0.18)' }}
             >
               <Users style={{ width: 14, height: 14 }} strokeWidth={2.2} />

@@ -40,7 +40,7 @@ function InlineSearchInput({ value, onChange, placeholder, width = 220 }: {
   value: string
   onChange: (v: string) => void
   placeholder?: string
-  width?: number
+  width?: number | string
 }) {
   return (
     <div className="relative" style={{ width }}>
@@ -364,7 +364,7 @@ export function VehicleExpensesPage() {
         }
       />
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <KpiHeroCard
           label="Tổng chi phí"
           formattedValue={<AnimatedNumber value={totalAmount} format="currency" />}
@@ -396,14 +396,16 @@ export function VehicleExpensesPage() {
 
       {/* ── Controls row + Panel grouped tightly ── */}
       <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-end gap-2">
-        <InlineSearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder="Tìm biển số, mô tả..."
-          width={200}
-        />
-        <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
+        <div className="w-full sm:w-[200px]">
+          <InlineSearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Tìm biển số, mô tả..."
+            width="100%"
+          />
+        </div>
+        <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
           <Plus className="h-3.5 w-3.5" />
           Thêm chi phí
         </Button>

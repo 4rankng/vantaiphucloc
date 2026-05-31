@@ -1,0 +1,117 @@
+/* ─── Mobile responsive overrides ───────────────────────────────────────────
+   Catches common patterns across all pages so each page doesn't need its own
+   mobile branch. Imported LAST in index.css so these win in the cascade.
+
+   Strategy: phones (<= 640px) get tighter spacing, single-column collapses,
+   and explicit horizontal scroll on data tables. Specific page tweaks go in
+   their own files; this file is for app-wide patterns.
+   ───────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  /* ── PageHeader band: tighten padding, hide the lg-only accent bar, scale
+        the title icon down so it doesn't dominate a narrow viewport. */
+  .page-header-band {
+    padding: 12px 14px !important;
+    margin-bottom: 12px !important;
+    border-radius: 12px !important;
+  }
+  .page-header-band h1 {
+    font-size: 1rem !important;
+    line-height: 1.25 !important;
+  }
+  .page-header-band p {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+    -webkit-line-clamp: 3;
+  }
+  /* Title-icon (Lucide bubble): shrink from 44/48px to 32px */
+  .page-header-band .h-11.w-11,
+  .page-header-band .h-12.w-12 {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 10px !important;
+  }
+  .page-header-band .h-11.w-11 svg,
+  .page-header-band .h-12.w-12 svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  /* ── Data tables: always horizontal-scroll on phones with a visible cue. */
+  .nepo-table-scroll {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .nepo-table-scroll .nepo-table {
+    min-width: 480px !important;
+  }
+  /* Trim cell padding so more columns fit per swipe */
+  .nepo-table tbody td,
+  .nepo-table thead th {
+    padding: 8px 10px !important;
+    font-size: 12.5px !important;
+  }
+
+  /* ── KPI cards: when the parent isn't already using a Tailwind grid (e.g.
+        plain flex containers) force a single column. The pages that use
+        `grid grid-cols-1 sm:grid-cols-3` already collapse correctly. */
+  .nepo-kpi {
+    padding: 12px 14px !important;
+  }
+  .nepo-kpi__value {
+    font-size: 22px !important;
+  }
+  .nepo-kpi__label {
+    font-size: 10.5px !important;
+    letter-spacing: 0.03em !important;
+  }
+
+  /* ── Dialog / modal: full-width on phones, modest top margin */
+  [role="dialog"][data-state="open"] > div[class*="DialogContent"],
+  [data-radix-dialog-content] {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    margin: 8px !important;
+  }
+
+  /* ── Sheet (drawer) — already handled by Radix Sheet's vaul, but the
+        AccountantMobileShell side="left" drawer can overflow on tiny screens */
+  [data-radix-sheet-content] {
+    max-width: 85vw !important;
+  }
+
+  /* ── App content padding from AccountantMobileShell ('px-4 py-4') is fine,
+        but inside the content, secondary panels often add their own padding.
+        Trim panel padding so we don't stack 16+16 wasted px on each side. */
+  .panel,
+  .nepo-panel {
+    padding: 12px !important;
+    border-radius: 10px !important;
+  }
+
+  /* ── Hide non-essential icons in PageHeader actions on very narrow viewports
+        to keep the title row clean. Pages that need a primary CTA on mobile
+        should use icon-only buttons (e.g. the existing `<span class="hidden sm:inline">` pattern). */
+}
+
+/* ─── Narrow phone (<= 400px) — last-mile tightening ──────────────────────── */
+@media (max-width: 400px) {
+  /* AccountantMobileShell wraps content in px-4 (16px each side); on very
+     narrow phones that's 32px gone before content. Drop to 12. */
+  main .px-4 {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  /* Page header subtitle gets aggressive — clamp to 2 lines */
+  .page-header-band p {
+    -webkit-line-clamp: 2;
+  }
+
+  /* Status pills inside PageHeader actions: smaller font, tighter padding */
+  .nepo-status-pill,
+  [class*="StatPill"] {
+    font-size: 11px !important;
+    padding: 2px 6px !important;
+  }
+}

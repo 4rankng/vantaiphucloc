@@ -99,9 +99,9 @@ export function VendorRoutePricingPage() {
         lucideIcon={Route}
       />
 
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div style={{ width: 190 }}>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 flex-wrap">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
+          <div className="w-full sm:w-[190px]">
             <InlineSelect
               placeholder="Tất cả nhà thầu"
               value={vendorId ? String(vendorId) : 'all'}
@@ -111,7 +111,7 @@ export function VendorRoutePricingPage() {
             />
           </div>
 
-          <div style={{ width: 180 }}>
+          <div className="w-full sm:w-[180px]">
             <InlineSelect
               placeholder="Tất cả tác nghiệp"
               value={workType ?? 'all'}
@@ -123,7 +123,7 @@ export function VendorRoutePricingPage() {
 
           {(vendorId || workType) && (
             <button
-              className="text-xs font-medium transition-colors whitespace-nowrap"
+              className="text-xs font-medium transition-colors whitespace-nowrap self-start sm:self-center"
               style={{ color: 'var(--ink-3)' }}
               onClick={() => { setVendorId(undefined); setWorkType(undefined) }}
               onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.color = 'var(--ink-1)')}
@@ -134,12 +134,12 @@ export function VendorRoutePricingPage() {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5 whitespace-nowrap">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => setImportOpen(true)} className="flex-1 sm:flex-none gap-1.5 whitespace-nowrap">
             <FileSpreadsheet className="h-3.5 w-3.5" />
             Nhập Excel
           </Button>
-          <Button onClick={openCreate} className="gap-1.5 whitespace-nowrap">
+          <Button onClick={openCreate} className="flex-1 sm:flex-none gap-1.5 whitespace-nowrap">
             <Plus className="h-3.5 w-3.5" />
             Thêm cước trả
           </Button>

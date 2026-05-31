@@ -25,6 +25,7 @@ import {
 } from '@/hooks/use-queries'
 import { fuzzyMatch } from '@/lib/search-utils'
 import type { Location, LocationAlias } from '@/data/domain'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,8 @@ export function LocationAliasesPage() {
   const promoteAlias = usePromoteAlias()
   const deleteAlias = useDeleteAlias()
   const mergeLocations = useMergeLocations()
+
+  const isMobile = useIsMobile(768)
 
   const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
@@ -90,10 +93,11 @@ export function LocationAliasesPage() {
       }
       return
     }
+    if (isMobile) return
     if (selectedId === null || !locations.find(l => l.id === selectedId)) {
       setSelectedId(locations[0].id)
     }
-  }, [locations, selectedId])
+  }, [locations, selectedId, isMobile])
 
   // Keyboard navigation: ↑/↓ move through filtered list, unless focus is inside an input
   useEffect(() => {
@@ -198,7 +202,7 @@ export function LocationAliasesPage() {
   }
 
   return (
-    <div className="animate-fade-in flex flex-col" style={{ height: 'calc(100dvh - 80px)', maxHeight: 'calc(100dvh - 80px)', overflow: 'hidden' }}>
+    <div className="animate-fade-in flex flex-col" style={{ height: isMobile ? 'calc(100dvh - 110px)' : 'calc(100dvh - 80px)', maxHeight: isMobile ? 'calc(100dvh - 110px)' : 'calc(100dvh - 80px)', overflow: 'hidden' }}>
       {/* ── Header ── */}
       <div className="shrink-0">
         <PageHeader
@@ -206,15 +210,17 @@ export function LocationAliasesPage() {
           subtitle="Tên phụ giúp hệ thống nhận ra các cách viết khác nhau của cùng một địa điểm khi ghép chuyến tự động"
           lucideIcon={MapPin}
           actions={
-            <div className="flex items-center gap-2">
-              <StatPill count={locations.length} label=" địa điểm" accent />
-              <StatPill count={aliases.length} label=" tên phụ" />
-              <Button variant="outline" onClick={() => setImporting(true)}>
-                <FileSpreadsheet className="h-4 w-4" /> Nhập Excel
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <StatPill count={locations.length} label={isMobile ? " đ.điểm" : " địa điểm"} accent />
+              {!isMobile && <StatPill count={aliases.length} label=" tên phụ" />}
+              <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={() => setImporting(true)} className="gap-1 px-2.5">
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+                <span>{isMobile ? '' : 'Nhập Excel'}</span>
               </Button>
               {locations.length >= 2 && (
-                <Button variant="ghost" onClick={() => openMergeDialog()}>
-                  <Merge className="h-4 w-4" /> Gộp
+                <Button variant="ghost" size={isMobile ? "sm" : "default"} onClick={() => openMergeDialog()} className="gap-1 px-2.5">
+                  <Merge className="h-3.5 w-3.5" />
+                  <span>{isMobile ? '' : 'Gộp'}</span>
                 </Button>
               )}
             </div>
@@ -233,126 +239,131 @@ export function LocationAliasesPage() {
         }}
       >
         {/* ── Left rail: list ── */}
-        <aside
-          className="shrink-0 flex flex-col"
-          style={{ width: 300, borderRight: '1px solid var(--line)', background: 'var(--surface-2)' }}
-        >
-          {/* Search + add */}
-          <div className="px-3 py-3 shrink-0" style={{ borderBottom: '1px solid var(--line)' }}>
-            <div className="relative mb-2">
-              <Search
-                className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none"
-                style={{ left: 10, color: 'var(--ink-3)' }}
-              />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Tìm địa điểm, tên phụ…"
-                className="nepo-input text-[13px] w-full"
-                style={{ paddingLeft: 32 }}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setCreating(true)}
-                disabled={creating}
-                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[12px] font-medium transition-colors"
-                style={{ background: 'var(--accent)', color: 'var(--theme-text-on-brand)', opacity: creating ? 0.5 : 1 }}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Thêm địa điểm
-              </button>
-              {duplicateIds.size > 0 && (
+        {(!isMobile || !selected) && (
+          <aside
+            className="shrink-0 flex flex-col"
+            style={{ width: isMobile ? '100%' : 300, borderRight: isMobile ? 'none' : '1px solid var(--line)', background: 'var(--surface-2)' }}
+          >
+            {/* Search + add */}
+            <div className="px-3 py-3 shrink-0" style={{ borderBottom: '1px solid var(--line)' }}>
+              <div className="relative mb-2">
+                <Search
+                  className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none"
+                  style={{ left: 10, color: 'var(--ink-3)' }}
+                />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Tìm địa điểm, tên phụ…"
+                  className="nepo-input text-[13px] w-full"
+                  style={{ paddingLeft: 32 }}
+                />
+              </div>
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowOnlyDupes(v => !v)}
-                  className="flex items-center gap-1 px-2 py-1.5 rounded text-[11px] font-medium transition-colors shrink-0"
-                  style={showOnlyDupes
-                    ? { background: 'var(--warning)', color: 'var(--theme-text-on-brand)', border: 'none' }
-                    : { background: 'var(--surface-3)', color: 'var(--ink-3)', border: 'none' }
-                  }
-                  title={showOnlyDupes ? 'Xem tất cả' : 'Chỉ hiện địa điểm có thể trùng'}
+                  onClick={() => setCreating(true)}
+                  disabled={creating}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[12px] font-medium transition-colors"
+                  style={{ background: 'var(--accent)', color: 'var(--theme-text-on-brand)', opacity: creating ? 0.5 : 1 }}
                 >
-                  <AlertTriangle className="h-3 w-3" />
-                  {duplicateIds.size}
+                  <Plus className="h-3.5 w-3.5" />
+                  Thêm địa điểm
                 </button>
-              )}
-            </div>
-          </div>
-
-          {/* List — scroll-fade wrapper */}
-          <div className="flex-1 overflow-hidden" style={{ position: 'relative' }}>
-              <div ref={listRef} style={{ height: '100%', overflowY: 'auto', paddingBottom: 32 }}>
-            {creating && (
-              <NewLocationInput
-                onCreate={handleCreate}
-                onCancel={() => setCreating(false)}
-                saving={createLocation.isPending}
-              />
-            )}
-
-            {isLoading ? (
-              <div className="px-3 py-4 text-[12px]" style={{ color: 'var(--ink-3)' }}>
-                Đang tải…
+                {duplicateIds.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowOnlyDupes(v => !v)}
+                    className="flex items-center gap-1 px-2 py-1.5 rounded text-[11px] font-medium transition-colors shrink-0"
+                    style={showOnlyDupes
+                      ? { background: 'var(--warning)', color: 'var(--theme-text-on-brand)', border: 'none' }
+                      : { background: 'var(--surface-3)', color: 'var(--ink-3)', border: 'none' }
+                    }
+                    title={showOnlyDupes ? 'Xem tất cả' : 'Chỉ hiện địa điểm có thể trùng'}
+                  >
+                    <AlertTriangle className="h-3 w-3" />
+                    {duplicateIds.size}
+                  </button>
+                )}
               </div>
-            ) : filtered.length === 0 && !creating ? (
-              <div className="py-8">
+            </div>
+
+            {/* List — scroll-fade wrapper */}
+            <div className="flex-1 overflow-hidden" style={{ position: 'relative' }}>
+                <div ref={listRef} style={{ height: '100%', overflowY: 'auto', paddingBottom: 32 }}>
+              {creating && (
+                <NewLocationInput
+                  onCreate={handleCreate}
+                  onCancel={() => setCreating(false)}
+                  saving={createLocation.isPending}
+                />
+              )}
+
+              {isLoading ? (
+                <div className="px-3 py-4 text-[12px]" style={{ color: 'var(--ink-3)' }}>
+                  Đang tải…
+                </div>
+              ) : filtered.length === 0 && !creating ? (
+                <div className="py-8">
+                  <EmptyState
+                    icon={<MapPin className="h-5 w-5" />}
+                    title={search.trim() ? 'Không tìm thấy' : 'Chưa có địa điểm'}
+                    compact
+                  />
+                </div>
+              ) : (
+                filtered.map(loc => (
+                  <LocationListItem
+                    key={loc.id}
+                    data-loc-id={loc.id}
+                    location={loc}
+                    aliasCount={aliasesByLoc.get(loc.id)?.length ?? 0}
+                    isSelected={selectedId === loc.id}
+                    isDuplicateCandidate={duplicateIds.has(loc.id)}
+                    query={search}
+                    onClick={() => setSelectedId(loc.id)}
+                  />
+                ))
+              )}
+              </div>{/* end inner scroll */}
+            </div>{/* end scroll-fade wrapper */}
+          </aside>
+        )}
+
+        {/* ── Right panel: detail ── */}
+        {(!isMobile || selected) && (
+          <main className="flex-1 min-w-0" style={{ background: 'var(--surface)' }}>
+            {selected ? (
+              <LocationDetailPanel
+                location={selected}
+                aliases={selectedAliases}
+                allAliases={aliases}
+                allLocations={locations}
+                onUpdate={handleUpdate}
+                onDelete={(loc) => setDeleteTarget(loc)}
+                onPromoteAlias={handlePromoteAlias}
+                onDeleteAlias={handleDeleteAlias}
+                onAddAlias={handleAddAlias}
+                onMergeInto={(target) =>
+                  openMergeDialog({ source: selected.id, target: target.id })
+                }
+                updatePending={updateLocation.isPending}
+                addingAlias={createAlias.isPending}
+                promoting={promoteAlias.isPending}
+                onBack={isMobile ? () => setSelectedId(null) : undefined}
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center">
                 <EmptyState
                   icon={<MapPin className="h-5 w-5" />}
-                  title={search.trim() ? 'Không tìm thấy' : 'Chưa có địa điểm'}
+                  title="Chọn một địa điểm"
+                  description="Chọn từ danh sách bên trái để xem và sửa tên phụ."
                   compact
                 />
               </div>
-            ) : (
-              filtered.map(loc => (
-                <LocationListItem
-                  key={loc.id}
-                  data-loc-id={loc.id}
-                  location={loc}
-                  aliasCount={aliasesByLoc.get(loc.id)?.length ?? 0}
-                  isSelected={selectedId === loc.id}
-                  isDuplicateCandidate={duplicateIds.has(loc.id)}
-                  query={search}
-                  onClick={() => setSelectedId(loc.id)}
-                />
-              ))
             )}
-            </div>{/* end inner scroll */}
-          </div>{/* end scroll-fade wrapper */}
-        </aside>
-
-        {/* ── Right panel: detail ── */}
-        <main className="flex-1 min-w-0" style={{ background: 'var(--surface)' }}>
-          {selected ? (
-            <LocationDetailPanel
-              location={selected}
-              aliases={selectedAliases}
-              allAliases={aliases}
-              allLocations={locations}
-              onUpdate={handleUpdate}
-              onDelete={(loc) => setDeleteTarget(loc)}
-              onPromoteAlias={handlePromoteAlias}
-              onDeleteAlias={handleDeleteAlias}
-              onAddAlias={handleAddAlias}
-              onMergeInto={(target) =>
-                openMergeDialog({ source: selected.id, target: target.id })
-              }
-              updatePending={updateLocation.isPending}
-              addingAlias={createAlias.isPending}
-              promoting={promoteAlias.isPending}
-            />
-          ) : (
-            <div className="h-full flex items-center justify-center">
-              <EmptyState
-                icon={<MapPin className="h-5 w-5" />}
-                title="Chọn một địa điểm"
-                description="Chọn từ danh sách bên trái để xem và sửa tên phụ."
-                compact
-              />
-            </div>
-          )}
-        </main>
+          </main>
+        )}
       </div>
 
       {/* ── Delete confirmation ── */}

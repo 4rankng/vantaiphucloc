@@ -230,7 +230,7 @@ export function PnLPage() {
         actions={<MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />}
       />
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <KpiHeroCard
           label="Doanh thu"
           formattedValue={<><AnimatedNumber value={totalRevenue} format="currency" /> ₫</>}
@@ -261,18 +261,19 @@ export function PnLPage() {
       </div>
 
       <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         <SearchBar
           value={search}
           onChange={setSearch}
           placeholder="Tìm biển số / nhà xe..."
-          className="w-[240px]"
+          className="w-full sm:w-[240px]"
         />
         <Button
           variant="outline"
           size="sm"
           onClick={handleExport}
           disabled={isExporting || isLoading}
+          className="w-full sm:w-auto"
         >
           <Download size={14} className={isExporting ? 'animate-bounce' : ''} />
           {isExporting ? 'Đang xuất...' : 'Xuất báo cáo'}

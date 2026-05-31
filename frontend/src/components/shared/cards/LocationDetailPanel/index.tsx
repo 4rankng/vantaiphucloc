@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { MapPin, Plus, AlertTriangle, Merge, Trash2, Tag, X } from 'lucide-react'
+import { MapPin, Plus, AlertTriangle, Merge, Trash2, Tag, X, ArrowLeft } from 'lucide-react'
 import { EditableLocationName } from '@/components/shared/cards/EditableLocationName'
 import { AliasChip } from '@/components/shared/cards/AliasChip'
 import { findDuplicateHint } from '@/lib/duplicate-detection'
@@ -19,11 +19,12 @@ export interface LocationDetailPanelProps {
   updatePending: boolean
   addingAlias: boolean
   promoting: boolean
+  onBack?: () => void
 }
 
 export function LocationDetailPanel({
   location, aliases, allAliases, allLocations, onUpdate, onDelete, onPromoteAlias, onDeleteAlias, onAddAlias,
-  onMergeInto, updatePending, addingAlias, promoting,
+  onMergeInto, updatePending, addingAlias, promoting, onBack,
 }: LocationDetailPanelProps) {
   const [adding, setAdding] = useState(false)
   const [newAlias, setNewAlias] = useState('')
@@ -66,6 +67,16 @@ export function LocationDetailPanel({
       <header className="px-6 py-5 shrink-0" style={{ borderBottom: '1px solid var(--line)' }}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex items-center gap-1 mb-2.5 text-[12px] font-medium transition-colors"
+                style={{ color: 'var(--accent)', background: 'none', border: 'none', padding: 0 }}
+              >
+                <ArrowLeft className="h-3.5 w-3.5" /> Quay lại
+              </button>
+            )}
             <div className="flex items-center gap-1.5 mb-1.5">
               <MapPin className="h-3 w-3 shrink-0" style={{ color: 'var(--accent)' }} />
               <p className="text-[11px] uppercase tracking-wide m-0 font-semibold" style={{ color: 'var(--accent)' }}>

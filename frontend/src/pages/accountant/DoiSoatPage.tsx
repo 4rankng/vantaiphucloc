@@ -36,6 +36,7 @@ import {
   useUnmatchTrip,
   useDeleteDeliveredTrip,
 } from '@/hooks/use-queries'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 // ─── Status filter type ───────────────────────────────────────────────────────
 
@@ -56,6 +57,7 @@ function AIMatchButtonLabel({ isPending }: { isPending: boolean }) {
 
 export function DoiSoatPage() {
   const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
+  const isMobile = useIsMobile(768)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
@@ -238,24 +240,25 @@ export function DoiSoatPage() {
       {/* ── Table section ── */}
       <section>
         {/* Row 1: title + action buttons */}
-        <div className="flex items-center justify-between mb-2.5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 mb-2.5">
           <div className="flex items-center gap-2">
             <span style={{ color: 'var(--ink-2)' }}><ClipboardList className="h-4 w-4" /></span>
             <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>
               Chuyến đã đi
             </h2>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
             <Button
               variant="outline"
               size="sm"
               title="Xuất Excel đối soát"
               onClick={() => setShowExportDialog(true)}
+              className="flex-1 sm:flex-none"
             >
               <FileSpreadsheet className="h-3.5 w-3.5" />
               Xuất đối soát
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
+            <Button variant="outline" size="sm" onClick={() => setShowImport(true)} className="flex-1 sm:flex-none">
               <FileSpreadsheet className="h-3.5 w-3.5" />
               Nhập Excel
             </Button>
@@ -263,7 +266,7 @@ export function DoiSoatPage() {
               title="Tự động ghép tất cả chuyến khớp hoàn toàn (số cont, tuyến, chủ hàng). Bạn sẽ được xem trước trước khi xác nhận."
               onClick={() => setShowAutoMatchDate(true)}
               disabled={autoMatchPreview.isPending}
-              className="inline-flex items-center gap-1.5 ml-3 px-3 py-1.5 rounded-full text-violet-600 text-xs font-medium border border-violet-200 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-violet-200 focus:ring-offset-1"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-violet-600 text-xs font-medium border border-violet-200 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-violet-200 focus:ring-offset-1 flex-1 sm:flex-none"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
@@ -277,45 +280,55 @@ export function DoiSoatPage() {
 
         {/* Row 2: search + filter dropdowns in a card */}
         <Panel flush className="mb-2">
-          <div className="flex items-center gap-3 px-4 py-2.5">
-            <ToolbarSearch
-              value={search}
-              onChange={setSearch}
-              placeholder="Tìm chủ hàng, tàu, tuyến, cont…"
-              width={280}
-            />
-            <div className="flex-1" />
-            <InlineSelect
-              placeholder="Tất cả chủ hàng"
-              value={doiSoatClientId}
-              options={[
-                { value: 'ALL', label: 'Tất cả chủ hàng' },
-                ...clients.map((c) => ({ value: String(c.id), label: c.code ? `${c.code} — ${c.name}` : c.name })),
-              ]}
-              onChange={setDoiSoatClientId}
-              style={{ width: 185, height: 32, fontSize: 12.5 }}
-            />
-            <InlineSelect
-              placeholder="Tất cả lái xe"
-              value={driverIdFilter}
-              options={[
-                { value: 'ALL', label: 'Tất cả lái xe' },
-                ...drivers.map((d) => ({ value: String(d.id), label: d.fullName || d.username })),
-              ]}
-              onChange={setDriverIdFilter}
-              style={{ width: 160, height: 32, fontSize: 12.5 }}
-            />
-            <InlineSelect
-              placeholder="Trạng thái"
-              value={statusFilter}
-              options={[
-                { value: 'ALL', label: 'Tất cả' },
-                { value: 'PENDING', label: 'Chờ ghép' },
-                { value: 'MATCHED', label: 'Đã ghép' },
-              ]}
-              onChange={(val) => setStatusFilter(val as StatusFilter)}
-              style={{ width: 130, height: 32, fontSize: 12.5 }}
-            />
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3 px-4 py-2.5">
+            <div className="w-full lg:w-[280px]">
+              <ToolbarSearch
+                value={search}
+                onChange={setSearch}
+                placeholder="Tìm chủ hàng, tàu, tuyến, cont…"
+                width="100%"
+              />
+            </div>
+            {!isMobile && <div className="flex-1" />}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
+              <div className="w-full sm:w-[185px]">
+                <InlineSelect
+                  placeholder="Tất cả chủ hàng"
+                  value={doiSoatClientId}
+                  options={[
+                    { value: 'ALL', label: 'Tất cả chủ hàng' },
+                    ...clients.map((c) => ({ value: String(c.id), label: c.code ? `${c.code} — ${c.name}` : c.name })),
+                  ]}
+                  onChange={setDoiSoatClientId}
+                  style={{ width: '100%', height: 32, fontSize: 12.5 }}
+                />
+              </div>
+              <div className="w-full sm:w-[160px]">
+                <InlineSelect
+                  placeholder="Tất cả lái xe"
+                  value={driverIdFilter}
+                  options={[
+                    { value: 'ALL', label: 'Tất cả lái xe' },
+                    ...drivers.map((d) => ({ value: String(d.id), label: d.fullName || d.username })),
+                  ]}
+                  onChange={setDriverIdFilter}
+                  style={{ width: '100%', height: 32, fontSize: 12.5 }}
+                />
+              </div>
+              <div className="w-full sm:w-[130px]">
+                <InlineSelect
+                  placeholder="Trạng thái"
+                  value={statusFilter}
+                  options={[
+                    { value: 'ALL', label: 'Tất cả' },
+                    { value: 'PENDING', label: 'Chờ ghép' },
+                    { value: 'MATCHED', label: 'Đã ghép' },
+                  ]}
+                  onChange={(val) => setStatusFilter(val as StatusFilter)}
+                  style={{ width: '100%', height: 32, fontSize: 12.5 }}
+                />
+              </div>
+            </div>
           </div>
         </Panel>
 
