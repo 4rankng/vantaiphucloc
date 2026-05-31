@@ -36,7 +36,6 @@ import {
   useUnmatchTrip,
   useDeleteDeliveredTrip,
 } from '@/hooks/use-queries'
-import { useIsMobile } from '@/hooks/use-mobile'
 
 // ─── Status filter type ───────────────────────────────────────────────────────
 
@@ -57,7 +56,6 @@ function AIMatchButtonLabel({ isPending }: { isPending: boolean }) {
 
 export function DoiSoatPage() {
   const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
-  const isMobile = useIsMobile(768)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
@@ -289,7 +287,7 @@ export function DoiSoatPage() {
                 width="100%"
               />
             </div>
-            {!isMobile && <div className="flex-1" />}
+            <div className="hidden lg:block flex-1" />
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
               <div className="w-full sm:w-[185px]">
                 <InlineSelect
@@ -372,7 +370,7 @@ export function DoiSoatPage() {
                     search.trim()
                       ? 'Không tìm thấy chuyến'
                       : statusFilter !== 'ALL'
-                        ? `Không có chuyến nào "${(statusFilter === 'PENDING' ? 'cho ghep' : 'da ghep')}"`
+                        ? `Không có chuyến nào "${(statusFilter === 'PENDING' ? 'chờ ghép' : 'đã ghép')}"`
                         : 'Chưa có chuyến nào trong tháng này'
                   }
                   compact

@@ -132,7 +132,7 @@ export function LocationAliasesPage() {
       onSuccess: (loc) => {
         toast.success('Đã thêm địa điểm')
         setCreating(false)
-        if (loc && typeof loc === 'object' && 'id' in loc) {
+        if (!isMobile && loc && typeof loc === 'object' && 'id' in loc) {
           setSelectedId((loc as Location).id)
         }
       },
@@ -201,8 +201,10 @@ export function LocationAliasesPage() {
     setMergeOpen(true)
   }
 
+  const panelHeight = isMobile ? 'calc(100dvh - 110px)' : 'calc(100dvh - 80px)'
+
   return (
-    <div className="animate-fade-in flex flex-col" style={{ height: isMobile ? 'calc(100dvh - 110px)' : 'calc(100dvh - 80px)', maxHeight: isMobile ? 'calc(100dvh - 110px)' : 'calc(100dvh - 80px)', overflow: 'hidden' }}>
+    <div className="animate-fade-in flex flex-col" style={{ height: panelHeight, maxHeight: panelHeight, overflow: 'hidden' }}>
       {/* ── Header ── */}
       <div className="shrink-0">
         <PageHeader
@@ -215,12 +217,12 @@ export function LocationAliasesPage() {
               {!isMobile && <StatPill count={aliases.length} label=" tên phụ" />}
               <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={() => setImporting(true)} className="gap-1 px-2.5">
                 <FileSpreadsheet className="h-3.5 w-3.5" />
-                <span>{isMobile ? '' : 'Nhập Excel'}</span>
+                {!isMobile && <span>Nhập Excel</span>}
               </Button>
               {locations.length >= 2 && (
                 <Button variant="ghost" size={isMobile ? "sm" : "default"} onClick={() => openMergeDialog()} className="gap-1 px-2.5">
                   <Merge className="h-3.5 w-3.5" />
-                  <span>{isMobile ? '' : 'Gộp'}</span>
+                  {!isMobile && <span>Gộp</span>}
                 </Button>
               )}
             </div>

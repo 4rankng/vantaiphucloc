@@ -66,17 +66,21 @@
     letter-spacing: 0.03em !important;
   }
 
-  /* ── Dialog / modal: full-width on phones, modest top margin */
-  [role="dialog"][data-state="open"] > div[class*="DialogContent"],
-  [data-radix-dialog-content] {
+  /* ── Dialog / modal: full-width on phones, modest top margin.
+        Targets the Radix Dialog Content element (which has role="dialog" and
+        data-state), but excludes Sheet drawers by checking the parent does
+        NOT have a data-side attribute (sheets use Popover with data-side). */
+  [role="dialog"][data-state="open"]:not([data-side]) {
     width: calc(100vw - 16px) !important;
     max-width: calc(100vw - 16px) !important;
     margin: 8px !important;
   }
 
-  /* ── Sheet (drawer) — already handled by Radix Sheet's vaul, but the
-        AccountantMobileShell side="left" drawer can overflow on tiny screens */
-  [data-radix-sheet-content] {
+  /* ── Sheet (drawer) — Sheet wraps DialogPrimitive.Content which renders
+        with role="dialog" and data-state. Limit width on tiny screens.
+        Sheets are positioned via inline styles from the SheetContent wrapper,
+        so we scope by the side attribute set by the Sheet component. */
+  [role="dialog"][data-state="open"][data-side] {
     max-width: 85vw !important;
   }
 
