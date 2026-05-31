@@ -51,7 +51,7 @@ export function DriverJobs() {
               )}
             </div>
             <div className="flex flex-wrap gap-1">
-              {job.containers.map((c, i) => (
+              {(job.containers ?? []).map((c, i) => (
                 <span key={i} className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}>
                   {c.containerNumber} ({c.workType})
                 </span>
