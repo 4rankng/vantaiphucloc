@@ -10,7 +10,7 @@ export function DriverJobs() {
   const { data } = useDeliveredTrips({ driverId })
   const jobs = useMemo(() => data?.items ?? [], [data])
 
-  const totalEarning = useMemo(() => jobs.reduce((s, j) => s + j.driverSalary, 0), [jobs])
+  const totalEarning = useMemo(() => jobs.reduce((s, j) => s + (j.driverSalary ?? 0), 0), [jobs])
 
   const sortedJobs = useMemo(
     () => [...jobs].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
@@ -39,24 +39,24 @@ export function DriverJobs() {
             className="rounded-lg p-3 space-y-2"
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-muted)' }}>{job.code}</span>
-              {job.status === 'PENDING' && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{
-                  background: 'var(--theme-status-warning-light)',
-                  color: 'var(--theme-status-warning)',
-                }}>
-                  Chờ ghép
-                </span>
-              )}
+            {/* Header — DeliveredTrip has no `code` or `status`. Use the
+                container number (or fallback id) as identifier; show client
+                name on the right. */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
+                {job.contNumber || `#${job.id}`}
+              </span>
+              <span className="text-[10px] font-medium truncate" style={{ color: 'var(--theme-text-muted)' }}>
+                {job.client?.name ?? ''}
+              </span>
             </div>
-            <div className="flex flex-wrap gap-1">
-              {(job.containers ?? []).map((c, i) => (
-                <span key={i} className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}>
-                  {c.containerNumber} ({c.workType})
+            {job.contNumber && (
+              <div className="flex flex-wrap gap-1">
+                <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}>
+                  {job.contNumber} ({job.contType ?? job.workType ?? '?'})
                 </span>
-              ))}
-            </div>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{job.pickupLocation?.name} → {job.dropoffLocation?.name}</span>
               <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(job.driverSalary)}</span>

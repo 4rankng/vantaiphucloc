@@ -30,8 +30,10 @@ export function ClientJobs() {
     [jobs],
   )
 
-  const totalRevenue = useMemo(() => jobs.reduce((s, j) => s + j.unitPrice, 0), [jobs])
-  const totalDriverEarning = useMemo(() => jobs.reduce((s, j) => s + j.driverSalary, 0), [jobs])
+  // DeliveredTrip uses `revenue`, not `unitPrice` — older code referenced the
+  // wrong field, which silently returned NaN totals.
+  const totalRevenue = useMemo(() => jobs.reduce((s, j) => s + (j.revenue ?? 0), 0), [jobs])
+  const totalDriverEarning = useMemo(() => jobs.reduce((s, j) => s + (j.driverSalary ?? 0), 0), [jobs])
 
   const pricingJobCounts = useMemo(() => {
     const map = new Map<string, number>()
@@ -111,21 +113,32 @@ export function ClientJobs() {
           className="rounded-lg p-3 space-y-2"
           style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
         >
+          {/* Header row — show the container number (or fallback id) as the
+              identifier since DeliveredTrip has no `code` field. Vendor-only
+              trips have no driver assigned; show '—' rather than crash. */}
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-muted)' }}>{job.code}</span>
-            {job.status === 'PENDING' && (
+            <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
+              {job.contNumber || `#${job.id}`}
+            </span>
+            {!job.driver && (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{
                 background: 'var(--theme-status-warning-light)',
                 color: 'var(--theme-status-warning)',
               }}>
-                Chờ ghép
+                Chưa ghép
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>{job.driver.name}</span>
-            <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>• {job.driver.name}</span>
-          </div>
+          {(job.driver?.name || job.vehiclePlate) && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+                {job.driver?.name ?? '—'}
+              </span>
+              {job.vehiclePlate && (
+                <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>• {job.vehiclePlate}</span>
+              )}
+            </div>
+          )}
           <div className="flex flex-wrap gap-1">
             {job.contNumber && (
               <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}>
@@ -135,7 +148,7 @@ export function ClientJobs() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{job.pickupLocation?.name} → {job.dropoffLocation?.name}</span>
-            <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(job.unitPrice)}</span>
+            <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(job.revenue ?? 0)}</span>
           </div>
           <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{new Date(job.createdAt).toLocaleDateString('vi-VN')}</p>
         </div>
