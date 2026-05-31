@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Truck, Plus, User, X, Building2, Users, Trash2 } from 'lucide-react'
+import { Truck, Plus, User, X, Building2, Users, Trash2, Download } from 'lucide-react'
 import { Button } from '@/components/ui'
 
 import { Panel } from '@/components/shared/overlays/Panel'
@@ -26,6 +26,74 @@ import {
   DriverMobileEditCard,
 } from '@/components/shared'
 import { DangerConfirmDialog } from '@/components/shared/overlays/DangerConfirmDialog/DangerConfirmDialog'
+
+async function exportDriversXlsx(drivers: import('@/data/domain').Driver[]) {
+  const ExcelJS = (await import('exceljs')).default
+  const wb = new ExcelJS.Workbook()
+  wb.creator = 'Vận tải Phúc Lộc'
+  wb.created = new Date()
+
+  const ws = wb.addWorksheet('Lái xe', {
+    views: [{ state: 'frozen', ySplit: 1 }],
+    pageSetup: { fitToPage: true, fitToWidth: 1 },
+  })
+
+  ws.columns = [
+    { key: 'fullName',     width: 28 },
+    { key: 'username',     width: 18 },
+    { key: 'phone',        width: 16 },
+    { key: 'vehiclePlate', width: 16 },
+  ]
+
+  // ── Header row ─────────────────────────────────────────────────────────
+  const HEADERS = ['Họ tên', 'Tên đăng nhập', 'SĐT', 'Biển số xe']
+  const headerRow = ws.addRow(HEADERS)
+  headerRow.height = 24
+  headerRow.eachCell((cell) => {
+    cell.font      = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } }
+    cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1D4ED8' } }
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false }
+    cell.border    = {
+      bottom: { style: 'medium', color: { argb: 'FF1E40AF' } },
+    }
+  })
+
+  // ── Data rows ───────────────────────────────────────────────────────────
+  drivers.forEach((d, i) => {
+    const row = ws.addRow([
+      d.fullName ?? '',
+      d.username,
+      d.phone ?? '',
+      d.vehiclePlate ?? '',
+    ])
+    row.height = 20
+    const isEven = i % 2 === 0
+    row.eachCell((cell) => {
+      cell.font      = { size: 10.5 }
+      cell.alignment = { vertical: 'middle' }
+      cell.fill      = {
+        type: 'pattern', pattern: 'solid',
+        fgColor: { argb: isEven ? 'FFFFFFFF' : 'FFF0F5FF' },
+      }
+      cell.border    = {
+        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        right:  { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      }
+    })
+  })
+
+  // ── Download ────────────────────────────────────────────────────────────
+  const buf  = await wb.xlsx.writeBuffer()
+  const blob = new Blob([buf], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+  const url = URL.createObjectURL(blob)
+  const a   = document.createElement('a')
+  a.href     = url
+  a.download = `Danh_sach_lai_xe_${new Date().toISOString().slice(0, 10)}.xlsx`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 function FleetSection() {
   const isMobile = useIsMobile(768)
@@ -228,6 +296,9 @@ function FleetSection() {
         <section>
           <div className="flex items-center gap-2 mb-3">
             <SearchInput value={driverSearch} onChange={handleDriverSearch} placeholder="Tìm tên, SĐT, biển số…" />
+            <Button size="sm" variant="outline" onClick={() => exportDriversXlsx(drivers)} title="Xuất danh sách lái xe ra Excel">
+              <Download className="h-4 w-4" /> Xuất Excel
+            </Button>
             <Button size="sm" onClick={() => setShowCreateDriver(true)}>
               <Plus className="h-4 w-4" /> Thêm lái xe
             </Button>

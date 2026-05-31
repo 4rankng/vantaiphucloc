@@ -140,19 +140,6 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
       ),
     },
     {
-      key: 'vendor',
-      header: 'Nhà thầu',
-      width: 90,
-      render: (t) => {
-        const name = t.vendor?.name || (t.vendorId ? null : 'Phúc Lộc')
-        return (
-          <span className="text-[13px] truncate block" style={{ color: name === 'Phúc Lộc' ? 'var(--ink-2)' : 'var(--ink)' }}>
-            {name || '—'}
-          </span>
-        )
-      },
-    },
-    {
       key: 'vehicle',
       header: 'Số xe chạy',
       width: 90,
@@ -166,9 +153,8 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
     {
       key: 'driverName',
       header: 'Lái xe',
-      width: 130,
       render: (t) => (
-        <span className="text-[13px] truncate block" style={{ color: 'var(--ink-2)' }}>
+        <span className="text-[13px] whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
           {t.driver?.name || '—'}
         </span>
       ),
@@ -296,6 +282,19 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
           {money(t.driverSalary)}
         </span>
       ),
+    },
+    {
+      key: 'vendor',
+      header: 'Nhà thầu',
+      width: 90,
+      render: (t) => {
+        const name = t.vendor?.name || (t.vendorId ? null : 'Phúc Lộc')
+        return (
+          <span className="text-[13px] whitespace-nowrap" style={{ color: name === 'Phúc Lộc' ? 'var(--ink-2)' : 'var(--ink)' }}>
+            {name || '—'}
+          </span>
+        )
+      },
     },
     {
       key: 'createdAt',
