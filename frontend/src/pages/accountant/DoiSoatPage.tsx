@@ -307,7 +307,7 @@ export function DoiSoatPage() {
                   value={driverIdFilter}
                   options={[
                     { value: 'ALL', label: 'Tất cả lái xe' },
-                    ...drivers.map((d) => ({ value: String(d.id), label: d.fullName || d.username })),
+                    ...drivers.map((d) => ({ value: String(d.id), label: d.fullName || d.username, sublabel: d.phone })),
                   ]}
                   onChange={setDriverIdFilter}
                   style={{ width: '100%', height: 32, fontSize: 12.5 }}
