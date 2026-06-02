@@ -351,6 +351,18 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     return fields
   }, [containers, clientId, pickupLocation, dropoffLocation])
 
+  // Whether any container has a photo taken (for nudge UI)
+  const hasAnyPhoto = useMemo(() =>
+    containers.some(c => c.photoTaken),
+    [containers],
+  )
+
+  // Number of non-empty containers (for summary / multi-trip display)
+  const containerCount = useMemo(() =>
+    containers.filter(c => c.containerNumber.trim()).length,
+    [containers],
+  )
+
   // Submit flow — confirmSubmit defined first so onRequestSubmit can call it directly in edit mode
   const confirmSubmit = useCallback(async () => {
     setSummaryOpen(false)
@@ -364,9 +376,9 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
         return
       }
 
-      const firstCont = containers[0]
-      // Let backend auto-resolve vehicle_plate from driver's VehicleDriver assignment
+      // Edit mode: single container only
       if (isEdit && existingDeliveredTrip) {
+        const firstCont = containers[0]
         await apiClient.updateDeliveredTrip(existingDeliveredTrip.id, {
           contNumber: firstCont?.containerNumber.trim() || null,
           contType: firstCont?.contType ?? null,
@@ -378,6 +390,11 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
           vehiclePlate: null,
           tripDate,
         })
+        // Upload photo if taken
+        if (firstCont?.photoTaken && firstCont?.photoDataUrl) {
+          apiClient.uploadDeliveredTripPhoto(existingDeliveredTrip.id, firstCont.photoDataUrl)
+            .catch(() => {})
+        }
         invalidateDeliveredTripDeps(qc)
         setShowSuccess(true)
         if (vessel.trim()) addRecentVessel(vessel.trim())
@@ -385,27 +402,50 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
           setShowSuccess(false)
           navigate('/driver')
         }, 1500)
-      } else {
-        await apiClient.createDeliveredTrip({
-          contNumber: firstCont?.containerNumber.trim() || null,
-          contType: firstCont?.contType ?? null,
-          workType: firstCont?.workType ?? null,
-          clientId: Number(clientId),
-          pickupLocationId: pickupId,
-          dropoffLocationId: dropoffId,
-          driverId: Number(user!.id),
-          vessel: vessel || null,
-          vehiclePlate: null,
-          tripDate,
-        })
-        invalidateDeliveredTripDeps(qc)
-        setShowSuccess(true)
-        if (vessel.trim()) addRecentVessel(vessel.trim())
-        setTimeout(() => {
-          setShowSuccess(false)
-          navigate('/driver')
-        }, 2000)
+        return
       }
+
+      // Create mode: submit each container as a separate DeliveredTrip
+      const activeContainers = containers.filter(c => c.containerNumber.trim())
+      let anyFailed = false
+
+      for (const cont of activeContainers) {
+        try {
+          const res = await apiClient.createDeliveredTrip({
+            contNumber: cont.containerNumber.trim() || null,
+            contType: cont.contType ?? null,
+            workType: cont.workType ?? null,
+            clientId: Number(clientId),
+            pickupLocationId: pickupId,
+            dropoffLocationId: dropoffId,
+            driverId: Number(user!.id),
+            vessel: vessel || null,
+            vehiclePlate: null,
+            tripDate,
+          })
+
+          if (!res.success) {
+            anyFailed = true
+            continue
+          }
+
+          // Photo upload is optional — failures are silently ignored
+          if (cont.photoTaken && cont.photoDataUrl && res.data?.id) {
+            apiClient.uploadDeliveredTripPhoto(res.data.id, cont.photoDataUrl)
+              .catch(() => {})
+          }
+        } catch {
+          anyFailed = true
+        }
+      }
+
+      invalidateDeliveredTripDeps(qc)
+      setShowSuccess(true)
+      if (vessel.trim()) addRecentVessel(vessel.trim())
+      setTimeout(() => {
+        setShowSuccess(false)
+        navigate('/driver')
+      }, anyFailed ? 3000 : 2000)
     } catch (err) {
       console.error('Submit failed:', err)
       setSubmitting(false)
@@ -434,11 +474,13 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     }
   }, [canSubmit, containers, isEdit, confirmSubmit])
 
-  // Summary data for dialog
-  const summaryContNumber = useMemo(() =>
-    containers[0]?.containerNumber.trim() || null,
-    [containers],
-  )
+  // Summary data for dialog — show all container numbers (comma separated)
+  const summaryContNumber = useMemo(() => {
+    const numbers = containers
+      .map(c => c.containerNumber.trim())
+      .filter(Boolean)
+    return numbers.length > 0 ? numbers.join(', ') : null
+  }, [containers])
 
   // Summary chip shows only the cont type (E20/E40/F20/F40).
   const summaryContType = useMemo(() => containers[0]?.contType ?? null, [containers])
@@ -501,6 +543,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
 
     // Derived
     canSubmit, summaryContNumber, summaryContType, summaryWorkType, summaryClientName,
+    hasAnyPhoto, containerCount,
     tripDateLabel: formatISODate(tripDate),
 
     // Actions

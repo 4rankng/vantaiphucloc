@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { Camera } from 'lucide-react'
 import { Drawer } from '@/components/shared/overlays/Drawer'
+import { PhotoLightbox } from '@/components/shared/overlays/PhotoLightbox'
 import { Pill, type PillVariant } from '@/components/shared/data-display/Pill'
 import { Button } from '@/components/ui'
 import { InlineEditable } from '@/components/shared/forms/InlineEditable/InlineEditable'
@@ -30,6 +32,7 @@ export function DeliveredTripDetailDrawer({
 }) {
   const [trip, setTrip] = useState<DeliveredTrip>(initialTrip)
   const [showAISuggest, setShowAISuggest] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
   const _updateTrip = useUpdateDeliveredTrip()
   const { data: clients = [] } = useClients()
   const { data: locations = [] } = useLocations()
@@ -183,6 +186,32 @@ export function DeliveredTripDetailDrawer({
             </div>
           </div>
 
+          {/* ── Container photo ── */}
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--ink-4)' }}>
+              Ảnh container
+            </p>
+            {trip.contPhotoUrl ? (
+              <div
+                className="group relative rounded-xl overflow-hidden border border-[var(--line)] cursor-zoom-in"
+                onClick={() => setLightboxOpen(true)}
+              >
+                <img
+                  src={trip.contPhotoUrl}
+                  alt="Ảnh container"
+                  className="w-full object-cover"
+                  style={{ maxHeight: 240 }}
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-150" />
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 rounded-xl px-3 py-3 text-xs" style={{ background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--ink-4)' }}>
+                <Camera className="w-4 h-4 shrink-0" />
+                <span>Chưa có ảnh container</span>
+              </div>
+            )}
+          </div>
+
           {!trip.bookedTripId && (
             <div className="pt-2 flex justify-end">
               <button
@@ -206,6 +235,13 @@ export function DeliveredTripDetailDrawer({
         <AISuggestionDialog
           trip={trip}
           onClose={() => setShowAISuggest(false)}
+        />
+      )}
+
+      {lightboxOpen && trip.contPhotoUrl && (
+        <PhotoLightbox
+          src={trip.contPhotoUrl}
+          onClose={() => setLightboxOpen(false)}
         />
       )}
     </>

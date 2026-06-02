@@ -70,6 +70,8 @@ export function useRemoveVehicleDriver() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers })
       qc.invalidateQueries({ queryKey: ['vehicles'] })
+      qc.invalidateQueries({ queryKey: ['drivers'] })
+      qc.invalidateQueries({ queryKey: ['drivers-paged'] })
     },
   })
 }

@@ -82,7 +82,12 @@ export function ok<T>(data: T): ApiResponse<T> {
 
 /** Wrap an error in the ApiResponse shape */
 export function fail<T>(err: unknown): ApiResponse<T> {
-  const message = err instanceof Error ? err.message : 'Đã xảy ra lỗi'
+  let message = 'Đã xảy ra lỗi'
+  if (err instanceof Error) {
+    message = err.message
+  } else if (err && typeof err === 'object' && 'message' in err && typeof (err as Record<string, unknown>).message === 'string') {
+    message = String((err as Record<string, unknown>).message)
+  }
   return { data: null as unknown as T, success: false, message }
 }
 

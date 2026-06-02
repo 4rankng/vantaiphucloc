@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import Vehicle, VehicleDriver
@@ -98,3 +98,7 @@ async def deactivate_existing_assignments(
     for vd in existing:
         vd.is_active = False
         vd.effective_to = today
+        if vd.vehicle_id is not None:
+            await session.execute(
+                update(Vehicle).where(Vehicle.id == vd.vehicle_id, Vehicle.driver_id == driver_id).values(driver_id=None)
+            )

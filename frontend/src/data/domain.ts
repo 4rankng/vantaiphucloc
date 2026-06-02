@@ -151,6 +151,7 @@ export interface DeliveredTrip {
   id: number
   contNumber: string | null
   contType: ContType | null
+  contPhotoUrl: string | null
   client: ClientSummary
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary

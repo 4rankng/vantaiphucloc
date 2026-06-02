@@ -239,6 +239,7 @@ async def set_driver_vehicle(
     plate = body.plate.strip().upper()
     vehicle = await ensure_vehicle(db, plate)
     await deactivate_existing_assignments(db, driver_id)
+    await db.execute(update(Vehicle).where(Vehicle.id == vehicle.id).values(driver_id=driver_id))
     db.add(VehicleDriver(
         vehicle_id=vehicle.id,
         driver_id=driver_id,
@@ -296,7 +297,11 @@ async def delete_driver(
     await db.execute(update(Vehicle).where(Vehicle.driver_id == driver_id).values(driver_id=None))
     await db.execute(update(DeliveredTrip).where(DeliveredTrip.driver_id == driver_id).values(driver_id=None))
     # Hard delete — VehicleDriver, DriverSalaryConfig, DriverSalary cascade via ondelete="CASCADE"
-    await db.delete(user)
-    await db.commit()
+    try:
+        await db.delete(user)
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Cannot delete driver: associated data prevents deletion. Please ensure the driver has no active work orders, locations, or expenses created.")
     await CacheManager(redis).invalidate_namespace("drivers")
     return None

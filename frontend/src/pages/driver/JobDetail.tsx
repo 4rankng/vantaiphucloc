@@ -1,10 +1,14 @@
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, Camera } from 'lucide-react'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { formatCurrencyFull, getWorkTypeLabel } from '@/data/domain'
 import { useDeliveredTrip, useDeleteDeliveredTrip, useUpdateDeliveredTrip } from '@/hooks/use-queries'
 import { DangerConfirmDialog } from '@/components/shared/overlays/DangerConfirmDialog/DangerConfirmDialog'
 import { DateNavigator } from '@/components/shared/navigation/DateNavigator'
+import { ContainerScanner } from '@/components/shared/overlays/ContainerScanner'
+import { apiClient } from '@/services/api'
+import { useQueryClient } from '@tanstack/react-query'
+import { invalidateDeliveredTripDeps } from '@/hooks/query-keys'
 
 // ─── Status pill ──────────────────────────────────────────────────────────────
 function StatusPill({ booked }: { booked: boolean }) {
@@ -59,7 +63,10 @@ export function JobDetail() {
   const updateTrip = useUpdateDeliveredTrip()
   const [deleting, setDeleting] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [scannerOpen, setScannerOpen] = useState(false)
+  const [photoLoading, setPhotoLoading] = useState(false)
   const isMatched = !!job?.bookedTripId
+  const qc = useQueryClient()
 
   // Local trip date state — synced from server data, persisted on change
   const [tripDate, setTripDate] = useState<string>('')
@@ -108,6 +115,18 @@ export function JobDetail() {
     })
   }
 
+  const handlePhotoCapture = useCallback(async (imageSrc: string) => {
+    setScannerOpen(false)
+    setPhotoLoading(true)
+    try {
+      const res = await apiClient.uploadDeliveredTripPhoto(jobId, imageSrc)
+      if (res.success) {
+        invalidateDeliveredTripDeps(qc)
+      }
+    } catch { /* silent */ }
+    setPhotoLoading(false)
+  }, [jobId, qc])
+
   if (loading) {
     return (
       <div className="animate-pulse space-y-3 p-4">
@@ -140,6 +159,14 @@ export function JobDetail() {
         }
         .status-dot-amber { animation: amberPulse 1.6s infinite; }
       `}</style>
+
+      {/* Container scanner — photo capture */}
+      {scannerOpen && (
+        <ContainerScanner
+          onCapture={handlePhotoCapture}
+          onClose={() => setScannerOpen(false)}
+        />
+      )}
 
       {/* Back nav */}
       <button
@@ -411,6 +438,72 @@ export function JobDetail() {
                 </div>
               </div>
             </div>
+          </div>
+        </Section>
+
+        {/* ── CONTAINER PHOTO ── */}
+        <Section label="Ảnh container">
+          <div
+            className="rounded-[18px] overflow-hidden"
+            style={{
+              background: 'var(--theme-bg-secondary)',
+              border: '1px solid var(--theme-border-default)',
+            }}
+          >
+            {job.contPhotoUrl ? (
+              <div className="p-1">
+                <img
+                  src={job.contPhotoUrl}
+                  alt="Container photo"
+                  className="w-full rounded-xl object-cover"
+                  style={{ maxHeight: 260 }}
+                  onClick={() => window.open(job.contPhotoUrl!, '_blank')}
+                />
+                {canEdit && (
+                  <div className="px-3 py-2.5">
+                    <button
+                      onClick={() => setScannerOpen(true)}
+                      disabled={photoLoading}
+                      className="w-full h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]"
+                      style={{
+                        background: 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)',
+                        color: 'var(--theme-brand-primary)',
+                        border: '1px dashed color-mix(in srgb, var(--theme-brand-primary) 35%, transparent)',
+                      }}
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      {photoLoading ? 'Đang lưu...' : 'Chụp lại ảnh'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 text-center">
+                {canEdit ? (
+                  <button
+                    onClick={() => setScannerOpen(true)}
+                    disabled={photoLoading}
+                    className="w-full rounded-xl py-5 flex flex-col items-center gap-2 transition-all active:scale-[0.98]"
+                    style={{
+                      background: 'color-mix(in srgb, var(--theme-brand-primary) 4%, transparent)',
+                      border: '1.5px dashed color-mix(in srgb, var(--theme-brand-primary) 25%, transparent)',
+                      color: 'var(--theme-text-muted)',
+                    }}
+                  >
+                    <Camera className="w-6 h-6" style={{ color: 'var(--theme-brand-primary)' }} />
+                    <span className="text-xs font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
+                      {photoLoading ? 'Đang lưu...' : 'Chụp ảnh container'}
+                    </span>
+                    <span className="text-[10px]">Ảnh giúp kế toán đối soát chính xác hơn</span>
+                  </button>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 py-3">
+                    <Camera className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
+                    <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Chưa có ảnh container</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </Section>
 

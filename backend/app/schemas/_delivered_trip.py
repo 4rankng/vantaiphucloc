@@ -12,7 +12,14 @@ __all__ = [
     "DeliveredTripCreate",
     "DeliveredTripUpdate",
     "DeliveredTripOut",
+    "DeliveredTripPhotoUpload",
 ]
+
+
+class DeliveredTripPhotoUpload(BaseModel):
+    """Base64-encoded image data for a container photo."""
+
+    image_data: str
 
 
 class DeliveredTripCreate(BaseModel):
@@ -26,6 +33,7 @@ class DeliveredTripCreate(BaseModel):
     work_type: str = ""
     cont_number: str | None = None
     cont_type: str | None = None
+    cont_photo_url: str | None = None
     trip_date: date | None = None
 
     @model_validator(mode="after")
@@ -50,6 +58,7 @@ class DeliveredTripUpdate(BaseModel):
     work_type: str | None = None
     cont_number: str | None = None
     cont_type: str | None = None
+    cont_photo_url: str | None = None
     trip_date: date | None = None
     revenue: int | None = None
     driver_salary: int | None = None
@@ -68,6 +77,7 @@ class DeliveredTripOut(BaseModel):
     work_type: str = ""
     cont_number: str | None = None
     cont_type: str | None = None
+    cont_photo_url: str | None = None
     revenue: int
     driver_salary: int
     trip_date: date | None = None

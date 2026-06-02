@@ -240,8 +240,9 @@ export function useFleetManager() {
       try {
         await deleteVehicle.mutateAsync(id)
         toast.success('Đã xoá xe')
-      } catch {
-        toast.error('Không thể xoá xe')
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Không thể xoá xe'
+        toast.error('Không thể xoá xe', msg !== 'Đã xảy ra lỗi' ? msg : undefined)
       }
     },
     [deleteVehicle, toast]
@@ -252,8 +253,9 @@ export function useFleetManager() {
       try {
         await deleteDriver.mutateAsync(id)
         toast.success('Đã xoá lái xe')
-      } catch {
-        toast.error('Không thể xoá lái xe')
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Không thể xoá lái xe'
+        toast.error('Không thể xoá lái xe', msg !== 'Đã xảy ra lỗi' ? msg : undefined)
       }
     },
     [deleteDriver, toast]

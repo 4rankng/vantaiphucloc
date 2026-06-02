@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, require_permission
@@ -98,4 +98,7 @@ async def deactivate_vehicle_driver(
         raise HTTPException(status_code=404, detail="Vehicle-driver assignment not found")
     vd.is_active = False
     vd.effective_to = date.today()
+    await db.execute(
+        update(Vehicle).where(Vehicle.id == vd.vehicle_id, Vehicle.driver_id == vd.driver_id).values(driver_id=None)
+    )
     await db.commit()

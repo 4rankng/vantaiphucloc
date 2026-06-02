@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   ScanLine, RotateCcw, Trash2, AlertCircle, Loader2, Plus,
   ChevronLeft, CheckCircle2, Container as ContainerIcon, Ship, MapPin,
-  Sparkles,
+  Sparkles, Camera,
 } from 'lucide-react'
 import { getWorkTypeLabel } from '@/data/domain'
 import { ContainerScanner } from '@/components/shared/overlays/ContainerScanner'
@@ -39,6 +39,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
     submitting, scannerOpen, summaryOpen, showSuccess,
     forceManualEntry, missingFields, containerErrors, containerSuggestions, suggestionLoading,
     canSubmit, summaryContNumber, summaryContType, summaryWorkType, summaryClientName,
+    hasAnyPhoto, containerCount,
     tripDateLabel,
     setClientId, setVessel, setPickupLocation, setDropoffLocation, setTripDate,
     openScanner, handleScanComplete, setScannerOpen,
@@ -411,6 +412,23 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
         }}
       >
         <div className="max-w-2xl mx-auto space-y-2">
+          {/* Nudge banner — gentle reminder when no photo taken (create mode only) */}
+          {!isEdit && containerCount > 0 && !hasAnyPhoto && (
+            <div
+              className="flex items-start gap-2 rounded-xl px-3 py-2 text-[11px]"
+              style={{
+                background: 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--theme-brand-primary) 15%, transparent)',
+                color: 'var(--theme-text-secondary)',
+              }}
+            >
+              <Camera className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: 'var(--theme-brand-primary)' }} />
+              <span>
+                Bạn có thể chụp ảnh container để kế toán dễ đối soát hơn.
+              </span>
+            </div>
+          )}
+
           {missingFields.length > 0 && !canSubmit && (
             <p className="text-[11px] font-medium text-center leading-tight" style={{ color: 'var(--theme-status-warning, #b45309)' }}>
               <span className="font-bold">Còn thiếu:</span> {missingFields.join(', ')}
@@ -478,6 +496,9 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
         pickupLocation={pickupLocation}
         dropoffLocation={dropoffLocation}
         tripDate={tripDateLabel}
+        containerCount={containerCount}
+        hasPhoto={hasAnyPhoto}
+        photoUrls={containers.filter(c => c.photoTaken && c.photoDataUrl).map(c => c.photoDataUrl!)}
       />
 
       {/* AI scanning overlay — visible while backend OCR is in flight */}

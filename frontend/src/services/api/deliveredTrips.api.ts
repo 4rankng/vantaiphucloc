@@ -32,6 +32,7 @@ interface DeliveredTripFilters {
 export interface DeliveredTripCreatePayload {
   contNumber?: string | null
   contType?: string | null
+  contPhotoUrl?: string | null
   clientId: number
   pickupLocationId: number
   dropoffLocationId: number
@@ -46,6 +47,7 @@ export interface DeliveredTripCreatePayload {
 export interface DeliveredTripUpdatePayload {
   contNumber?: string | null
   contType?: string | null
+  contPhotoUrl?: string | null
   clientId?: number
   pickupLocationId?: number
   dropoffLocationId?: number
@@ -136,6 +138,18 @@ export async function deleteDeliveredTrip(id: number): Promise<ApiResponse<void>
 export async function updateDeliveredTrip(id: number, data: DeliveredTripUpdatePayload): Promise<ApiResponse<DeliveredTrip>> {
   try {
     const res = await api.put(`/delivered-trips/${id}`, toSnake(data))
+    return ok(toCamel<DeliveredTrip>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+/** Upload a container photo for a delivered trip. */
+export async function uploadDeliveredTripPhoto(id: number, imageDataUrl: string): Promise<ApiResponse<DeliveredTrip>> {
+  try {
+    // Strip data URI prefix: "data:image/jpeg;base64," → raw base64
+    const base64 = imageDataUrl.replace(/^data:[^;]+;base64,/, '')
+    const res = await api.put(`/delivered-trips/${id}/photo`, { image_data: base64 })
     return ok(toCamel<DeliveredTrip>(res.data))
   } catch (err) {
     return fail(err)

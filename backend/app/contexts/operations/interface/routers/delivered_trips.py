@@ -39,6 +39,7 @@ from app.schemas.base import PaginatedResponse
 from app.schemas.domain import (
     DeliveredTripCreate,
     DeliveredTripOut,
+    DeliveredTripPhotoUpload,
     DeliveredTripUpdate,
 )
 from app.core.summaries import (
@@ -53,6 +54,7 @@ from app.core.summaries import (
 )
 from app.schemas._ocr import ContainerOCRRequest
 from app.contexts.operations.infrastructure.ocr import extract_container_number
+from app.contexts.operations.infrastructure.photo_storage import save_base64_photo
 from app.utils.iso6346 import normalize_container_number as _norm
 
 _logger = logging.getLogger(__name__)
@@ -79,6 +81,7 @@ def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, vendors) -> Deliv
         work_type=w.work_type,
         cont_number=w.cont_number,
         cont_type=w.cont_type,
+        cont_photo_url=w.cont_photo_url,
         revenue=w.revenue,
         driver_salary=w.driver_salary,
         trip_date=w.trip_date,
@@ -190,6 +193,7 @@ async def create_delivered_trip_endpoint(
                 work_type=body.work_type,
                 cont_number=body.cont_number,
                 cont_type=body.cont_type,
+                cont_photo_url=body.cont_photo_url,
                 trip_date=body.trip_date,
             ),
             _user_ctx(current_user),
@@ -313,6 +317,7 @@ async def update_delivered_trip(
                 work_type=body.work_type,
                 cont_number=body.cont_number,
                 cont_type=body.cont_type,
+                cont_photo_url=body.cont_photo_url,
                 trip_date=body.trip_date,
                 revenue=body.revenue,
                 driver_salary=body.driver_salary,
@@ -325,6 +330,45 @@ async def update_delivered_trip(
         return await _load_one(use_case.session, w)
     except Exception as exc:
         _logger.exception("Failed to load WO#%s after update", delivered_trip_id)
+        raise translate(exc)
+
+
+@router.put("/delivered-trips/{delivered_trip_id:int}/photo", response_model=DeliveredTripOut)
+async def upload_delivered_trip_photo(
+    delivered_trip_id: int,
+    body: DeliveredTripPhotoUpload,
+    current_user: User = Depends(get_current_user),
+    get_trip: GetDeliveredTrip = Depends(get_get_delivered_trip),
+    update_trip: UpdateDeliveredTrip = Depends(get_update_delivered_trip),
+):
+    """Upload (or replace) the container photo for a delivered trip.
+
+    The ``image_data`` field must be a raw base64 string (no ``data:`` prefix).
+    The photo is saved to local disk; the resulting URL path is stored on the
+    ``DeliveredTrip`` record so it can be served via the ``/photos`` static mount.
+    """
+    try:
+        # Verify trip exists and caller has access
+        trip = await get_trip(delivered_trip_id)
+        if current_user.role == "driver" and trip.driver_id != current_user.id:
+            from app.contexts.operations.domain.exceptions import NotFound
+            raise translate(NotFound("DeliveredTrip", delivered_trip_id))
+
+        data_url = f"data:image/jpeg;base64,{body.image_data}"
+        photo_url = save_base64_photo(data_url)
+
+        w = await update_trip(
+            delivered_trip_id,
+            DeliveredTripUpdateInput(cont_photo_url=photo_url),
+            _user_ctx(current_user),
+        )
+    except Exception as exc:
+        raise translate(exc)
+
+    try:
+        return await _load_one(update_trip.session, w)
+    except Exception as exc:
+        _logger.exception("Failed to load WO#%s after photo upload", delivered_trip_id)
         raise translate(exc)
 
 

@@ -116,6 +116,7 @@ class CreateDeliveredTrip:
             work_type=work_type,
             cont_number=data.cont_number,
             cont_type=data.cont_type,
+            cont_photo_url=data.cont_photo_url,
             revenue=0,
             driver_salary=0,
             trip_date=data.trip_date if data.trip_date else date.today(),
@@ -193,6 +194,8 @@ class UpdateDeliveredTrip:
             w.cont_number = data.cont_number
         if data.cont_type is not None:
             w.cont_type = data.cont_type
+        if data.cont_photo_url is not None:
+            w.cont_photo_url = data.cont_photo_url
         if data.trip_date is not None:
             w.trip_date = data.trip_date
         if data.revenue is not None:
