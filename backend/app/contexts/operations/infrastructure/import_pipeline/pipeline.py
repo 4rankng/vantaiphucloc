@@ -16,10 +16,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 from dataclasses import asdict, dataclass, field
 from datetime import date
 from typing import Any
+
+_logger = logging.getLogger(__name__)
 
 from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     CANONICAL_FIELDS,

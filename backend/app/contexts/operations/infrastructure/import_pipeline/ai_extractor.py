@@ -95,8 +95,8 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
             "generationConfig": {
                 "temperature": 0,
                 "maxOutputTokens": 8192,
-                "response_mime_type": "application/json",
-                "response_schema": {
+                "responseMimeType": "application/json",
+                "responseSchema": {
                     "type": "ARRAY",
                     "items": {
                         "type": "OBJECT",

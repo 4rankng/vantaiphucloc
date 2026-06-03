@@ -165,7 +165,7 @@ async def sniff_columns(sample_rows: list[list[str]], source_id: str | None = No
         data = json.loads(response)
         return ColumnMapping(
             header_row=data.get("header_row", 0),
-            mapping={int(k): v for k, v in data.get("mapping", {}).items()},
+            mapping={int(k): v for k, v in data.get("mapping", {}).items() if k.isdigit()},
             confidence=data.get("confidence", 0.5),
             raw_response=response,
         )

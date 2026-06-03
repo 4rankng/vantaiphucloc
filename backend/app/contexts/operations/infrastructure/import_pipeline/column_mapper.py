@@ -203,9 +203,17 @@ async def map_columns(
         candidates = list(CANONICAL_FIELD_NAMES)
         batch_results = await classifier.classify_batch(unmapped_headers, candidates)
         
+        by_idx = {m.column_index: m for m in mappings}
         for c, field_name in batch_results.items():
-            if field_name:
-                m = next(x for x in mappings if x.column_index == c)
+            m = by_idx.get(c)
+            if m is None or not field_name:
+                continue
+            if field_name == SKIP_FIELD:
+                m.canonical_field = SKIP_FIELD
+                m.confidence = 1.0
+                m.source = "llm_batch"
+                m.reason = "LLM batch skip"
+            else:
                 m.canonical_field = field_name
                 m.confidence = 0.6
                 m.source = "llm_batch"

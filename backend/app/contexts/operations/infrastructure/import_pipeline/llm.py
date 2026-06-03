@@ -14,6 +14,7 @@ To enable real LLM classification, set
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 from typing import Protocol
 
@@ -176,8 +177,8 @@ class GeminiHeaderClassifier:
                 "generationConfig": {
                     "temperature": 0, 
                     "maxOutputTokens": 64,
-                    "response_mime_type": "application/json",
-                    "response_schema": {
+                    "responseMimeType": "application/json",
+                    "responseSchema": {
                         "type": "OBJECT",
                         "properties": {
                             "field": {"type": "STRING"}
@@ -197,8 +198,7 @@ class GeminiHeaderClassifier:
                     .get("text", "")
                     .strip()
             )
-            
-            import json
+
             try:
                 parsed = json.loads(text)
                 return _parse_llm_response(parsed.get("field", ""), candidates)
@@ -303,8 +303,8 @@ class GeminiBatchClassifier:
                 "generationConfig": {
                     "temperature": 0, 
                     "maxOutputTokens": 1024,
-                    "response_mime_type": "application/json",
-                    "response_schema": {
+                    "responseMimeType": "application/json",
+                    "responseSchema": {
                         "type": "OBJECT",
                         "properties": {
                             "columns": {
@@ -335,19 +335,19 @@ class GeminiBatchClassifier:
                     .get("text", "")
                     .strip()
             )
-            
-            import json
+
             from app.contexts.operations.infrastructure.import_pipeline.canonical import SKIP_FIELD
-            
+
             parsed = json.loads(text)
             result = {}
             for col in parsed.get("columns", []):
                 idx = col.get("index")
+                if idx is None:
+                    continue
                 field = col.get("field", "").strip().lower()
                 if field == "skip":
                     result[idx] = SKIP_FIELD
                 elif any(field == c.lower() for c in candidates):
-                    # Find exact case match from candidates
                     matched = next(c for c in candidates if c.lower() == field)
                     result[idx] = matched
             return result

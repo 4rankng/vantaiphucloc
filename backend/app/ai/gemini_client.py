@@ -60,8 +60,8 @@ async def call_gemini(
     }
     
     if response_schema:
-        payload["generationConfig"]["response_mime_type"] = "application/json"
-        payload["generationConfig"]["response_schema"] = response_schema
+        payload["generationConfig"]["responseMimeType"] = "application/json"
+        payload["generationConfig"]["responseSchema"] = response_schema
 
     async with httpx.AsyncClient(timeout=30) as client:
         response = await client.post(url, json=payload)

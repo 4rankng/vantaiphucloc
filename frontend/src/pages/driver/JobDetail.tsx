@@ -302,7 +302,7 @@ export function JobDetail() {
                   }}
                 />
                 <div className="text-[13px] font-bold leading-tight tracking-[0.3px]" style={{ color: 'var(--theme-text-primary)' }}>
-                  {job.pickupLocation.name}
+                  {job.pickupLocation?.name ?? '—'}
                 </div>
                 <div
                   className="text-[10px] font-semibold uppercase tracking-wide mt-1"
@@ -353,7 +353,7 @@ export function JobDetail() {
                   }}
                 />
                 <div className="text-[13px] font-bold leading-tight tracking-[0.3px]" style={{ color: 'var(--theme-text-primary)' }}>
-                  {job.dropoffLocation.name}
+                  {job.dropoffLocation?.name ?? '—'}
                 </div>
                 <div
                   className="text-[10px] font-semibold uppercase tracking-wide mt-1"
