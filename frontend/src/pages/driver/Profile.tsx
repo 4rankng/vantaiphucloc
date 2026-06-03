@@ -188,34 +188,42 @@ export function Profile() {
     }
   }
 
-  const initials = (fullName || user?.name || '?').charAt(0).toUpperCase()
   const roleLabel = ROLE_LABELS[user?.role ?? ''] ?? user?.role ?? ''
 
   return (
     <div className="pb-20 space-y-5">
 
-      {/* Back button — inline in page body */}
-      <button
-        onClick={() => navigate(-1)}
-        className="inline-flex items-center gap-1.5 text-sm font-medium mb-2"
-        style={{ color: 'var(--theme-text-secondary)' }}
-      >
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-        Quay lại
-      </button>
-
-      {/* ── Simple profile header (avatar + role only — info lives in form rows below) ── */}
-      <div className="flex items-center gap-4 px-1 py-2">
-        <div
-          className="w-14 h-14 rounded-lg flex items-center justify-center text-xl font-bold text-white shrink-0"
-          style={{ background: 'var(--theme-brand-primary)' }}
+      {/* Back button + page title — keep them on a single line so the user
+          always knows where they are even after the back chevron. */}
+      <div className="flex items-center gap-2 mb-2">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1 text-sm font-medium shrink-0"
+          style={{ color: 'var(--theme-text-secondary)' }}
+          aria-label="Quay lại"
         >
-          {initials}
-        </div>
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1
+          className="text-base font-bold truncate"
+          style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.01em' }}
+        >
+          Tài khoản
+        </h1>
+      </div>
+
+      {/* ── Profile header — name + role only (avatar already shown in top bar) ── */}
+      <div className="px-1 py-2">
+        <p
+          className="text-base font-bold truncate"
+          style={{ color: 'var(--theme-text-primary)' }}
+        >
+          {fullName || user?.name || 'Người dùng'}
+        </p>
         <span
-          className="inline-block text-xs font-semibold px-2.5 py-1 rounded-full"
+          className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full mt-1"
           style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
         >
           {roleLabel}

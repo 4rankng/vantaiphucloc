@@ -22,16 +22,38 @@ from app.contexts.operations.infrastructure.import_pipeline.workbook import Shee
 _logger = logging.getLogger(__name__)
 
 _EXTRACT_PROMPT = """\
-Extract container data from this shipping document.
-For each container found, return a JSON object with these fields:
-- container_number: ISO container number (4 uppercase letters + 7 digits, e.g. TCNU2473728)
-- cont_type: one of E20, E40, F20, F40 (E=empty/vỏ, F=full/hàng, 20/40=feet)
-- pickup: origin/pickup location name (empty string if unknown)
-- dropoff: destination/dropoff location name (empty string if unknown)
+You are an expert data extractor for a Vietnamese container trucking company (vận tải container).
+Extract container trip records from this spreadsheet data.
 
-Return ONLY a JSON array. No explanation, no markdown fences.
-Example: [{"container_number":"TCNU2473728","cont_type":"E20","pickup":"HAIPHONG","dropoff":"HKG"}]
-If a field is unknown, use empty string.
+CONTEXT:
+- This is a shipping/logistics document from Vietnam
+- Data may have Vietnamese headers, locations, and company names
+- The document may contain: loading lists, bay plans, invoices, or settlement sheets
+- Headers may be on row 0, 1, 2, or even row 5+ (skip title/logo rows)
+- Summary rows (containing CỘNG, TỔNG, TOTAL, SUM) are NOT data — skip them
+- Merged header cells may span multiple rows — look at the data pattern, not just one row
+
+FIELDS TO EXTRACT:
+- container_number: ISO 6346 format, 4 uppercase letters + 7 digits (e.g. TCNU2473728).
+  Must match pattern [A-Z]{4}[0-9]{7}. Skip rows without a valid container number.
+- cont_type: One of E20, E40, F20, F40.
+  E = empty/vỏ rỗng. F = full/có hàng. 20/40 = container size in feet.
+  May appear as separate columns (size + full/empty) or combined (F20', E40').
+  If a row has "1" under a column header like "F20'" or "E40'", that IS the cont_type.
+- pickup: Origin location (Vietnamese name). Keep original text.
+- dropoff: Destination location (Vietnamese name). Keep original text.
+- vessel_name: Ship/vessel name if present in the document.
+- consignee: Customer or cargo owner name.
+- vehicle_plate: Vietnamese truck plate (e.g. 51C-12345, 15C04567).
+- freight_charge: Price/freight as integer VND. null if unknown.
+- trip_date: Date in YYYY-MM-DD format. null if unknown.
+  Vietnamese dates are typically DD/MM/YYYY.
+- source_row: The row index (R-number) from the input data where this record was found.
+
+RULES:
+- Return ONLY rows that have a valid container number matching [A-Z]{4}[0-9]{7}.
+- If a field is not available, use empty string "" for strings, null for numbers/dates.
+- source_row MUST match the R-index prefix from the input data.
 """
 
 
@@ -43,7 +65,7 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
     try:
         from app.config import settings
         api_key = getattr(settings, "GEMINI_API_KEY", None)
-        model = getattr(settings, "GEMINI_MODEL", "gemini-3.1-flash-lite-preview")
+        model = getattr(settings, "GEMINI_MODEL", "gemini-3.5-flash")
     except Exception:
         return []
 
@@ -70,7 +92,30 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
         )
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0, "maxOutputTokens": 8192},
+            "generationConfig": {
+                "temperature": 0,
+                "maxOutputTokens": 8192,
+                "response_mime_type": "application/json",
+                "response_schema": {
+                    "type": "ARRAY",
+                    "items": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "container_number": {"type": "STRING"},
+                            "cont_type": {"type": "STRING", "enum": ["E20","E40","F20","F40"]},
+                            "pickup": {"type": "STRING"},
+                            "dropoff": {"type": "STRING"},
+                            "vessel_name": {"type": "STRING"},
+                            "consignee": {"type": "STRING"},
+                            "vehicle_plate": {"type": "STRING"},
+                            "freight_charge": {"type": "INTEGER", "nullable": True},
+                            "trip_date": {"type": "STRING", "nullable": True},
+                            "source_row": {"type": "INTEGER"},
+                        },
+                        "required": ["container_number", "cont_type", "source_row"],
+                    },
+                },
+            },
         }
         async with httpx.AsyncClient(timeout=60.0) as client:
             resp = await client.post(url, json=payload)
@@ -86,10 +131,6 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
         )
         if not text:
             return []
-
-        # Strip markdown code fences if present
-        text = re.sub(r"^```(?:json)?\s*", "", text)
-        text = re.sub(r"\s*```$", "", text)
 
         items = json.loads(text)
         if not isinstance(items, list):
@@ -112,14 +153,17 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
 
             pickup = str(item.get("pickup", "")).strip()
             dropoff = str(item.get("dropoff", "")).strip()
+            vessel_name = str(item.get("vessel_name", "")).strip()
+            # Note: ExtractedRow currently only accepts vessel_name, pickup, dropoff, etc.
+            # but we can capture them anyway to fit the schema
 
             rows.append(ExtractedRow(
                 container_number=cont_no,
                 cont_type=cont_type,
                 pickup=pickup,
                 dropoff=dropoff,
-                vessel_name="",
-                source_row_index=0,
+                vessel_name=vessel_name,
+                source_row_index=item.get("source_row", 0),
             ))
         return rows
 
@@ -143,21 +187,20 @@ def _pick_richest_sheet(sheets: list[SheetView]) -> SheetView | None:
 
 
 def _sheet_to_text(sheet: SheetView, max_rows: int = 200) -> str:
-    """Convert sheet to pipe-delimited text for the AI prompt."""
+    """Convert sheet to tab-delimited text with row indices for the AI prompt."""
     lines: list[str] = []
     for r, row in enumerate(sheet.rows[:max_rows]):
         cells = []
         for cell in row:
             if cell is None:
-                cells.append("")
+                cells.append("[EMPTY]")
             else:
                 s = str(cell).strip()
-                # Truncate very long cells
-                if len(s) > 60:
-                    s = s[:57] + "..."
+                # Truncate very long cells but keep them long enough for names
+                if len(s) > 120:
+                    s = s[:117] + "..."
                 cells.append(s)
-        line = " | ".join(cells)
-        # Skip completely empty lines
-        if line.replace("|", "").strip():
-            lines.append(line)
+        line = "\t".join(cells)
+        # Keep all rows to preserve indices
+        lines.append(f"R{r}\t{line}")
     return "\n".join(lines)

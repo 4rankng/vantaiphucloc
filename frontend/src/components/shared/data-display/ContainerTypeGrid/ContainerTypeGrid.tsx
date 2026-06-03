@@ -119,6 +119,8 @@ export function ContainerTypeGrid({
     /** Show a checkmark when selected (default true). Disable for tight chips
      *  where the green background is already enough selection feedback. */
     showSelectedIcon?: boolean
+    /** Extra className (e.g. flex sizing for parent layout). */
+    className?: string
   }) => {
     const { selected, error, muted } = opts
     const showCheck = opts.showSelectedIcon !== false
@@ -131,6 +133,7 @@ export function ContainerTypeGrid({
           'min-h-[44px] rounded-xl flex items-center justify-center gap-1 transition-all',
           'active:translate-y-[1px] touch-manipulation',
           opts.compact ? 'text-sm font-bold' : 'text-xs font-bold',
+          opts.className ?? '',
         ].join(' ')}
         style={{
           background: selected ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
@@ -182,7 +185,7 @@ export function ContainerTypeGrid({
         <p className="text-[10px] font-bold uppercase tracking-wider px-0.5" style={{ color: 'var(--theme-text-muted)' }}>
           Tác nghiệp
         </p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-wrap gap-2">
           {activeOps.map(wt =>
             chip({
               key: wt,
@@ -190,6 +193,7 @@ export function ContainerTypeGrid({
               selected: workType === wt,
               onClick: () => handleWorkTypeSelect(wt as WorkType),
               error: workTypeError,
+              className: 'basis-[calc(50%-4px)] shrink grow min-w-0',
             }),
           )}
 
@@ -201,6 +205,7 @@ export function ContainerTypeGrid({
             icon: <Plus className="w-3 h-3" />,
             error: workTypeError,
             muted: !isCustomValue,
+            className: 'basis-[calc(50%-4px)] shrink grow min-w-0',
           })}
         </div>
 

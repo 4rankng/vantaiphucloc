@@ -49,7 +49,7 @@ from app.database import get_db
 from app.models.base import User
 from app.models.domain import Client
 from app.contexts.operations.infrastructure.import_pipeline.canonical import CANONICAL_FIELDS, SKIP_FIELD
-from app.contexts.operations.infrastructure.import_pipeline.llm import get_default_classifier
+from app.contexts.operations.infrastructure.import_pipeline.llm import get_batch_classifier
 from app.contexts.operations.infrastructure.import_pipeline.pipeline import (
     run_preview,
 )
@@ -297,7 +297,7 @@ async def preview_customer_excel(
         raise HTTPException(status_code=400, detail="Tệp tải lên rỗng.")
 
     trip_date = default_trip_date or date.today()
-    classifier = get_default_classifier()
+    classifier = get_batch_classifier()
 
     try:
         result = await run_preview(

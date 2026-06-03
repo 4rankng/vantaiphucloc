@@ -74,3 +74,5 @@ heartbeat*.json
 .codegraph
 .opencode
 .antigravitycli/
+.agents
+.mavis

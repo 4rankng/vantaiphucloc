@@ -14,7 +14,7 @@ import httpx
 _logger = logging.getLogger(__name__)
 
 # Default model
-DEFAULT_MODEL = "gemini-3.1-flash-lite-preview"
+DEFAULT_MODEL = "gemini-3.5-flash"
 
 # API endpoint
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -25,12 +25,13 @@ async def call_gemini(
     model: str | None = None,
     max_tokens: int = 2048,
     temperature: float = 0.1,
+    response_schema: dict | None = None,
 ) -> str:
     """Call Gemini API with a text prompt.
 
     Args:
         prompt: Text prompt
-        model: Model name (default: gemini-3.1-flash-lite-preview)
+        model: Model name (default: gemini-3.5-flash)
         max_tokens: Max output tokens
         temperature: Sampling temperature (low = more deterministic)
 
@@ -57,6 +58,10 @@ async def call_gemini(
             "temperature": temperature,
         },
     }
+    
+    if response_schema:
+        payload["generationConfig"]["response_mime_type"] = "application/json"
+        payload["generationConfig"]["response_schema"] = response_schema
 
     async with httpx.AsyncClient(timeout=30) as client:
         response = await client.post(url, json=payload)
@@ -105,16 +110,15 @@ Rules:
 - If a value cannot be reliably cleaned, return it unchanged
 - Do not fabricate or guess missing values"""
 
-    response = await call_gemini(prompt, model=model, max_tokens=512)
+    schema = {
+        "type": "OBJECT",
+        "properties": {k: {"type": "STRING"} for k in row_data.keys()}
+    }
+
+    response = await call_gemini(prompt, model=model, max_tokens=512, response_schema=schema)
 
     try:
-        cleaned = response.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
-            if cleaned.endswith("```"):
-                cleaned = cleaned[:-3]
-            cleaned = cleaned.strip()
-        return json.loads(cleaned)
+        return json.loads(response.strip())
     except (json.JSONDecodeError, ValueError):
         _logger.warning("Row cleanup failed, returning raw data")
         return row_data

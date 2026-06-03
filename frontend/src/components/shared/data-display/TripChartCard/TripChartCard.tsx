@@ -10,6 +10,7 @@ import {
 } from 'chart.js'
 import { Bar } from 'react-chartjs-2'
 import { cn } from '@/lib/utils'
+import { useTheme } from '@/themes/ThemeContext'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip)
 
@@ -44,6 +45,14 @@ export function TripChartCard({
   className,
 }: TripChartCardProps) {
   const chartRef = useRef(null)
+  const { theme } = useTheme()
+
+  // Read the concrete colors from the active theme. Chart.js renders the
+  // canvas with whatever hex string we hand it, so we can't rely on a
+  // `var(--token)` resolving inside the canvas context — pass the real
+  // values from the theme registry to keep the bars and the legend in sync.
+  const matchedColor = theme.colors.brandPrimary
+  const pendingColor = theme.colors.statusWarning
 
   const labels = bars.map(formatLabel)
 
@@ -53,7 +62,7 @@ export function TripChartCard({
       {
         label: 'Ghép',
         data: bars.map(b => b.matched),
-        backgroundColor: 'var(--theme-brand-primary)',
+        backgroundColor: matchedColor,
         borderRadius: 3,
         borderSkipped: 'bottom',
         stack: 'trips',
@@ -61,7 +70,7 @@ export function TripChartCard({
       {
         label: 'Chờ',
         data: bars.map(b => b.pending),
-        backgroundColor: 'var(--theme-status-warning)',
+        backgroundColor: pendingColor,
         borderRadius: 3,
         borderSkipped: 'bottom',
         stack: 'trips',
@@ -165,11 +174,11 @@ export function TripChartCard({
           )}
         </div>
 
-        {/* Legend — swatch + label only, matches demo */}
+        {/* Legend — swatch + label only, matches the bar colors */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {[
-            { label: 'Ghép', color: 'var(--theme-brand-primary)' },
-            { label: 'Chờ',  color: 'var(--theme-status-warning)' },
+            { label: 'Ghép', color: matchedColor },
+            { label: 'Chờ',  color: pendingColor },
           ].map(({ label, color }) => (
             <span
               key={label}

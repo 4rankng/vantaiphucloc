@@ -20,8 +20,8 @@ import { formatCurrencyFull as fmt } from '@/data/domain'
 import { pad, daysInMonth, sumChiPhi, computeDelta } from '@/lib/accounting-utils'
 import type { VehiclePnLRow } from '@/services/api/pnl.api'
 import {
-  DollarSign, TrendingUp,
-  TrendingDown, BarChart3, Truck,
+  TrendingUp,
+  TrendingDown, BarChart3, Truck, Coins,
 } from 'lucide-react'
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
@@ -345,7 +345,7 @@ function DesktopDashboard() {
             label="Lợi nhuận"
             value={laiRong}
             formattedValue={<AnimatedNumber value={laiRong} format="currency" />}
-            icon={DollarSign}
+            icon={Coins}
             color="blue"
             sublabel={bienLai != null ? `Biên lãi ${bienLai.toFixed(1)}%` : `Tháng ${pad(month)}/${year}`}
             trend={laiDelta != null ? { value: `${Math.abs(laiDelta)}%`, positive: laiDelta >= 0 } : undefined}
@@ -446,7 +446,7 @@ function MobileDashboard() {
             label="Lợi nhuận"
             value={laiRong}
             formattedValue={<AnimatedNumber value={laiRong} format="currency" />}
-            icon={DollarSign}
+            icon={Coins}
             color="blue"
             sublabel={bienLai != null ? `Biên lãi ${bienLai.toFixed(1)}%` : `Tháng ${pad(month)}/${year}`}
             trend={laiDelta != null ? { value: `${Math.abs(laiDelta)}%`, positive: laiDelta >= 0 } : undefined}

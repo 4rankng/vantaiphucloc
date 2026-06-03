@@ -130,31 +130,7 @@ Rules:
 """
 
 
-def _extract_json(text: str) -> dict:
-    """Extract first JSON object from LLM response, tolerating fences and surrounding text."""
-    # Try to find a JSON object using brace matching
-    # First attempt: strip code fences
-    cleaned = text.strip()
-    if cleaned.startswith("```"):
-        cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
-        if cleaned.endswith("```"):
-            cleaned = cleaned[:-3]
-        cleaned = cleaned.strip()
 
-    # Find the first { ... } block
-    start = cleaned.find("{")
-    if start == -1:
-        raise ValueError("No JSON object found in response")
-    depth = 0
-    for i in range(start, len(cleaned)):
-        if cleaned[i] == "{":
-            depth += 1
-        elif cleaned[i] == "}":
-            depth -= 1
-            if depth == 0:
-                return json.loads(cleaned[start : i + 1])
-    # Fallback: parse from first { to end
-    return json.loads(cleaned[start:])
 
 
 async def sniff_columns(sample_rows: list[list[str]], source_id: str | None = None) -> ColumnMapping:
@@ -169,11 +145,24 @@ async def sniff_columns(sample_rows: list[list[str]], source_id: str | None = No
     """
     prompt = _build_sniff_prompt(sample_rows)
 
-    response = await call_gemini(prompt)
+    schema = {
+        "type": "OBJECT",
+        "properties": {
+            "header_row": {"type": "INTEGER"},
+            "mapping": {
+                "type": "OBJECT",
+                "additionalProperties": {"type": "STRING"}
+            },
+            "confidence": {"type": "NUMBER"}
+        },
+        "required": ["header_row", "mapping", "confidence"]
+    }
 
-    # Parse JSON from response — robust extraction
+    response = await call_gemini(prompt, response_schema=schema)
+
+    # Parse JSON from response
     try:
-        data = _extract_json(response)
+        data = json.loads(response)
         return ColumnMapping(
             header_row=data.get("header_row", 0),
             mapping={int(k): v for k, v in data.get("mapping", {}).items()},

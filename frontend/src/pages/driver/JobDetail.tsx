@@ -139,8 +139,24 @@ export function JobDetail() {
 
   if (!job) {
     return (
-      <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>
-        <p className="text-sm">Không tìm thấy chuyến</p>
+      <div className="min-h-[50vh] flex flex-col">
+        {/* Back button — keep the user from getting stuck when a job id is invalid */}
+        <div className="px-4 pt-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 text-sm font-semibold"
+            style={{ color: 'var(--theme-brand-primary-dark)' }}
+            aria-label="Quay lại"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            Quay lại
+          </button>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
+          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không tìm thấy chuyến</p>
+        </div>
       </div>
     )
   }
@@ -168,17 +184,25 @@ export function JobDetail() {
         />
       )}
 
-      {/* Back nav */}
-      <button
-        onClick={() => navigate(-1)}
-        className="inline-flex items-center gap-2 text-[15px] font-semibold px-5 pt-[18px] pb-2 mb-1"
-        style={{ color: 'var(--theme-brand-primary-dark)' }}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-        Quay lại
-      </button>
+      {/* Back nav + page title */}
+      <div className="flex items-center gap-2 px-5 pt-[18px] pb-2 mb-1">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1 text-[15px] font-semibold shrink-0"
+          style={{ color: 'var(--theme-brand-primary-dark)' }}
+          aria-label="Quay lại"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1
+          className="text-[15px] font-bold truncate"
+          style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.01em' }}
+        >
+          Chi tiết chuyến
+        </h1>
+      </div>
 
       <div className="space-y-0 pb-28">
 

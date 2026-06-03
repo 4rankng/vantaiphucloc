@@ -34,17 +34,26 @@ export function DriverHistory() {
 
   return (
     <div className="pb-20 space-y-3">
-      {/* Back button — inline in page body */}
-      <button
-        onClick={() => navigate(-1)}
-        className="inline-flex items-center gap-1.5 text-sm font-medium mb-1"
-        style={{ color: 'var(--theme-text-secondary)' }}
-      >
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-        Quay lại
-      </button>
+      {/* Back button + page title — keep them on a single line so the user
+          always knows where they are even after the back chevron. */}
+      <div className="flex items-center gap-2 mb-1">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1 text-sm font-medium shrink-0"
+          style={{ color: 'var(--theme-text-secondary)' }}
+          aria-label="Quay lại"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1
+          className="text-base font-bold truncate"
+          style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.01em' }}
+        >
+          Lịch sử chuyến đi
+        </h1>
+      </div>
 
       <FilterPills<FilterValue> options={filterOptions} value={filter} onChange={setFilter} />
 
@@ -68,9 +77,15 @@ export function DriverHistory() {
             ))}
           </>
         ) : filtered.length === 0 ? (
-          <div className="col-span-full rounded-lg p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
-            <Truck className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)' }} />
-            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có chuyến nào</p>
+          <div
+            className="col-span-full rounded-xl p-8 text-center flex flex-col items-center justify-center"
+            style={{ background: 'var(--theme-bg-secondary)', minHeight: '40vh' }}
+          >
+            <Truck className="w-8 h-8 mb-2" style={{ color: 'var(--theme-text-muted)' }} />
+            <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Chưa có chuyến nào</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+              Quay lại trang chủ và nhấn + để tạo chuyến mới.
+            </p>
           </div>
         ) : (
           filtered.map(wo => (

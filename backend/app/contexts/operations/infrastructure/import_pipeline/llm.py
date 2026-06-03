@@ -45,6 +45,25 @@ class NullHeaderClassifier:
         return None, 0.0
 
 
+class BatchHeaderClassifier(Protocol):
+    async def classify_batch(
+        self,
+        headers: list[tuple[int, str, list[str]]],
+        candidates: list[str],
+    ) -> dict[int, str]:
+        """Return a mapping of column index -> canonical field name (or 'skip')."""
+        ...
+
+
+class NullBatchHeaderClassifier:
+    async def classify_batch(
+        self,
+        headers: list[tuple[int, str, list[str]]],
+        candidates: list[str],
+    ) -> dict[int, str]:
+        return {}
+
+
 # ---------------------------------------------------------------------------
 # In-process cache so re-running the pipeline on the same file (preview
 # repeatedly) doesn't re-pay the LLM cost.
@@ -83,6 +102,40 @@ class CachedHeaderClassifier:
         return result
 
 
+_BATCH_LLM_CACHE: dict[str, dict[int, str]] = {}
+
+def _batch_cache_key(headers: list[tuple[int, str, list[str]]]) -> str:
+    h = hashlib.sha256()
+    for idx, header, samples in headers:
+        h.update(str(idx).encode("utf-8"))
+        h.update(b"|")
+        h.update(header.encode("utf-8"))
+        for s in samples[:5]:
+            h.update(b"|")
+            h.update(str(s).encode("utf-8"))
+        h.update(b"||")
+    return h.hexdigest()
+
+class CachedBatchHeaderClassifier:
+    def __init__(self, inner: BatchHeaderClassifier) -> None:
+        self._inner = inner
+
+    async def classify_batch(
+        self,
+        headers: list[tuple[int, str, list[str]]],
+        candidates: list[str],
+    ) -> dict[int, str]:
+        if not headers:
+            return {}
+        key = _batch_cache_key(headers)
+        cached = _BATCH_LLM_CACHE.get(key)
+        if cached is not None:
+            return cached
+        result = await self._inner.classify_batch(headers, candidates)
+        _BATCH_LLM_CACHE[key] = result
+        return result
+
+
 # ---------------------------------------------------------------------------
 # Gemini-backed implementation. Wired but disabled by default — the
 # settings flag keeps it inert.
@@ -101,7 +154,7 @@ class GeminiHeaderClassifier:
         from app.config import settings
         self._enabled = bool(getattr(settings, "GEMINI_ENABLE", False))
         self._api_key = getattr(settings, "GEMINI_API_KEY", None)
-        self._model = getattr(settings, "GEMINI_MODEL", "gemini-3.1-flash-lite-preview")
+        self._model = getattr(settings, "GEMINI_MODEL", "gemini-3.5-flash")
 
     async def classify(
         self,
@@ -120,7 +173,18 @@ class GeminiHeaderClassifier:
             )
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0, "maxOutputTokens": 64},
+                "generationConfig": {
+                    "temperature": 0, 
+                    "maxOutputTokens": 64,
+                    "response_mime_type": "application/json",
+                    "response_schema": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "field": {"type": "STRING"}
+                        },
+                        "required": ["field"]
+                    }
+                },
             }
             async with httpx.AsyncClient(timeout=15.0) as client:
                 resp = await client.post(url, json=payload)
@@ -133,7 +197,13 @@ class GeminiHeaderClassifier:
                     .get("text", "")
                     .strip()
             )
-            return _parse_llm_response(text, candidates)
+            
+            import json
+            try:
+                parsed = json.loads(text)
+                return _parse_llm_response(parsed.get("field", ""), candidates)
+            except json.JSONDecodeError:
+                return None, 0.0
         except Exception as exc:  # pragma: no cover - external service
             _logger.warning("Gemini header classify failed: %s", exc)
             return None, 0.0
@@ -153,7 +223,6 @@ def _build_prompt(header: str, samples: list[str], candidates: list[str]) -> str
         "- Vessel name, voyage, ATA/ATD/ETA/ETB/ETD, port of loading/discharge, "
         "  bay/slot/cell, crane code, sales region → reply 'skip'.\n"
         "- If unsure, reply 'skip'.\n"
-        "Reply with ONE WORD only."
     )
 
 
@@ -171,8 +240,7 @@ def _parse_llm_response(text: str, candidates: list[str]) -> tuple[str | None, f
 
 
 def get_default_classifier() -> HeaderClassifier:
-    """Factory used by the pipeline. Honours `settings.GEMINI_ENABLE`.
-    """
+    """Factory used by the pipeline. Honours `settings.GEMINI_ENABLE`."""
     try:
         from app.config import settings
         if getattr(settings, "GEMINI_ENABLE", False):
@@ -180,3 +248,119 @@ def get_default_classifier() -> HeaderClassifier:
     except Exception:
         pass
     return CachedHeaderClassifier(NullHeaderClassifier())
+
+
+def _build_batch_prompt(headers: list[tuple[int, str, list[str]]], candidates: list[str]) -> str:
+    cand_list = ", ".join(candidates)
+    
+    # Format the columns to classify
+    cols_text = []
+    for idx, header, samples in headers:
+        samples_str = ", ".join(repr(s) for s in samples[:5]) or "none"
+        cols_text.append(f"Column {idx} — header: {header!r}\n  samples: {samples_str}")
+    cols_formatted = "\n\n".join(cols_text)
+    
+    return f"""You are a column classifier for a Vietnamese container trucking import system.
+Map each header to one canonical field.
+
+CANONICAL FIELDS TO CHOOSE FROM:
+{cand_list}
+skip
+
+RULES:
+- If a column is vessel schedule (ATA/ATD/ETA), port (POL/POD), stowage (bay/slot/cell), crane, admin, or irrelevant → "skip"
+- If unsure → "skip"
+
+COLUMNS TO CLASSIFY:
+{cols_formatted}
+"""
+
+class GeminiBatchClassifier:
+    """Batch LLM classifier. Calls Gemini once for all unmapped columns."""
+    
+    def __init__(self) -> None:
+        from app.config import settings
+        self._enabled = bool(getattr(settings, "GEMINI_ENABLE", False))
+        self._api_key = getattr(settings, "GEMINI_API_KEY", None)
+        self._model = getattr(settings, "GEMINI_MODEL", "gemini-3.5-flash")
+
+    async def classify_batch(
+        self,
+        headers: list[tuple[int, str, list[str]]],
+        candidates: list[str],
+    ) -> dict[int, str]:
+        if not headers or not self._enabled or not self._api_key:
+            return {}
+        try:
+            import httpx
+            prompt = _build_batch_prompt(headers, candidates)
+            url = (
+                f"https://generativelanguage.googleapis.com/v1beta/"
+                f"models/{self._model}:generateContent?key={self._api_key}"
+            )
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0, 
+                    "maxOutputTokens": 1024,
+                    "response_mime_type": "application/json",
+                    "response_schema": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "columns": {
+                                "type": "ARRAY",
+                                "items": {
+                                    "type": "OBJECT",
+                                    "properties": {
+                                        "index": {"type": "INTEGER"},
+                                        "field": {"type": "STRING"}
+                                    },
+                                    "required": ["index", "field"]
+                                }
+                            }
+                        },
+                        "required": ["columns"]
+                    }
+                },
+            }
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(url, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+            
+            text = (
+                data.get("candidates", [{}])[0]
+                    .get("content", {})
+                    .get("parts", [{}])[0]
+                    .get("text", "")
+                    .strip()
+            )
+            
+            import json
+            from app.contexts.operations.infrastructure.import_pipeline.canonical import SKIP_FIELD
+            
+            parsed = json.loads(text)
+            result = {}
+            for col in parsed.get("columns", []):
+                idx = col.get("index")
+                field = col.get("field", "").strip().lower()
+                if field == "skip":
+                    result[idx] = SKIP_FIELD
+                elif any(field == c.lower() for c in candidates):
+                    # Find exact case match from candidates
+                    matched = next(c for c in candidates if c.lower() == field)
+                    result[idx] = matched
+            return result
+        except Exception as exc:
+            _logger.warning("Gemini batch header classify failed: %s", exc)
+            return {}
+
+def get_batch_classifier() -> BatchHeaderClassifier:
+    """Factory used by the pipeline. Honours `settings.GEMINI_ENABLE`."""
+    try:
+        from app.config import settings
+        if getattr(settings, "GEMINI_ENABLE", False):
+            return CachedBatchHeaderClassifier(GeminiBatchClassifier())
+    except Exception:
+        pass
+    return CachedBatchHeaderClassifier(NullBatchHeaderClassifier())

@@ -29,7 +29,7 @@ async def import_excel_preview_task(
     produced the data.
     """
     from app.contexts.operations.infrastructure.import_pipeline.llm import (
-        get_default_classifier,
+        get_batch_classifier,
     )
     from app.contexts.operations.infrastructure.import_pipeline.pipeline import (
         run_preview,
@@ -42,7 +42,7 @@ async def import_excel_preview_task(
     logger.info("Import preview task started: %s (%s)", job_id, filename)
     content = base64.b64decode(file_bytes_b64)
     trip_date = date.fromisoformat(default_trip_date_iso)
-    classifier = get_default_classifier()
+    classifier = get_batch_classifier()
 
     result = await run_preview(
         content,

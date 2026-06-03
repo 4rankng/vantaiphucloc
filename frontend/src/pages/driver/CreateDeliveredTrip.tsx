@@ -304,7 +304,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                 style={{
                   background: 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)',
                   color: 'var(--theme-brand-primary)',
-                  border: '1.5px dashed color-mix(in srgb, var(--theme-brand-primary) 40%, transparent)',
+                  border: '1.5px solid color-mix(in srgb, var(--theme-brand-primary) 25%, transparent)',
                 }}
               >
                 <Plus className="w-4 h-4" /> Thêm container

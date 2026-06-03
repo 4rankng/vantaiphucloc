@@ -38,7 +38,7 @@ from app.contexts.operations.infrastructure.import_pipeline.header_finder import
     find_header_row,
     header_row_text,
 )
-from app.contexts.operations.infrastructure.import_pipeline.llm import HeaderClassifier
+from app.contexts.operations.infrastructure.import_pipeline.llm import BatchHeaderClassifier
 from app.contexts.operations.infrastructure.import_pipeline.pattern_detector import DetectedPattern, detect_pattern
 from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import ExtractedRow, extract_bay_plan, extract_invoice, extract_loading_list, extract_settlement_list
 from app.contexts.operations.infrastructure.import_pipeline.sheet_picker import SheetScore, score_sheets
@@ -97,7 +97,7 @@ async def run_preview(
     content: bytes,
     filename: str,
     default_trip_date: date,
-    classifier: HeaderClassifier | None = None,
+    classifier: BatchHeaderClassifier | None = None,
     cached_mapping: list[ColumnMapping] | None = None,
 ) -> PreviewResult:
     sheets = load_workbook(content, filename)
@@ -115,7 +115,22 @@ async def run_preview(
     except ValueError:
         pass
 
-    # Step 3: Complete failure (AI fallback disabled)
+    # Step 3: Full AI extraction fallback
+    from app.config import settings
+    if getattr(settings, "GEMINI_ENABLE", False):
+        try:
+            from app.contexts.operations.infrastructure.import_pipeline.ai_extractor import extract_with_ai
+            ai_rows = await extract_with_ai(sheets, filename)
+            if ai_rows:
+                return _build_preview_from_extracted(
+                    ai_rows, [], filename,
+                    sheets[0].name, "ai_extraction",
+                    default_trip_date,
+                )
+        except Exception as e:
+            _logger.warning("AI extraction fallback failed: %s", e)
+
+    # Step 4: Complete failure
     raise ValueError("Không thể đọc tệp Excel. Vui lòng kiểm tra lại cấu trúc cột hoặc nhập thủ công.")
 
 
@@ -396,7 +411,7 @@ async def _run_generic_preview(
     sheets: list[SheetView],
     filename: str,
     default_trip_date: date,
-    classifier: HeaderClassifier | None,
+    classifier: BatchHeaderClassifier | None,
     cached_mapping: list[ColumnMapping] | None,
 ) -> PreviewResult:
     """The original header-finding + column-mapping pipeline."""

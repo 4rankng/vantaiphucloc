@@ -12,6 +12,8 @@ import {
   Building2,
   Truck,
   User,
+  Bot,
+  Sparkles,
 } from 'lucide-react'
 import { Drawer } from '@/components/shared/overlays/Drawer'
 import { StepIndicator } from '@/components/shared/navigation/StepIndicator'
@@ -427,6 +429,8 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
 
   const previewCols = previewColumns.length > 0 ? previewColumns : []
 
+  const isProcessing = enqueueClientExcel.isPending || !!activeJobId || previewDriverRecon.isPending || previewVendorRecon.isPending
+
   // Build a map of row index → duplicate type for highlighting
   const duplicateRowMap = useMemo(() => {
     const map = new Map<number, 'exact'>()
@@ -444,12 +448,24 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
         <Button variant="outline" size="sm" onClick={onClose}>
           Huỷ
         </Button>
-        {(enqueueClientExcel.isPending || activeJobId || previewDriverRecon.isPending || previewVendorRecon.isPending) && (
+        {isProcessing && (
           <div className="flex items-center gap-2" style={{ color: 'var(--ink-2)', fontSize: 13 }}>
             <Loader2 className="h-4 w-4 animate-spin" />
-            {activeJobId ? 'Đang phân tích file...' : 'Đang phân tích tệp...'}
+            {activeJobId ? 'AI đang phân tích file...' : 'Đang tải file lên...'}
           </div>
         )}
+        {/* Hidden button since we auto-parse now, but kept for logic structure */}
+        <div className="hidden">
+          <Button 
+            onClick={() => {
+              if (file) startPreview(file)
+            }} 
+            size="sm" 
+            disabled={!file || isProcessing}
+          >
+            {isProcessing ? 'Đang phân tích...' : 'Phân tích file'}
+          </Button>
+        </div>
       </>
     ) : step === 'preview' ? (
       <>
@@ -525,158 +541,193 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
       {/* ── Upload step ── */}
       {step === 'upload' && (
         <div className="space-y-5">
-          {/* Type selector */}
-          <div className="grid grid-cols-3 gap-3" style={{ maxWidth: 660 }}>
-            {([
-              { type: 'client', icon: Building2, label: 'Chủ hàng', hint: 'Tạo đơn đặt từ file Excel khách hàng' },
-              { type: 'vendor', icon: Truck,     label: 'Nhà xe',    hint: 'Đối soát chuyến đi từ file nhà thầu' },
-              { type: 'driver', icon: User,      label: 'Lái xe nội bộ', hint: 'Đối soát chuyến đi từ file lái xe' },
-            ] as const).map(({ type, icon: Icon, label, hint }) => {
-              const active = importType === type
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => { setImportType(type); setFile(null); setClientId(''); setVendorId(''); setError(null) }}
-                  className="text-left px-4 py-3.5 rounded-xl transition-all"
-                  style={{
-                    background: active ? 'var(--accent-soft)' : 'var(--surface-2)',
-                    border: `1.5px solid ${active ? 'var(--accent)' : 'var(--line)'}`,
-                    outline: 'none',
+          {/* When Processing, hide the forms and show a Dramatic AI Parsing Screen */}
+          {isProcessing ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4">
+              <style>{`
+                @keyframes bot-float {
+                  0%, 100% { transform: translateY(0); }
+                  50% { transform: translateY(-10px); }
+                }
+                @keyframes radar-scan {
+                  0% { transform: scale(0.8); opacity: 0.8; }
+                  100% { transform: scale(2); opacity: 0; }
+                }
+                @keyframes pulse-glow {
+                  0%, 100% { opacity: 0.6; filter: blur(20px); }
+                  50% { opacity: 1; filter: blur(30px); }
+                }
+              `}</style>
+              
+              <div className="relative w-32 h-32 flex items-center justify-center mb-8">
+                {/* Glowing aura */}
+                <div 
+                  className="absolute inset-0 rounded-full"
+                  style={{ 
+                    background: 'var(--accent)', 
+                    animation: 'pulse-glow 2s ease-in-out infinite' 
+                  }}
+                />
+                {/* Radar rings */}
+                <div 
+                  className="absolute inset-0 rounded-full border-2"
+                  style={{ 
+                    borderColor: 'var(--accent)', 
+                    animation: 'radar-scan 1.5s cubic-bezier(0.0, 0.2, 0.8, 1) infinite' 
+                  }}
+                />
+                <div 
+                  className="absolute inset-0 rounded-full border-2"
+                  style={{ 
+                    borderColor: 'var(--accent)', 
+                    animation: 'radar-scan 1.5s cubic-bezier(0.0, 0.2, 0.8, 1) infinite',
+                    animationDelay: '0.75s'
+                  }}
+                />
+                {/* Center AI Bot icon */}
+                <div 
+                  className="relative z-10 w-24 h-24 rounded-full flex items-center justify-center shadow-xl"
+                  style={{ 
+                    background: 'var(--surface)', 
+                    border: '4px solid var(--accent)',
+                    animation: 'bot-float 3s ease-in-out infinite'
                   }}
                 >
-                  <div
-                    className="grid place-items-center mb-2.5"
-                    style={{
-                      width: 32, height: 32, borderRadius: 8,
-                      background: active ? 'var(--accent)' : 'var(--surface-3)',
-                       color: active ? 'var(--theme-text-on-brand)' : 'var(--ink-3)',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    <Icon className="h-4 w-4" strokeWidth={1.75} />
-                  </div>
-                  <p className="m-0 text-[13.5px] font-semibold" style={{ color: active ? 'var(--accent)' : 'var(--ink)' }}>
-                    {label}
-                  </p>
-                  <p className="m-0 mt-0.5 text-[11.5px] leading-snug" style={{ color: 'var(--ink-3)' }}>
-                    {hint}
-                  </p>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Vendor selector if Vendor reconciliation is picked */}
-          {importType === 'vendor' && (
-            <div className="space-y-1.5" style={{ maxWidth: 400 }}>
-              <label className="nepo-field-label">
-                Nhà xe / Nhà thầu <span style={{ color: 'var(--danger)' }}>*</span>
-              </label>
-              <InlineSelect
-                placeholder="Chọn nhà thầu..."
-                value={vendorId}
-                options={vendors.map(v => ({ value: String(v.id), label: v.name }))}
-                onChange={setVendorId}
-              />
-            </div>
-          )}
-
-          {/* File area */}
-          <div>
-            <label className="nepo-field-label">File Excel</label>
-
-            {/* File chip — shown when file selected */}
-            {file && (
-              <div
-                className="flex items-center gap-2.5 px-3 py-2 mb-3"
-                style={{
-                  background: 'var(--accent-soft)',
-                  borderRadius: 'var(--r-sm)',
-                  border: '1px solid var(--accent)',
-                  maxWidth: 500
-                }}
-              >
-                <FileSpreadsheet
-                  className="h-4 w-4 shrink-0"
-                  style={{ color: 'var(--accent)' }}
-                />
-                <div className="min-w-0 flex-1">
-                  <p
-                    className="text-[13px] font-semibold truncate m-0"
-                    style={{ color: 'var(--ink)' }}
-                  >
-                    {file.name}
-                  </p>
-                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>
-                    {(file.size / 1024).toFixed(1)} KB · xlsx / xls / csv
-                  </p>
+                  <Bot className="h-10 w-10" style={{ color: 'var(--accent)' }} />
+                  <Sparkles 
+                    className="absolute top-1 right-2 h-5 w-5 animate-pulse" 
+                    style={{ color: '#FCD34D' }} 
+                  />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFile(null)
-                    if (fileRef.current) fileRef.current.value = ''
-                  }}
-                  className="grid place-items-center rounded-md"
-                  style={{ width: 24, height: 24, color: 'var(--ink-3)' }}
-                  aria-label="Xoá file"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
               </div>
-            )}
-
-            {/* Drop zone — only shown when no file is selected */}
-            {!file && (
-              <div
-                ref={dropRef}
-                onClick={() => fileRef.current?.click()}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className="nepo-dropzone"
-                style={{ minHeight: 130 }}
-              >
-                <Upload
-                  className="h-7 w-7 mb-2"
-                  style={{ color: 'var(--ink-3)' }}
-                  strokeWidth={1.5}
-                />
-                <p
-                  className="text-[13.5px] font-semibold m-0"
-                  style={{ color: 'var(--ink)' }}
-                >
-                  Kéo & thả file vào đây
-                </p>
-                <p className="text-[12px] m-0 mt-1" style={{ color: 'var(--ink-3)' }}>
-                  hoặc nhấn để chọn từ máy · .xlsx .xls .csv
-                </p>
+              
+              <h3 className="text-xl font-bold mb-3 tracking-tight" style={{ color: 'var(--ink)' }}>
+                Hệ thống AI đang đọc và trích xuất dữ liệu
+              </h3>
+              <p className="text-sm max-w-md text-center" style={{ color: 'var(--ink-3)' }}>
+                Antigravity đang phân tích hàng ngàn dòng dữ liệu từ file <strong style={{ color: 'var(--ink)' }}>{file?.name}</strong>. Quá trình này được tối ưu hoá cực kỳ nhanh và chuẩn xác.
+              </p>
+              
+              <div className="mt-8 flex items-center gap-3 px-5 py-2.5 rounded-full" style={{ background: 'var(--surface-2)' }}>
+                <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--accent)' }} />
+                <span className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>Đang quét cấu trúc cột...</span>
               </div>
-            )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
-              className="hidden"
-            />
-          </div>
-
-          {error && (
-            <div
-              className="flex items-start gap-2.5 px-3.5 py-3"
-              style={{
-                background: 'var(--danger-soft)',
-                borderRadius: 'var(--r-sm)',
-                color: 'var(--danger)',
-                fontSize: 13,
-                maxWidth: 500
-              }}
-            >
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>{error}</span>
             </div>
+          ) : (
+            <>
+              {/* Type selector */}
+              <div className="grid grid-cols-3 gap-3" style={{ maxWidth: 660 }}>
+                {([
+                  { type: 'client', icon: Building2, label: 'Chủ hàng', hint: 'Tạo đơn đặt từ file Excel khách hàng' },
+                  { type: 'vendor', icon: Truck,     label: 'Nhà xe',    hint: 'Đối soát chuyến đi từ file nhà thầu' },
+                  { type: 'driver', icon: User,      label: 'Lái xe nội bộ', hint: 'Đối soát chuyến đi từ file lái xe' },
+                ] as const).map(({ type, icon: Icon, label, hint }) => {
+                  const active = importType === type
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => { setImportType(type); setFile(null); setClientId(''); setVendorId(''); setError(null) }}
+                      className="text-left px-4 py-3.5 rounded-xl transition-all"
+                      style={{
+                        background: active ? 'var(--accent-soft)' : 'var(--surface-2)',
+                        border: `1.5px solid ${active ? 'var(--accent)' : 'var(--line)'}`,
+                        outline: 'none',
+                      }}
+                    >
+                      <div
+                        className="grid place-items-center mb-2.5"
+                        style={{
+                          width: 32, height: 32, borderRadius: 8,
+                          background: active ? 'var(--accent)' : 'var(--surface-3)',
+                           color: active ? 'var(--theme-text-on-brand)' : 'var(--ink-3)',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <Icon className="h-4 w-4" strokeWidth={1.75} />
+                      </div>
+                      <p className="m-0 text-[13.5px] font-semibold" style={{ color: active ? 'var(--accent)' : 'var(--ink)' }}>
+                        {label}
+                      </p>
+                      <p className="m-0 mt-0.5 text-[11.5px] leading-snug" style={{ color: 'var(--ink-3)' }}>
+                        {hint}
+                      </p>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Vendor selector if Vendor reconciliation is picked */}
+              {importType === 'vendor' && (
+                <div className="space-y-1.5" style={{ maxWidth: 400 }}>
+                  <label className="nepo-field-label">
+                    Nhà xe / Nhà thầu <span style={{ color: 'var(--danger)' }}>*</span>
+                  </label>
+                  <InlineSelect
+                    placeholder="Chọn nhà thầu..."
+                    value={vendorId}
+                    options={vendors.map(v => ({ value: String(v.id), label: v.name }))}
+                    onChange={setVendorId}
+                  />
+                </div>
+              )}
+
+              {/* File area */}
+              <div>
+                <label className="nepo-field-label">File Excel</label>
+
+                {/* Drop zone — only shown when no file is selected */}
+                {!file && (
+                  <div
+                    ref={dropRef}
+                    onClick={() => fileRef.current?.click()}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className="nepo-dropzone"
+                    style={{ minHeight: 130 }}
+                  >
+                    <Upload
+                      className="h-7 w-7 mb-2"
+                      style={{ color: 'var(--ink-3)' }}
+                      strokeWidth={1.5}
+                    />
+                    <p
+                      className="text-[13.5px] font-semibold m-0"
+                      style={{ color: 'var(--ink)' }}
+                    >
+                      Kéo & thả file vào đây
+                    </p>
+                    <p className="text-[12px] m-0 mt-1" style={{ color: 'var(--ink-3)' }}>
+                      hoặc nhấn để chọn từ máy · .xlsx .xls .csv
+                    </p>
+                  </div>
+                )}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
+                  className="hidden"
+                />
+              </div>
+
+              {error && (
+                <div
+                  className="flex items-start gap-2.5 px-3.5 py-3"
+                  style={{
+                    background: 'var(--danger-soft)',
+                    borderRadius: 'var(--r-sm)',
+                    color: 'var(--danger)',
+                    fontSize: 13,
+                    maxWidth: 500
+                  }}
+                >
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>{error}</span>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

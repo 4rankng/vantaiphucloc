@@ -36,7 +36,7 @@ from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     normalize_header_text,
     synonym_substring_match,
 )
-from app.contexts.operations.infrastructure.import_pipeline.llm import HeaderClassifier, NullHeaderClassifier
+from app.contexts.operations.infrastructure.import_pipeline.llm import BatchHeaderClassifier, NullBatchHeaderClassifier
 from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import parse_date
 
@@ -162,10 +162,10 @@ class ColumnMapping:
 async def map_columns(
     sheet: SheetView,
     header_row: int,
-    classifier: HeaderClassifier | None = None,
+    classifier: BatchHeaderClassifier | None = None,
     threshold: float = 0.5,
 ) -> list[ColumnMapping]:
-    classifier = classifier or NullHeaderClassifier()
+    classifier = classifier or NullBatchHeaderClassifier()
     headers = sheet.rows[header_row] if 0 <= header_row < len(sheet.rows) else []
     n_cols = max(sheet.n_cols, len(headers))
 
@@ -186,21 +186,31 @@ async def map_columns(
             if pattern.canonical_field and pattern.confidence > m.confidence:
                 m = pattern
 
-        # LLM fallback (only if still below threshold and we have a header)
-        if (not m.canonical_field or m.confidence < threshold) and header_text:
-            candidates = list(CANONICAL_FIELD_NAMES)
-            field_name, conf = await classifier.classify(header_text, samples, candidates)
-            if field_name and conf >= 0.5:
-                m = ColumnMapping(
-                    column_index=c, header_text=header_text,
-                    canonical_field=field_name, confidence=conf,
-                    source="llm", sample_values=samples, reason="LLM fallback",
-                )
-
         if not m.canonical_field:
             m.source = "unmapped"
             m.reason = m.reason or "no synonym match"
         mappings.append(m)
+        
+    # Batch LLM fallback for unmapped columns (or below threshold)
+    unmapped_indices = []
+    unmapped_headers = []
+    for m in mappings:
+        if (not m.canonical_field or m.confidence < threshold) and m.header_text:
+            unmapped_indices.append(m.column_index)
+            unmapped_headers.append((m.column_index, m.header_text, m.sample_values))
+            
+    if unmapped_headers:
+        candidates = list(CANONICAL_FIELD_NAMES)
+        batch_results = await classifier.classify_batch(unmapped_headers, candidates)
+        
+        for c, field_name in batch_results.items():
+            if field_name:
+                m = next(x for x in mappings if x.column_index == c)
+                m.canonical_field = field_name
+                m.confidence = 0.6
+                m.source = "llm_batch"
+                m.reason = "LLM batch fallback"
+
     return mappings
 
 
