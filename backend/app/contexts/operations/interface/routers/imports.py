@@ -85,6 +85,7 @@ class CommitRow(BaseModel):
     consignee: str = ""
     commodity: str = ""
     driver_name: str = ""
+    vessel: str = ""
     remarks: str = ""
 
 
@@ -220,7 +221,7 @@ async def enqueue_preview_customer_excel(
 
     try:
         await enqueue(
-            "app.workers.tasks.imports.import_excel_preview_task",
+            "import_excel_preview_task",
             _job_id=job_id,
             job_id=job_id,
             file_bytes_b64=base64.b64encode(content).decode(),
@@ -229,7 +230,7 @@ async def enqueue_preview_customer_excel(
             sheet_name=sheet_name,
         )
     except Exception as exc:
-        logger.exception("Failed to enqueue import preview: %s", exc)
+        _logger.exception("Failed to enqueue import preview: %s", exc)
         raise HTTPException(
             status_code=503,
             detail="Không thể enqueue job. Vui lòng thử lại sau.",
@@ -308,14 +309,14 @@ async def preview_customer_excel(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    location_resolutions = await _resolve_preview_locations(db, result.accepted)
+    location_resolutions = await resolve_preview_locations(db, result.accepted)
 
     payload = result.to_dict()
     payload["location_resolutions"] = location_resolutions
     return payload
 
 
-async def _resolve_preview_locations(
+async def resolve_preview_locations(
     db: AsyncSession, accepted: list[dict],
 ) -> dict[str, dict]:
     resolver = LocationResolverService(db)
@@ -386,6 +387,7 @@ async def commit_customer_excel(
             customer_ref=r.customer_ref,
             consignee=r.consignee,
             driver_name=r.driver_name,
+            vessel=r.vessel,
             remarks=r.remarks,
         )
         for r in body.rows

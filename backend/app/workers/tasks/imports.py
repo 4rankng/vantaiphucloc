@@ -28,14 +28,14 @@ async def import_excel_preview_task(
     endpoint returns, so the frontend doesn't need to know which path
     produced the data.
     """
-    from app.contexts.customer_pricing.infrastructure.location_resolver import (
-        LocationResolverService,
-    )
     from app.contexts.operations.infrastructure.import_pipeline.llm import (
         get_default_classifier,
     )
     from app.contexts.operations.infrastructure.import_pipeline.pipeline import (
         run_preview,
+    )
+    from app.contexts.operations.interface.routers.imports import (
+        resolve_preview_locations,
     )
     from app.database import get_session
 
@@ -52,29 +52,7 @@ async def import_excel_preview_task(
     )
 
     async with get_session() as db:
-        resolver = LocationResolverService(db)
-        seen: set[str] = set()
-        for r in result.accepted:
-            v = r.get("values") or {}
-            for key in ("pickup_location", "dropoff_location"):
-                s = (v.get(key) or "").strip()
-                if s:
-                    seen.add(s)
-
-        location_resolutions: dict[str, dict] = {}
-        for raw in seen:
-            resolution = await resolver.find_match(raw)
-            location_resolutions[raw] = {
-                "raw": raw,
-                "match_kind": resolution.match_kind.value,
-                "location_id": resolution.location.id if resolution.location else None,
-                "location_name": resolution.location.name if resolution.location else None,
-                "review_needed": resolution.review_needed,
-                "suggestions": [
-                    {"location_id": s.location_id, "name": s.name, "score": s.score}
-                    for s in resolution.suggestions
-                ],
-            }
+        location_resolutions = await resolve_preview_locations(db, result.accepted)
 
     payload = result.to_dict()
     payload["location_resolutions"] = location_resolutions

@@ -62,6 +62,7 @@ class ImportTripRow:
     customer_ref: str = ""
     consignee: str = ""
     driver_name: str = ""
+    vessel: str = ""
     remarks: str = ""
 
 

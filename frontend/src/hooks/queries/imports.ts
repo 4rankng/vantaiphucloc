@@ -55,6 +55,11 @@ export function useCustomerExcelPreviewStatus(
     onResultRef.current = onResult
   }, [onResult])
 
+  // Reset when jobId changes (including null on navigation away)
+  useEffect(() => {
+    lastHandledRef.current = null
+  }, [jobId])
+
   const query = useQuery({
     queryKey: ['import-excel-preview', jobId],
     queryFn: () => apiClient.getCustomerExcelPreviewStatus(jobId!),

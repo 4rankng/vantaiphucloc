@@ -20,7 +20,6 @@ import { Button } from '@/components/ui'
 import {
   useClients,
   useCreateClient,
-  usePreviewCustomerExcel,
   useCommitCustomerExcel,
   useEnqueueCustomerExcelPreview,
   useCustomerExcelPreviewStatus,
@@ -90,7 +89,6 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
   const { data: clients = [] } = useClients()
   const { data: vendors = [] } = useVendors()
   const createClient = useCreateClient()
-  const previewClientExcel = usePreviewCustomerExcel()
   const commitClientExcel = useCommitCustomerExcel()
   const enqueueClientExcel = useEnqueueCustomerExcelPreview()
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
@@ -362,6 +360,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
     setDriverCommitResult(null)
     setError(null)
     setCreatingClient(false)
+    setActiveJobId(null)
     setClientForm(EMPTY_CLIENT_FORM)
     setClientFormErrors({})
     if (fileRef.current) fileRef.current.value = ''
@@ -445,10 +444,10 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
         <Button variant="outline" size="sm" onClick={onClose}>
           Huỷ
         </Button>
-        {(enqueueClientExcel.isPending || activeJobId || previewClientExcel.isPending || previewDriverRecon.isPending || previewVendorRecon.isPending) && (
+        {(enqueueClientExcel.isPending || activeJobId || previewDriverRecon.isPending || previewVendorRecon.isPending) && (
           <div className="flex items-center gap-2" style={{ color: 'var(--ink-2)', fontSize: 13 }}>
             <Loader2 className="h-4 w-4 animate-spin" />
-            {activeJobId ? 'Đang phân tích bằng AI...' : 'Đang phân tích tệp...'}
+            {activeJobId ? 'Đang phân tích file...' : 'Đang phân tích tệp...'}
           </div>
         )}
       </>
@@ -480,6 +479,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
             setStep('upload')
             setPreviewData([])
             setPreviewColumns([])
+            setActiveJobId(null)
           }}
         >
           Quay lại
@@ -1102,7 +1102,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                   <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color: 'var(--success)' }}>
                     {commitClientExcel.data?.created ?? 0}
                   </p>
-                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Chuyến đã tạo (Booked)</p>
+                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Chuyến đã tạo</p>
                 </div>
                 <div className="p-3 rounded-lg border border-solid" style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}>
                   <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color: 'var(--ink)' }}>
@@ -1117,7 +1117,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                   <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color: 'var(--success)' }}>
                     {driverCommitResult?.created ?? 0}
                   </p>
-                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Chuyến nội bộ tạo mới (Delivered)</p>
+                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Chuyến nội bộ tạo mới</p>
                 </div>
                 <div className="p-3 rounded-lg border border-solid" style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}>
                   <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color: 'var(--accent)' }}>
@@ -1132,7 +1132,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                   <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color: 'var(--success)' }}>
                     {reconResult?.created ?? 0}
                   </p>
-                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Chuyến thầu tạo mới (Delivered)</p>
+                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Chuyến thầu tạo mới</p>
                 </div>
                 <div className="p-3 rounded-lg border border-solid" style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}>
                   <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color: 'var(--accent)' }}>

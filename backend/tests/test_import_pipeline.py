@@ -176,12 +176,7 @@ def test_detect_pivot_columns_full_sheet():
 
 
 def test_derive_pivot_value_picks_truthy_cell():
-    pivots = [
-        detect_pivot_columns(["F20'"])[0]._replace(column_index=0),
-        detect_pivot_columns(["F40'"])[0]._replace(column_index=1),
-        detect_pivot_columns(["E20'"])[0]._replace(column_index=2),
-        detect_pivot_columns(["E40'"])[0]._replace(column_index=3),
-    ] if False else detect_pivot_columns(["F20'", "F40'", "E20'", "E40'"])
+    pivots = detect_pivot_columns(["F20'", "F40'", "E20'", "E40'"])
     assert derive_pivot_value(["1", "", "", ""], pivots).freight_kind == "F"
     assert derive_pivot_value(["1", "", "", ""], pivots).container_size == "20"
     assert derive_pivot_value(["", "1", "", ""], pivots).freight_kind == "F"

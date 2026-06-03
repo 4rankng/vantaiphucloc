@@ -17,8 +17,8 @@ __all__ = [
 class BookedTripCreate(BaseModel):
     trip_date: date
     client_id: int
-    pickup_location_id: int
-    dropoff_location_id: int
+    pickup_location_id: int | None = None
+    dropoff_location_id: int | None = None
     cont_number: str | None = None
     cont_type: str | None = None
     vessel: str | None = None
@@ -42,8 +42,8 @@ class BookedTripOut(BaseModel):
     id: int
     trip_date: date
     client: ClientSummaryOut
-    pickup_location: LocationSummaryOut
-    dropoff_location: LocationSummaryOut
+    pickup_location: LocationSummaryOut | None = None
+    dropoff_location: LocationSummaryOut | None = None
     cont_number: str | None = None
     cont_type: str | None = None
     vessel: str | None = None

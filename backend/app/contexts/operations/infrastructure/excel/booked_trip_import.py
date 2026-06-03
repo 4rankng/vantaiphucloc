@@ -196,10 +196,6 @@ async def import_booked_trips(
         if dropoff:
             r = await resolver.resolve_or_create(dropoff, source=ResolverSource.MANUAL, user_id=user_id)
             dropoff_id = r.location.id if r.location else None
-        if not pickup_id or not dropoff_id:
-            errors.append(f"Nhóm {key}: pickup/dropoff không có")
-            continue
-
         if not revenue:
             tiered = await find_tiered_pricing(
                 db, client_id=client.id, work_type=work_type,

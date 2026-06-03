@@ -122,7 +122,7 @@ def _score_loading_list(sheet: SheetView) -> float:
         row = sheet.rows[r]
         for cell in row:
             t = _cell_text(cell).upper()
-            if "CONTAINERNO" in t or "CONTAINER NO" in t:
+            if is_container_header(cell) or "CONTAINERNO" in t:
                 has_container_header = True
                 header_row_idx = r
             if t in ("F/E", "FE", "F E"):
@@ -157,7 +157,7 @@ def _score_invoice(sheet: SheetView) -> float:
         row = sheet.rows[r]
         for cell in row:
             t = _cell_text(cell).upper()
-            if "SỐCONT" in t or "SOCONT" in t or "SO CONT" in t:
+            if is_container_header(cell):
                 has_socont = True
             if "H/R" in t or t == "HR":
                 has_hr = True
@@ -212,6 +212,8 @@ def _score_settlement_list(sheet: SheetView) -> float:
                 t = _cell_text(cell).upper().strip().rstrip("'\"")
                 if t in _SETTLEMENT_WT_HEADERS:
                     wt_cols += 1
+            # Done — only count the first header row
+            break
 
     if not has_socont or wt_cols < 2:
         return 0.0

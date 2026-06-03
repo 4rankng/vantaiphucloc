@@ -248,21 +248,15 @@ class CreateBookedTripFromImport:
                     if d.review_needed:
                         review_needed = True
 
-                if not pickup_loc or not dropoff_loc:
-                    errors.append(
-                        f"Row {idx}: pickup/dropoff khong the giai quyet "
-                        f"(pickup={pickup!r}, dropoff={dropoff!r})"
-                    )
-                    continue
-
                 trip = BookedTripORM(
                     trip_date=td,
                     client_id=partner.id,
-                    pickup_location_id=pickup_loc.id,
-                    dropoff_location_id=dropoff_loc.id,
+                    pickup_location_id=pickup_loc.id if pickup_loc else None,
+                    dropoff_location_id=dropoff_loc.id if dropoff_loc else None,
                     work_type=work_type_val,
                     cont_number=cn,
                     cont_type=cont_type,
+                    vessel=r.vessel,
                 )
                 if review_needed:
                     locations_review_flagged += 1
@@ -271,7 +265,7 @@ class CreateBookedTripFromImport:
                 created_trip_ids.append(trip.id)
                 created += 1
             except Exception as exc:
-                errors.append(f"Row {idx}: {exc}")
+                errors.append(f"Dòng {idx}: Lỗi xử lý — {exc}")
 
         locations_created = max(
             0, await count_locations(self.session) - locations_seen_before

@@ -401,10 +401,10 @@ class BookedTrip(AuditableMixin, Base):
     trip_date = Column(Date, nullable=False)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     pickup_location_id = Column(
-        Integer, ForeignKey("locations.id"), nullable=False, index=True
+        Integer, ForeignKey("locations.id"), nullable=True, index=True
     )
     dropoff_location_id = Column(
-        Integer, ForeignKey("locations.id"), nullable=False, index=True
+        Integer, ForeignKey("locations.id"), nullable=True, index=True
     )
     vessel = Column(String(100), nullable=True)
     vehicle_plate = Column(String(50), nullable=True)
