@@ -1,4 +1,4 @@
-import { Calendar, Route, Settings, Truck } from 'lucide-react'
+import { Calendar, Route, Settings, Truck, Wrench } from 'lucide-react'
 import { SettingCard, type SettingCardItem } from '@/components/shared/forms/SettingCard/SettingCard'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
 
@@ -26,6 +26,14 @@ const SETTINGS_SECTIONS: SettingCardItem[] = [
     icon: Truck,
     path: '/accountant/settings/cuoc-tra-xe-ngoai',
     color: 'var(--theme-status-warning)',
+  },
+  {
+    key: 'operation-types',
+    label: 'Loại tác nghiệp',
+    desc: 'Quản lý các loại tác nghiệp (Xuất/Nhập tàu, Chuyển bãi, Đóng kho...)',
+    icon: Wrench,
+    path: '/accountant/settings/tac-nghiep',
+    color: 'var(--theme-status-success)',
   },
 ]
 
