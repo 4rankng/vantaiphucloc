@@ -12,9 +12,9 @@ import {
 import type { MatchCandidate } from '@/services/api/autoMatch.api'
 
 const CONFIDENCE_CONFIG = {
-  full: { label: 'Khớp đầy đủ', color: 'var(--theme-status-success)', icon: CheckCircle2 },
-  partial: { label: 'Khớp một phần', color: 'var(--theme-status-warning)', icon: AlertCircle },
-  none: { label: 'Yếu', color: 'var(--theme-status-error)', icon: XCircle },
+  full: { label: 'Khớp đầy đủ', color: 'var(--success)', icon: CheckCircle2 },
+  partial: { label: 'Khớp một phần', color: 'var(--warning)', icon: AlertCircle },
+  none: { label: 'Yếu', color: 'var(--danger)', icon: XCircle },
 }
 
 const WORK_TYPE_LABELS: Record<string, string> = {
@@ -327,10 +327,10 @@ export function AutoMatchDialog({
         onClick={() => togglePair(c.deliveredTripId, c.bookedTripId)}
         className="rounded-xl cursor-pointer transition-all border p-4 flex flex-col justify-between"
         style={{
-          background: isSelected ? 'rgba(99,102,241,0.03)' : 'var(--surface)',
-          borderColor: isSelected ? 'rgba(99,102,241,0.35)' : 'var(--line-2)',
+          background: isSelected ? 'rgba(0,177,79,0.03)' : 'var(--surface)',
+          borderColor: isSelected ? 'rgba(0,177,79,0.35)' : 'var(--line-2)',
           opacity: isSelected ? 1 : 0.9,
-          boxShadow: isSelected ? '0 4px 12px rgba(99,102,241,0.04)' : 'none',
+          boxShadow: isSelected ? 'var(--sh-sm)' : 'none',
         }}
       >
         <div>
@@ -338,7 +338,7 @@ export function AutoMatchDialog({
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               {isSelected ? (
-                <CheckCircle2 className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--theme-ai-accent)' }} />
+                <CheckCircle2 className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--accent)' }} />
               ) : (
                 <div className="h-4 w-4 rounded-full border-2 flex-shrink-0" style={{ borderColor: 'var(--ink-4)' }} />
               )}
@@ -406,7 +406,7 @@ export function AutoMatchDialog({
                           "px-2.5 py-1 rounded-md text-[11.5px] border transition-all duration-200 cursor-pointer",
                           (cKey === 'contNumber' || cKey === 'vehiclePlate') ? "font-mono" : "font-sans font-medium",
                           activeChoice === 'delivered'
-                            ? "bg-indigo-600 text-white border-indigo-600 font-bold shadow-sm"
+                            ? "bg-[var(--success)] text-white border-[var(--success)] font-bold shadow-sm"
                             : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 opacity-60 hover:opacity-100"
                         )}
                       >
@@ -428,7 +428,7 @@ export function AutoMatchDialog({
                           "px-2.5 py-1 rounded-md text-[11.5px] border transition-all duration-200 cursor-pointer",
                           (cKey === 'contNumber' || cKey === 'vehiclePlate') ? "font-mono" : "font-sans font-medium",
                           activeChoice === 'booked'
-                            ? "bg-amber-500 text-white border-amber-500 font-bold shadow-sm"
+                            ? "bg-[var(--warning)] text-white border-[var(--warning)] font-bold shadow-sm"
                             : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 opacity-60 hover:opacity-100"
                         )}
                       >
@@ -437,11 +437,11 @@ export function AutoMatchDialog({
                     </span>
                   ) : (
                     <span className="flex items-center gap-1 truncate text-xs" style={{ color: 'var(--ink-2)' }}>
-                      <span className={cn("px-1 py-0.5 text-[11px] text-indigo-600 font-semibold bg-indigo-50 rounded", (cKey === 'contNumber' || cKey === 'vehiclePlate') ? "font-mono" : "font-sans")}>
+                      <span className={cn("px-1 py-0.5 text-[11px] text-[var(--success)] font-semibold bg-[var(--success-soft)] rounded", (cKey === 'contNumber' || cKey === 'vehiclePlate') ? "font-mono" : "font-sans")}>
                         {dStr}
                       </span>
                       <ArrowRight className="h-3 w-3 flex-shrink-0 text-gray-400" />
-                      <span className={cn("px-1 py-0.5 text-[11px] text-amber-600 font-semibold bg-amber-50 rounded", (cKey === 'contNumber' || cKey === 'vehiclePlate') ? "font-mono" : "font-sans")}>
+                      <span className={cn("px-1 py-0.5 text-[11px] text-[var(--warning)] font-semibold bg-[var(--warning-soft)] rounded", (cKey === 'contNumber' || cKey === 'vehiclePlate') ? "font-mono" : "font-sans")}>
                         {bStr}
                       </span>
                     </span>
@@ -480,8 +480,8 @@ export function AutoMatchDialog({
           (isLoading || isEmptyResult) && 'p-0'
         )}
         style={(isLoading || isEmptyResult) ? {
-          background: 'linear-gradient(145deg, var(--theme-ai-accent-dark) 0%, var(--theme-ai-accent-dark) 45%, var(--theme-ai-accent-dark) 80%, var(--theme-ai-accent) 100%)',
-          border: '1px solid rgba(139,92,246,0.3)',
+          background: 'linear-gradient(145deg, var(--accent) 0%, var(--accent) 45%, var(--accent) 80%, var(--accent) 100%)',
+          border: '1px solid var(--accent)',
           overflow: 'hidden',
         } : undefined}
       >
@@ -493,21 +493,21 @@ export function AutoMatchDialog({
         <div style={{
           margin: '-16px -16px 12px -16px',
           height: 3,
-          background: 'linear-gradient(to right, var(--theme-ai-accent), var(--theme-ai-accent-light), #ec4899)',
+          background: 'var(--gradient-primary)',
           borderRadius: '12px 12px 0 0',
         }} />
         {/* Header and Legend combined row */}
-        <div className="flex items-center justify-between pb-2.5 mb-2 border-b pr-8" style={{ borderColor: 'rgba(99,102,241,0.1)' }}>
+        <div className="flex items-center justify-between pb-2.5 mb-2 border-b pr-8" style={{ borderColor: 'var(--line-2)' }}>
           <div className="flex items-center gap-4 flex-wrap">
             {/* Title */}
             <div className="flex items-center gap-2">
               <span
                 className="inline-flex items-center justify-center w-7 h-7 rounded-lg"
-                style={{ background: 'rgba(99,102,241,0.1)' }}
+                style={{ background: 'var(--accent-soft)' }}
               >
-                <Zap className="h-4 w-4" style={{ color: 'var(--theme-ai-accent)' }} />
+                <Zap className="h-4 w-4" style={{ color: 'var(--accent)' }} />
               </span>
-              <span className="text-[14.5px] font-bold" style={{ background: 'linear-gradient(to right,var(--theme-ai-accent),var(--theme-ai-accent-light))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <span className="text-[14.5px] font-bold" style={{ color: 'var(--ink)' }}>
                 Đối chiếu tự động
               </span>
             </div>
@@ -519,12 +519,12 @@ export function AutoMatchDialog({
             {candidates.length > 0 && (
               <div className="flex items-center gap-2">
                 <span className="flex items-center gap-1.5 text-[10.5px]">
-                  <span className="inline-block w-2.5 h-1.5 rounded-sm" style={{ background: 'rgba(99,102,241,0.5)' }} />
+                  <span className="inline-block w-2.5 h-1.5 rounded-sm" style={{ background: 'var(--success)' }} />
                   <span style={{ color: 'var(--ink-3)' }}>Lái xe</span>
                 </span>
                 <ArrowRight className="h-2.5 w-2.5 text-gray-400" />
                 <span className="flex items-center gap-1.5 text-[10.5px]">
-                   <span className="inline-block w-2.5 h-1.5 rounded-sm" style={{ background: 'var(--theme-status-warning)' }} />
+                   <span className="inline-block w-2.5 h-1.5 rounded-sm" style={{ background: 'var(--warning)' }} />
                    <span style={{ color: 'var(--ink-3)' }}>Chủ hàng</span>
                 </span>
               </div>
@@ -536,7 +536,8 @@ export function AutoMatchDialog({
             <div className="flex items-center gap-2.5">
               {/* Alert message if unresolved conflicts exist */}
               {unresolvedCount > 0 && (
-                <span className="hidden md:inline-flex text-[11px] font-medium text-amber-600 items-center gap-1 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                <span className="hidden md:inline-flex text-[11px] font-medium items-center gap-1 border px-2.5 py-1 rounded-full"
+                  style={{ color: 'var(--warning)', backgroundColor: 'var(--warning-soft)', borderColor: 'rgba(245, 166, 35, 0.25)' }}>
                   <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
                   Cần chọn nguồn lệch ({unresolvedCount} cặp)
                 </span>
@@ -546,9 +547,9 @@ export function AutoMatchDialog({
               <button
                 className="text-[10.5px] font-medium px-2.5 py-1 rounded-full transition-all duration-150 hover:scale-105 active:scale-95"
                  style={{
-                   color: allSelected ? 'var(--theme-ai-accent)' : 'var(--ink-3)',
-                   background: allSelected ? 'rgba(99,102,241,0.08)' : 'transparent',
-                   border: `1px solid ${allSelected ? 'rgba(99,102,241,0.25)' : 'transparent'}`,
+                   color: allSelected ? 'var(--accent)' : 'var(--ink-3)',
+                   background: allSelected ? 'var(--accent-soft)' : 'transparent',
+                   border: `1px solid ${allSelected ? 'rgba(0, 177, 79, 0.25)' : 'transparent'}`,
                  }}
                 onClick={() => {
                   setDeselected(new Set())
@@ -577,9 +578,9 @@ export function AutoMatchDialog({
               <button
                 className="text-[10.5px] font-medium px-2.5 py-1 rounded-full transition-all duration-150 hover:scale-105 active:scale-95"
                  style={{
-                   color: !allSelected ? 'var(--theme-ai-accent)' : 'var(--ink-3)',
-                   background: !allSelected ? 'rgba(99,102,241,0.08)' : 'transparent',
-                   border: `1px solid ${!allSelected ? 'rgba(99,102,241,0.25)' : 'transparent'}`,
+                   color: !allSelected ? 'var(--accent)' : 'var(--ink-3)',
+                   background: !allSelected ? 'var(--accent-soft)' : 'transparent',
+                   border: `1px solid ${!allSelected ? 'rgba(0, 177, 79, 0.25)' : 'transparent'}`,
                  }}
                 onClick={() => { setDeselected(new Set(allKeys)); setAllSelected(false) }}
               >
@@ -590,7 +591,7 @@ export function AutoMatchDialog({
               <button
                 onClick={handleConfirm}
                 disabled={selectedPairs.length === 0 || unresolvedCount > 0 || isConfirming}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-white text-[12px] font-bold bg-violet-600 hover:bg-violet-700 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-violet-300 shadow-sm"
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-white text-[12px] font-bold bg-[var(--accent)] hover:bg-[var(--accent-2)] transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[rgba(0,177,79,0.3)] shadow-[0_4px_10px_-3px_rgba(0,177,79,0.32)]"
               >
                 {isConfirming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                 Ghép {selectedPairs.length} cặp
