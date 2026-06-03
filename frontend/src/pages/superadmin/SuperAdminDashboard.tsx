@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Plus, Search, Phone, Building2, Eye, Pencil, Play } from 'lucide-react'
+import { Plus, Search, Phone, Building2, Eye, Pencil, Play, Users, CheckCircle2 } from 'lucide-react'
 import { EmptyState } from '@/components/shared/feedback/EmptyState/EmptyState'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { ROLE_LABELS, type Role } from '@/data/domain'
@@ -77,22 +77,18 @@ function UserCard({
 
   return (
     <article
-      className="group relative flex flex-col gap-3.5 rounded-2xl border p-[18px] transition-all duration-200 hover:-translate-y-0.5"
+      className="bento-card group flex flex-col gap-3.5 transition-all duration-200"
       style={{
         background: inactive
-          ? 'linear-gradient(180deg,#FFFBFB 0%,var(--theme-bg-secondary) 60%)'
+          ? 'linear-gradient(180deg, var(--theme-bg-secondary) 0%, color-mix(in srgb, var(--theme-status-error) 2.5%, var(--theme-bg-secondary)) 100%)'
           : 'var(--theme-bg-secondary)',
-        border: '1px solid var(--theme-border-default)',
-        boxShadow: 'none',
+        padding: '18px',
       }}
       onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.boxShadow =
-          '0 1px 3px rgba(14,17,22,0.06),0 4px 12px rgba(14,17,22,0.04)'
-        ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--theme-border-strong)'
+        (e.currentTarget as HTMLElement).style.borderColor = 'var(--theme-border-strong)'
       }}
       onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.boxShadow = 'none'
-        ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--theme-border-default)'
+        (e.currentTarget as HTMLElement).style.borderColor = 'var(--theme-border-default)'
       }}
     >
       {/* ── Top row ── */}
@@ -381,8 +377,76 @@ export function SuperAdminDashboard({
     tab.value === 'ALL' || (counts[tab.value as keyof typeof counts] ?? 0) > 0,
   )
 
+  const totalCount = users.length
+  const activeCount = users.filter(u => u.isActive).length
+  const inactiveCount = totalCount - activeCount
+  const directorCount = users.filter(u => u.role === 'director').length
+  const accountantCount = users.filter(u => u.role === 'accountant').length
+  const driverCount = users.filter(u => u.role === 'driver').length
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 animate-fade-in">
+
+      {/* ── Summary Stats Bento Grid ── */}
+      <div className="bento-grid">
+        {/* Panel 1: Tài khoản hệ thống */}
+        <div className="bento-card bento-card-gradient-blue bento-col-12 md:bento-col-4">
+          <div className="flex items-center gap-3">
+            <div className="bento-badge-icon" style={{ background: 'color-mix(in srgb, var(--theme-status-info) 10%, transparent)', color: 'var(--theme-status-info)' }}>
+              <Users className="h-5 w-5" />
+            </div>
+            <div className="flex-grow min-w-0">
+              <span className="bento-stat-label">Tài khoản hệ thống</span>
+              <h3 className="bento-stat-value">
+                {totalCount} <span className="text-xs font-semibold text-theme-muted" style={{ fontFamily: 'var(--font-sans)' }}>Tài khoản</span>
+              </h3>
+            </div>
+          </div>
+          <div className="bento-stat-footer">
+            <span style={{ color: 'var(--theme-status-success)', fontWeight: 600 }}>Hoạt động: {activeCount}</span>
+            <span style={{ color: 'var(--theme-status-error)', fontWeight: 600 }}>Tạm dừng: {inactiveCount}</span>
+          </div>
+        </div>
+
+        {/* Panel 2: Phân bổ vai trò */}
+        <div className="bento-card bento-col-12 md:bento-col-4">
+          <div className="flex items-center gap-3">
+            <div className="bento-badge-icon" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}>
+              <Building2 className="h-5 w-5" />
+            </div>
+            <div className="flex-grow min-w-0">
+              <span className="bento-stat-label">Phân bổ vai trò</span>
+              <div className="flex gap-2 mt-1 text-[11px] font-bold">
+                <span className="inline-flex items-center rounded-md px-1.5 py-0.5" style={{ background: '#F1ECF9', color: '#6E45B0' }}>ĐT: {directorCount}</span>
+                <span className="inline-flex items-center rounded-md px-1.5 py-0.5" style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>KT: {accountantCount}</span>
+                <span className="inline-flex items-center rounded-md px-1.5 py-0.5" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>LX: {driverCount}</span>
+              </div>
+            </div>
+          </div>
+          <div className="bento-stat-footer">
+            <span>Giám đốc · Kế toán · Lái xe</span>
+          </div>
+        </div>
+
+        {/* Panel 3: Trạng thái vận hành */}
+        <div className="bento-card bento-card-gradient-emerald bento-col-12 md:bento-col-4">
+          <div className="flex items-center gap-3">
+            <div className="bento-badge-icon" style={{ background: 'color-mix(in srgb, var(--theme-status-success) 10%, transparent)', color: 'var(--theme-status-success)' }}>
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+            <div className="flex-grow min-w-0">
+              <span className="bento-stat-label">Trạng thái vận hành</span>
+              <h3 className="text-base font-bold mt-1" style={{ color: 'var(--theme-text-primary)' }}>
+                Hệ thống ổn định
+              </h3>
+              <p className="text-[11px] text-theme-muted">Tất cả dịch vụ đang hoạt động</p>
+            </div>
+          </div>
+          <div className="bento-stat-footer">
+            <span>SuperAdmin quản trị</span>
+          </div>
+        </div>
+      </div>
 
       {/* ── Toolbar ── */}
       <div className="flex items-center gap-3 flex-wrap">

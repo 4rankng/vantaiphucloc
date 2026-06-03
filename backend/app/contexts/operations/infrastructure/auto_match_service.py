@@ -357,12 +357,21 @@ async def auto_match_preview(
     }
 
 
-SYNCABLE_FIELDS = ["vessel", "vehicle_plate", "work_type"]
+SYNCABLE_FIELDS = [
+    "vessel",
+    "vehicle_plate",
+    "work_type",
+    "cont_number",
+    "client_id",
+    "pickup_location_id",
+    "dropoff_location_id",
+    "trip_date",
+]
 
 
 async def confirm_matches(
     db: AsyncSession,
-    pairs: list[tuple[int, int, str | None]],
+    pairs: list[tuple[int, int, str | None, dict[str, str] | None]],
 ) -> dict:
     """Commit matched pairs: set matched=True, sync fields, and apply pricing.
 
@@ -388,7 +397,7 @@ async def confirm_matches(
     errors: list[str] = []
     matched_pairs: list[tuple] = []
 
-    for wo_id, to_id, sync_source in pairs:
+    for wo_id, to_id, sync_source, field_choices in pairs:
         wo = (await db.execute(
             select(WO).where(WO.id == wo_id)
         )).scalar_one_or_none()
@@ -406,14 +415,33 @@ async def confirm_matches(
             errors.append(f"DeliveredTrip#{wo_id} already matched")
             continue
 
-        if sync_source == "delivered":
-            for field in SYNCABLE_FIELDS:
+        for field in SYNCABLE_FIELDS:
+            if field == "vehicle_plate":
+                fe_field = "vehiclePlate"
+            elif field == "work_type":
+                fe_field = "workType"
+            elif field == "cont_number":
+                fe_field = "contNumber"
+            elif field == "client_id":
+                fe_field = "clientName"
+            elif field == "pickup_location_id":
+                fe_field = "pickupName"
+            elif field == "dropoff_location_id":
+                fe_field = "dropoffName"
+            elif field == "trip_date":
+                fe_field = "tripDate"
+            else:
+                fe_field = field
+
+            choice = field_choices.get(fe_field) if field_choices else None
+            if not choice:
+                choice = sync_source
+
+            if choice == "delivered":
                 setattr(to, field, getattr(wo, field))
-        elif sync_source == "booked":
-            for field in SYNCABLE_FIELDS:
+            elif choice == "booked":
                 setattr(wo, field, getattr(to, field))
-        else:
-            for field in SYNCABLE_FIELDS:
+            else:
                 wo_val = getattr(wo, field)
                 to_val = getattr(to, field)
                 if wo_val and not to_val:

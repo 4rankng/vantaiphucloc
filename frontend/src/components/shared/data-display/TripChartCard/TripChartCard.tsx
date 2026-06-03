@@ -27,6 +27,7 @@ export interface TripChartCardProps {
   bars: TripChartBar[]
   chartHeight?: number
   className?: string
+  style?: React.CSSProperties
 }
 
 function formatLabel(bar: TripChartBar): string {
@@ -43,6 +44,7 @@ export function TripChartCard({
   bars,
   chartHeight = 220,
   className,
+  style,
 }: TripChartCardProps) {
   const chartRef = useRef(null)
   const { theme } = useTheme()
@@ -131,12 +133,13 @@ export function TripChartCard({
 
   return (
     <div
-      className={cn('overflow-hidden', className)}
+      className={cn('overflow-hidden bento-card', className)}
       style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--line)',
-        borderRadius: 18,
-        boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)',
+        background: 'var(--theme-bg-secondary)',
+        border: '1px solid var(--theme-border-default)',
+        borderRadius: 20,
+        boxShadow: '0 1px 2px rgba(0,0,0,0.02), 0 4px 16px rgba(0,0,0,0.01)',
+        ...style,
       }}
     >
       {/* Header */}

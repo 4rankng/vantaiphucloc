@@ -19,7 +19,7 @@ const fontMono = "'JetBrains Mono', ui-monospace, monospace"
 const fontSans = "'Plus Jakarta Sans', 'Be Vietnam Pro', system-ui, sans-serif"
 
 function KpiCard({
-  label, value, unit, context, trend, accentColor = 'var(--theme-brand-primary)', accentTint = 'var(--theme-brand-primary-light)', delay,
+  label, value, unit, context, trend, accentColor = 'var(--theme-brand-primary)', accentTint = 'var(--theme-brand-primary-light)', delay, className = '',
 }: {
   label: string
   value: string
@@ -29,19 +29,14 @@ function KpiCard({
   accentColor?: string
   accentTint?: string
   delay?: number
+  className?: string
 }) {
   return (
     <div
-      className="group relative transition-all duration-200 hover:-translate-y-px dir-kpi-card"
+      className={`bento-card group ${className}`}
       style={{
-        background: 'var(--theme-bg-secondary)',
-        border: '1px solid var(--theme-border-default)',
-        borderRadius: 18,
-        padding: '22px 24px 20px',
-        boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)',
         animation: `fadeIn 0.5s ease both`,
         animationDelay: delay ? `${delay}ms` : undefined,
-        containerType: 'inline-size',
       }}
     >
       <div
@@ -49,21 +44,21 @@ function KpiCard({
         style={{ background: accentColor }}
       />
 
-      <p className="text-[11px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)', letterSpacing: '0.1em' }}>
+      <p className="bento-stat-label">
         {label}
       </p>
 
-      <div className="mt-3.5 flex items-baseline gap-2.5 leading-none dir-kpi-value" style={{ fontFamily: fontMono, fontWeight: 500, color: 'var(--theme-text-primary)', letterSpacing: '-0.02em' }}>
-        <span>{value}</span>
+      <div className="mt-2 flex items-baseline gap-1.5 leading-none" style={{ fontFamily: fontMono, fontWeight: 700, color: 'var(--theme-text-primary)', letterSpacing: '-0.02em' }}>
+        <span className="text-2xl xl:text-3xl">{value}</span>
         {unit && (
-          <span className="dir-kpi-unit" style={{ fontFamily: fontSans, fontWeight: 600, color: 'var(--theme-text-muted)', letterSpacing: '0.04em' }}>
+          <span className="text-sm font-semibold" style={{ fontFamily: fontSans, color: 'var(--theme-text-muted)', letterSpacing: '0.04em' }}>
             {unit}
           </span>
         )}
       </div>
 
-      <div className="mt-3.5 flex items-center justify-between border-t border-dashed pt-3.5" style={{ borderColor: 'var(--theme-border-default)' }}>
-        <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{context ?? ' '}</span>
+      <div className="bento-stat-footer">
+        <span className="truncate">{context ?? ' '}</span>
         {trend && (
           <span
             className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
@@ -380,179 +375,181 @@ export function DirectorDashboard() {
           </div>
         </div>
 
-        <section className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <div className="bento-grid mt-6">
           <KpiCard
             label="Tổng chuyến"
             value={total.toLocaleString('vi-VN')}
             context={`So với tháng ${pad(prevMonth)}`}
             trend={totalDelta != null ? { value: `${Math.abs(totalDelta)}%`, positive: totalDelta >= 0 } : undefined}
             delay={60}
+            className="bento-col-12 sm:bento-col-6 lg:bento-col-3"
           />
           <KpiCard
             label="Doanh thu"
             value={revenue.toLocaleString('vi-VN')}
-            unit="VNĐ"
+            unit=" VNĐ"
             context={avgRev > 0 ? `Trung bình ${avgRev.toLocaleString('vi-VN')} / chuyến` : undefined}
             trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta >= 0 } : undefined}
             accentColor='var(--theme-status-warning)'
             accentTint='var(--theme-status-warning-light)'
             delay={120}
+            className="bento-card-gradient-emerald bento-col-12 sm:bento-col-6 lg:bento-col-3"
           />
           <KpiCard
             label="Chi phí"
             value={totalCost.toLocaleString('vi-VN')}
-            unit="VNĐ"
+            unit=" VNĐ"
             context={revenue > 0 ? `Tỷ lệ ${Math.round((totalCost / revenue) * 100)}% doanh thu` : undefined}
             trend={costDelta != null ? { value: `${Math.abs(costDelta)}%`, positive: costDelta <= 0 } : undefined}
             accentColor='var(--theme-status-error)'
             accentTint='var(--theme-status-error-light)'
             delay={180}
+            className="bento-card-gradient-rose bento-col-12 sm:bento-col-6 lg:bento-col-3"
           />
           <KpiCard
             label="Lợi nhuận"
             value={profit.toLocaleString('vi-VN')}
-            unit="VNĐ"
+            unit=" VNĐ"
             context={revenue > 0 ? `Biên ${Math.round((profit / revenue) * 100)}%` : undefined}
             trend={profitDelta != null ? { value: `${Math.abs(profitDelta)}%`, positive: profitDelta >= 0 } : undefined}
             accentColor={profit >= 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-error)'}
             accentTint={profit >= 0 ? 'var(--theme-brand-primary-light)' : 'var(--theme-status-error-light)'}
             delay={240}
+            className={`${profit >= 0 ? 'bento-card-gradient-blue' : 'bento-card-gradient-rose'} bento-col-12 sm:bento-col-6 lg:bento-col-3`}
           />
-        </section>
 
-        <section className="mb-4" style={{ animation: 'fadeIn 0.5s ease both', animationDelay: '120ms' }}>
+          {/* Bar chart */}
           <TripChartCard
+            title="Tần suất chuyến đi"
             subtitle={`Tháng ${pad(month)} · ${year}`}
             bars={buckets}
+            className="bento-col-12 lg:bento-col-8"
+            style={{ minHeight: 330 }}
           />
-        </section>
 
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ animation: 'fadeIn 0.5s ease both', animationDelay: '240ms' }}>
-
-          <div style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', borderRadius: 18, padding: '22px 24px', boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)' }}>
-            <p className="text-[11px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)', letterSpacing: '0.1em' }}>Tuyến đường nổi bật</p>
-            <div className="flex flex-col gap-3 mt-2.5">
-              {topRoutes.length === 0 && (
-                <p className="text-xs py-4 text-center" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu</p>
-              )}
-              {topRoutes.map((r, i) => (
-                <div key={r.name} className="flex items-center gap-3">
-                  <span className="w-4 shrink-0 text-[10px] font-semibold" style={{ fontFamily: fontMono, color: 'var(--theme-text-muted)' }}>{String(i + 1).padStart(2, '0')}</span>
-                  <span className="flex-1 truncate text-[12.5px] font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>{r.name}</span>
-                  <div className="flex-[1.3] h-[5px] rounded-full overflow-hidden" style={{ background: 'var(--theme-border-default)' }}>
-                    <div className="h-full rounded-full" style={{ width: `${maxRouteCount > 0 ? (r.count / maxRouteCount) * 100 : 0}%`, background: 'linear-gradient(90deg, var(--theme-brand-primary), var(--theme-brand-primary-dark))' }} />
-                  </div>
-                  <span className="w-7 shrink-0 text-right text-[11px] font-semibold" style={{ fontFamily: fontMono, color: 'var(--theme-text-primary)' }}>{r.count}</span>
-                </div>
-              ))}
+          {/* Hoạt động gần đây */}
+          <div className="bento-card bento-col-12 lg:bento-col-4 lg:bento-row-2 flex flex-col">
+            <div className="pb-3" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
+              <div className="text-[14px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>Hoạt động gần đây</div>
             </div>
-          </div>
-
-          <div style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', borderRadius: 18, padding: '22px 24px', boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)' }}>
-            <p className="text-[11px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)', letterSpacing: '0.1em' }}>Lái xe dẫn đầu</p>
-            <div className="flex flex-col gap-2.5 mt-2.5">
-              {topDrivers.length === 0 && (
-                <p className="text-xs py-4 text-center" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu</p>
-              )}
-              {topDrivers.map((d, i) => (
-                <div key={d.name + d.plate} className="flex items-center gap-3" style={{ paddingTop: i > 0 ? 14 : undefined, borderTop: i > 0 ? '1px solid var(--theme-border-default)' : undefined }}>
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate text-[13px] font-semibold leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</p>
-                    <p className="truncate text-[11px] leading-tight mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{d.plate}</p>
-                  </div>
-                  <span className="text-[13px] font-semibold" style={{ fontFamily: fontMono, color: 'var(--theme-text-primary)', letterSpacing: '-0.01em' }}>{d.tripCount}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-4" style={{ animation: 'fadeIn 0.5s ease both', animationDelay: '300ms' }}>
-          <div style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', borderRadius: 18, boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)', overflow: 'hidden' }}>
-
-            <div className="flex items-center justify-between px-6 pt-[22px] pb-4" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
-              <div className="text-[15px] font-bold" style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.01em' }}>
-                Doanh thu &amp; Chi phí theo xe
-              </div>
-              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                {(ownFleetPnl.rows.length + vendorPnl.rows.length)} xe
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2">
-
-              <div className="min-w-0" style={{ borderRight: '1px solid var(--theme-border-default)' }}>
-                <div className="flex items-center justify-between px-6 py-3" style={{ borderBottom: '1px solid var(--theme-border-default)', background: 'color-mix(in srgb, var(--theme-brand-primary-light) 60%, transparent)' }}>
-                  <p className="text-[11px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)', letterSpacing: '0.1em' }}>
-                    Xe nội bộ <span style={{ fontWeight: 400 }}>({ownFleetPnl.rows.length})</span>
-                  </p>
-                  <span
-                    className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                    style={{
-                      fontFamily: fontMono,
-                      letterSpacing: '-0.01em',
-                      background: ownFleetPnl.totalProfit >= 0 ? 'var(--theme-brand-primary-light)' : 'var(--theme-status-error-light)',
-                      color:      ownFleetPnl.totalProfit >= 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-error)',
-                    }}
-                  >
-                    LN {ownFleetPnl.totalProfit.toLocaleString('vi-VN')}
-                  </span>
-                </div>
-                <VehiclePnLTable group={ownFleetPnl} emptyHint="Chưa có dữ liệu xe nhà" />
-              </div>
-
-              <div className="min-w-0">
-                <div className="flex items-center justify-between px-6 py-3" style={{ borderBottom: '1px solid var(--theme-border-default)', background: 'color-mix(in srgb, var(--theme-brand-primary-light) 60%, transparent)' }}>
-                  <p className="text-[11px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)', letterSpacing: '0.1em' }}>
-                    Xe ngoài <span style={{ fontWeight: 400 }}>({vendorPnl.rows.length})</span>
-                  </p>
-                  <span
-                    className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                    style={{
-                      fontFamily: fontMono,
-                      letterSpacing: '-0.01em',
-                      background: vendorPnl.totalProfit >= 0 ? 'var(--theme-brand-primary-light)' : 'var(--theme-status-error-light)',
-                      color:      vendorPnl.totalProfit >= 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-error)',
-                    }}
-                  >
-                    LN {vendorPnl.totalProfit.toLocaleString('vi-VN')}
-                  </span>
-                </div>
-                <VehiclePnLTable group={vendorPnl} emptyHint="Chưa có dữ liệu xe ngoài" />
-              </div>
-
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-4 mb-4">
-          <div
-            style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', borderRadius: 18, boxShadow: '0 1px 0 rgba(15,26,20,0.02), 0 1px 2px rgba(15,26,20,0.03)', animation: 'fadeIn 0.5s ease both', animationDelay: '180ms' }}
-          >
-            <div className="px-6 pt-[22px] pb-4">
-              <div className="text-[15px] font-bold" style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.01em' }}>Hoạt động gần đây</div>
-            </div>
-            <div className="px-3 pb-3.5">
+            <div className="flex-grow overflow-y-auto mt-3 px-1 custom-scrollbar" style={{ maxHeight: 520 }}>
               {auditLogs.length === 0 && !auditLoading ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-2">
+                <div className="flex flex-col items-center justify-center py-12 gap-2 h-full">
                   <Activity className="w-8 h-8" style={{ color: 'var(--theme-border-default)' }} />
                   <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có hoạt động nào</p>
                 </div>
               ) : (
-                <>
+                <div className="space-y-1">
                   {auditLogs.map((log, i) => <ActivityItem key={log.id} log={log} isFirst={i === 0} />)}
                   {hasMore && (
-                    <div ref={sentinelRef} className="flex items-center justify-center py-4">
+                    <div ref={sentinelRef} className="flex items-center justify-center py-3">
                       {auditLoading && (
                         <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Đang tải…</span>
                       )}
                     </div>
                   )}
-                </>
+                </div>
               )}
             </div>
           </div>
-        </section>
+
+          {/* Top routes */}
+          <div className="bento-card bento-col-12 lg:bento-col-4">
+            <div className="pb-3" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
+              <p className="text-[13px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-primary)' }}>Tuyến đường nổi bật</p>
+            </div>
+            <div className="flex flex-col gap-3 mt-4">
+              {topRoutes.length === 0 && (
+                <p className="text-xs py-4 text-center" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu</p>
+              )}
+              {topRoutes.slice(0, 5).map((r, i) => (
+                <div key={r.name} className="flex items-center gap-3">
+                  <span className="w-4 shrink-0 text-[10px] font-semibold font-mono" style={{ color: 'var(--theme-text-muted)' }}>{String(i + 1).padStart(2, '0')}</span>
+                  <span className="flex-grow truncate text-[12.5px] font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>{r.name}</span>
+                  <div className="w-24 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--theme-border-default)' }}>
+                    <div className="h-full rounded-full" style={{ width: `${maxRouteCount > 0 ? (r.count / maxRouteCount) * 100 : 0}%`, background: 'var(--theme-brand-primary)' }} />
+                  </div>
+                  <span className="w-6 shrink-0 text-right text-[11px] font-bold font-mono" style={{ color: 'var(--theme-text-primary)' }}>{r.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top drivers */}
+          <div className="bento-card bento-col-12 lg:bento-col-4">
+            <div className="pb-3" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
+              <p className="text-[13px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-primary)' }}>Lái xe dẫn đầu</p>
+            </div>
+            <div className="flex flex-col gap-3 mt-4">
+              {topDrivers.length === 0 && (
+                <p className="text-xs py-4 text-center" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu</p>
+              )}
+              {topDrivers.slice(0, 4).map((d, i) => (
+                <div key={d.name + d.plate} className="flex items-center gap-3" style={{ paddingTop: i > 0 ? 10 : undefined, borderTop: i > 0 ? '1px solid var(--theme-border-light)' : undefined }}>
+                  <div className="flex-grow min-w-0">
+                    <p className="truncate text-[13px] font-bold leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</p>
+                    <p className="truncate text-[11px] leading-tight mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{d.plate}</p>
+                  </div>
+                  <span className="text-[12.5px] font-bold font-mono" style={{ color: 'var(--theme-text-primary)' }}>{d.tripCount} chuyến</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Xe nội bộ */}
+          <div className="bento-card bento-col-12 lg:bento-col-6">
+            <div className="flex items-center justify-between pb-3" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
+              <div className="text-[14px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+                Xe nội bộ
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                  style={{
+                    fontFamily: fontMono,
+                    background: ownFleetPnl.totalProfit >= 0 ? 'var(--theme-brand-primary-light)' : 'var(--theme-status-error-light)',
+                    color:      ownFleetPnl.totalProfit >= 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-error)',
+                  }}
+                >
+                  Lãi {ownFleetPnl.totalProfit.toLocaleString('vi-VN')}
+                </span>
+                <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
+                  {ownFleetPnl.rows.length} xe
+                </span>
+              </div>
+            </div>
+            <div className="mt-3">
+              <VehiclePnLTable group={ownFleetPnl} emptyHint="Chưa có dữ liệu xe nhà" />
+            </div>
+          </div>
+
+          {/* Xe ngoài */}
+          <div className="bento-card bento-col-12 lg:bento-col-6">
+            <div className="flex items-center justify-between pb-3" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
+              <div className="text-[14px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+                Xe ngoài
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                  style={{
+                    fontFamily: fontMono,
+                    background: vendorPnl.totalProfit >= 0 ? 'var(--theme-brand-primary-light)' : 'var(--theme-status-error-light)',
+                    color:      vendorPnl.totalProfit >= 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-error)',
+                  }}
+                >
+                  Lãi {vendorPnl.totalProfit.toLocaleString('vi-VN')}
+                </span>
+                <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
+                  {vendorPnl.rows.length} xe
+                </span>
+              </div>
+            </div>
+            <div className="mt-3">
+              <VehiclePnLTable group={vendorPnl} emptyHint="Chưa có dữ liệu xe ngoài" />
+            </div>
+          </div>
+        </div>
       </div>
     </>
   )

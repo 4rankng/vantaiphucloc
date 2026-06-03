@@ -199,12 +199,12 @@ export function AutoMatchDateDialog({ open, onClose, defaultDateFrom, defaultDat
         style={{ borderRadius: 20, boxShadow: '0 24px 60px rgba(0,0,0,0.35)' }}
       >
         <DialogTitle style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', borderWidth: 0 }}>
-          Quét thông minh với AI
+          Đối chiếu tự động
         </DialogTitle>
 
         {/* ── Hero Header ─────────────────────────────── */}
         <RobotDialogHero
-          title={isPending ? 'AI đang quét dữ liệu…' : 'Quét thông minh với AI'}
+          title={isPending ? 'Đang quét dữ liệu…' : 'Đối chiếu tự động'}
           thinking={isPending}
         >
           {isPending && <ScanMessages />}

@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { formatCurrencyFull } from '@/data/domain'
 import { FilterPills } from '@/components/shared/navigation/FilterPills'
 import { DeliveredTripCard } from '@/components/shared/cards/DeliveredTripCard'
+import { MobileBackHeader } from '@/components/shared/navigation/MobileBackHeader'
 import { useDeliveredTrips } from '@/hooks/use-queries'
 import { DRIVER_HISTORY_FILTER_OPTIONS as FILTER_OPTIONS, type FilterValue } from '@/lib/filter-options'
 
@@ -34,26 +35,7 @@ export function DriverHistory() {
 
   return (
     <div className="pb-20 space-y-3">
-      {/* Back button + page title — keep them on a single line so the user
-          always knows where they are even after the back chevron. */}
-      <div className="flex items-center gap-2 mb-1">
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-1 text-sm font-medium shrink-0"
-          style={{ color: 'var(--theme-text-secondary)' }}
-          aria-label="Quay lại"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h1
-          className="text-base font-bold truncate"
-          style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.01em' }}
-        >
-          Lịch sử chuyến đi
-        </h1>
-      </div>
+      <MobileBackHeader title="Lịch sử chuyến đi" />
 
       <FilterPills<FilterValue> options={filterOptions} value={filter} onChange={setFilter} />
 

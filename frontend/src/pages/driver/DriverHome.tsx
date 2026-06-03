@@ -189,10 +189,10 @@ function MobileDriverHome() {
 
       {/* Stat card: trips breakdown + salary */}
       <div
-        className="rounded-xl overflow-hidden flex relative"
+        className="bento-card overflow-hidden flex relative"
         style={{
           background: 'linear-gradient(135deg, color-mix(in srgb, var(--theme-brand-primary) 5%, var(--theme-bg-secondary)) 0%, var(--theme-bg-secondary) 55%)',
-          border: '1px solid color-mix(in srgb, var(--theme-brand-primary) 14%, var(--theme-border-default))',
+          padding: 0,
         }}
       >
         {/* Watermark truck silhouette */}

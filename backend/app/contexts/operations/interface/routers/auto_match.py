@@ -62,6 +62,7 @@ class MatchPair(BaseModel):
     delivered_trip_id: int
     booked_trip_id: int
     sync_source: str | None = None
+    field_choices: dict[str, str] | None = None
 
 
 class ConfirmMatchRequest(BaseModel):
@@ -174,7 +175,7 @@ async def auto_match_confirm_endpoint(
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await confirm_matches(db, [(p.delivered_trip_id, p.booked_trip_id, p.sync_source) for p in body.pairs])
+    result = await confirm_matches(db, [(p.delivered_trip_id, p.booked_trip_id, p.sync_source, p.field_choices) for p in body.pairs])
     return ConfirmMatchResponse(**result)
 
 

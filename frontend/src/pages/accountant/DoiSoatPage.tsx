@@ -3,6 +3,7 @@ import {
   ClipboardList,
   Loader2,
   FileSpreadsheet,
+  Zap,
   Unlink,
 } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
@@ -43,14 +44,7 @@ type StatusFilter = 'ALL' | 'PENDING' | 'MATCHED'
 
 const AI_ANIMATION_TIME = 1800 // ms — minimum loading animation duration before showing results
 
-function AIMatchButtonLabel({ isPending }: { isPending: boolean }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-      AI Ghép chuyến
-    </span>
-  )
-}
+
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
@@ -114,7 +108,12 @@ export function DoiSoatPage() {
   )
 
   const handleConfirmMatch = useCallback(
-    (pairs: Array<{ deliveredTripId: number; bookedTripId: number; syncSource?: string | null }>) => {
+    (pairs: Array<{
+      deliveredTripId: number
+      bookedTripId: number
+      syncSource?: string | null
+      fieldChoices?: Record<string, 'delivered' | 'booked'> | null
+    }>) => {
       confirmMatch.mutate(pairs, {
         onSuccess: () => {
           setShowAutoMatch(false)
@@ -260,19 +259,21 @@ export function DoiSoatPage() {
               <FileSpreadsheet className="h-3.5 w-3.5" />
               Nhập Excel
             </Button>
-            <button
+            <Button
+              variant="default"
+              size="sm"
               title="Tự động ghép tất cả chuyến khớp hoàn toàn (số cont, tuyến, chủ hàng). Bạn sẽ được xem trước trước khi xác nhận."
               onClick={() => setShowAutoMatchDate(true)}
               disabled={autoMatchPreview.isPending}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-violet-600 text-xs font-medium border border-violet-200 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-violet-200 focus:ring-offset-1 flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
-                <path d="M20 3v4"/><path d="M22 5h-4"/>
-                <path d="M4 17v2"/><path d="M5 18H3"/>
-              </svg>
-              <AIMatchButtonLabel isPending={autoMatchPreview.isPending} />
-            </button>
+              {autoMatchPreview.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Zap className="h-3.5 w-3.5" />
+              )}
+              Ghép tự động
+            </Button>
           </div>
         </div>
 

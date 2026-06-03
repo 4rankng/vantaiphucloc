@@ -23,3 +23,4 @@
 @import "./styles/14-theme-tokens.css";   /* Theme token utilities (@layer)         */
 @import "./styles/15-motion.css";         /* Purpose-driven viewport animations     */
 @import "./styles/16-mobile.css";         /* Mobile responsive overrides (LAST)     */
+@import "./styles/17-bento.css";          /* Bento style grid and card system       */

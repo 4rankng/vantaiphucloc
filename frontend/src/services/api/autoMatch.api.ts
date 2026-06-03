@@ -73,7 +73,12 @@ export async function autoMatchPreview(params: {
 }
 
 export async function confirmAutoMatch(
-  pairs: Array<{ deliveredTripId: number; bookedTripId: number; syncSource?: string | null }>
+  pairs: Array<{
+    deliveredTripId: number
+    bookedTripId: number
+    syncSource?: string | null
+    fieldChoices?: Record<string, 'delivered' | 'booked'> | null
+  }>
 ) {
   try {
     const res = await api.post('/auto-match/confirm', {
@@ -81,6 +86,7 @@ export async function confirmAutoMatch(
         delivered_trip_id: p.deliveredTripId,
         booked_trip_id: p.bookedTripId,
         sync_source: p.syncSource || null,
+        field_choices: p.fieldChoices || null,
       })),
     })
     return ok<ConfirmMatchResponse>(toCamel(res.data))

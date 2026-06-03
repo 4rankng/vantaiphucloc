@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProfile, useUpdateProfile, useChangePassword } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
@@ -9,6 +8,7 @@ import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { ROLE_LABELS } from '@/data/domain'
+import { MobileBackHeader } from '@/components/shared/navigation/MobileBackHeader'
 
 // ─── Inline editable row ──────────────────────────────────────────────────────
 
@@ -141,7 +141,6 @@ function Divider() {
 // ─── Profile page ─────────────────────────────────────────────────────────────
 
 export function Profile() {
-  const navigate = useNavigate()
   const { user, logout, updateUser } = useAuth()
   const toast = useToast()
 
@@ -193,26 +192,7 @@ export function Profile() {
   return (
     <div className="pb-20 space-y-5">
 
-      {/* Back button + page title — keep them on a single line so the user
-          always knows where they are even after the back chevron. */}
-      <div className="flex items-center gap-2 mb-2">
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-1 text-sm font-medium shrink-0"
-          style={{ color: 'var(--theme-text-secondary)' }}
-          aria-label="Quay lại"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h1
-          className="text-base font-bold truncate"
-          style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.01em' }}
-        >
-          Tài khoản
-        </h1>
-      </div>
+      <MobileBackHeader title="Tài khoản" className="mb-2" />
 
       {/* ── Profile header — name + role only (avatar already shown in top bar) ── */}
       <div className="px-1 py-2">

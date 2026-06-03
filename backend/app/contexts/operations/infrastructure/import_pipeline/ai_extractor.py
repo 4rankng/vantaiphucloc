@@ -46,9 +46,10 @@ FIELDS TO EXTRACT:
 - consignee: Customer or cargo owner name.
 - vehicle_plate: Vietnamese truck plate (e.g. 51C-12345, 15C04567).
 - freight_charge: Price/freight as integer VND. null if unknown.
-- trip_date: Date in YYYY-MM-DD format. null if unknown.
-  Vietnamese dates are typically DD/MM/YYYY.
 - source_row: The row index (R-number) from the input data where this record was found.
+- consignee: Customer or cargo owner company name. Empty string if not found.
+- vehicle_plate: Vietnamese truck plate (e.g. 51C-12345). Empty string if not found.
+- freight_charge: Price/freight as integer VND. null if unknown.
 
 RULES:
 - Return ONLY rows that have a valid container number matching [A-Z]{4}[0-9]{7}.
@@ -109,7 +110,6 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
                             "consignee": {"type": "STRING"},
                             "vehicle_plate": {"type": "STRING"},
                             "freight_charge": {"type": "INTEGER", "nullable": True},
-                            "trip_date": {"type": "STRING", "nullable": True},
                             "source_row": {"type": "INTEGER"},
                         },
                         "required": ["container_number", "cont_type", "source_row"],
@@ -154,8 +154,14 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
             pickup = str(item.get("pickup", "")).strip()
             dropoff = str(item.get("dropoff", "")).strip()
             vessel_name = str(item.get("vessel_name", "")).strip()
-            # Note: ExtractedRow currently only accepts vessel_name, pickup, dropoff, etc.
-            # but we can capture them anyway to fit the schema
+            consignee = str(item.get("consignee", "")).strip()
+            vehicle_plate = str(item.get("vehicle_plate", "")).strip()
+            freight_charge = item.get("freight_charge")
+            if freight_charge is not None:
+                try:
+                    freight_charge = float(freight_charge)
+                except (ValueError, TypeError):
+                    freight_charge = None
 
             rows.append(ExtractedRow(
                 container_number=cont_no,
@@ -163,6 +169,9 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
                 pickup=pickup,
                 dropoff=dropoff,
                 vessel_name=vessel_name,
+                consignee=consignee,
+                vehicle_plate=vehicle_plate,
+                freight_charge=freight_charge,
                 source_row_index=item.get("source_row", 0),
             ))
         return rows
