@@ -14,6 +14,12 @@ If everything fails → mapping is None and the column is shown as
 The output is a `ColumnMapping` per column, which is JSON-serializable so
 it round-trips through the API and is what we cache in
 `customer_import_templates`.
+
+Pivot columns (`F20'`, `F40'`, `E20'`, `E40'`) are a special case: a
+single header encodes BOTH `container_size` and `freight_kind`. We
+detect them as a group via `detect_pivot_columns()` — the pipeline
+then reads the column with the `1` value per row to derive both
+fields, instead of trying to map each to a single canonical field.
 """
 
 from __future__ import annotations
@@ -27,6 +33,7 @@ from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     EXACT_LOOKUP,
     SKIP_FIELD,
     is_skip_header,
+    normalize_for_match,
     normalize_header_text,
     synonym_substring_match,
 )
@@ -40,6 +47,101 @@ SIZE_VALUE_RE = re.compile(r"^(20|22|40|42|45)(?:DC|GP|HC|RF|RE|G[01]|R[01]|T0|U
 FE_VALUE_RE = re.compile(r"^(F|E|FULL|EMPTY)$", re.IGNORECASE)
 NUMERIC_RE = re.compile(r"^[\d.,\s\-]+$")
 PLATE_RE = re.compile(r"^[0-9]{2}[A-Z]\d{4,6}$", re.IGNORECASE)
+
+
+# ---------------------------------------------------------------------------
+# Pivot columns — headers that encode compound (size, kind) per cell.
+# A typical Vietnamese reconciliation sheet has 4 such columns:
+#   F20' | F40' | E20' | E40'
+# Each row has a "1" in exactly one of them; that column's header tells
+# us the cont_type. We keep these separate from ColumnMapping because
+# they don't map to a single canonical field — they synthesize TWO.
+# ---------------------------------------------------------------------------
+
+PIVOT_HEADER_RE = re.compile(r"^([FE])\s*([0-9]{2})['\"]?$", re.IGNORECASE)
+
+
+@dataclass(frozen=True)
+class PivotColumn:
+    """A header cell that encodes both `freight_kind` and `container_size`."""
+    column_index: int
+    freight_kind: str   # "F" or "E"
+    container_size: str  # "20" or "40"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "column_index": self.column_index,
+            "freight_kind": self.freight_kind,
+            "container_size": self.container_size,
+        }
+
+
+def detect_pivot_columns(headers: list[Any]) -> list[PivotColumn]:
+    """Return one `PivotColumn` per matching header, in column order.
+
+    Matching rules (intentionally lenient — real customer files have
+    trailing apostrophes, double-quotes, accidental spaces):
+      - exact match: F20, F40, E20, E40 (case-insensitive)
+      - with trailing punctuation: F20', F20", F20.
+      - with whitespace: "F 20", "F  20", " F20 "
+    All other patterns ignored.
+
+    Returns [] if fewer than 2 pivot columns found (need at least 2 to
+    be meaningful — one pivot column is just bad data).
+    """
+    out: list[PivotColumn] = []
+    for c, cell in enumerate(headers):
+        if cell is None:
+            continue
+        s = str(cell).strip()
+        if not s:
+            continue
+        m = PIVOT_HEADER_RE.match(s)
+        if not m:
+            continue
+        fk = m.group(1).upper()
+        sz = m.group(2)
+        if sz not in ("20", "22", "40", "42", "45"):
+            continue
+        if fk not in ("F", "E"):
+            continue
+        out.append(PivotColumn(
+            column_index=c,
+            freight_kind=fk,
+            container_size="20" if sz in ("20", "22") else "40",
+        ))
+    return out if len(out) >= 2 else []
+
+
+def derive_pivot_value(row: list[Any], pivots: list[PivotColumn]) -> PivotColumn | None:
+    """For a data row, return the pivot column whose value is truthy.
+
+    "Truthy" means: cell exists, isn't None/empty/0/"0", and parses as a
+    number > 0 if numeric. Used by the pipeline to set size+kind per row
+    when generic column mapping can't find them.
+
+    Returns None if no pivot column fires — caller should treat as a
+    bad row (missing required fields).
+    """
+    for p in pivots:
+        if p.column_index >= len(row):
+            continue
+        v = row[p.column_index]
+        if v is None:
+            continue
+        if isinstance(v, str):
+            s = v.strip()
+            if not s or s in ("0", "0.0"):
+                continue
+            try:
+                if float(s) > 0:
+                    return p
+            except ValueError:
+                continue
+        elif isinstance(v, (int, float)):
+            if v > 0:
+                return p
+    return None
 
 
 @dataclass

@@ -26,7 +26,13 @@ from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     SKIP_FIELD,
     normalize_header_text,
 )
-from app.contexts.operations.infrastructure.import_pipeline.column_mapper import ColumnMapping, map_columns
+from app.contexts.operations.infrastructure.import_pipeline.column_mapper import (
+    ColumnMapping,
+    PivotColumn,
+    derive_pivot_value,
+    detect_pivot_columns,
+    map_columns,
+)
 from app.contexts.operations.infrastructure.import_pipeline.header_finder import (
     HeaderHit,
     find_header_row,
@@ -118,11 +124,18 @@ def apply_mapping(
     header_row: int,
     mappings: list[ColumnMapping],
     default_trip_date: date,
+    pivots: list[PivotColumn] | None = None,
 ) -> tuple[list[ParsedRow], list[RejectedRow]]:
     """Slice the sheet into accepted/rejected rows based on the mapping.
 
     De-duplicates by composite key (container_no + trip_date + pickup + dropoff)
     within the file. Same container on different date/route is a different trip.
+
+    `pivots` is an optional list of header columns that encode BOTH
+    `container_size` and `freight_kind` in a single column (e.g. F20',
+    F40', E20', E40'). When pivots are supplied and either size or
+    freight_kind is not separately mapped, we derive both from the
+    pivot cell with the truthy value for that row.
     """
     accepted: list[ParsedRow] = []
     rejected: list[RejectedRow] = []
@@ -138,6 +151,10 @@ def apply_mapping(
             if existing is None or m.confidence > existing.confidence:
                 by_field[m.canonical_field] = m
 
+    needs_pivot = bool(pivots) and (
+        "container_size" not in by_field or "freight_kind" not in by_field
+    )
+
     # Detect "all-empty" tail rows so we don't treat trailing whitespace
     # as 600 rejected entries. Stop once we hit 50 consecutive empty rows.
     empty_streak = 0
@@ -152,7 +169,26 @@ def apply_mapping(
             continue
         empty_streak = 0
 
-        raw_dict, parsed_or_reasons = _parse_row(raw_row, by_field, default_trip_date)
+        # If pivot columns can supply the missing fields for this row,
+        # build a row-level override dict that _parse_row merges into
+        # raw_dict. This lets the existing size/freight parsers run
+        # against the pre-filled values and pass validation.
+        row_overrides: dict[str, Any] = {}
+        if needs_pivot:
+            pivot = derive_pivot_value(raw_row, pivots or [])
+            if pivot is None:
+                # Row has no pivot fired — let _parse_row report the
+                # missing field as a rejection reason.
+                pass
+            else:
+                if "container_size" not in by_field:
+                    row_overrides["container_size"] = pivot.container_size
+                if "freight_kind" not in by_field:
+                    row_overrides["freight_kind"] = pivot.freight_kind
+
+        raw_dict, parsed_or_reasons = _parse_row(
+            raw_row, by_field, default_trip_date, row_overrides=row_overrides,
+        )
         if isinstance(parsed_or_reasons, list):
             rejected.append(RejectedRow(source_row_index=r, reasons=parsed_or_reasons, raw=raw_dict))
             continue
@@ -185,11 +221,14 @@ def _parse_row(
     row: list[Any],
     by_field: dict[str, ColumnMapping],
     default_trip_date: date,
+    row_overrides: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any] | list[str]]:
     raw_dict: dict[str, Any] = {}
     for field_name, m in by_field.items():
         cell = row[m.column_index] if m.column_index < len(row) else None
         raw_dict[field_name] = cell
+    if row_overrides:
+        raw_dict.update(row_overrides)
 
     reasons: list[str] = []
 
@@ -390,8 +429,13 @@ async def _run_generic_preview(
     else:
         mappings = await map_columns(chosen.sheet, hit.row_index, classifier=classifier)
 
+    pivots = detect_pivot_columns(
+        chosen.sheet.rows[hit.row_index] if 0 <= hit.row_index < len(chosen.sheet.rows) else []
+    )
+
     accepted, rejected = apply_mapping(
         chosen.sheet, hit.row_index, mappings, default_trip_date,
+        pivots=pivots,
     )
 
     warnings: list[str] = []
