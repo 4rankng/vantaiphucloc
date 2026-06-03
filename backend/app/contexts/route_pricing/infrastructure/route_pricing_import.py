@@ -19,7 +19,7 @@ from app.contexts.customer_pricing.infrastructure.location_resolver import (
     LocationResolverService,
     ResolverSource,
 )
-from app.contexts.route_pricing.domain.value_objects import VALID_WORK_TYPES
+from app.contexts.route_pricing.domain.value_objects import get_valid_work_types
 from app.models.domain import Client
 from app.models.domain import RoutePricing as RoutePricingORM
 
@@ -67,7 +67,7 @@ def _normalize_work_type(raw: str) -> str | None:
     cleaned = raw.strip().upper()
     cleaned = re.sub(r"\s*/\s*", "/", cleaned)
     cleaned = re.sub(r"\s+", " ", cleaned)
-    for valid in VALID_WORK_TYPES:
+    for valid in get_valid_work_types():
         if cleaned == valid:
             return valid
     return None

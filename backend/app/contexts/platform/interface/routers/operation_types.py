@@ -96,7 +96,15 @@ async def update_operation_type(
     obj = await db.get(OperationType, type_id)
     if not obj:
         raise HTTPException(404, "Không tìm thấy tác nghiệp")
-    if body.name is not None:
+    if body.name is not None and body.name != obj.name:
+        # Check for name collision with another type
+        exists = (
+            await db.execute(
+                select(OperationType).where(OperationType.name == body.name)
+            )
+        ).scalar_one_or_none()
+        if exists:
+            raise HTTPException(409, f"Tác nghiệp '{body.name}' đã tồn tại")
         obj.name = body.name
     if body.label is not None:
         obj.label = body.label

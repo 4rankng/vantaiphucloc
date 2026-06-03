@@ -63,7 +63,7 @@ export function ContainerTypeGrid({
   }, [operationTypes])
 
   const labelFor = (wt: string): string => {
-    if (operationTypes) {
+    if (operationTypes && operationTypes.length > 0) {
       const found = operationTypes.find(o => o.name === wt)
       if (found) return found.label
     }
