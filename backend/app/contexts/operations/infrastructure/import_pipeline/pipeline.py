@@ -481,7 +481,7 @@ def _build_preview_from_extracted(
                 "work_type": row.work_type,             # CHUYỂN BÃI, XUẤT/NHẬP TÀU, etc.
                 "pickup_location": row.pickup,
                 "dropoff_location": row.dropoff,
-                "vessel_name": row.vessel_name,
+                "vessel": row.vessel_name,
                 "trip_date": default_trip_date.isoformat(),
                 "container_type_iso": "",
                 "gross_weight_kg": None,

@@ -53,6 +53,7 @@ CONSCIENCE = DOCS / "8.CONSCIENCE 2615N.xlsx"
 HAIAN_BETA = DOCS / "Loading list of HAIAN BETA 062S.xls"
 PHUC_LOC = DOCS / "Phúc Lộc - Shipside T4.26 HAP.xlsx"
 SAMPLE_IO = DOCS / "templates" / "sample-input-output.xlsx"
+ULTIMA = DOCS / "templates" / "ultima02.06.xlsx"
 
 
 # ---------------------------------------------------------------------------
@@ -552,3 +553,45 @@ async def test_settlement_list_e2e_preview():
     assert first["dropoff_location"] != ""
     for w in res.warnings:
         assert "Thiếu cột bắt buộc" not in w
+
+
+# ---------------------------------------------------------------------------
+# Ultima02.06 — real-world file with SỐ CONTAINER (space) and F20'/F40'/E20'/E40' headers
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def ultima_sheets():
+    if not ULTIMA.exists():
+        pytest.skip("ultima02.06.xlsx missing")
+    return load_workbook(ULTIMA.read_bytes(), ULTIMA.name)
+
+
+def test_detect_settlement_list_ultima(ultima_sheets):
+    pattern = detect_pattern(ultima_sheets, "ultima02.06.xlsx")
+    assert pattern is not None
+    assert pattern.pattern_name == "settlement_list"
+    assert pattern.confidence >= 0.6
+
+
+def test_extract_settlement_list_ultima(ultima_sheets):
+    accepted, rejected = extract_settlement_list(ultima_sheets, "ultima02.06.xlsx")
+    assert len(accepted) > 0
+    assert len(rejected) == 0
+    for row in accepted:
+        assert row.cont_type in ("E20", "E40", "F20", "F40")
+
+
+@pytest.mark.asyncio
+async def test_ultima_e2e_preview(ultima_sheets):
+    res = await run_preview(ULTIMA.read_bytes(), ULTIMA.name, default_trip_date=date(2026, 6, 2))
+    assert res.stats["accepted_count"] > 0
+    assert res.stats["rejected_count"] == 0
+    for w in res.warnings:
+        assert "Thiếu cột bắt buộc" not in w
+        assert "chưa được mapping" not in w
+    first = res.accepted[0]["values"]
+    assert first["container_no"]
+    assert first["cont_type"] in ("E20", "E40", "F20", "F40")
+    assert first["freight_kind"] in ("F", "E")
+    assert first["container_size"] in ("20", "40")
+    assert "ULTIMA" in (first.get("vessel") or "")

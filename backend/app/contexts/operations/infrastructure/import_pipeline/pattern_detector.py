@@ -201,10 +201,10 @@ def _score_settlement_list(sheet: SheetView) -> float:
     for r in range(min(15, len(sheet.rows))):
         row = sheet.rows[r]
         for cell in row:
-            t = _cell_text(cell).upper()
-            if "SỐCONT" in t or "SOCONT" in t or "SO CONT" in t:
+            if is_container_header(cell):
                 has_socont = True
                 header_found = True
+                break
 
         if header_found:
             # Count work-type columns in the same row

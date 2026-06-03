@@ -614,12 +614,16 @@ def extract_settlement_list(sheets: list[SheetView], filename: str = "") -> tupl
                 except ValueError:
                     pass
 
+        vessel_name = ""
+        if col_map.get("vessel") is not None and col_map["vessel"] < len(row):
+            vessel_name = parse_string(row[col_map["vessel"]], max_len=255)
+
         accepted.append(ExtractedRow(
             container_number=cont_no,
             cont_type=work_type,
             pickup=pickup,
             dropoff=dropoff,
-            vessel_name="",
+            vessel_name=vessel_name,
             source_row_index=r,
             work_type=work_type_val,
             consignee=consignee,
@@ -641,10 +645,9 @@ def _find_settlement_list_sheet(sheets: list[SheetView]) -> SheetView | None:
             row = sheet.rows[r]
             row_has_socont = False
             for cell in row:
-                t = _cell_upper(cell)
-                if "SỐCONT" in t or "SOCONT" in t or "SO CONT" in t:
+                if is_container_header(cell):
                     row_has_socont = True
-                clean = t.strip().rstrip("'\"")
+                clean = _cell_upper(cell).strip().rstrip("'\"")
                 if clean in _SETTLEMENT_WT_HEADERS:
                     wt_count += 1
             if row_has_socont:
@@ -658,8 +661,7 @@ def _find_settlement_header(sheet: SheetView) -> int | None:
     """Find the header row containing SỐCONTAINER."""
     for r in range(min(15, len(sheet.rows))):
         for cell in sheet.rows[r]:
-            t = _cell_upper(cell)
-            if "SỐCONT" in t or "SOCONT" in t or "SO CONT" in t:
+            if is_container_header(cell):
                 return r
     return None
 
@@ -671,13 +673,14 @@ def _map_settlement_cols(header: list) -> dict[str, int | None]:
         "f20": None, "f40": None, "e20": None, "e40": None,
         "plate": None, "pickup": None, "dropoff": None,
         "amount": None, "notes": None, "operation": None,
+        "vessel": None,
     }
 
     for c, cell in enumerate(header):
         t = _cell_upper(cell)
         clean = t.strip().rstrip("'\"").rstrip("\n").rstrip()
 
-        if "SỐCONT" in t or "SOCONT" in t or "SO CONT" in t:
+        if is_container_header(cell):
             col_map["container"] = c
         elif "NGÀY ĐI" in t or "NGAY DI" in t or t == "NGÀY" or t == "NGAY":
             col_map["date"] = c
@@ -703,6 +706,8 @@ def _map_settlement_cols(header: list) -> dict[str, int | None]:
             col_map["operation"] = c
         elif "GHI" in t and ("CHÚ" in t or "CHU" in t):
             col_map["notes"] = c
+        elif "TÊN TẦU" in t or "TEN TAU" in t or "TÊN TÀU" in t or "TEN TAU" in t.upper():
+            col_map["vessel"] = c
 
     return col_map
 
