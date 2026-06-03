@@ -8,6 +8,7 @@ from app.contexts.route_pricing.domain.value_objects import (
     Money,
     VALID_WORK_TYPES,
     WorkType,
+    get_valid_work_types,
     validate_work_type,
 )
 
@@ -21,5 +22,6 @@ __all__ = [
     "WorkType",
     "Money",
     "VALID_WORK_TYPES",
+    "get_valid_work_types",
     "validate_work_type",
 ]

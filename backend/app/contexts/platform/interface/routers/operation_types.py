@@ -9,6 +9,7 @@ from app.core.deps import get_current_user
 from app.database import get_db
 from app.models.operation_type import OperationType
 from app.models.base import User
+from app.contexts.route_pricing.domain.value_objects import refresh_work_types_from_async
 
 router = APIRouter(prefix="/operation-types", tags=["operation-types"])
 
@@ -34,6 +35,17 @@ class OperationTypeUpdate(BaseModel):
     name: str | None = None
     label: str | None = None
     is_active: bool | None = None
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+
+async def _refresh_cache(db: AsyncSession) -> None:
+    """Reload active work types from DB into the validation cache."""
+    rows = (await db.execute(
+        select(OperationType.name).where(OperationType.is_active == True)  # noqa: E712
+    )).scalars().all()
+    refresh_work_types_from_async(frozenset(rows))
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
@@ -70,6 +82,7 @@ async def create_operation_type(
     db.add(obj)
     await db.flush()
     await db.refresh(obj)
+    await _refresh_cache(db)
     return obj
 
 
@@ -91,6 +104,7 @@ async def update_operation_type(
         obj.is_active = body.is_active
     await db.flush()
     await db.refresh(obj)
+    await _refresh_cache(db)
     return obj
 
 
@@ -132,4 +146,5 @@ async def delete_operation_type(
             )
     await db.delete(obj)
     await db.flush()
+    await _refresh_cache(db)
     return {"success": True}

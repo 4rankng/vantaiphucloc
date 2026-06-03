@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -11,13 +10,7 @@ from app.schemas.domain import (
     LocationSummaryOut,
 )
 
-WorkTypeLiteral = Literal[
-    "XUẤT/NHẬP TÀU",
-    "CHUYỂN BÃI",
-    "LẤY VỎ HẠ HÀNG",
-    "CHẠY SÀ LAN",
-    "ĐÓNG KHO",
-]
+WorkTypeLiteral = str  # validated at runtime via validate_work_type()
 
 
 class RoutePricingCreate(BaseModel):
