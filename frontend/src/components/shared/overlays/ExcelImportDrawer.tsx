@@ -22,6 +22,8 @@ import {
   useCreateClient,
   usePreviewCustomerExcel,
   useCommitCustomerExcel,
+  useEnqueueCustomerExcelPreview,
+  useCustomerExcelPreviewStatus,
   usePreviewVendorReconciliation,
   useCommitVendorReconciliation,
   usePreviewDriverReconciliation,
@@ -90,6 +92,8 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
   const createClient = useCreateClient()
   const previewClientExcel = usePreviewCustomerExcel()
   const commitClientExcel = useCommitCustomerExcel()
+  const enqueueClientExcel = useEnqueueCustomerExcelPreview()
+  const [activeJobId, setActiveJobId] = useState<string | null>(null)
   const previewDriverRecon = usePreviewDriverReconciliation()
   const commitDriverRecon = useCommitDriverReconciliation()
   const previewVendorRecon = usePreviewVendorReconciliation()
@@ -103,63 +107,91 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
     return names.length === 1 ? names[0] : null
   }, [previewData])
 
+  const applyPreviewResult = useCallback((data: PreviewResultDto) => {
+    setPreviewResult(data)
+    const cols = ['Ngày đi', 'Chủ hàng', 'Số Cont', 'Loại Cont', 'Số xe chạy', 'Điểm đi', 'Điểm đến', 'Cước']
+    const rows = (data.accepted ?? []).map(r => ({
+      'Ngày đi': r.values.trip_date,
+      'Chủ hàng': r.values.consignee,
+      'Số Cont': r.values.container_no,
+      'Loại Cont': r.values.cont_type ?? `${r.values.freight_kind ?? ''}${r.values.container_size ?? ''}`,
+      'Số xe chạy': r.values.vehicle_plate,
+      'Điểm đi': r.values.pickup_location,
+      'Điểm đến': r.values.dropoff_location,
+      'Cước': r.values.freight_charge,
+    }))
+    const containerKey = Object.keys((data.rejected?.[0]?.raw ?? {}) as Record<string, unknown>).find(k => /container/i.test(k))
+    const dups = (data.rejected ?? [])
+      .filter(r => r.reasons?.includes('duplicate_in_file') || r.reasons?.some(reason => reason.includes('duplicate')))
+      .map((r) => {
+        const cNo = containerKey ? String((r.raw as Record<string, unknown>)?.[containerKey] ?? '') : ''
+        return {
+          type: 'exact' as const,
+          rowIndices: [r.source_row_index],
+          containers: [cNo],
+          message: `Dòng ${r.source_row_index + 1}: Trùng container ${cNo}`
+        }
+      })
+    const warns = data.warnings ?? []
+
+    setPreviewColumns(cols)
+    setPreviewData(rows)
+    setDuplicateGroups(dups)
+    setPreviewWarnings(warns)
+
+    if (!clientId) {
+      const uniqueConsignees = [
+        ...new Set((data.accepted ?? []).map((r) => String(r.values.consignee ?? '').trim()).filter(Boolean)),
+      ]
+      if (uniqueConsignees.length >= 1) {
+        const norm = (s: string) => s.toUpperCase().replace(/\s+/g, ' ').trim()
+        const q = norm(uniqueConsignees[0])
+        const match = clients.find(
+          (c) =>
+            (c.code && norm(c.code) === q) ||
+            norm(c.name) === q ||
+            norm(c.name).includes(q) ||
+            q.includes(norm(c.name)),
+        )
+        if (match) setClientId(String(match.id))
+      }
+    }
+    setStep('preview')
+  }, [clientId, clients])
+
+  // Polling hook fires the callback once per status transition to a
+  // terminal state. The hook handles its own ref-keeping internally so
+  // `applyPreviewResult` doesn't need to be in a dep array.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const jobStatus = useCustomerExcelPreviewStatus(
+    activeJobId,
+    (status, result) => {
+      if (status === 'complete' && result) {
+        applyPreviewResult(result)
+        setActiveJobId(null)
+      } else if (status === 'failed' || status === 'not_found') {
+        setError(
+          status === 'not_found'
+            ? 'Job đã hết hạn hoặc không tồn tại. Vui lòng tải lại file.'
+            : 'Phân tích file thất bại. Vui lòng thử lại.',
+        )
+        setActiveJobId(null)
+      }
+    },
+  )
+
+  // When the async job finishes, the polling hook's `onResult` callback
+  // (set up just above) handles the state transitions. No effect needed
+  // here.
+
   const startPreview = useCallback((f: File) => {
     setError(null)
     if (importType === 'client') {
-      previewClientExcel.mutate(
-        { file: f, clientId: clientId ? Number(clientId) : undefined },
+      enqueueClientExcel.mutate(
+        { file: f },
         {
-          onSuccess: (data) => {
-            setPreviewResult(data)
-            const cols = ['Ngày đi', 'Chủ hàng', 'Số Cont', 'Loại Cont', 'Số xe chạy', 'Điểm đi', 'Điểm đến', 'Cước']
-            const rows = (data.accepted ?? []).map(r => ({
-              'Ngày đi': r.values.trip_date,
-              'Chủ hàng': r.values.consignee,
-              'Số Cont': r.values.container_no,
-              'Loại Cont': r.values.cont_type ?? `${r.values.freight_kind ?? ''}${r.values.container_size ?? ''}`,
-              'Số xe chạy': r.values.vehicle_plate,
-              'Điểm đi': r.values.pickup_location,
-              'Điểm đến': r.values.dropoff_location,
-              'Cước': r.values.freight_charge,
-            }))
-            const containerKey = Object.keys((data.rejected?.[0]?.raw ?? {}) as Record<string, unknown>).find(k => /container/i.test(k))
-            const dups = (data.rejected ?? [])
-              .filter(r => r.reasons?.includes('duplicate_in_file') || r.reasons?.some(reason => reason.includes('duplicate')))
-              .map((r) => {
-                const cNo = containerKey ? String((r.raw as Record<string, unknown>)?.[containerKey] ?? '') : ''
-                return {
-                  type: 'exact' as const,
-                  rowIndices: [r.source_row_index],
-                  containers: [cNo],
-                  message: `Dòng ${r.source_row_index + 1}: Trùng container ${cNo}`
-                }
-              })
-            const warns = data.warnings ?? []
-
-            setPreviewColumns(cols)
-            setPreviewData(rows)
-            setDuplicateGroups(dups)
-            setPreviewWarnings(warns)
-
-            // Auto-detect client from consignee
-            if (!clientId) {
-              const uniqueConsignees = [
-                ...new Set((data.accepted ?? []).map((r) => String(r.values.consignee ?? '').trim()).filter(Boolean)),
-              ]
-              if (uniqueConsignees.length >= 1) {
-                const norm = (s: string) => s.toUpperCase().replace(/\s+/g, ' ').trim()
-                const q = norm(uniqueConsignees[0])
-                const match = clients.find(
-                  (c) =>
-                    (c.code && norm(c.code) === q) ||
-                    norm(c.name) === q ||
-                    norm(c.name).includes(q) ||
-                    q.includes(norm(c.name)),
-                )
-                if (match) setClientId(String(match.id))
-              }
-            }
-            setStep('preview')
+          onSuccess: (res) => {
+            setActiveJobId(res.job_id)
           },
           onError: (err) => setError(err instanceof Error ? err.message : 'Lỗi khi phân tích file'),
         }
@@ -241,7 +273,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
         }
       )
     }
-  }, [importType, previewClientExcel, previewDriverRecon, previewVendorRecon, clientId, vendorId, clients])
+  }, [importType, previewDriverRecon, previewVendorRecon, vendorId, enqueueClientExcel])
 
   const handleFileSelect = useCallback((f: File | null) => {
     if (!f) return
@@ -413,10 +445,10 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
         <Button variant="outline" size="sm" onClick={onClose}>
           Huỷ
         </Button>
-        {(previewClientExcel.isPending || previewDriverRecon.isPending || previewVendorRecon.isPending) && (
+        {(enqueueClientExcel.isPending || activeJobId || previewClientExcel.isPending || previewDriverRecon.isPending || previewVendorRecon.isPending) && (
           <div className="flex items-center gap-2" style={{ color: 'var(--ink-2)', fontSize: 13 }}>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Đang phân tích tệp...
+            {activeJobId ? 'Đang phân tích bằng AI...' : 'Đang phân tích tệp...'}
           </div>
         )}
       </>

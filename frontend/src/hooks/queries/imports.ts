@@ -1,7 +1,9 @@
+import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { invalidateDeliveredTripDeps } from '@/hooks/query-keys'
 import type { ApiResponse } from '@/data/domain'
+import type { PreviewResultDto } from '@/services/api/imports.api'
 
 function unwrap<T>(res: ApiResponse<T>): T {
   if (res.success) return res.data
@@ -39,9 +41,21 @@ export function usePreviewCustomerExcel() {
 
 // Async preview flow: enqueue returns job_id, this hook polls until
 // status is complete / failed / not_found. 1.5s interval matches the
-// existing notification panel cadence.
-export function useCustomerExcelPreviewStatus(jobId: string | null) {
-  return useQuery({
+// existing notification panel cadence. `onResult` fires once per status
+// transition (complete / failed / not_found) so the caller can react
+// without an explicit useEffect.
+export function useCustomerExcelPreviewStatus(
+  jobId: string | null,
+  onResult?: (status: 'complete' | 'failed' | 'not_found', result?: PreviewResultDto) => void,
+) {
+  const onResultRef = useRef(onResult)
+  const lastHandledRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    onResultRef.current = onResult
+  }, [onResult])
+
+  const query = useQuery({
     queryKey: ['import-excel-preview', jobId],
     queryFn: () => apiClient.getCustomerExcelPreviewStatus(jobId!),
     enabled: !!jobId,
@@ -51,13 +65,28 @@ export function useCustomerExcelPreviewStatus(jobId: string | null) {
       return apiClient.isTerminalStatus(status) ? false : 1500
     },
     retry: (count, err) => {
-      // Don't retry 404s (job expired/never existed) — surface immediately.
       const status = (err as { response?: { status?: number } })?.response?.status
       if (status === 404 || status === 401) return false
       return count < 3
     },
     staleTime: 0,
   })
+
+  // Fire onResult callback on status transitions to terminal states.
+  // useEffect's setState-from-prop pattern is what we want here: the
+  // callback is a side effect on the polled data, not a derived value.
+  useEffect(() => {
+    const status = query.data?.status
+    if (!status || !onResultRef.current) return
+    if (!apiClient.isTerminalStatus(status)) return
+    if (lastHandledRef.current === status) return
+    lastHandledRef.current = status
+    if (status === 'complete' || status === 'failed' || status === 'not_found') {
+      onResultRef.current(status, query.data?.result)
+    }
+  }, [query.data?.status, query.data?.result])
+
+  return query
 }
 
 export function useEnqueueCustomerExcelPreview() {
