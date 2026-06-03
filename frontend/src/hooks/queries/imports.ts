@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { invalidateDeliveredTripDeps } from '@/hooks/query-keys'
 import type { ApiResponse } from '@/data/domain'
@@ -34,6 +34,36 @@ export function usePreviewCustomerExcel() {
       sheetName?: string
       headerRowIndex?: number
     }) => apiClient.previewCustomerExcel(args),
+  })
+}
+
+// Async preview flow: enqueue returns job_id, this hook polls until
+// status is complete / failed / not_found. 1.5s interval matches the
+// existing notification panel cadence.
+export function useCustomerExcelPreviewStatus(jobId: string | null) {
+  return useQuery({
+    queryKey: ['import-excel-preview', jobId],
+    queryFn: () => apiClient.getCustomerExcelPreviewStatus(jobId!),
+    enabled: !!jobId,
+    refetchInterval: (q) => {
+      const status = q.state.data?.status
+      if (!status) return 1500
+      return apiClient.isTerminalStatus(status) ? false : 1500
+    },
+    retry: (count, err) => {
+      // Don't retry 404s (job expired/never existed) — surface immediately.
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 404 || status === 401) return false
+      return count < 3
+    },
+    staleTime: 0,
+  })
+}
+
+export function useEnqueueCustomerExcelPreview() {
+  return useMutation({
+    mutationFn: (args: { file: File; defaultTripDate?: string; sheetName?: string }) =>
+      apiClient.enqueueCustomerExcelPreview(args),
   })
 }
 

@@ -176,6 +176,49 @@ export async function previewCustomerExcel(args: {
   return res.data as PreviewResultDto
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// Async preview — returns immediately with a job_id; frontend polls
+// getCustomerExcelPreviewStatus until status is "complete" / "failed".
+// ──────────────────────────────────────────────────────────────────────────
+
+export interface ImportPreviewEnqueueResponse {
+  job_id: string
+  status: 'queued'
+  message?: string
+}
+
+export type ImportJobStatus = 'queued' | 'processing' | 'in_progress' | 'complete' | 'failed' | 'not_found'
+
+export interface ImportPreviewStatusResponse {
+  job_id: string
+  status: ImportJobStatus
+  result?: PreviewResultDto
+}
+
+export async function enqueueCustomerExcelPreview(args: {
+  file: File
+  defaultTripDate?: string
+  sheetName?: string
+}): Promise<ImportPreviewEnqueueResponse> {
+  const fd = new FormData()
+  fd.append('file', args.file)
+  if (args.defaultTripDate) fd.append('default_trip_date', args.defaultTripDate)
+  if (args.sheetName) fd.append('sheet_name', args.sheetName)
+  const res = await api.post('/imports/customer-excel/preview-async', fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data as ImportPreviewEnqueueResponse
+}
+
+export async function getCustomerExcelPreviewStatus(jobId: string): Promise<ImportPreviewStatusResponse> {
+  const res = await api.get(`/imports/customer-excel/jobs/${jobId}`)
+  return res.data as ImportPreviewStatusResponse
+}
+
+export function isTerminalStatus(status: ImportJobStatus | undefined): boolean {
+  return status === 'complete' || status === 'failed' || status === 'not_found'
+}
+
 export async function commitCustomerExcel(body: CommitRequest): Promise<CommitResponse> {
   const res = await api.post('/imports/customer-excel/commit', body)
   return res.data as CommitResponse
