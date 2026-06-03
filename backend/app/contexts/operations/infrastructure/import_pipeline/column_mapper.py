@@ -33,7 +33,6 @@ from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     EXACT_LOOKUP,
     SKIP_FIELD,
     is_skip_header,
-    normalize_for_match,
     normalize_header_text,
     synonym_substring_match,
 )
