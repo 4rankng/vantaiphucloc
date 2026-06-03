@@ -66,6 +66,7 @@ export const queryKeys = {
   vendorRoutePricings: ['vendor-route-pricings'] as const,
   vendorRoutePricingsFiltered: (filters?: { vendorId?: number; workType?: string }) =>
     ['vendor-route-pricings', filters] as const,
+  operationTypes: ['operation-types'] as const,
 }
 
 /**
@@ -139,4 +140,10 @@ export function invalidateVehicleExpenseDeps(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: ['vehicle-pnl'] })
   qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
   qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
+}
+
+export function invalidateOperationTypeDeps(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: queryKeys.operationTypes })
+  qc.invalidateQueries({ queryKey: queryKeys.routePricings })
+  qc.invalidateQueries({ queryKey: queryKeys.vendorRoutePricings })
 }
