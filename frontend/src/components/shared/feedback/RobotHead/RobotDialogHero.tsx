@@ -3,7 +3,7 @@ import { useTypewriter } from './useTypewriter'
 
 interface RobotDialogHeroProps {
   /** Main bold title */
-  title: string
+  title: React.ReactNode
   /** Subtitle — if provided, plays as typewriter while mouth opens/closes */
   subtitle?: string
   /** Typewriter speed in ms per character (default 18) */
@@ -74,9 +74,13 @@ export function RobotDialogHero({
       </div>
 
       {/* Title */}
-      <h2 style={{ color: 'white', fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>
-        {title}
-      </h2>
+      {typeof title === 'string' ? (
+        <h2 style={{ color: 'white', fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>
+          {title}
+        </h2>
+      ) : (
+        title
+      )}
 
       {/* Typewriter subtitle */}
       {subtitle !== undefined && (

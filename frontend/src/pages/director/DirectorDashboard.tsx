@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { TripChartCard } from '@/components/shared/data-display/TripChartCard'
+import { KpiHeroCard } from '@/components/shared/data-display/KpiHeroCard'
+import { DashboardSectionHeader } from '@/components/shared/data-display/DashboardSectionHeader'
 import {
   TrendingUp, TrendingDown, ChevronLeft, ChevronRight,
-  Activity, ArrowUpRight, Users,
+  Activity, Users, Truck, Coins, BarChart3,
 } from 'lucide-react'
 import { useDirectorDashboard } from '@/hooks/queries/pnl'
-import type { VehiclePnLGroup, VehiclePnLRow } from '@/services/api/pnl.api'
+import type { VehiclePnLRow } from '@/services/api/pnl.api'
 import type { AuditLogEntry } from '@/services/api/audit.api'
 import { getAuditLogs } from '@/services/api/audit.api'
 import { formatActivityEntry, formatFinancialChange, SUBJECT_PREFIX } from '@/lib/activity-utils'
@@ -14,154 +16,33 @@ import { pad } from '@/lib/accounting-utils'
 import { useMonthParams } from '@/pages/accountant/use-month-params'
 import { useInfiniteScroll } from '@/components/shared/data-display/ListUtils'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { useProfile } from '@/hooks/use-queries'
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 const fontMono = "'JetBrains Mono', ui-monospace, monospace"
-const fontSans = "'Plus Jakarta Sans', 'Be Vietnam Pro', system-ui, sans-serif"
 
-function KpiCard({
-  label, value, unit, context, trend, accentColor = 'var(--theme-brand-primary)', accentTint = 'var(--theme-brand-primary-light)', delay, className = '',
-}: {
-  label: string
-  value: string
-  unit?: string
-  context?: string
-  trend?: { value: string; positive: boolean }
-  accentColor?: string
-  accentTint?: string
-  delay?: number
-  className?: string
-}) {
-  return (
-    <div
-      className={`bento-card group ${className}`}
-      style={{
-        animation: `fadeIn 0.5s ease both`,
-        animationDelay: delay ? `${delay}ms` : undefined,
-      }}
-    >
-      <div
-        className="absolute top-[22px] left-0 h-[18px] w-[3px] rounded-r-[3px] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-        style={{ background: accentColor }}
-      />
-
-      <p className="bento-stat-label">
-        {label}
-      </p>
-
-      <div className="mt-2 flex items-baseline gap-1.5 leading-none" style={{ fontFamily: fontMono, fontWeight: 700, color: 'var(--theme-text-primary)', letterSpacing: '-0.02em' }}>
-        <span className="text-2xl xl:text-3xl">{value}</span>
-        {unit && (
-          <span className="text-sm font-semibold" style={{ fontFamily: fontSans, color: 'var(--theme-text-muted)', letterSpacing: '0.04em' }}>
-            {unit}
-          </span>
-        )}
-      </div>
-
-      <div className="bento-stat-footer">
-        <span className="truncate">{context ?? ' '}</span>
-        {trend && (
-          <span
-            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-            style={{
-              fontFamily: fontMono,
-              letterSpacing: '-0.01em',
-              background: trend.positive ? accentTint : 'var(--theme-status-error-light)',
-              color: trend.positive ? accentColor : 'var(--theme-status-error)',
-            }}
-          >
-            {trend.positive ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
-            {trend.value}
-          </span>
-        )}
-      </div>
-    </div>
-  )
+const greeting = () => {
+  const h = new Date().getHours()
+  if (h < 12) return 'Chào buổi sáng'
+  if (h < 18) return 'Chào buổi chiều'
+  return 'Chào buổi tối'
 }
 
+const fmtCompact = (n: number): string => {
+  if (Math.abs(n) >= 1e9) return `${(n / 1e9).toFixed(1)} tỷ`
+  if (Math.abs(n) >= 1e6) return `${(n / 1e6).toFixed(1)} tr`
+  if (Math.abs(n) >= 1e3) return `${(n / 1e3).toFixed(0)}K`
+  return n.toLocaleString('vi-VN')
+}
+
+// ─── Activity feed ──────────────────────────────────────────────────────────
 
 const ROLE_INITIALS: Record<string, string> = {
-  accountant: 'KT',
-  director: 'ĐT',
-  driver: 'LX',
-  superadmin: 'SA',
+  accountant: 'KT', director: 'ĐT', driver: 'LX', superadmin: 'SA',
 }
-
 const ROLE_LABELS: Record<string, string> = {
-  accountant: 'Kế toán',
-  director: 'Giám đốc',
-  driver: 'Lái xe',
-  superadmin: 'Quản trị',
-}
-
-function VehiclePnLTable({ group, emptyHint }: { group: VehiclePnLGroup; emptyHint: string }) {
-  const rows = group.rows ?? []
-
-  if (rows.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-3 py-6">
-        <img src="/illustrations/empty-vendors.svg" alt="" className="h-24 w-auto opacity-80" draggable={false} />
-        <p className="text-xs text-center" style={{ color: 'var(--theme-text-muted)' }}>{emptyHint}</p>
-      </div>
-    )
-  }
-
-  const sorted: VehiclePnLRow[] = [...rows].sort((a, b) => b.loiNhuan - a.loiNhuan)
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full" style={{ borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
-            <th style={{ textAlign: 'left',  padding: '8px 10px', color: 'var(--theme-text-muted)', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Biển số</th>
-            <th style={{ textAlign: 'right', padding: '8px 10px', color: 'var(--theme-text-muted)', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Doanh thu</th>
-            <th style={{ textAlign: 'right', padding: '8px 10px', color: 'var(--theme-text-muted)', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Chi phí</th>
-            <th style={{ textAlign: 'right', padding: '8px 10px', color: 'var(--theme-text-muted)', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Lợi nhuận</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((row) => {
-            const cost = row.cpXe.total + row.cpLuongSanLuong + row.cpLuongCoBan + row.cpVendor
-            const positive = row.loiNhuan >= 0
-            return (
-              <tr key={row.vehicleId} style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
-                <td style={{ padding: '8px 10px', color: 'var(--theme-text-primary)', fontSize: 13, fontWeight: 600 }}>
-                  {row.plate}
-                  {row.isVendor && row.vendorName && (
-                    <span className="ml-1.5 inline-block rounded px-1.5 py-0.5" style={{ fontSize: 10, color: 'var(--theme-text-muted)', background: 'var(--theme-border-default)', fontWeight: 500 }}>
-                      {row.vendorName}
-                    </span>
-                  )}
-                </td>
-                <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: fontMono, fontSize: 12.5, color: 'var(--theme-text-primary)' }}>{row.revenue.toLocaleString('vi-VN')}</td>
-                <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: fontMono, fontSize: 12.5, color: 'var(--theme-text-secondary)' }}>{cost.toLocaleString('vi-VN')}</td>
-                <td style={{
-                  padding: '8px 10px', textAlign: 'right',
-                  fontFamily: fontMono, fontSize: 12.5, fontWeight: 600,
-                  color: positive ? 'var(--theme-brand-primary)' : 'var(--theme-status-error)',
-                }}>
-                  {row.loiNhuan.toLocaleString('vi-VN')}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-        <tfoot>
-          <tr style={{ borderTop: '1px solid var(--theme-border-default)' }}>
-            <td style={{ padding: '10px', color: 'var(--theme-text-primary)', fontWeight: 700, fontSize: 12 }}>Tổng</td>
-            <td style={{ padding: '10px', textAlign: 'right', fontFamily: fontMono, fontWeight: 700, fontSize: 12.5, color: 'var(--theme-text-primary)' }}>{group.totalRevenue.toLocaleString('vi-VN')}</td>
-            <td style={{ padding: '10px', textAlign: 'right', fontFamily: fontMono, fontWeight: 700, fontSize: 12.5, color: 'var(--theme-text-secondary)' }}>{group.totalCost.toLocaleString('vi-VN')}</td>
-            <td style={{
-              padding: '10px', textAlign: 'right',
-              fontFamily: fontMono, fontWeight: 700, fontSize: 12.5,
-              color: group.totalProfit >= 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-error)',
-            }}>
-              {group.totalProfit.toLocaleString('vi-VN')}
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  )
+  accountant: 'Kế toán', director: 'Giám đốc', driver: 'Lái xe', superadmin: 'Quản trị',
 }
 
 function ActivityItem({ log, isFirst }: { log: AuditLogEntry; isFirst: boolean }) {
@@ -182,44 +63,42 @@ function ActivityItem({ log, isFirst }: { log: AuditLogEntry; isFirst: boolean }
 
   return (
     <div
-      className="flex gap-3 rounded-[10px] px-3.5 py-3 transition-colors duration-150 relative"
-      style={{ background: 'transparent' }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'var(--theme-brand-primary-light)')}
+      className="flex gap-3 rounded-[10px] px-3 py-2.5 transition-colors duration-150 relative"
+      onMouseEnter={e => (e.currentTarget.style.background = 'var(--theme-bg-tertiary)')}
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
       {!isFirst && (
-        <div style={{ position: 'absolute', top: 0, left: 28, width: 1, height: 12, background: 'var(--theme-border-default)' }} />
+        <div style={{ position: 'absolute', top: 0, left: 28, width: 1, height: 12, background: 'var(--theme-border-light)' }} />
       )}
       <div
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold relative"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-bold"
         style={{
-          background: isCreate ? 'var(--theme-status-warning-light)' : 'var(--theme-brand-primary-light)',
+          background: isCreate ? 'color-mix(in srgb, var(--theme-status-warning) 10%, transparent)' : 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)',
           color: isCreate ? 'var(--theme-status-warning)' : 'var(--theme-brand-primary)',
-          letterSpacing: '0.02em',
         }}
       >
         {initials}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] leading-snug" style={{ color: 'var(--theme-text-secondary)' }}>
+        <p className="text-[12.5px] leading-snug" style={{ color: 'var(--theme-text-secondary)' }}>
           <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{actorLabel}</span>{' '}
-          <span className="font-semibold" style={{ color: isCreate ? 'var(--theme-status-warning)' : 'var(--theme-brand-primary)' }}>đã {activityText}</span>
+          <span style={{ color: isCreate ? 'var(--theme-status-warning)' : 'var(--theme-brand-primary)' }}>đã {activityText}</span>
           {log.subjectName && (
             <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
               {(() => { const pfx = SUBJECT_PREFIX[log.tableName]; return pfx ? ` ${pfx} ` : ' ' })()}{log.subjectName}
             </span>
           )}
         </p>
-        <p className="mt-1" style={{ fontFamily: fontMono, fontSize: 10, color: 'var(--theme-text-muted)', letterSpacing: '0.02em' }}>
+        <p className="mt-0.5" style={{ fontFamily: fontMono, fontSize: 10, color: 'var(--theme-text-muted)' }}>
           {timeStr} · {dateStr}
         </p>
         {changes && (
           <div className="flex flex-wrap gap-1.5 mt-1">
             {changes.map((c, ci) => (
-              <span key={ci} className="inline-flex items-center gap-1 text-[11px] rounded-md px-2 py-0.5" style={{ background: 'var(--theme-border-default)', border: '1px solid var(--theme-border-default)' }}>
-                <span className="font-medium" style={{ color: 'var(--theme-text-muted)' }}>{c.label}:</span>
+              <span key={ci} className="inline-flex items-center gap-1 text-[11px] rounded-md px-2 py-0.5" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                <span style={{ color: 'var(--theme-text-muted)' }}>{c.label}:</span>
                 <span className="line-through" style={{ color: 'var(--theme-text-muted)' }}>{c.old.toLocaleString('vi-VN')}</span>
-                <ArrowUpRight className="h-2.5 w-2.5" style={{ color: 'var(--theme-text-muted)' }} />
+                <span style={{ color: 'var(--theme-text-muted)' }}>→</span>
                 <span className="font-bold" style={{ color: 'var(--theme-brand-primary)' }}>{c.new.toLocaleString('vi-VN')}</span>
               </span>
             ))}
@@ -230,9 +109,79 @@ function ActivityItem({ log, isFirst }: { log: AuditLogEntry; isFirst: boolean }
   )
 }
 
+// ─── Vehicle bar list ────────────────────────────────────────────────────────
+
+function VehicleBarList({ rows }: { rows: VehiclePnLRow[] }) {
+  if (rows.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 py-6">
+        <p className="text-xs text-center" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu</p>
+      </div>
+    )
+  }
+
+  const maxAbs = Math.max(1, ...rows.map(r => Math.abs(r.loiNhuan)))
+
+  return (
+    <div>
+      <div
+        className="grid items-center gap-x-3 px-2 pb-2 mb-1"
+        style={{ gridTemplateColumns: '76px 1fr 68px 38px', borderBottom: '1px solid var(--theme-border-light)' }}
+      >
+        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Biển số</span>
+        <span />
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--theme-text-muted)' }}>Lãi</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--theme-text-muted)' }}>Biên</span>
+      </div>
+      <div>
+        {rows.map(row => {
+          const isProfit = row.loiNhuan >= 0
+          const marginPct = row.revenue > 0 ? (row.loiNhuan / row.revenue) * 100 : null
+          const barWidth = row.loiNhuan !== 0 ? Math.max(3, (Math.abs(row.loiNhuan) / maxAbs) * 100) : 0
+
+          return (
+            <div
+              key={row.vehicleId}
+              className="grid items-center gap-x-3 py-[7px] px-2 rounded-lg transition-colors duration-100"
+              style={{ gridTemplateColumns: '76px 1fr 68px 38px' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--theme-bg-tertiary)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <div className="min-w-0">
+                <span className="font-mono text-[12px] font-semibold block truncate" style={{ color: 'var(--theme-text-primary)' }}>{row.plate}</span>
+                {row.isVendor && row.vendorName && (
+                  <span className="block text-[10px] truncate mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{row.vendorName}</span>
+                )}
+              </div>
+              <div className="h-[6px] rounded-full overflow-hidden" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${barWidth}%`,
+                    background: isProfit ? 'linear-gradient(90deg, #005A2D, #00B14F)' : 'linear-gradient(90deg, #DC2626, #EF4444)',
+                  }}
+                />
+              </div>
+              <span className="font-mono text-[12px] font-bold tabular-nums text-right whitespace-nowrap" style={{ color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
+                {row.loiNhuan === 0 ? '0' : `${isProfit ? '+' : ''}${fmtCompact(row.loiNhuan)}`}
+              </span>
+              <span className="font-mono text-[11px] tabular-nums text-right" style={{ color: 'var(--theme-text-muted)' }}>
+                {marginPct != null ? `${marginPct.toFixed(0)}%` : '—'}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── Main component ────────────────────────────────────────────────────────
+
 export function DirectorDashboard() {
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
   const isMobile = useIsMobile(768)
+  const { data: profile } = useProfile()
 
   const { data: stats } = useDirectorDashboard(dateFrom, dateTo)
 
@@ -246,17 +195,18 @@ export function DirectorDashboard() {
   const buckets     = stats?.buckets     ?? []
   const topRoutes   = stats?.topRoutes   ?? []
   const topDrivers  = stats?.topDrivers  ?? []
-
   const totalDelta     = stats?.totalDelta     ?? null
   const revenueDelta   = stats?.revenueDelta   ?? null
   const costDelta      = stats?.costDelta      ?? null
   const profitDelta    = stats?.profitDelta    ?? null
-
-  const ownFleetPnl: VehiclePnLGroup = stats?.ownFleetPnl ?? { rows: [], totalRevenue: 0, totalCost: 0, totalProfit: 0, tripCount: 0 }
-  const vendorPnl: VehiclePnLGroup   = stats?.vendorPnl   ?? { rows: [], totalRevenue: 0, totalCost: 0, totalProfit: 0, tripCount: 0 }
+  const ownFleetRows   = stats?.ownFleetPnl?.rows ?? []
+  const vendorRows     = stats?.vendorPnl?.rows ?? []
+  const ownFleetProfit = stats?.ownFleetPnl?.totalProfit ?? 0
+  const vendorProfit   = stats?.vendorPnl?.totalProfit ?? 0
 
   const prevMonth = month === 1 ? 12 : month - 1
 
+  // ── Audit log ──
   const PAGE_SIZE = 15
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([])
   const [auditPage, setAuditPage] = useState(1)
@@ -311,246 +261,253 @@ export function DirectorDashboard() {
 
   const sentinelRef = useInfiniteScroll(loadMore)
 
-  const fadeStyle = `
-@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-@keyframes pulse2 { 0%,100%{box-shadow:0 0 0 4px var(--theme-brand-primary-light)} 50%{box-shadow:0 0 0 7px rgba(0,90,45,.08)} }
-`
-
-  const pct = total > 0 ? Math.round((matched / total) * 100) : 0
   const maxRouteCount = topRoutes.length > 0 ? topRoutes[0].count : 1
 
-  function getInitials(name: string) {
-    const parts = name.trim().split(/\s+/)
-    if (parts.length >= 2) return (parts[parts.length - 2][0] + parts[parts.length - 1][0]).toUpperCase()
-    return name.slice(0, 2).toUpperCase()
-  }
-
   return (
-    <>
-      <style>{fadeStyle}</style>
-      <div style={{ padding: isMobile ? '16px 12px 32px' : '32px 40px 48px', maxWidth: 1480, margin: '0 auto' }}>
+    <div style={{ padding: isMobile ? '16px 12px 32px' : '32px 40px 48px', maxWidth: 1480, margin: '0 auto' }}>
 
-        <div className="flex flex-col md:grid md:grid-cols-3 md:items-center mb-7 gap-4" style={{ animation: 'fadeIn 0.5s ease both' }}>
-          <div>
-            <h1 style={{ fontSize: isMobile ? 26 : 32, fontWeight: 700, color: 'var(--theme-text-primary)', letterSpacing: '-0.025em', lineHeight: 1.1 }}>
-              Tổng quan điều hành
-            </h1>
-            <div className="flex items-center gap-2.5 mt-2 text-[13px]" style={{ color: 'var(--theme-text-muted)' }}>
-              <span
-                className="inline-block h-[7px] w-[7px] rounded-full"
-                style={{ background: 'var(--theme-brand-primary)', boxShadow: '0 0 0 4px var(--theme-brand-primary-light)', animation: 'pulse2 2s ease-in-out infinite' }}
-              />
-              Cập nhật trực tiếp
-            </div>
-          </div>
-
-          <div className="flex justify-start md:justify-center w-full md:w-auto">
-            <div className="flex items-center gap-1 rounded-xl border p-1" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', borderRadius: 12 }}>
-              <button onClick={onPrev} className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-[#F1F7F3]" aria-label="Tháng trước">
-                <ChevronLeft style={{ width: 14, height: 14, stroke: 'var(--theme-text-secondary)' }} />
-              </button>
-              <div className="px-3.5 text-center">
-                <div className="text-[13px] font-bold" style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.005em' }}>
-                  Tháng {pad(month)} · {year}
-                </div>
-                <div style={{ fontFamily: fontMono, fontSize: 10, color: 'var(--theme-text-muted)', letterSpacing: '0.02em', marginTop: 1 }}>
-                  {dateFrom.slice(5)} → {dateTo.slice(5)}
-                </div>
-              </div>
-              <button onClick={onNext} className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-[#F1F7F3]" aria-label="Tháng sau">
-                <ChevronRight style={{ width: 14, height: 14, stroke: 'var(--theme-text-secondary)' }} />
-              </button>
-            </div>
-          </div>
-
-          <div className="flex justify-start md:justify-end w-full md:w-auto">
-            <Link
-              to="/director/users"
-              className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] w-full md:w-auto"
-              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', boxShadow: '0 1px 3px rgba(0,90,45,0.18)' }}
-            >
-              <Users style={{ width: 14, height: 14 }} strokeWidth={2.2} />
-              Quản lý người dùng
-            </Link>
-          </div>
+      {/* ── Greeting header ── */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-7">
+        <div>
+          <h1
+            className="text-[22px] font-extrabold tracking-tight leading-tight"
+            style={{ color: 'var(--theme-text-primary)' }}
+          >
+            {greeting()},{' '}
+            <span>{profile?.fullName || 'bạn'}</span>
+          </h1>
+          <p className="mt-1.5 text-[13px]" style={{ color: 'var(--theme-text-secondary)' }}>
+            {total} chuyến · {matched} đã ghép · {pending} chờ xử lý
+          </p>
         </div>
 
-        <div className="bento-grid mt-6">
-          <KpiCard
-            label="Tổng chuyến"
-            value={total.toLocaleString('vi-VN')}
-            context={`So với tháng ${pad(prevMonth)}`}
-            trend={totalDelta != null ? { value: `${Math.abs(totalDelta)}%`, positive: totalDelta >= 0 } : undefined}
-            delay={60}
-            className="bento-col-12 sm:bento-col-6 lg:bento-col-3"
-          />
-          <KpiCard
-            label="Doanh thu"
-            value={revenue.toLocaleString('vi-VN')}
-            unit=" VNĐ"
-            context={avgRev > 0 ? `Trung bình ${avgRev.toLocaleString('vi-VN')} / chuyến` : undefined}
-            trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta >= 0 } : undefined}
-            accentColor='var(--theme-status-warning)'
-            accentTint='var(--theme-status-warning-light)'
-            delay={120}
-            className="bento-card-gradient-emerald bento-col-12 sm:bento-col-6 lg:bento-col-3"
-          />
-          <KpiCard
-            label="Chi phí"
-            value={totalCost.toLocaleString('vi-VN')}
-            unit=" VNĐ"
-            context={revenue > 0 ? `Tỷ lệ ${Math.round((totalCost / revenue) * 100)}% doanh thu` : undefined}
-            trend={costDelta != null ? { value: `${Math.abs(costDelta)}%`, positive: costDelta <= 0 } : undefined}
-            accentColor='var(--theme-status-error)'
-            accentTint='var(--theme-status-error-light)'
-            delay={180}
-            className="bento-card-gradient-rose bento-col-12 sm:bento-col-6 lg:bento-col-3"
-          />
-          <KpiCard
-            label="Lợi nhuận"
-            value={profit.toLocaleString('vi-VN')}
-            unit=" VNĐ"
-            context={revenue > 0 ? `Biên ${Math.round((profit / revenue) * 100)}%` : undefined}
-            trend={profitDelta != null ? { value: `${Math.abs(profitDelta)}%`, positive: profitDelta >= 0 } : undefined}
-            accentColor={profit >= 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-error)'}
-            accentTint={profit >= 0 ? 'var(--theme-brand-primary-light)' : 'var(--theme-status-error-light)'}
-            delay={240}
-            className={`${profit >= 0 ? 'bento-card-gradient-blue' : 'bento-card-gradient-rose'} bento-col-12 sm:bento-col-6 lg:bento-col-3`}
-          />
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Month navigator */}
+          <div className="flex items-center gap-1 rounded-xl border p-1" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
+            <button onClick={onPrev} className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-[#F1F7F3]" aria-label="Tháng trước">
+              <ChevronLeft style={{ width: 14, height: 14, stroke: 'var(--theme-text-secondary)' }} />
+            </button>
+            <div className="px-3.5 text-center">
+              <div className="text-[13px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+                Tháng {pad(month)} · {year}
+              </div>
+              <div style={{ fontFamily: fontMono, fontSize: 10, color: 'var(--theme-text-muted)', marginTop: 1 }}>
+                {dateFrom.slice(5)} → {dateTo.slice(5)}
+              </div>
+            </div>
+            <button onClick={onNext} className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-[#F1F7F3]" aria-label="Tháng sau">
+              <ChevronRight style={{ width: 14, height: 14, stroke: 'var(--theme-text-secondary)' }} />
+            </button>
+          </div>
 
-          {/* Bar chart */}
+          {/* CTA */}
+          <Link
+            to="/director/users"
+            className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', boxShadow: '0 1px 3px rgba(0,90,45,0.18)' }}
+          >
+            <Users style={{ width: 14, height: 14 }} strokeWidth={2.2} />
+            Quản lý người dùng
+          </Link>
+        </div>
+      </header>
+
+      {/* ── KPI row ── */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
+        <KpiHeroCard
+          label={`Tổng chuyến · ${pad(month)}/${year}`}
+          formattedValue={<span>{total.toLocaleString('vi-VN')}</span>}
+          icon={Activity}
+          color="emerald"
+          sublabel={`${pending} chờ ghép · ${matched} đã ghép`}
+          trend={totalDelta != null ? { value: `${Math.abs(totalDelta)}%`, positive: totalDelta >= 0 } : undefined}
+        />
+        <KpiHeroCard
+          label="Doanh thu"
+          formattedValue={<span>{fmtCompact(revenue)}</span>}
+          icon={TrendingUp}
+          color="blue"
+          sublabel={avgRev > 0 ? `TB ${fmtCompact(avgRev)}/chuyến` : 'Chưa có doanh thu'}
+          trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta >= 0 } : undefined}
+        />
+        <KpiHeroCard
+          label="Chi phí"
+          formattedValue={<span>{fmtCompact(totalCost)}</span>}
+          icon={TrendingDown}
+          color="rose"
+          sublabel={revenue > 0 ? `${Math.round((totalCost / revenue) * 100)}% doanh thu` : 'Chưa có dữ liệu'}
+          trend={costDelta != null ? { value: `${Math.abs(costDelta)}%`, positive: costDelta <= 0 } : undefined}
+        />
+        <KpiHeroCard
+          label="Lợi nhuận"
+          formattedValue={<span>{fmtCompact(profit)}</span>}
+          icon={Coins}
+          color="amber"
+          sublabel={revenue > 0 ? `Biên ${Math.round((profit / revenue) * 100)}%` : 'Chưa có dữ liệu'}
+          trend={profitDelta != null ? { value: `${Math.abs(profitDelta)}%`, positive: profitDelta >= 0 } : undefined}
+        />
+      </div>
+
+      {/* ── Main grid ── */}
+      <div className="bento-grid">
+        {/* Left column wrapping Chart and Top lists to prevent grid height mismatch empty space */}
+        <div className="bento-col-12 lg:bento-col-8 flex flex-col gap-5 md:gap-6">
+          {/* Chart */}
           <TripChartCard
             title="Tần suất chuyến đi"
             subtitle={`Tháng ${pad(month)} · ${year}`}
             bars={buckets}
-            className="bento-col-12 lg:bento-col-8"
-            style={{ minHeight: 330 }}
           />
 
-          {/* Hoạt động gần đây */}
-          <div className="bento-card bento-col-12 lg:bento-col-4 lg:bento-row-2 flex flex-col">
-            <div className="pb-3" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
-              <div className="text-[14px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>Hoạt động gần đây</div>
+          {/* Top lists row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+            {/* Top routes */}
+            <div className="bento-card">
+              <DashboardSectionHeader
+                title="Tuyến đường nổi bật"
+                icon={BarChart3}
+                className="pb-3"
+              />
+              <div className="mb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }} />
+              <div className="flex flex-col gap-2.5">
+                {topRoutes.length === 0 && (
+                  <p className="text-xs py-4 text-center" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu</p>
+                )}
+                {topRoutes.slice(0, 5).map((r, i) => (
+                  <div key={r.name} className="flex items-center gap-3">
+                    <span className="w-5 shrink-0 flex items-center justify-center h-5 rounded-md text-[10px] font-bold" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)', color: 'var(--theme-brand-primary)' }}>
+                      {i + 1}
+                    </span>
+                    <span className="flex-grow truncate text-[12.5px] font-medium" style={{ color: 'var(--theme-text-secondary)' }}>{r.name}</span>
+                    <div className="w-20 h-[6px] rounded-full overflow-hidden" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                      <div className="h-full rounded-full" style={{ width: `${(r.count / maxRouteCount) * 100}%`, background: 'linear-gradient(90deg, #005A2D, #00B14F)' }} />
+                    </div>
+                    <span className="w-6 shrink-0 text-right text-[11px] font-bold font-mono tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{r.count}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex-grow overflow-y-auto mt-3 px-1 custom-scrollbar" style={{ maxHeight: 520 }}>
-              {auditLogs.length === 0 && !auditLoading ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-2 h-full">
-                  <Activity className="w-8 h-8" style={{ color: 'var(--theme-border-default)' }} />
-                  <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có hoạt động nào</p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {auditLogs.map((log, i) => <ActivityItem key={log.id} log={log} isFirst={i === 0} />)}
-                  {hasMore && (
-                    <div ref={sentinelRef} className="flex items-center justify-center py-3">
-                      {auditLoading && (
-                        <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Đang tải…</span>
+
+            {/* Top drivers */}
+            <div className="bento-card">
+              <DashboardSectionHeader
+                title="Lái xe dẫn đầu"
+                icon={Users}
+                className="pb-3"
+              />
+              <div className="mb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }} />
+              <div className="flex flex-col gap-1">
+                {topDrivers.length === 0 && (
+                  <p className="text-xs py-4 text-center" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu</p>
+                )}
+                {topDrivers.slice(0, 5).map((d, i) => (
+                  <div
+                    key={d.name + (d as any).plate}
+                    className="flex items-center gap-3 py-2 px-2 rounded-lg"
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--theme-bg-tertiary)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <span className="w-5 shrink-0 flex items-center justify-center h-5 rounded-md text-[10px] font-bold" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)', color: 'var(--theme-brand-primary)' }}>
+                      {i + 1}
+                    </span>
+                    <div className="flex-grow min-w-0">
+                      <p className="truncate text-[12.5px] font-semibold leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</p>
+                      {(d as any).plate && (
+                        <p className="truncate text-[10px] leading-tight mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{(d as any).plate}</p>
                       )}
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Top routes */}
-          <div className="bento-card bento-col-12 lg:bento-col-4">
-            <div className="pb-3" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
-              <p className="text-[13px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-primary)' }}>Tuyến đường nổi bật</p>
-            </div>
-            <div className="flex flex-col gap-3 mt-4">
-              {topRoutes.length === 0 && (
-                <p className="text-xs py-4 text-center" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu</p>
-              )}
-              {topRoutes.slice(0, 5).map((r, i) => (
-                <div key={r.name} className="flex items-center gap-3">
-                  <span className="w-4 shrink-0 text-[10px] font-semibold font-mono" style={{ color: 'var(--theme-text-muted)' }}>{String(i + 1).padStart(2, '0')}</span>
-                  <span className="flex-grow truncate text-[12.5px] font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>{r.name}</span>
-                  <div className="w-24 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--theme-border-default)' }}>
-                    <div className="h-full rounded-full" style={{ width: `${maxRouteCount > 0 ? (r.count / maxRouteCount) * 100 : 0}%`, background: 'var(--theme-brand-primary)' }} />
+                    <span className="text-[12px] font-bold font-mono tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{d.tripCount} chuyến</span>
                   </div>
-                  <span className="w-6 shrink-0 text-right text-[11px] font-bold font-mono" style={{ color: 'var(--theme-text-primary)' }}>{r.count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Top drivers */}
-          <div className="bento-card bento-col-12 lg:bento-col-4">
-            <div className="pb-3" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
-              <p className="text-[13px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-primary)' }}>Lái xe dẫn đầu</p>
-            </div>
-            <div className="flex flex-col gap-3 mt-4">
-              {topDrivers.length === 0 && (
-                <p className="text-xs py-4 text-center" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu</p>
-              )}
-              {topDrivers.slice(0, 4).map((d, i) => (
-                <div key={d.name + d.plate} className="flex items-center gap-3" style={{ paddingTop: i > 0 ? 10 : undefined, borderTop: i > 0 ? '1px solid var(--theme-border-light)' : undefined }}>
-                  <div className="flex-grow min-w-0">
-                    <p className="truncate text-[13px] font-bold leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</p>
-                    <p className="truncate text-[11px] leading-tight mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{d.plate}</p>
-                  </div>
-                  <span className="text-[12.5px] font-bold font-mono" style={{ color: 'var(--theme-text-primary)' }}>{d.tripCount} chuyến</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Xe nội bộ */}
-          <div className="bento-card bento-col-12 lg:bento-col-6">
-            <div className="flex items-center justify-between pb-3" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
-              <div className="text-[14px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-                Xe nội bộ
+                ))}
               </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                  style={{
-                    fontFamily: fontMono,
-                    background: ownFleetPnl.totalProfit >= 0 ? 'var(--theme-brand-primary-light)' : 'var(--theme-status-error-light)',
-                    color:      ownFleetPnl.totalProfit >= 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-error)',
-                  }}
-                >
-                  Lãi {ownFleetPnl.totalProfit.toLocaleString('vi-VN')}
-                </span>
-                <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-                  {ownFleetPnl.rows.length} xe
-                </span>
-              </div>
-            </div>
-            <div className="mt-3">
-              <VehiclePnLTable group={ownFleetPnl} emptyHint="Chưa có dữ liệu xe nhà" />
-            </div>
-          </div>
-
-          {/* Xe ngoài */}
-          <div className="bento-card bento-col-12 lg:bento-col-6">
-            <div className="flex items-center justify-between pb-3" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
-              <div className="text-[14px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-                Xe ngoài
-              </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                  style={{
-                    fontFamily: fontMono,
-                    background: vendorPnl.totalProfit >= 0 ? 'var(--theme-brand-primary-light)' : 'var(--theme-status-error-light)',
-                    color:      vendorPnl.totalProfit >= 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-error)',
-                  }}
-                >
-                  Lãi {vendorPnl.totalProfit.toLocaleString('vi-VN')}
-                </span>
-                <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-                  {vendorPnl.rows.length} xe
-                </span>
-              </div>
-            </div>
-            <div className="mt-3">
-              <VehiclePnLTable group={vendorPnl} emptyHint="Chưa có dữ liệu xe ngoài" />
             </div>
           </div>
         </div>
+
+        {/* Hoạt động gần đây */}
+        <div className="bento-card bento-col-12 lg:bento-col-4 flex flex-col">
+          <div className="pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+            <div className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Hoạt động gần đây</div>
+          </div>
+          <div className="flex-grow overflow-y-auto mt-2 px-1 custom-scrollbar" style={{ maxHeight: 520 }}>
+            {auditLogs.length === 0 && !auditLoading ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-2 h-full">
+                <Activity className="w-7 h-7" style={{ color: 'var(--theme-text-muted)' }} />
+                <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có hoạt động nào</p>
+              </div>
+            ) : (
+              <div className="space-y-0.5">
+                {auditLogs.map((log, i) => <ActivityItem key={log.id} log={log} isFirst={i === 0} />)}
+                {hasMore && (
+                  <div ref={sentinelRef} className="flex items-center justify-center py-3">
+                    {auditLoading && (
+                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Đang tải…</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Xe nội bộ */}
+        <div className="bento-card bento-col-12 lg:bento-col-6">
+          <DashboardSectionHeader
+            title="Xe nội bộ"
+            icon={Truck}
+            className="pb-3"
+            right={
+              <div className="flex items-center gap-2">
+                {ownFleetRows.length > 0 && (
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[10px] font-bold font-mono"
+                    style={{
+                      background: ownFleetProfit >= 0
+                        ? 'color-mix(in srgb, var(--theme-status-success) 10%, transparent)'
+                        : 'color-mix(in srgb, var(--theme-status-error) 10%, transparent)',
+                      color: ownFleetProfit >= 0 ? 'var(--theme-status-success)' : 'var(--theme-status-error)',
+                    }}
+                  >
+                    {ownFleetProfit >= 0 ? '+' : ''}{fmtCompact(ownFleetProfit)}
+                  </span>
+                )}
+                <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{ownFleetRows.length} xe</span>
+              </div>
+            }
+          />
+          <div className="mb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }} />
+          <VehicleBarList rows={ownFleetRows} />
+        </div>
+
+        {/* Xe ngoài */}
+        <div className="bento-card bento-col-12 lg:bento-col-6">
+          <DashboardSectionHeader
+            title="Xe ngoài"
+            icon={Truck}
+            className="pb-3"
+            right={
+              <div className="flex items-center gap-2">
+                {vendorRows.length > 0 && (
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[10px] font-bold font-mono"
+                    style={{
+                      background: vendorProfit >= 0
+                        ? 'color-mix(in srgb, var(--theme-status-success) 10%, transparent)'
+                        : 'color-mix(in srgb, var(--theme-status-error) 10%, transparent)',
+                      color: vendorProfit >= 0 ? 'var(--theme-status-success)' : 'var(--theme-status-error)',
+                    }}
+                  >
+                    {vendorProfit >= 0 ? '+' : ''}{fmtCompact(vendorProfit)}
+                  </span>
+                )}
+                <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{vendorRows.length} xe</span>
+              </div>
+            }
+          />
+          <div className="mb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }} />
+          <VehicleBarList rows={vendorRows} />
+        </div>
       </div>
-    </>
+    </div>
   )
 }

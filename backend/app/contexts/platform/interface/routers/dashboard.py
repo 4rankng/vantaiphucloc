@@ -1062,12 +1062,6 @@ async def _compute_vehicle_pnl_rows(db: AsyncSession, df, dt) -> list[VehiclePnL
             khac=xe_cats.get("KHAC", 0),
             total=sum(xe_cats.values()),
         )
-        # Skip rows that had no activity AND no expenses for the period.
-        if (
-            rev == 0 and sal == 0 and base == 0 and vcost == 0
-            and xe_summary.total == 0 and trip_count_by_vehicle.get(vid, 0) == 0
-        ):
-            continue
         loi_nhuan = rev - (xe_summary.total + sal + base + vcost)
         vnd_id = vendor_id_by_vehicle.get(vid)
         rows.append(VehiclePnLRow(

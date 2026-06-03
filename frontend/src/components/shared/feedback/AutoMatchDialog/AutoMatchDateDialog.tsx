@@ -1,9 +1,10 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useCallback, useEffect } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog'
-import { RobotDialogHero } from '@/components/shared/feedback/RobotHead'
 import { Input } from '@/components/ui/Input'
 import { useSalaryConfig } from '@/hooks/use-queries'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Zap } from 'lucide-react'
+import { RobotDialogHero } from '@/components/shared/feedback/RobotHead'
 
 interface Props {
   open: boolean
@@ -20,18 +21,9 @@ function toYearMonth(dateStr: string): { year: number; month: number } {
   return { year: y || new Date().getFullYear(), month: m || new Date().getMonth() + 1 }
 }
 
-function firstDayOf(year: number, month: number): string {
-  return `${year}-${String(month).padStart(2, '0')}-01`
-}
-
-function lastDayOf(year: number, month: number): string {
-  const last = new Date(year, month, 0).getDate()
-  return `${year}-${String(month).padStart(2, '0')}-${String(last).padStart(2, '0')}`
-}
-
 function addMonths(year: number, month: number, delta: number): { year: number; month: number } {
   let m = month - 1 + delta
-  let y = year + Math.floor(m / 12)
+  const y = year + Math.floor(m / 12)
   m = ((m % 12) + 12) % 12
   return { year: y, month: m + 1 }
 }
@@ -46,7 +38,7 @@ function PeriodNav({
   month,
   onPrev,
   onNext,
-  accentColor = 'var(--theme-ai-accent)',
+  accentColor = 'var(--accent)',
 }: {
   label: string
   year: number
@@ -57,25 +49,23 @@ function PeriodNav({
 }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[13px] font-semibold" style={{ color: accentColor }}>{label}</p>
+      <p className="text-[13px] font-medium" style={{ color: 'var(--ink-2)' }}>{label}</p>
       <div
         className="flex items-center justify-between rounded-xl px-1 py-1"
-        style={{ border: `1.5px solid ${accentColor}66`, background: 'white', gap: 4 }}
+        style={{ border: `1.5px solid var(--line-2)`, background: 'white', gap: 4 }}
       >
         <button
           type="button"
           onClick={onPrev}
-          className="flex items-center justify-center w-7 h-7 rounded-lg transition-all hover:scale-110 active:scale-95"
-          style={{ color: accentColor, background: 'transparent' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = `${accentColor}18` }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+          className="flex items-center justify-center w-7 h-7 rounded-lg transition-all hover:scale-110 active:scale-95 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+          style={{ background: 'transparent' }}
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
 
         <span
           className="flex-1 text-center text-sm font-semibold select-none"
-           style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.01em' }}
+           style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}
         >
           {VI_MONTHS[month - 1]} / <span style={{ color: accentColor, fontWeight: 700 }}>{year}</span>
         </span>
@@ -83,10 +73,8 @@ function PeriodNav({
         <button
           type="button"
           onClick={onNext}
-          className="flex items-center justify-center w-7 h-7 rounded-lg transition-all hover:scale-110 active:scale-95"
-          style={{ color: accentColor, background: 'transparent' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = `${accentColor}18` }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+          className="flex items-center justify-center w-7 h-7 rounded-lg transition-all hover:scale-110 active:scale-95 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+          style={{ background: 'transparent' }}
         >
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -196,7 +184,7 @@ export function AutoMatchDateDialog({ open, onClose, defaultDateFrom, defaultDat
     <Dialog open={open} onOpenChange={isPending ? undefined : handleOpen}>
       <DialogContent
         className="max-w-sm overflow-hidden p-0 border-0 gap-0"
-        style={{ borderRadius: 20, boxShadow: '0 24px 60px rgba(0,0,0,0.35)' }}
+        style={{ borderRadius: 20, boxShadow: 'var(--sh-lg)', background: 'var(--surface)' }}
       >
         <DialogTitle style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', borderWidth: 0 }}>
           Đối chiếu tự động
@@ -204,7 +192,28 @@ export function AutoMatchDateDialog({ open, onClose, defaultDateFrom, defaultDat
 
         {/* ── Hero Header ─────────────────────────────── */}
         <RobotDialogHero
-          title={isPending ? 'Đang quét dữ liệu…' : 'Đối chiếu tự động'}
+          title={
+            isPending ? (
+              <h2 className="text-base font-bold text-white tracking-tight select-none animate-pulse" style={{ margin: 0 }}>
+                Đang quét dữ liệu…
+              </h2>
+            ) : (
+              <div className="flex flex-col items-center gap-1 select-none">
+                <span
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.16)',
+                    border: '1px solid rgba(255, 255, 255, 0.28)',
+                    color: 'white',
+                    boxShadow: '0 2px 8px rgba(99,102,241,0.2)'
+                  }}
+                >
+                  <Zap className="w-2.8 h-2.8 text-yellow-300 fill-yellow-300" />
+                  Hệ thống quét AI
+                </span>
+              </div>
+            )
+          }
           thinking={isPending}
         >
           {isPending && <ScanMessages />}
@@ -212,7 +221,7 @@ export function AutoMatchDateDialog({ open, onClose, defaultDateFrom, defaultDat
 
         {/* ── Pickers ───────────────────────────────────── */}
         {!isPending && (
-          <div className="px-6 py-5 space-y-5" style={{ background: 'var(--theme-bg-secondary)' }}>
+          <div className="px-6 py-5 space-y-5">
             
             {/* Month Selector */}
             <PeriodNav
@@ -221,7 +230,7 @@ export function AutoMatchDateDialog({ open, onClose, defaultDateFrom, defaultDat
               month={period.month}
               onPrev={handlePrevPeriod}
               onNext={handleNextPeriod}
-              accentColor="var(--theme-ai-accent)"
+              accentColor="var(--accent)"
             />
 
             {/* Date Range */}
@@ -232,7 +241,7 @@ export function AutoMatchDateDialog({ open, onClose, defaultDateFrom, defaultDat
                   type="date" 
                   value={dateFrom} 
                   onChange={(e) => setDateFrom(e.target.value)} 
-                  style={{ backgroundColor: 'white', color: 'var(--theme-text-primary)' }}
+                  style={{ backgroundColor: 'white', color: 'var(--ink)' }}
                 />
               </div>
               <div className="space-y-1.5">
@@ -241,7 +250,7 @@ export function AutoMatchDateDialog({ open, onClose, defaultDateFrom, defaultDat
                   type="date" 
                   value={dateTo} 
                   onChange={(e) => setDateTo(e.target.value)} 
-                  style={{ backgroundColor: 'white', color: 'var(--theme-text-primary)' }}
+                  style={{ backgroundColor: 'white', color: 'var(--ink)' }}
                 />
               </div>
             </div>
@@ -252,7 +261,7 @@ export function AutoMatchDateDialog({ open, onClose, defaultDateFrom, defaultDat
         {/* ── Footer ───────────────────────────────────── */}
         <div
           className="flex items-center justify-between px-6 py-4"
-          style={{ background: 'var(--theme-bg-secondary)', borderTop: isPending ? 'none' : '1px solid var(--theme-border-default)' }}
+          style={{ borderTop: isPending ? 'none' : '1px solid var(--line-2)' }}
         >
           {isPending ? (
             <div style={{ height: 8 }} />
@@ -260,22 +269,18 @@ export function AutoMatchDateDialog({ open, onClose, defaultDateFrom, defaultDat
             <>
               <button
                 onClick={onClose}
-                className="text-sm font-medium transition-colors"
-                style={{ color: 'var(--theme-text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 0' }}
-                onMouseEnter={e => (e.currentTarget.style.color = 'var(--theme-text-primary)')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'var(--theme-text-muted)')}
+                className="text-sm font-semibold transition-colors"
+                style={{ color: 'var(--ink-3)', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 0' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--ink)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'var(--ink-3)')}
               >
                 Hủy
               </button>
               <button
                 onClick={handleConfirm}
-                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-white text-sm font-medium bg-violet-600 hover:bg-violet-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-1"
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-white text-sm font-semibold bg-[var(--accent)] hover:bg-[var(--accent-2)] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[rgba(0,177,79,0.3)] shadow-[0_4px_10px_-3px_rgba(0,177,79,0.32)]"
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
-                  <path d="M20 3v4"/><path d="M22 5h-4"/>
-                  <path d="M4 17v2"/><path d="M5 18H3"/>
-                </svg>
+                <Zap className="w-3.5 h-3.5" />
                 Bắt đầu quét
               </button>
             </>

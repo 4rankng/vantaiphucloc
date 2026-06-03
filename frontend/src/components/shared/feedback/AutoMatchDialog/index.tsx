@@ -410,7 +410,7 @@ export function AutoMatchDialog({
                             : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 opacity-60 hover:opacity-100"
                         )}
                       >
-                        Lái xe: {dStr}
+                        {dStr}
                       </button>
                       <ArrowRight className="h-3 w-3 flex-shrink-0 text-gray-400" />
                       <button
@@ -432,7 +432,7 @@ export function AutoMatchDialog({
                             : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 opacity-60 hover:opacity-100"
                         )}
                       >
-                        Chủ hàng: {bStr}
+                        {bStr}
                       </button>
                     </span>
                   ) : (

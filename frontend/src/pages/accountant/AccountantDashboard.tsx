@@ -3,15 +3,13 @@ import {
   useMonthlyPnL,
   useVehiclePnL,
   useTripDailyStats,
+  useProfile,
 } from '@/hooks/use-queries'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
-import { PageHeader } from '@/components/shared/layouts/PageHeader'
 import { KpiHeroCard } from '@/components/shared/data-display/KpiHeroCard'
 import { DashboardSectionHeader } from '@/components/shared/data-display/DashboardSectionHeader'
-import { RevealList, Reveal } from '@/components/shared/feedback/Reveal'
 import { AnimatedNumber } from '@/components/shared'
-import { DashboardCard } from '@/components/shared/data-display/DashboardCard'
 import { TripChartCard } from '@/components/shared/data-display/TripChartCard'
 import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull as fmt } from '@/data/domain'
@@ -21,6 +19,22 @@ import {
   TrendingUp,
   TrendingDown, BarChart3, Truck, Coins,
 } from 'lucide-react'
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+const greeting = () => {
+  const h = new Date().getHours()
+  if (h < 12) return 'Chào buổi sáng'
+  if (h < 18) return 'Chào buổi chiều'
+  return 'Chào buổi tối'
+}
+
+const fmtCompact = (n: number): string => {
+  if (Math.abs(n) >= 1e9) return `${(n / 1e9).toFixed(1)} tỷ`
+  if (Math.abs(n) >= 1e6) return `${(n / 1e6).toFixed(1)} tr`
+  if (Math.abs(n) >= 1e3) return `${(n / 1e3).toFixed(0)}K`
+  return n.toLocaleString('vi-VN')
+}
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
@@ -42,42 +56,6 @@ function EmptyState({ icon: Icon, text }: { icon: React.ElementType; text: strin
 
 type NoiBoSortCol  = 'plate' | 'revenue' | 'totalCp' | 'profit' | 'margin'
 type NgoaiSortCol  = 'plate' | 'vendorName' | 'revenue' | 'cpVendor' | 'profit' | 'margin'
-
-function PlateChip({ plate }: { plate: string }) {
-  return (
-    <span
-      className="inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-bold tracking-wider"
-      style={{
-        background: 'var(--theme-bg-tertiary)',
-        borderColor: 'var(--theme-border-default)',
-        color: 'var(--theme-text-primary)',
-      }}
-    >
-      {plate}
-    </span>
-  )
-}
-
-// ─── Stack helpers ──────────────────────────────────────────────────────────
-
-function StackMetric({ label, value, color }: { label: string; value: string; color?: string }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span
-        className="text-[10px] font-semibold uppercase tracking-wider"
-        style={{ color: 'var(--theme-text-muted)' }}
-      >
-        {label}
-      </span>
-      <span
-        className="text-[13px] font-bold tabular-nums leading-tight"
-        style={{ color: color ?? 'var(--theme-text-primary)' }}
-      >
-        {value}
-      </span>
-    </div>
-  )
-}
 
 function SortPill({
   label,
@@ -110,11 +88,39 @@ function SortPill({
   )
 }
 
-// ─── Xe nội bộ stacked cards ────────────────────────────────────────────────
+// ─── Cost donut ──────────────────────────────────────────────────────────────
 
-function NoiBoSubTable({ rows }: { rows: VehiclePnLRow[] }) {
+interface DonutSlice { name: string; pct: number; color: string }
+
+function CostDonut({ slices, total }: { slices: DonutSlice[]; total: string }) {
+  let offset = 0
+  const segs = slices.map(s => {
+    const seg = { color: s.color, dasharray: `${s.pct} ${100 - s.pct}`, dashoffset: -offset }
+    offset += s.pct
+    return seg
+  })
+  return (
+    <div className="relative flex-shrink-0" style={{ width: 110, height: 110 }}>
+      <svg viewBox="0 0 42 42" style={{ width: 110, height: 110, transform: 'rotate(-90deg)' }}>
+        <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--theme-border-light, #eef1ef)" strokeWidth="7" />
+        {segs.map((s, i) => (
+          <circle key={i} cx="21" cy="21" r="15.9" fill="none" stroke={s.color}
+                  strokeWidth="7" strokeDasharray={s.dasharray} strokeDashoffset={s.dashoffset} />
+        ))}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <span className="text-base font-bold tabular-nums leading-none" style={{ fontFamily: 'var(--theme-font-display, inherit)', color: 'var(--theme-text-primary)' }}>{total}</span>
+        <span className="text-[9px] font-semibold uppercase tracking-wider mt-1" style={{ color: 'var(--theme-text-muted)' }}>Tổng CP</span>
+      </div>
+    </div>
+  )
+}
+
+// ─── Vehicle bar list (Xe nội bộ) ────────────────────────────────────────────
+
+function NoiBoBarList({ rows }: { rows: VehiclePnLRow[] }) {
   const [sort, setSort] = useState<{ col: NoiBoSortCol; dir: 'asc' | 'desc' }>({
-    col: 'revenue',
+    col: 'profit',
     dir: 'desc',
   })
 
@@ -147,65 +153,73 @@ function NoiBoSubTable({ rows }: { rows: VehiclePnLRow[] }) {
     })
   }, [rows, sort])
 
+  const maxAbs = useMemo(
+    () => Math.max(1, ...sorted.map(r => Math.abs(r.loiNhuan))),
+    [sorted]
+  )
+
   return (
-    <div className="space-y-2">
-      <div className="flex gap-1 flex-wrap">
+    <div>
+      {/* Column headers + sort pills */}
+      <div
+        className="grid items-center gap-x-3 px-2 pb-2 mb-1"
+        style={{ gridTemplateColumns: '76px 1fr 68px 38px', borderBottom: '1px solid var(--theme-border-light)' }}
+      >
         <SortPill label="Biển số" active={sort.col === 'plate'} descending={sort.dir === 'desc'} onClick={() => toggleSort('plate')} />
-        <SortPill label="Doanh thu" active={sort.col === 'revenue'} descending={sort.dir === 'desc'} onClick={() => toggleSort('revenue')} />
-        <SortPill label="Chi phí" active={sort.col === 'totalCp'} descending={sort.dir === 'desc'} onClick={() => toggleSort('totalCp')} />
+        <span />
         <SortPill label="Lãi" active={sort.col === 'profit'} descending={sort.dir === 'desc'} onClick={() => toggleSort('profit')} />
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--theme-text-muted)' }}>Biên</span>
       </div>
 
-      <div className="space-y-1.5">
+      {/* Vehicle rows */}
+      <div>
         {sorted.map(row => {
-          const totalCp = (row.cpXe?.total ?? 0) + (row.cpLuongSanLuong ?? 0) + (row.cpLuongCoBan ?? 0)
           const isProfit = row.loiNhuan >= 0
           const marginPct = row.revenue > 0 ? (row.loiNhuan / row.revenue) * 100 : null
+          const barWidth = row.loiNhuan !== 0
+            ? Math.max(3, (Math.abs(row.loiNhuan) / maxAbs) * 100)
+            : 0
+
           return (
             <div
               key={row.vehicleId}
-              className="rounded-xl p-3 transition-all duration-200"
-              style={{
-                background: 'var(--theme-bg-primary)',
-                border: '1px solid var(--theme-border-light)',
-              }}
+              className="grid items-center gap-x-3 py-[7px] px-2 rounded-lg transition-colors duration-100"
+              style={{ gridTemplateColumns: '76px 1fr 68px 38px' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--theme-bg-tertiary)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              <div className="flex justify-between items-center mb-2.5">
-                <PlateChip plate={row.plate} />
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className="text-[13px] font-bold tabular-nums whitespace-nowrap"
-                    style={{ color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}
-                  >
-                    {isProfit ? '+' : ''}{fmt(row.loiNhuan)}
-                  </span>
-                  {marginPct != null && (
-                    <span
-                      className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums"
-                      style={{
-                        background: isProfit
-                          ? 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)'
-                          : 'color-mix(in srgb, var(--theme-status-error) 12%, transparent)',
-                        color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)',
-                      }}
-                    >
-                      {marginPct.toFixed(0)}%
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div
-                className="grid grid-cols-3 gap-3 pt-2.5"
-                style={{ borderTop: '1px solid var(--theme-border-light)' }}
+              <span
+                className="font-mono text-[12px] font-semibold truncate"
+                style={{ color: 'var(--theme-text-primary)' }}
               >
-                <StackMetric label="Doanh thu" value={fmt(row.revenue)} />
-                <StackMetric label="Chi phí" value={fmt(totalCp)} color="var(--theme-status-error)" />
-                <StackMetric
-                  label="Biên lãi"
-                  value={marginPct != null ? `${marginPct.toFixed(0)}%` : '—'}
-                  color={isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)'}
+                {row.plate}
+              </span>
+              <div
+                className="h-[6px] rounded-full overflow-hidden"
+                style={{ background: 'var(--theme-bg-tertiary)' }}
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${barWidth}%`,
+                    background: isProfit
+                      ? 'linear-gradient(90deg, #005A2D, #00B14F)'
+                      : 'linear-gradient(90deg, #DC2626, #EF4444)',
+                  }}
                 />
               </div>
+              <span
+                className="font-mono text-[12px] font-bold tabular-nums text-right whitespace-nowrap"
+                style={{ color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}
+              >
+                {row.loiNhuan === 0 ? '0' : `${isProfit ? '+' : ''}${fmtCompact(row.loiNhuan)}`}
+              </span>
+              <span
+                className="font-mono text-[11px] tabular-nums text-right"
+                style={{ color: 'var(--theme-text-muted)' }}
+              >
+                {marginPct != null ? `${marginPct.toFixed(0)}%` : '—'}
+              </span>
             </div>
           )
         })}
@@ -214,11 +228,11 @@ function NoiBoSubTable({ rows }: { rows: VehiclePnLRow[] }) {
   )
 }
 
-// ─── Xe ngoài stacked cards ──────────────────────────────────────────────────
+// ─── Vehicle bar list (Xe ngoài) ──────────────────────────────────────────────
 
-function NgoaiSubTable({ rows }: { rows: VehiclePnLRow[] }) {
+function NgoaiBarList({ rows }: { rows: VehiclePnLRow[] }) {
   const [sort, setSort] = useState<{ col: NgoaiSortCol; dir: 'asc' | 'desc' }>({
-    col: 'revenue',
+    col: 'profit',
     dir: 'desc',
   })
 
@@ -251,74 +265,80 @@ function NgoaiSubTable({ rows }: { rows: VehiclePnLRow[] }) {
     })
   }, [rows, sort])
 
+  const maxAbs = useMemo(
+    () => Math.max(1, ...sorted.map(r => Math.abs(r.loiNhuan))),
+    [sorted]
+  )
+
   return (
-    <div className="space-y-2">
-      <div className="flex gap-1 flex-wrap">
+    <div>
+      {/* Column headers + sort pills */}
+      <div
+        className="grid items-center gap-x-3 px-2 pb-2 mb-1"
+        style={{ gridTemplateColumns: '76px 1fr 68px 38px', borderBottom: '1px solid var(--theme-border-light)' }}
+      >
         <SortPill label="Biển số" active={sort.col === 'plate'} descending={sort.dir === 'desc'} onClick={() => toggleSort('plate')} />
-        <SortPill label="Nhà xe" active={sort.col === 'vendorName'} descending={sort.dir === 'desc'} onClick={() => toggleSort('vendorName')} />
-        <SortPill label="Doanh thu" active={sort.col === 'revenue'} descending={sort.dir === 'desc'} onClick={() => toggleSort('revenue')} />
-        <SortPill label="Chi phí" active={sort.col === 'cpVendor'} descending={sort.dir === 'desc'} onClick={() => toggleSort('cpVendor')} />
+        <span />
         <SortPill label="Lãi" active={sort.col === 'profit'} descending={sort.dir === 'desc'} onClick={() => toggleSort('profit')} />
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--theme-text-muted)' }}>Biên</span>
       </div>
 
-      <div className="space-y-1.5">
+      {/* Vehicle rows */}
+      <div>
         {sorted.map(row => {
           const isProfit = row.loiNhuan >= 0
           const marginPct = row.revenue > 0 ? (row.loiNhuan / row.revenue) * 100 : null
+          const barWidth = row.loiNhuan !== 0
+            ? Math.max(3, (Math.abs(row.loiNhuan) / maxAbs) * 100)
+            : 0
+
           return (
             <div
               key={row.vehicleId}
-              className="rounded-xl p-3 transition-all duration-200"
-              style={{
-                background: 'var(--theme-bg-primary)',
-                border: '1px solid var(--theme-border-light)',
-              }}
+              className="grid items-center gap-x-3 py-[7px] px-2 rounded-lg transition-colors duration-100"
+              style={{ gridTemplateColumns: '76px 1fr 68px 38px' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--theme-bg-tertiary)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              <div className="flex justify-between items-center">
-                <PlateChip plate={row.plate} />
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className="text-[13px] font-bold tabular-nums whitespace-nowrap"
-                    style={{ color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}
-                  >
-                    {isProfit ? '+' : ''}{fmt(row.loiNhuan)}
+              <div className="min-w-0">
+                <span
+                  className="font-mono text-[12px] font-semibold block truncate"
+                  style={{ color: 'var(--theme-text-primary)' }}
+                >
+                  {row.plate}
+                </span>
+                {row.vendorName && (
+                  <span className="block text-[10px] truncate mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                    {row.vendorName}
                   </span>
-                  {marginPct != null && (
-                    <span
-                      className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums"
-                      style={{
-                        background: isProfit
-                          ? 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)'
-                          : 'color-mix(in srgb, var(--theme-status-error) 12%, transparent)',
-                        color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)',
-                      }}
-                    >
-                      {marginPct.toFixed(0)}%
-                    </span>
-                  )}
-                </div>
+                )}
               </div>
-              {row.vendorName && (
-                <p className="text-[11px] mt-1.5 mb-2" style={{ color: 'var(--theme-text-muted)' }}>
-                  {row.vendorName}
-                </p>
-              )}
               <div
-                className="grid grid-cols-3 gap-3 pt-2.5"
-                style={{ borderTop: '1px solid var(--theme-border-light)' }}
+                className="h-[6px] rounded-full overflow-hidden"
+                style={{ background: 'var(--theme-bg-tertiary)' }}
               >
-                <StackMetric label="Doanh thu" value={fmt(row.revenue)} />
-                <StackMetric
-                  label="Chi phí"
-                  value={(row.cpVendor ?? 0) > 0 ? fmt(row.cpVendor) : '—'}
-                  color="var(--theme-status-error)"
-                />
-                <StackMetric
-                  label="Biên lãi"
-                  value={marginPct != null ? `${marginPct.toFixed(0)}%` : '—'}
-                  color={isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)'}
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${barWidth}%`,
+                    background: isProfit
+                      ? 'linear-gradient(90deg, #005A2D, #00B14F)'
+                      : 'linear-gradient(90deg, #DC2626, #EF4444)',
+                  }}
                 />
               </div>
+              <span
+                className="font-mono text-[12px] font-bold tabular-nums text-right whitespace-nowrap"
+                style={{ color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}
+              >
+                {row.loiNhuan === 0 ? '0' : `${isProfit ? '+' : ''}${fmtCompact(row.loiNhuan)}`}
+              </span>
+              <span
+                className="font-mono text-[11px] tabular-nums text-right"
+                style={{ color: 'var(--theme-text-muted)' }}
+              >
+                {marginPct != null ? `${marginPct.toFixed(0)}%` : '—'}
+              </span>
             </div>
           )
         })}
@@ -327,12 +347,11 @@ function NgoaiSubTable({ rows }: { rows: VehiclePnLRow[] }) {
   )
 }
 
-
-
 // ─── Desktop dashboard ────────────────────────────────────────────────────────
 
 function DesktopDashboard() {
   const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
+  const { data: profile } = useProfile()
 
   const prevMonth = month === 1 ? 12 : month - 1
   const prevYear  = month === 1 ? year - 1 : year
@@ -360,91 +379,75 @@ function DesktopDashboard() {
   const vehicleExp = pnl?.totalVehicleExpenses ?? 0
   const generalExp = pnl?.totalCpChung ?? 0
 
+  const costSlices = useMemo<DonutSlice[]>(() => {
+    const realTotal = salaryProd + salaryBase + vehicleExp + generalExp
+    if (realTotal <= 0) return []
+    return [
+      { name: 'Lương chuyến & Phụ cấp', pct: Math.round((salaryProd / realTotal) * 100), color: '#005A2D' },
+      { name: 'Lương cơ bản', pct: Math.round((salaryBase / realTotal) * 100), color: '#16A34A' },
+      { name: 'Chi phí xe vận hành', pct: Math.round((vehicleExp / realTotal) * 100), color: '#2563EB' },
+      { name: 'Chi phí quản lý chung', pct: Math.round((generalExp / realTotal) * 100), color: '#C2780B' },
+    ].filter(s => s.pct > 0)
+  }, [salaryProd, salaryBase, vehicleExp, generalExp])
+
   const allRows   = vehiclePnl?.rows ?? []
   const noiBoRows = allRows.filter(r => !r.isVendor)
   const ngoaiRows = allRows.filter(r => r.isVendor)
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6">
 
-      {/* ── Header ── */}
-      <PageHeader
-        title="Tổng quan"
-        subtitle="Bảng điều khiển kế toán & vận tải"
-        lucideIcon={BarChart3}
-        actions={<MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />}
-      />
+      {/* ── Greeting header ── */}
+      <header className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h1
+            className="text-[22px] font-extrabold tracking-tight leading-tight"
+            style={{ color: 'var(--theme-text-primary)' }}
+          >
+            {greeting()},{' '}
+            <span>{profile?.fullName || 'bạn'}</span>
+          </h1>
+        </div>
+        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
+      </header>
 
+      {/* ── KPI row ── */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <KpiHeroCard
+          label={`Doanh thu · ${pad(month)}/${year}`}
+          formattedValue={<AnimatedNumber value={revenue} format="currency" />}
+          icon={TrendingUp}
+          color="emerald"
+          sublabel={`Tháng trước · ${fmtCompact(prevPnl?.revenue ?? 0)}`}
+          trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta > 0 } : undefined}
+        />
+        <KpiHeroCard
+          label="Tổng chi phí"
+          formattedValue={<AnimatedNumber value={chiPhi} format="currency" />}
+          icon={TrendingDown}
+          color="rose"
+          sublabel="Lương + Xe + CP Chung"
+          trend={chiPhiDelta != null ? { value: `${Math.abs(chiPhiDelta)}%`, positive: chiPhiDelta <= 0 } : undefined}
+        />
+        <KpiHeroCard
+          label="Lợi nhuận"
+          formattedValue={<AnimatedNumber value={laiRong} format="currency" />}
+          icon={Coins}
+          color="blue"
+          sublabel={bienLai != null ? `Biên lãi ${bienLai.toFixed(1)}%` : `Tháng ${pad(month)}/${year}`}
+          trend={laiDelta != null ? { value: `${Math.abs(laiDelta)}%`, positive: laiDelta >= 0 } : undefined}
+        />
+        <KpiHeroCard
+          label="Biên lãi"
+          formattedValue={<span>{bienLai != null ? `${bienLai.toFixed(1)}%` : '—'}</span>}
+          icon={BarChart3}
+          color="amber"
+          sublabel={revenue > 0 ? `Doanh thu ${fmtCompact(revenue)}` : 'Chưa có dữ liệu'}
+        />
+      </div>
+
+      {/* ── Main grid ── */}
       <div className="bento-grid">
-        {/* Doanh thu */}
-        <div className="bento-card bento-card-gradient-emerald bento-col-12 md:bento-col-4">
-          <div className="flex items-center gap-3">
-            <div className="bento-badge-icon" style={{ background: 'color-mix(in srgb, var(--theme-status-success) 10%, transparent)', color: 'var(--theme-status-success)' }}>
-              <TrendingUp className="h-5 w-5" />
-            </div>
-            <div className="flex-grow min-w-0">
-              <span className="bento-stat-label">Doanh thu</span>
-              <h3 className="bento-stat-value">
-                <AnimatedNumber value={revenue} format="currency" />
-              </h3>
-            </div>
-          </div>
-          <div className="bento-stat-footer">
-            <span>Tháng {pad(month)}/{year}</span>
-            {revenueDelta != null && (
-              <span className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)', color: 'var(--theme-status-success)' }}>
-                ↑ {Math.abs(revenueDelta)}%
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Chi phí */}
-        <div className="bento-card bento-card-gradient-rose bento-col-12 md:bento-col-4">
-          <div className="flex items-center gap-3">
-            <div className="bento-badge-icon" style={{ background: 'color-mix(in srgb, var(--theme-status-error) 10%, transparent)', color: 'var(--theme-status-error)' }}>
-              <TrendingDown className="h-5 w-5" />
-            </div>
-            <div className="flex-grow min-w-0">
-              <span className="bento-stat-label">Chi phí</span>
-              <h3 className="bento-stat-value">
-                <AnimatedNumber value={chiPhi} format="currency" />
-              </h3>
-            </div>
-          </div>
-          <div className="bento-stat-footer">
-            <span>Lương + Xe + CP Chung</span>
-            {chiPhiDelta != null && (
-              <span className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: chiPhiDelta <= 0 ? 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)' : 'color-mix(in srgb, var(--theme-status-error) 12%, transparent)', color: chiPhiDelta <= 0 ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
-                {chiPhiDelta <= 0 ? '↓' : '↑'} {Math.abs(chiPhiDelta)}%
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Lợi nhuận */}
-        <div className="bento-card bento-card-gradient-blue bento-col-12 md:bento-col-4">
-          <div className="flex items-center gap-3">
-            <div className="bento-badge-icon" style={{ background: 'color-mix(in srgb, var(--theme-status-info) 10%, transparent)', color: 'var(--theme-status-info)' }}>
-              <Coins className="h-5 w-5" />
-            </div>
-            <div className="flex-grow min-w-0">
-              <span className="bento-stat-label">Lợi nhuận</span>
-              <h3 className="bento-stat-value">
-                <AnimatedNumber value={laiRong} format="currency" />
-              </h3>
-            </div>
-          </div>
-          <div className="bento-stat-footer">
-            <span>{bienLai != null ? `Biên lãi ${bienLai.toFixed(1)}%` : `Tháng ${pad(month)}/${year}`}</span>
-            {laiDelta != null && (
-              <span className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: laiDelta >= 0 ? 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)' : 'color-mix(in srgb, var(--theme-status-error) 12%, transparent)', color: laiDelta >= 0 ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
-                {laiDelta >= 0 ? '↑' : '↓'} {Math.abs(laiDelta)}%
-              </span>
-            )}
-          </div>
-        </div>
-
         {/* Chart */}
         <TripChartCard
           title="Chuyến theo ngày"
@@ -453,57 +456,53 @@ function DesktopDashboard() {
           className="bento-col-12 md:bento-col-8"
         />
 
-        {/* Phân bổ Chi phí */}
+        {/* Cost donut */}
         <div className="bento-card bento-col-12 md:bento-col-4">
           <div className="mb-4">
-            <h3 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Phân bổ chi phí</h3>
-            <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>Cấu trúc các nhóm chi phí trong tháng</p>
+            <h3 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Cơ cấu chi phí</h3>
+            <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+              {costSlices.length > 0 ? `Tháng ${pad(month)}/${year} · tổng ${fmt(chiPhi)}` : 'Chưa có chi phí ghi nhận'}
+            </p>
           </div>
-          <div className="flex-grow flex flex-col justify-between gap-3">
-            {[
-              { label: 'Lương chuyến & Phụ cấp', value: salaryProd },
-              { label: 'Lương cơ bản', value: salaryBase },
-              { label: 'Chi phí xe vận hành', value: vehicleExp },
-              { label: 'Chi phí quản lý chung', value: generalExp },
-            ].map(({ label, value }) => {
-              const pct = chiPhi > 0 ? (value / chiPhi) * 100 : 0
-              return (
-                <div key={label} className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span style={{ color: 'var(--theme-text-secondary)' }}>{label}</span>
-                    <span className="font-mono text-[11px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>{fmt(value)}</span>
+          {costSlices.length > 0 ? (
+            <div className="flex items-start gap-4">
+              <CostDonut slices={costSlices} total={fmtCompact(chiPhi)} />
+              <div className="flex-1 flex flex-col gap-2.5 min-w-0 pt-1">
+                {costSlices.map((s, i) => (
+                  <div key={i} className="flex items-center gap-2.5 text-xs">
+                    <span className="w-2.5 h-2.5 rounded-[3px] flex-shrink-0" style={{ background: s.color }} />
+                    <span className="flex-1 truncate" style={{ color: 'var(--theme-text-secondary)' }}>{s.name}</span>
+                    <span className="font-mono font-bold text-[11px] tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{s.pct}%</span>
                   </div>
-                  <div className="h-1.5 w-full rounded-full" style={{ background: 'var(--theme-bg-tertiary)' }}>
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${pct}%`,
-                        background: 'var(--theme-brand-primary)',
-                      }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex-grow flex items-center justify-center py-6">
+              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có chi phí ghi nhận trong tháng.</p>
+            </div>
+          )}
         </div>
 
         {/* Xe nội bộ */}
         <div className="bento-card bento-col-12 lg:bento-col-6">
-          <div className="pb-3 flex justify-between items-center" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-            <DashboardSectionHeader
-              title="Xe nội bộ"
-              icon={Truck}
-              right={
-                noiBoRows.length
-                  ? <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{noiBoRows.length} xe</span>
-                  : undefined
-              }
-            />
-          </div>
-          <div className="mt-3">
+          <DashboardSectionHeader
+            title="Xe nội bộ"
+            icon={Truck}
+            className="pb-3"
+            right={
+              noiBoRows.length
+                ? <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{noiBoRows.length} xe</span>
+                : undefined
+            }
+          />
+          <div
+            className="mb-3"
+            style={{ borderBottom: '1px solid var(--theme-border-light)' }}
+          />
+          <div>
             {noiBoRows.length > 0
-              ? <NoiBoSubTable rows={noiBoRows} />
+              ? <NoiBoBarList rows={noiBoRows} />
               : <EmptyState icon={Truck} text="Không có xe nội bộ trong tháng này" />
             }
           </div>
@@ -511,20 +510,23 @@ function DesktopDashboard() {
 
         {/* Xe ngoài */}
         <div className="bento-card bento-col-12 lg:bento-col-6">
-          <div className="pb-3 flex justify-between items-center" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-            <DashboardSectionHeader
-              title="Xe ngoài"
-              icon={Truck}
-              right={
-                ngoaiRows.length
-                  ? <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{ngoaiRows.length} xe</span>
-                  : undefined
-              }
-            />
-          </div>
+          <DashboardSectionHeader
+            title="Xe ngoài"
+            icon={Truck}
+            className="pb-3"
+            right={
+              ngoaiRows.length
+                ? <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{ngoaiRows.length} xe</span>
+                : undefined
+            }
+          />
+          <div
+            className="mb-3"
+            style={{ borderBottom: '1px solid var(--theme-border-light)' }}
+          />
           <div className="mt-3">
             {ngoaiRows.length > 0 ? (
-              <NgoaiSubTable rows={ngoaiRows} />
+              <NgoaiBarList rows={ngoaiRows} />
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 py-6">
                 <img
@@ -549,6 +551,7 @@ function DesktopDashboard() {
 
 function MobileDashboard() {
   const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
+  const { data: profile } = useProfile()
 
   const prevMonth    = month === 1 ? 12 : month - 1
   const prevYear     = month === 1 ? year - 1 : year
@@ -571,90 +574,76 @@ function MobileDashboard() {
 
   const dayBars = dailyStats?.buckets ?? []
 
+  const salaryProd = (pnl?.totalProductivitySalary ?? 0) + (pnl?.totalAllowance ?? 0)
+  const salaryBase = pnl?.totalBaseSalary ?? 0
+  const vehicleExp = pnl?.totalVehicleExpenses ?? 0
+  const generalExp = pnl?.totalCpChung ?? 0
+
+  const costSlices = useMemo<DonutSlice[]>(() => {
+    const realTotal = salaryProd + salaryBase + vehicleExp + generalExp
+    if (realTotal <= 0) return []
+    return [
+      { name: 'Lương chuyến & Phụ cấp', pct: Math.round((salaryProd / realTotal) * 100), color: '#005A2D' },
+      { name: 'Lương cơ bản', pct: Math.round((salaryBase / realTotal) * 100), color: '#16A34A' },
+      { name: 'Chi phí xe vận hành', pct: Math.round((vehicleExp / realTotal) * 100), color: '#2563EB' },
+      { name: 'Chi phí quản lý chung', pct: Math.round((generalExp / realTotal) * 100), color: '#C2780B' },
+    ].filter(s => s.pct > 0)
+  }, [salaryProd, salaryBase, vehicleExp, generalExp])
+
   const allRows   = vehiclePnl?.rows ?? []
   const noiBoRows = allRows.filter(r => !r.isVendor)
   const ngoaiRows = allRows.filter(r => r.isVendor)
 
   return (
     <div className="space-y-4 pb-8">
-      <PageHeader
-        title="Tổng quan"
-        subtitle="Bảng điều khiển kế toán & vận tải"
-        lucideIcon={BarChart3}
-        compact
-        actions={<MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />}
-      />
+      {/* ── Greeting header ── */}
+      <header className="flex items-end justify-between gap-3 flex-wrap">
+        <div>
+          <h1
+            className="text-lg font-extrabold tracking-tight leading-tight"
+            style={{ color: 'var(--theme-text-primary)' }}
+          >
+            {greeting()},{' '}
+            <span>{profile?.fullName || 'bạn'}</span>
+          </h1>
+        </div>
+        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
+      </header>
 
+      {/* ── KPI cards (2×2) ── */}
+      <div className="grid grid-cols-2 gap-2.5">
+        <KpiHeroCard
+          label={`Doanh thu · ${pad(month)}/${year}`}
+          formattedValue={<AnimatedNumber value={revenue} format="currency" />}
+          icon={TrendingUp}
+          color="emerald"
+          trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta > 0 } : undefined}
+        />
+        <KpiHeroCard
+          label="Chi phí"
+          formattedValue={<AnimatedNumber value={chiPhi} format="currency" />}
+          icon={TrendingDown}
+          color="rose"
+          trend={chiPhiDelta != null ? { value: `${Math.abs(chiPhiDelta)}%`, positive: chiPhiDelta <= 0 } : undefined}
+        />
+        <KpiHeroCard
+          label="Lợi nhuận"
+          formattedValue={<AnimatedNumber value={laiRong} format="currency" />}
+          icon={Coins}
+          color="blue"
+          sublabel={bienLai != null ? `Biên lãi ${bienLai.toFixed(1)}%` : undefined}
+          trend={laiDelta != null ? { value: `${Math.abs(laiDelta)}%`, positive: laiDelta >= 0 } : undefined}
+        />
+        <KpiHeroCard
+          label="Biên lãi"
+          formattedValue={<span>{bienLai != null ? `${bienLai.toFixed(1)}%` : '—'}</span>}
+          icon={BarChart3}
+          color="amber"
+        />
+      </div>
+
+      {/* ── Main grid ── */}
       <div className="bento-grid">
-        {/* Doanh thu */}
-        <div className="bento-card bento-card-gradient-emerald bento-col-12">
-          <div className="flex items-center gap-3">
-            <div className="bento-badge-icon" style={{ background: 'color-mix(in srgb, var(--theme-status-success) 10%, transparent)', color: 'var(--theme-status-success)' }}>
-              <TrendingUp className="h-5 w-5" />
-            </div>
-            <div className="flex-grow min-w-0">
-              <span className="bento-stat-label">Doanh thu</span>
-              <h3 className="bento-stat-value">
-                <AnimatedNumber value={revenue} format="currency" />
-              </h3>
-            </div>
-          </div>
-          <div className="bento-stat-footer">
-            <span>Tháng {pad(month)}/{year}</span>
-            {revenueDelta != null && (
-              <span className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)', color: 'var(--theme-status-success)' }}>
-                ↑ {Math.abs(revenueDelta)}%
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Chi phí */}
-        <div className="bento-card bento-card-gradient-rose bento-col-12">
-          <div className="flex items-center gap-3">
-            <div className="bento-badge-icon" style={{ background: 'color-mix(in srgb, var(--theme-status-error) 10%, transparent)', color: 'var(--theme-status-error)' }}>
-              <TrendingDown className="h-5 w-5" />
-            </div>
-            <div className="flex-grow min-w-0">
-              <span className="bento-stat-label">Chi phí</span>
-              <h3 className="bento-stat-value">
-                <AnimatedNumber value={chiPhi} format="currency" />
-              </h3>
-            </div>
-          </div>
-          <div className="bento-stat-footer">
-            <span>Lương + Xe + CP Chung</span>
-            {chiPhiDelta != null && (
-              <span className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: chiPhiDelta <= 0 ? 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)' : 'color-mix(in srgb, var(--theme-status-error) 12%, transparent)', color: chiPhiDelta <= 0 ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
-                {chiPhiDelta <= 0 ? '↓' : '↑'} {Math.abs(chiPhiDelta)}%
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Lợi nhuận */}
-        <div className="bento-card bento-card-gradient-blue bento-col-12">
-          <div className="flex items-center gap-3">
-            <div className="bento-badge-icon" style={{ background: 'color-mix(in srgb, var(--theme-status-info) 10%, transparent)', color: 'var(--theme-status-info)' }}>
-              <Coins className="h-5 w-5" />
-            </div>
-            <div className="flex-grow min-w-0">
-              <span className="bento-stat-label">Lợi nhuận</span>
-              <h3 className="bento-stat-value">
-                <AnimatedNumber value={laiRong} format="currency" />
-              </h3>
-            </div>
-          </div>
-          <div className="bento-stat-footer">
-            <span>{bienLai != null ? `Biên lãi ${bienLai.toFixed(1)}%` : `Tháng ${pad(month)}/${year}`}</span>
-            {laiDelta != null && (
-              <span className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: laiDelta >= 0 ? 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)' : 'color-mix(in srgb, var(--theme-status-error) 12%, transparent)', color: laiDelta >= 0 ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
-                {laiDelta >= 0 ? '↑' : '↓'} {Math.abs(laiDelta)}%
-              </span>
-            )}
-          </div>
-        </div>
-
         {/* Bar chart */}
         <TripChartCard
           subtitle={`Tháng ${pad(month)} · ${year}`}
@@ -662,22 +651,53 @@ function MobileDashboard() {
           className="bento-col-12"
         />
 
+        {/* Cost donut */}
+        <div className="bento-card bento-col-12">
+          <div className="mb-4">
+            <h3 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Cơ cấu chi phí</h3>
+            <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+              {costSlices.length > 0 ? `Tháng ${pad(month)}/${year} · tổng ${fmt(chiPhi)}` : 'Chưa có chi phí ghi nhận'}
+            </p>
+          </div>
+          {costSlices.length > 0 ? (
+            <div className="flex items-start gap-4">
+              <CostDonut slices={costSlices} total={fmtCompact(chiPhi)} />
+              <div className="flex-1 flex flex-col gap-2.5 min-w-0 pt-1">
+                {costSlices.map((s, i) => (
+                  <div key={i} className="flex items-center gap-2.5 text-xs">
+                    <span className="w-2.5 h-2.5 rounded-[3px] flex-shrink-0" style={{ background: s.color }} />
+                    <span className="flex-1 truncate" style={{ color: 'var(--theme-text-secondary)' }}>{s.name}</span>
+                    <span className="font-mono font-bold text-[11px] tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{s.pct}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex-grow flex items-center justify-center py-6">
+              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có chi phí ghi nhận trong tháng.</p>
+            </div>
+          )}
+        </div>
+
         {/* Xe nội bộ */}
         <div className="bento-card bento-col-12">
-          <div className="pb-3 flex justify-between items-center" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-            <DashboardSectionHeader
-              title="Xe nội bộ"
-              icon={Truck}
-              right={
-                noiBoRows.length
-                  ? <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{noiBoRows.length} xe</span>
-                  : undefined
-              }
-            />
-          </div>
-          <div className="mt-3">
+          <DashboardSectionHeader
+            title="Xe nội bộ"
+            icon={Truck}
+            className="pb-3"
+            right={
+              noiBoRows.length
+                ? <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{noiBoRows.length} xe</span>
+                : undefined
+            }
+          />
+          <div
+            className="mb-3"
+            style={{ borderBottom: '1px solid var(--theme-border-light)' }}
+          />
+          <div>
             {noiBoRows.length > 0
-              ? <NoiBoSubTable rows={noiBoRows} />
+              ? <NoiBoBarList rows={noiBoRows} />
               : <EmptyState icon={Truck} text="Không có xe nội bộ trong tháng này" />
             }
           </div>
@@ -685,20 +705,23 @@ function MobileDashboard() {
 
         {/* Xe ngoài */}
         <div className="bento-card bento-col-12">
-          <div className="pb-3 flex justify-between items-center" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-            <DashboardSectionHeader
-              title="Xe ngoài"
-              icon={Truck}
-              right={
-                ngoaiRows.length
-                  ? <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{ngoaiRows.length} xe</span>
-                  : undefined
-              }
-            />
-          </div>
+          <DashboardSectionHeader
+            title="Xe ngoài"
+            icon={Truck}
+            className="pb-3"
+            right={
+              ngoaiRows.length
+                ? <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{ngoaiRows.length} xe</span>
+                : undefined
+            }
+          />
+          <div
+            className="mb-3"
+            style={{ borderBottom: '1px solid var(--theme-border-light)' }}
+          />
           <div className="mt-3">
             {ngoaiRows.length > 0 ? (
-              <NgoaiSubTable rows={ngoaiRows} />
+              <NgoaiBarList rows={ngoaiRows} />
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 py-6">
                 <img
