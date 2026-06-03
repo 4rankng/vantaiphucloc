@@ -124,6 +124,14 @@ export interface VendorSummaryStats {
 // Domain DB stores only FKs; backend composes these via batch JOIN. See
 // BizLogic.md §4 for the rationale.
 
+// ─── Operation Type (dynamic, from API) ────────────────────────────────────────
+export interface OperationType {
+  id: number
+  name: string
+  label: string
+  isActive: boolean
+}
+
 export interface ClientSummary {
   id: number
   code?: string | null

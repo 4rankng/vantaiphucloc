@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { CheckCircle, Plus } from 'lucide-react'
 import {
-  CONT_TYPES, WORK_TYPES, WORK_TYPE_LABELS,
-  type ContType, type WorkType,
+  CONT_TYPES, WORK_TYPE_LABELS,
+  type ContType, type WorkType, type OperationType,
 } from '@/data/domain'
 import { hapticTap } from '@/lib/haptic'
 import { playTick } from '@/lib/sound'
@@ -30,15 +30,17 @@ interface ContainerTypeGridProps {
   contTypeError?: boolean
   /** Show warning border on the workType group. */
   workTypeError?: boolean
+  /** Dynamic operation types from API. Falls back to hardcoded WORK_TYPES. */
+  operationTypes?: OperationType[]
 }
 
 const CONT_TYPE_SET: ReadonlySet<string> = new Set(CONT_TYPES)
-const OPERATION_TYPES = WORK_TYPES.filter(w => !CONT_TYPE_SET.has(w))
 
 export function ContainerTypeGrid({
   contType, workType,
   onContTypeChange, onWorkTypeChange,
   contTypeError, workTypeError,
+  operationTypes,
 }: ContainerTypeGridProps) {
   const [showCustom, setShowCustom] = useState(false)
   const [customValue, setCustomValue] = useState('')
@@ -47,6 +49,26 @@ export function ContainerTypeGrid({
   useEffect(() => {
     if (showCustom && inputRef.current) inputRef.current.focus()
   }, [showCustom])
+
+  // Use API data when available, fallback to hardcoded
+  const activeOps = useMemo(() => {
+    if (operationTypes && operationTypes.length > 0) {
+      return operationTypes.filter(o => o.isActive).map(o => o.name)
+    }
+    return WORK_TYPE_LABELS
+      ? (Object.entries(WORK_TYPE_LABELS) as [string, string][])
+          .filter(([k]) => !CONT_TYPE_SET.has(k))
+          .map(([k]) => k)
+      : []
+  }, [operationTypes])
+
+  const labelFor = (wt: string): string => {
+    if (operationTypes) {
+      const found = operationTypes.find(o => o.name === wt)
+      if (found) return found.label
+    }
+    return WORK_TYPE_LABELS[wt as WorkType] ?? wt
+  }
 
   // ── Cont-type click: toggle ──
   const handleContTypeSelect = (ct: ContType) => {
@@ -81,7 +103,7 @@ export function ContainerTypeGrid({
   // Custom value detection: workType is set but it's not a known operation/cont.
   const isCustomValue =
     !!workType
-    && !OPERATION_TYPES.includes(workType)
+    && !activeOps.includes(workType)
     && !CONT_TYPE_SET.has(workType)
 
   // ── Shared chip renderer ──
@@ -161,12 +183,12 @@ export function ContainerTypeGrid({
           Tác nghiệp
         </p>
         <div className="grid grid-cols-2 gap-2">
-          {OPERATION_TYPES.map(wt =>
+          {activeOps.map(wt =>
             chip({
               key: wt,
-              label: WORK_TYPE_LABELS[wt] ?? wt,
+              label: labelFor(wt),
               selected: workType === wt,
-              onClick: () => handleWorkTypeSelect(wt),
+              onClick: () => handleWorkTypeSelect(wt as WorkType),
               error: workTypeError,
             }),
           )}

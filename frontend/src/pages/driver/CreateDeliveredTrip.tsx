@@ -16,6 +16,7 @@ import { RecentValuesInput } from '@/components/shared/forms/RecentValuesInput'
 import { LocationSelect } from '@/components/shared/forms/LocationSelect/LocationSelect'
 import { DateNavigator } from '@/components/shared/navigation/DateNavigator'
 import { useCreateDeliveredTrip } from './useCreateDeliveredTrip'
+import { useOperationTypes } from '@/hooks/queries/operation-types'
 import { useToast } from '@/components/atoms/Toast'
 import type { DeliveredTrip } from '@/data/domain'
 
@@ -48,6 +49,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit, setSummaryOpen,
   } = useCreateDeliveredTrip(existingDeliveredTrip)
+  const { data: operationTypes } = useOperationTypes()
 
   const navigate = useNavigate()
   const toast = useToast()
@@ -247,6 +249,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                     workType={cont.workType}
                     onContTypeChange={(ct) => updateContainer(idx, 'contType', ct)}
                     onWorkTypeChange={(wt) => updateContainer(idx, 'workType', wt)}
+                    operationTypes={operationTypes}
                   />
 
                   {/* Edit-mode hint: show prior contType / workType if changed */}
