@@ -78,9 +78,23 @@ def normalize_header_text(text: str | None) -> str:
     folded = folded.lower()
     folded = _WS_RE.sub(" ", folded).strip()
     # Collapse common punctuation that varies across files
-    folded = folded.replace(".", "").replace(":", "").replace("\n", " ").replace("\r", " ")
+    folded = folded.replace(".", "").replace(":", "").replace("'", "").replace("\"", "")
+    folded = folded.replace("\n", " ").replace("\r", " ")
     folded = _WS_RE.sub(" ", folded).strip()
     return folded
+
+
+def normalize_for_match(text: str | None) -> str:
+    """Aggressive normalization for pattern-detection substring checks.
+
+    Strips diacritics AND all whitespace. Lets "SỐ CONTAINER " match
+    "socont", "F20'" match "f20", and "NGÀY ĐI" match "ngaydi". Use this
+    only for substring/contains matching where internal whitespace is
+    not significant — keep `normalize_header_text` for exact-lookup
+    keys that need to stay distinct (e.g. "container" vs "container no").
+    """
+    base = normalize_header_text(text)
+    return "".join(base.split())
 
 
 # ---------------------------------------------------------------------------

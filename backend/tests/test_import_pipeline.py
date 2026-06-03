@@ -15,6 +15,7 @@ import pytest
 
 from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     is_skip_header,
+    normalize_for_match,
     normalize_header_text,
     synonym_substring_match,
     EXACT_LOOKUP,
@@ -102,6 +103,26 @@ def test_substring_match_does_not_fire_inside_word():
     assert not is_skip_header(normalize_header_text("Shipper"))
     # "Hãng tàu" must NOT match "hang" / "tau" via synonym dictionary
     assert synonym_substring_match(normalize_header_text("Hãng tàu")) is None
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("SỐ CONTAINER ", "socontainer"),
+        ("SỐCONT", "socont"),
+        ("F20'", "f20"),
+        ("F40'", "f40"),
+        ("E20'", "e20"),
+        ("E40'", "e40"),
+        ("NGÀY ĐI", "ngaydi"),
+        ("Số Cont", "socont"),
+        ("", ""),
+        (None, ""),
+        ("Chủ hàng", "chuhang"),
+    ],
+)
+def test_normalize_for_match_strips_whitespace_and_diacritics(raw, expected):
+    assert normalize_for_match(raw) == expected
 
 
 # ---------------------------------------------------------------------------
