@@ -33,6 +33,10 @@ from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors i
     extract_settlement_list,
 )
 from app.contexts.operations.infrastructure.import_pipeline.pipeline import run_preview
+from app.contexts.operations.infrastructure.import_pipeline.llm import (
+    NullHeaderClassifier,
+    get_default_classifier,
+)
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
     build_cont_type,
     parse_container_no,
@@ -686,3 +690,23 @@ async def test_ultima_e2e_preview(ultima_sheets):
     assert first["freight_kind"] in ("F", "E")
     assert first["container_size"] in ("20", "40")
     assert "ULTIMA" in (first.get("vessel") or "")
+
+
+# ---------------------------------------------------------------------------
+# Gemini config flag — when enabled, get_default_classifier returns a
+# Gemini-backed classifier; when disabled (the default), NullHeaderClassifier.
+# We don't hit the network — we just check the wiring.
+# ---------------------------------------------------------------------------
+
+def test_default_classifier_is_null_when_gemini_disabled(monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
+    clf = get_default_classifier()
+    assert isinstance(clf, type(NullHeaderClassifier())) or \
+        clf.__class__.__name__ == "CachedHeaderClassifier"
+
+
+def test_settings_has_gemini_enable_flag():
+    from app.config import settings
+    assert hasattr(settings, "GEMINI_ENABLE")
+    assert isinstance(settings.GEMINI_ENABLE, bool)

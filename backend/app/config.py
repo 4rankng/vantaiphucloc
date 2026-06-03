@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     # AI provider
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-3.1-flash-lite-preview"
+    GEMINI_ENABLE: bool = False
     CHATBOT_ENABLE: int = 0
 
     # Push notifications (VAPID)

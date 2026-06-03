@@ -99,7 +99,7 @@ class GeminiHeaderClassifier:
         # Lazy-import inside __init__ so the module loads even when the
         # settings module / Gemini deps are missing.
         from app.config import settings
-        self._enabled = bool(getattr(settings, "IMPORT_LLM_FALLBACK_ENABLED", False))
+        self._enabled = bool(getattr(settings, "GEMINI_ENABLE", False))
         self._api_key = getattr(settings, "GEMINI_API_KEY", None)
         self._model = getattr(settings, "GEMINI_MODEL", "gemini-3.1-flash-lite-preview")
 
@@ -171,12 +171,11 @@ def _parse_llm_response(text: str, candidates: list[str]) -> tuple[str | None, f
 
 
 def get_default_classifier() -> HeaderClassifier:
-    """Factory used by the pipeline. Honours
-    `settings.IMPORT_LLM_FALLBACK_ENABLED`.
+    """Factory used by the pipeline. Honours `settings.GEMINI_ENABLE`.
     """
     try:
         from app.config import settings
-        if getattr(settings, "IMPORT_LLM_FALLBACK_ENABLED", False):
+        if getattr(settings, "GEMINI_ENABLE", False):
             return CachedHeaderClassifier(GeminiHeaderClassifier())
     except Exception:
         pass
