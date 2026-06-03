@@ -154,6 +154,7 @@ function resolveMobileTitle(pathname: string): string {
     '/accountant/settings/ky-luong': 'Kỳ lương',
     '/accountant/settings/cuoc-tuyen': 'Bảng giá cước',
     '/accountant/settings/cuoc-tra-xe-ngoai': 'Bảng phí thuê xe',
+    '/accountant/settings/tac-nghiep': 'Loại tác nghiệp',
   }
   if (TITLES[pathname]) return TITLES[pathname]
   return ''

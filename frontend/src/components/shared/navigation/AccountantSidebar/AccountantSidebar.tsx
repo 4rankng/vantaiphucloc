@@ -15,6 +15,7 @@ import {
   TrendingUp,
   MapPin,
   KeyRound,
+  Wrench,
   Calendar,
   Route,
   Truck,
@@ -77,6 +78,7 @@ const ACCOUNTANT_NAV_SECTIONS: SidebarSection[] = [
       { label: 'Kỳ lương', href: '/accountant/settings/ky-luong', icon: Calendar },
       { label: 'Bảng giá cước', href: '/accountant/settings/cuoc-tuyen', icon: Route },
       { label: 'Bảng phí thuê xe', href: '/accountant/settings/cuoc-tra-xe-ngoai', icon: Truck },
+      { label: 'Loại tác nghiệp', href: '/accountant/settings/tac-nghiep', icon: Wrench },
     ],
   },
 ]
