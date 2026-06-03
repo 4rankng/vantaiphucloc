@@ -25,3 +25,14 @@ def salary_recalc_job_id(driver_id: int, start_date: str, end_date: str) -> str:
     """Deterministic job ID to prevent duplicate salary recalculation enqueues."""
     raw = f"salary_recalc:{driver_id}:{start_date}:{end_date}"
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
+
+
+def import_preview_job_id(content_sha_prefix: str, default_trip_date_iso: str) -> str:
+    """Deterministic job ID for a customer-Excel preview.
+
+    Re-uploading the exact same file (sha256 of content) on the same
+    day returns the same job id, so the second enqueue is a no-op and
+    the user gets the previous result via polling.
+    """
+    raw = f"import_preview:{content_sha_prefix}:{default_trip_date_iso}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:32]

@@ -10,6 +10,7 @@ from app.config import settings
 from app.workers.tasks.salary import calculate_salary_task
 from app.workers.tasks.notifications import send_notification_task
 from app.workers.tasks.geocoding import geocode_location_task
+from app.workers.tasks.imports import import_excel_preview_task
 from app.workers.tasks.reports import generate_monthly_report_task
 from app.workers.tasks.earning_sync import sync_wo_earning_on_to_update
 
@@ -23,7 +24,11 @@ class WorkerSettings:
         generate_monthly_report_task,
         geocode_location_task,
         sync_wo_earning_on_to_update,
+        import_excel_preview_task,
     ]
+    # Preview results can be 100KB+ for files with thousands of rows; keep
+    # them around for an hour so users have time to inspect and commit.
+    keep_result = 3600
     cron_jobs = []
 
 

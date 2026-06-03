@@ -13,6 +13,8 @@ Two-stage flow per upload:
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import logging
 from datetime import date
 from typing import Any
@@ -52,6 +54,8 @@ from app.contexts.operations.infrastructure.import_pipeline.pipeline import (
     run_preview,
 )
 from app.contexts.operations.infrastructure.import_pipeline.workbook import load_workbook
+from app.core.worker import get_arq_pool
+from app.workers import enqueue, import_preview_job_id
 
 _logger = logging.getLogger(__name__)
 
@@ -184,6 +188,91 @@ async def get_canonical_schema(
 # ---------------------------------------------------------------------------
 
 
+class ImportPreviewEnqueueResponse(BaseModel):
+    job_id: str
+    status: str = "queued"
+    message: str = "Đang phân tích file, vui lòng chờ."
+
+
+@router.post("/customer-excel/preview-async", response_model=ImportPreviewEnqueueResponse)
+async def enqueue_preview_customer_excel(
+    file: UploadFile = File(...),
+    default_trip_date: date | None = Form(None),
+    sheet_name: str | None = Form(None),
+    _user: User = Depends(require_roles("accountant", "superadmin")),
+):
+    """Enqueue a customer-Excel preview job. Returns job_id; the frontend
+    polls `/imports/customer-excel/jobs/{job_id}` for the result.
+
+    Re-uploading the same file (sha256) on the same day returns the
+    same job id (deterministic), so accidental double-clicks don't
+    burn worker cycles.
+    """
+    if file.filename is None:
+        raise HTTPException(status_code=400, detail="Tệp tải lên không có tên.")
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Tệp tải lên rỗng.")
+
+    trip_date = default_trip_date or date.today()
+    content_sha = hashlib.sha256(content).hexdigest()[:16]
+    job_id = import_preview_job_id(content_sha, trip_date.isoformat())
+
+    try:
+        await enqueue(
+            "app.workers.tasks.imports.import_excel_preview_task",
+            _job_id=job_id,
+            job_id=job_id,
+            file_bytes_b64=base64.b64encode(content).decode(),
+            filename=file.filename,
+            default_trip_date_iso=trip_date.isoformat(),
+            sheet_name=sheet_name,
+        )
+    except Exception as exc:
+        logger.exception("Failed to enqueue import preview: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Không thể enqueue job. Vui lòng thử lại sau.",
+        ) from exc
+
+    return ImportPreviewEnqueueResponse(job_id=job_id)
+
+
+@router.get("/customer-excel/jobs/{job_id}")
+async def get_import_preview_status(
+    job_id: str,
+    _user: User = Depends(require_roles("accountant", "superadmin")),
+):
+    """Return the worker's preview result. Polls the same Redis job that
+    /jobs/{job_id} reads, but keeps the URL scoped to the imports
+    namespace so the frontend has a clean per-feature polling target.
+
+    The worker stores the full PreviewResult under the job's result key.
+    Once `status == "complete"`, `result` is a dict with keys
+    `accepted`, `rejected`, `warnings`, `column_mappings`, `stats`,
+    `location_resolutions`, etc.
+    """
+    from arq.jobs import Job, JobStatus
+
+    pool = get_arq_pool()
+    job = Job(job_id, redis=pool)
+    status = await job.status()
+
+    if status == JobStatus.not_found:
+        return {"job_id": job_id, "status": "not_found"}
+
+    info = await job.info()
+    result = None
+    if info and hasattr(info, "result") and info.result is not None:
+        result = (
+            info.result
+            if isinstance(info.result, dict)
+            else {"value": str(info.result)}
+        )
+
+    return {"job_id": job_id, "status": status.value, "result": result}
+
+
 @router.post("/customer-excel/preview")
 async def preview_customer_excel(
     file: UploadFile = File(...),
@@ -194,6 +283,12 @@ async def preview_customer_excel(
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_roles("accountant", "superadmin")),
 ):
+    """Synchronous fallback. Use /preview-async for production.
+
+    Kept for: (1) backwards compatibility with internal scripts that
+    curl the endpoint, (2) cases where the worker is down and we want
+    a best-effort sync response.
+    """
     if file.filename is None:
         raise HTTPException(status_code=400, detail="Tệp tải lên không có tên.")
     content = await file.read()
