@@ -349,9 +349,7 @@ export function DoiSoatPage() {
             </div>
           </div>
         )}
-
         <Panel flush>
-
           <DataTable
             columns={columns}
             rows={filtered}
@@ -363,6 +361,8 @@ export function DoiSoatPage() {
             onSort={handleSort}
             onRowClick={(t) => setMatchTarget(t)}
             rowClassName={(t) => t.bookedTripId ? 'row-matched' : 'row-pending'}
+            maxHeight="calc(100dvh - 330px)"
+            sentinel={<LoadMoreSentinel sentinelRef={sentinelRef} hasMore={hasMore} />}
             empty={
               <div className="py-10">
                 <EmptyState
@@ -379,7 +379,6 @@ export function DoiSoatPage() {
               </div>
             }
           />
-          <LoadMoreSentinel sentinelRef={sentinelRef} hasMore={hasMore} />
         </Panel>
       </section>
 

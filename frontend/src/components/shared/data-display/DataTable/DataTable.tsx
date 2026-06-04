@@ -33,6 +33,10 @@ export interface DataTableProps<T> {
   sortOrder?: 'asc' | 'desc'
   /** Called when the user clicks a sortable column header. */
   onSort?: (key: string, order: 'asc' | 'desc') => void
+  /** Max height for vertical scrolling of the table body. */
+  maxHeight?: string | number
+  /** Sentinel element for infinite scrolling, rendered inside the scroll container. */
+  sentinel?: ReactNode
 }
 
 const ALIGN_CLASS: Record<ColumnAlign, string> = {
@@ -89,6 +93,8 @@ export function DataTable<T>({
   sortBy,
   sortOrder = 'desc',
   onSort,
+  maxHeight,
+  sentinel,
 }: DataTableProps<T>) {
   if (isLoading) {
     // Structured shimmer: header bar + per-column pill shapes per row
@@ -150,7 +156,10 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={`nepo-table-scroll overflow-x-auto ${className}`}>
+    <div
+      className={`nepo-table-scroll overflow-x-auto ${className}`}
+      style={maxHeight ? { maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight, overflowY: 'auto' } : undefined}
+    >
       <table
         className="nepo-table w-full"
         style={{ minWidth: `${minWidth}px`, borderCollapse: 'collapse', tableLayout: fixedLayout ? 'fixed' : 'auto' }}
@@ -238,6 +247,7 @@ export function DataTable<T>({
         </tbody>
         {footer && <tfoot className="nepo-tfoot">{footer}</tfoot>}
       </table>
+      {sentinel}
     </div>
   )
 }

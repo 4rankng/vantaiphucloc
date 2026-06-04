@@ -250,23 +250,6 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
       },
     },
     {
-      key: 'revenue',
-      header: 'Cước',
-      width: 90,
-      sortKey: 'revenue',
-      render: (t) => (
-        <span
-          className="tabular-nums whitespace-nowrap text-[13px]"
-          style={{
-            color: t.revenue ? 'var(--ink)' : 'var(--ink-4)',
-            fontFamily: 'var(--theme-font-mono)',
-          }}
-        >
-          {money(t.revenue)}
-        </span>
-      ),
-    },
-    {
       key: 'driverSalary',
       header: 'Lương SL',
       width: 90,
@@ -280,6 +263,23 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
           }}
         >
           {money(t.driverSalary)}
+        </span>
+      ),
+    },
+    {
+      key: 'revenue',
+      header: 'Cước',
+      width: 90,
+      sortKey: 'revenue',
+      render: (t) => (
+        <span
+          className="tabular-nums whitespace-nowrap text-[13px]"
+          style={{
+            color: t.revenue ? 'var(--ink)' : 'var(--ink-4)',
+            fontFamily: 'var(--theme-font-mono)',
+          }}
+        >
+          {money(t.revenue)}
         </span>
       ),
     },
