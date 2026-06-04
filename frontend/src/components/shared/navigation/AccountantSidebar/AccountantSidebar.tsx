@@ -120,7 +120,17 @@ export function AccountantSidebar({
 
   const sections: SidebarSection[] = items
     ? [{ label: null, items }]
-    : ACCOUNTANT_NAV_SECTIONS
+    : user?.role === 'superadmin'
+      ? [
+          ...ACCOUNTANT_NAV_SECTIONS,
+          {
+            label: 'HỆ THỐNG',
+            items: [
+              { label: 'Quản lý tài khoản', href: '/superadmin', icon: UserCircle },
+            ],
+          },
+        ]
+      : ACCOUNTANT_NAV_SECTIONS
 
   const isActive = useCallback(
     (href: string) => {

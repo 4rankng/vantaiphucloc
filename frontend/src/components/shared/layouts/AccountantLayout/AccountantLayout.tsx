@@ -9,7 +9,7 @@ import { X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Role } from '@/data/domain'
 
-const ALLOWED_ROLES: Role[] = ['accountant']
+const ALLOWED_ROLES: Role[] = ['accountant', 'superadmin']
 
 const FULLSCREEN_PREFIXES: string[] = []
 

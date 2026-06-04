@@ -102,7 +102,7 @@ export function createAppRouter() {
         // ─── SuperAdmin ────────────────────────────────────────
         {
           path: 'superadmin',
-          element: h(Lazy, { component: R.SuperAdminLayout }),
+          element: h(Lazy, { component: R.AccountantLayout }),
           children: [
             { index: true, element: ebc('SuperAdminDashboard', h(Lazy, { component: R.SuperAdminApp })) },
             { path: 'profile', element: ebc('Profile', h(Lazy, { component: R.Profile })) },
