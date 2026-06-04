@@ -346,14 +346,14 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
         if existing:
             changed = False
             for schema_col, orm_col in (
-                ("f_20_price", "f20_price"),
-                ("f_40_price", "f40_price"),
-                ("e_20_price", "e20_price"),
-                ("e_40_price", "e40_price"),
-                ("f_20_driver_salary", "f20_driver_salary"),
-                ("f_40_driver_salary", "f40_driver_salary"),
-                ("e_20_driver_salary", "e20_driver_salary"),
-                ("e_40_driver_salary", "e40_driver_salary"),
+                ("f20_price", "f20_price"),
+                ("f40_price", "f40_price"),
+                ("e20_price", "e20_price"),
+                ("e40_price", "e40_price"),
+                ("f20_driver_salary", "f20_driver_salary"),
+                ("f40_driver_salary", "f40_driver_salary"),
+                ("e20_driver_salary", "e20_driver_salary"),
+                ("e40_driver_salary", "e40_driver_salary"),
             ):
                 new_val = r.get(schema_col)
                 if new_val is not None and getattr(existing, orm_col) != new_val:
@@ -367,14 +367,14 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
                 pickup_location_id=pickup_id,
                 dropoff_location_id=dropoff_id,
                 work_type=work_type,
-                f20_price=r.get("f_20_price"),
-                f40_price=r.get("f_40_price"),
-                e20_price=r.get("e_20_price"),
-                e40_price=r.get("e_40_price"),
-                f20_driver_salary=r.get("f_20_driver_salary"),
-                f40_driver_salary=r.get("f_40_driver_salary"),
-                e20_driver_salary=r.get("e_20_driver_salary"),
-                e40_driver_salary=r.get("e_40_driver_salary"),
+                f20_price=r.get("f20_price"),
+                f40_price=r.get("f40_price"),
+                e20_price=r.get("e20_price"),
+                e40_price=r.get("e40_price"),
+                f20_driver_salary=r.get("f20_driver_salary"),
+                f40_driver_salary=r.get("f40_driver_salary"),
+                e20_driver_salary=r.get("e20_driver_salary"),
+                e40_driver_salary=r.get("e40_driver_salary"),
                 is_active=True,
             ))
             created += 1

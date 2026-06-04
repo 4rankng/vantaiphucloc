@@ -58,10 +58,10 @@ class VendorRoutePricingImportRow(BaseModel):
     dropoff_location_id: int | None = None
     dropoff_raw: str | None = None
     work_type: str | None = None
-    f_20_price: int | None = None
-    f_40_price: int | None = None
-    e_20_price: int | None = None
-    e_40_price: int | None = None
+    f20_price: int | None = None
+    f40_price: int | None = None
+    e20_price: int | None = None
+    e40_price: int | None = None
 
 
 class VendorRoutePricingImportCommit(BaseModel):

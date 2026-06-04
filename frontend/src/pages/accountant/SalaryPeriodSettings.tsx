@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Calendar, AlertTriangle } from 'lucide-react'
+import { Calendar, AlertTriangle, ArrowLeft } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button } from '@/components/ui'
 import { Panel } from '@/components/shared/overlays/Panel'
 import { DayStepperInput } from '@/components/shared/navigation/DayStepperInput'
@@ -10,6 +10,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { invalidateDeliveredTripDeps } from '@/hooks/query-keys'
 import { SettingsPageLayout } from '@/components/shared/layouts/SettingsPageLayout/SettingsPageLayout'
 import { DriverBaseSalaryTable } from '@/components/payroll/DriverBaseSalaryTable'
+import { LinkButton } from '@/components/shared'
 
 function periodExample(fromDay: number, toDay: number) {
   const now = new Date()
@@ -68,6 +69,9 @@ export function SalaryPeriodSettings() {
       title="Kỳ lương"
       subtitle="Cấu hình ngày bắt đầu và kết thúc kỳ lương hàng tháng"
       icon={Calendar}
+      breadcrumb={
+        <LinkButton to="/accountant/settings" icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
+      }
     >
       <Panel>
         {isLoading ? (

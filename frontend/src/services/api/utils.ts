@@ -20,7 +20,7 @@ function snakeToCamel(s: string): string {
 
 /** Convert a single camelCase string to snake_case */
 function camelToSnake(s: string): string {
-  return s.replace(/([A-Z])/g, (c: string) => '_' + c.toLowerCase()).replace(/([a-z])([0-9])/g, '$1_$2')
+  return s.replace(/([A-Z])/g, (c: string) => '_' + c.toLowerCase())
 }
 
 /** Recursively convert all object keys from snake_case to camelCase */

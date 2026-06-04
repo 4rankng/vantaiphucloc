@@ -149,7 +149,7 @@ export function ExcelImportPage() {
 
       {/* ── Header ── */}
       <header>
-        <LinkButton onClick={() => navigate('/accountant/doi-soat')} icon={ArrowLeft}>
+        <LinkButton to="/accountant/doi-soat" icon={ArrowLeft}>
           Đối soát
         </LinkButton>
         <h1 className="typo-display mt-2">Nhập Excel</h1>

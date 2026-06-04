@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useRef, useEffect } from 'react'
 import { Route } from 'lucide-react'
 import { EmptyState } from '@/components/shared/feedback/EmptyState'
 import { TableSkeleton } from '@/components/shared/data-display/TableSkeleton/TableSkeleton'
@@ -23,10 +23,53 @@ export function RoutePricingTable({
   clients,
   locations,
 }: RoutePricingTableProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
   const handleStartEdit = useCallback(
     (rp: Parameters<typeof onStartEdit>[0], field: FocusableField = 'f20Price') => onStartEdit(rp, field),
     [onStartEdit],
   )
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const active = document.activeElement
+      if (
+        active &&
+        (active.tagName === 'INPUT' ||
+          active.tagName === 'SELECT' ||
+          active.tagName === 'TEXTAREA' ||
+          active.hasAttribute('contenteditable'))
+      ) {
+        return
+      }
+
+      const hasOpenDialog = document.querySelector('[role="dialog"], [role="alertdialog"], .radix-overlay')
+      if (hasOpenDialog) {
+        return
+      }
+
+      if (e.key === 'ArrowLeft') {
+        if (scrollContainerRef.current) {
+          e.preventDefault()
+          scrollContainerRef.current.scrollBy({
+            left: -120,
+            behavior: 'smooth',
+          })
+        }
+      } else if (e.key === 'ArrowRight') {
+        if (scrollContainerRef.current) {
+          e.preventDefault()
+          scrollContainerRef.current.scrollBy({
+            left: 120,
+            behavior: 'smooth',
+          })
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   if (isLoading) return <TableSkeleton rows={5} />
 
@@ -53,10 +96,10 @@ export function RoutePricingTable({
         <span>
           {isEditing
             ? "💡 Nhấn Enter để xác nhận • Nhấn ESC để huỷ"
-            : "💡 Cuộn sang phải để xem đầy đủ cột cước & lương • Nhấp vào ô bất kỳ để chỉnh sửa trực tiếp"}
+            : "💡 Dùng phím mũi tên Trái/Phải hoặc cuộn để xem đầy đủ • Nhấp vào ô bất kỳ để chỉnh sửa trực tiếp"}
         </span>
       </div>
-      <div className="nepo-table-scroll overflow-x-auto">
+      <div ref={scrollContainerRef} className="nepo-table-scroll overflow-x-auto">
 
       <table
         className="nepo-table"

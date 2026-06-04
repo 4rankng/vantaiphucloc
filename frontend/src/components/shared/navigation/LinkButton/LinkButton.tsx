@@ -1,21 +1,22 @@
 import { Link } from 'react-router-dom'
+import type { ElementType, ReactNode, MouseEvent } from 'react'
 
 type BaseProps = {
-  icon?: React.ElementType
+  icon?: ElementType
   disabled?: boolean
   className?: string
-  children?: React.ReactNode
+  children?: ReactNode
+  variant?: 'brand' | 'muted'
 }
 
 type LinkButtonAsButton = BaseProps & {
-  onClick: () => void
+  onClick: (e: MouseEvent<HTMLButtonElement>) => void
   to?: never
 }
 
 type LinkButtonAsLink = BaseProps & {
   to: string
   onClick?: never
-  disabled?: never
 }
 
 export type LinkButtonProps = LinkButtonAsButton | LinkButtonAsLink
@@ -25,9 +26,14 @@ export function LinkButton({
   disabled,
   className,
   children,
+  variant = 'brand',
   ...rest
 }: LinkButtonProps) {
-  const style = { color: 'var(--theme-brand-primary-dark)' }
+  const style = {
+    color: variant === 'brand'
+      ? 'var(--theme-brand-primary-dark)'
+      : 'var(--theme-text-muted)',
+  }
 
   const sharedClass = [
     'inline-flex items-center gap-1.5 text-xs font-medium transition-opacity',
@@ -46,6 +52,13 @@ export function LinkButton({
   )
 
   if ('to' in rest && rest.to) {
+    if (disabled) {
+      return (
+        <span className={sharedClass} style={style}>
+          {content}
+        </span>
+      )
+    }
     return (
       <Link to={rest.to} className={sharedClass} style={style}>
         {content}
@@ -66,3 +79,4 @@ export function LinkButton({
     </button>
   )
 }
+

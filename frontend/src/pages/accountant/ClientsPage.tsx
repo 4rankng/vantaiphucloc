@@ -247,6 +247,14 @@ export function ClientsPage() {
   const companyCount = allClients.filter(c => c.type === 'company').length
   const individualCount = allClients.filter(c => c.type !== 'company').length
 
+  const statPills = (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <StatPill count={total} label=" chủ hàng" accent />
+      {companyCount > 0 && <StatPill count={companyCount} label=" công ty" />}
+      {individualCount > 0 && <StatPill count={individualCount} label=" cá nhân" />}
+    </div>
+  )
+
   const handleSort = (col: ClientSortBy) => {
     if (sortBy === col) {
       setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
@@ -303,18 +311,18 @@ export function ClientsPage() {
     <div className="space-y-6 animate-fade-in">
 
       {/* ── Header ── */}
-      <PageHeader
-        title="Chủ hàng"
-        subtitle="Danh sách chủ hàng và thông tin liên hệ"
-        lucideIcon={Building2}
-        actions={
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <StatPill count={total} label=" chủ hàng" accent />
-            {companyCount > 0 && <StatPill count={companyCount} label=" công ty" />}
-            {individualCount > 0 && <StatPill count={individualCount} label=" cá nhân" />}
-          </div>
-        }
-      />
+      {isMobile ? (
+        <div className="flex items-center justify-end gap-1.5 mb-2 flex-wrap">
+          {statPills}
+        </div>
+      ) : (
+        <PageHeader
+          title="Chủ hàng"
+          subtitle="Danh sách chủ hàng và thông tin liên hệ"
+          lucideIcon={Building2}
+          actions={statPills}
+        />
+      )}
 
       {/* ── Section ── */}
       <section>

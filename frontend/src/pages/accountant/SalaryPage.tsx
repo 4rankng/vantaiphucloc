@@ -16,7 +16,7 @@ import {
 } from '@/hooks/use-queries'
 import { useMonthParams } from './use-month-params'
 import { formatCurrency } from '@/data/domain'
-import { AnimatedNumber } from '@/components/shared'
+import { AnimatedNumber, LinkButton } from '@/components/shared'
 import { FieldActions } from '@/components/shared/data-display/ListUtils'
 import type { DriverEarnings, DriverSalaryRecord } from '@/services/api/salary.api'
 
@@ -339,15 +339,14 @@ export function SalaryPage() {
             {initializeMutation.isPending ? 'Đang khởi tạo...' : 'Khởi tạo kỳ lương'}
           </Button>
         )}
-        <Button
-          variant="outline"
-          size="sm"
+        <LinkButton
           onClick={handleExport}
+          icon={Download}
+          variant="muted"
           disabled={exportMutation.isPending}
         >
-          <Download className="h-3.5 w-3.5" />
           {exportMutation.isPending ? 'Đang xuất...' : 'Xuất Excel'}
-        </Button>
+        </LinkButton>
       </div>
 
       <NepoTable

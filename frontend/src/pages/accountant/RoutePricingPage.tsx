@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Plus, Route, FileSpreadsheet } from 'lucide-react'
+import { Plus, Route, FileSpreadsheet, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
 import { Panel } from '@/components/shared/overlays/Panel'
@@ -12,6 +12,7 @@ import { useRoutePricing } from '@/components/route-pricing/useRoutePricing'
 import { WORK_TYPE_LABELS } from '@/data/domain'
 import type { WorkType, RoutePricing } from '@/data/domain'
 import type { RoutePricingUpdatePayload } from '@/services/api/routePricings.api'
+import { LinkButton } from '@/components/shared'
 
 export function RoutePricingPage() {
   const [importOpen, setImportOpen] = useState(false)
@@ -111,6 +112,9 @@ export function RoutePricingPage() {
         title="Bảng giá cước"
         subtitle="Quản lý bảng giá cước theo tuyến đường và loại hình tác nghiệp"
         lucideIcon={Route}
+        breadcrumbs={
+          <LinkButton to="/accountant/settings" icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
+        }
       />
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 flex-wrap">

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useEffect } from 'react'
 import { MapPin, Flag, Trash2 } from 'lucide-react'
 import { compactCurrency, WORK_TYPE_LABELS } from '@/data/domain'
 import type { VendorRoutePricing, WorkType } from '@/data/domain'
@@ -328,10 +328,53 @@ export function VendorRoutePricingTable({
   vendors,
   locations,
 }: VendorRoutePricingTableProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
   const handleStartEdit = useCallback(
     (rp: VendorRoutePricing, field: FocusableField = 'f20Price') => onStartEdit(rp, field),
     [onStartEdit],
   )
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const active = document.activeElement
+      if (
+        active &&
+        (active.tagName === 'INPUT' ||
+          active.tagName === 'SELECT' ||
+          active.tagName === 'TEXTAREA' ||
+          active.hasAttribute('contenteditable'))
+      ) {
+        return
+      }
+
+      const hasOpenDialog = document.querySelector('[role="dialog"], [role="alertdialog"], .radix-overlay')
+      if (hasOpenDialog) {
+        return
+      }
+
+      if (e.key === 'ArrowLeft') {
+        if (scrollContainerRef.current) {
+          e.preventDefault()
+          scrollContainerRef.current.scrollBy({
+            left: -120,
+            behavior: 'smooth',
+          })
+        }
+      } else if (e.key === 'ArrowRight') {
+        if (scrollContainerRef.current) {
+          e.preventDefault()
+          scrollContainerRef.current.scrollBy({
+            left: 120,
+            behavior: 'smooth',
+          })
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   if (isLoading) return <TableSkeleton rows={5} />
 
@@ -354,9 +397,13 @@ export function VendorRoutePricingTable({
   return (
     <div className="space-y-1.5">
       <div className="px-4 pt-3.5 text-[11px] font-medium flex items-center gap-1.5" style={{ color: 'var(--ink-3)' }}>
-        <span>💡 Nhấp vào ô bất kỳ để chỉnh sửa trực tiếp</span>
+        <span>
+          {isEditing
+            ? "💡 Nhấn Enter để xác nhận • Nhấn ESC để huỷ"
+            : "💡 Dùng phím mũi tên Trái/Phải hoặc cuộn để xem đầy đủ • Nhấp vào ô bất kỳ để chỉnh sửa trực tiếp"}
+        </span>
       </div>
-      <div className="nepo-table-scroll overflow-x-auto">
+      <div ref={scrollContainerRef} className="nepo-table-scroll overflow-x-auto">
         <table className="nepo-table w-full" style={{ minWidth: tableMinWidth, borderCollapse: 'collapse' }}>
         <thead>
           <tr>

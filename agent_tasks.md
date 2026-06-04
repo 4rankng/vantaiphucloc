@@ -14,10 +14,10 @@
 
 ## Tasks
 
-- [ ] (frontend) Rewrite LinkButton component with unified API: `to` (router Link) / `onClick` (button), `variant` (brand/muted), `icon`, `disabled`
-- [ ] (frontend) Replace Pattern A — 3 identical `<Link>` back-nav occurrences with `<LinkButton to="..." icon={ArrowLeft} variant="muted">`
-- [ ] (frontend) Replace Pattern C — 2 `Button variant="link"` in VehicleExpensesPage with `<LinkButton onClick variant="brand">`
-- [ ] (frontend) Replace Pattern D — inline export button in SalaryPage with `<LinkButton onClick variant="muted" disabled>`
-- [ ] (frontend) Update Pattern B — ExcelImportPage to use new LinkButton API
-- [ ] (frontend) Remove dead DetailLink and ActionPill exports
-- [ ] (frontend) Run `make test-frontend` gate
+- [x] (frontend) Rewrite LinkButton component with unified API: `to` (router Link) / `onClick` (button), `variant` (brand/muted), `icon`, `disabled`
+- [x] (frontend) Replace Pattern A — 3 identical `<Link>` back-nav occurrences with `<LinkButton to="..." icon={ArrowLeft} variant="muted">`
+- [x] (frontend) Replace Pattern C — 2 `Button variant="link"` in VehicleExpensesPage with `<LinkButton onClick variant="brand">`
+- [x] (frontend) Replace Pattern D — inline export button in SalaryPage with `<LinkButton onClick variant="muted" disabled>`
+- [x] (frontend) Update Pattern B — ExcelImportPage to use new LinkButton API
+- [x] (frontend) Remove dead DetailLink and ActionPill exports
+- [x] (frontend) Run `make test-frontend` gate
