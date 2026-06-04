@@ -3,7 +3,7 @@
 import logging
 from io import BytesIO
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
@@ -12,7 +12,6 @@ from app.models.domain import (
     DeliveredTrip,
     Location,
 )
-from app.utils.excel_utils import add_template_version
 
 _logger = logging.getLogger(__name__)
 
@@ -47,7 +46,7 @@ async def generate_booked_trips_excel(
     loc_ids = {to.pickup_location_id for to in booked_trips} | {to.dropoff_location_id for to in booked_trips}
     loc_ids.discard(None)
     client_name_by_id = {c.id: c.name for c in (await db.execute(select(Client).where(Client.id.in_(client_ids)))).scalars().all()} if client_ids else {}
-    loc_name_by_id = {l.id: l.name for l in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
+    loc_name_by_id = {loc.id: loc.name for loc in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
 
     # For per-partner export: determine match status and vessel from BookedTrip directly
     client_name = None
@@ -147,7 +146,7 @@ async def generate_doi_soat_excel(
     Summary row at the bottom: count per work type + total amount.
     """
     import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.styles import Font, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
 
     # -- 1. Load partner --
@@ -200,7 +199,7 @@ async def generate_doi_soat_excel(
     thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
     center = Alignment(horizontal="center", vertical="center", wrap_text=True)
     left = Alignment(horizontal="left", vertical="center")
-    right_align = Alignment(horizontal="right", vertical="center")
+    Alignment(horizontal="right", vertical="center")
 
     # -- Title block (rows 1-8) --
     ws.merge_cells(f"A1:{last_col}1")
@@ -271,7 +270,6 @@ async def generate_doi_soat_excel(
         pickup = loc_name_by_id.get(to.pickup_location_id or 0, "")
         dropoff = loc_name_by_id.get(to.dropoff_location_id or 0, "")
         plate = to.vehicle_plate or ""
-        vessel = to.vessel or ""
         trip_date_str = to.trip_date.strftime("%d/%m/%Y") if to.trip_date else ""
 
         ct = (to.cont_type or "").upper()
