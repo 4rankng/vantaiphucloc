@@ -745,7 +745,7 @@ def _normalize_work_type(value: str) -> str:
     folded = folded.replace("Đ", "D").replace("đ", "d")
     if "CHUYEN BAI" in folded or "CHUYỂN BÃI" in norm:
         return "CHUYỂN BÃI"
-    if "XUAT" in folded and ("NHAP" in folded or "TAU" in folded):
+    if "XUAT" in folded or "NHAP" in folded or "TAU" in folded:
         return "XUẤT/NHẬP TÀU"
     if "LAY VO" in folded or "HA HANG" in folded:
         return "LẤY VỎ HẠ HÀNG"

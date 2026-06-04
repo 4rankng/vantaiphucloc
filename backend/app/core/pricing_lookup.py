@@ -51,6 +51,27 @@ def _salary_for_cont_type(row, cont_type: str | None) -> int:
     return int(getattr(row, col) or 0)
 
 
+def _normalize_work_type(wt: str | None) -> str:
+    if not wt:
+        return "CHUYỂN BÃI"
+    import unicodedata
+    norm = wt.strip().upper()
+    folded = unicodedata.normalize("NFD", norm)
+    folded = "".join(c for c in folded if not unicodedata.combining(c))
+    folded = folded.replace("Đ", "D").replace("đ", "d")
+    if "CHUYEN BAI" in folded or "CHUYỂN BÃI" in norm:
+        return "CHUYỂN BÃI"
+    if "XUAT" in folded or "NHAP" in folded or "TAU" in folded:
+        return "XUẤT/NHẬP TÀU"
+    if "LAY VO" in folded or "HA HANG" in folded:
+        return "LẤY VỎ HẠ HÀNG"
+    if "DONG KHO" in folded or "ĐÓNG KHO" in norm:
+        return "ĐÓNG KHO"
+    if "SA LAN" in folded or "SÀ LAN" in norm:
+        return "CHẠY SÀ LAN"
+    return wt
+
+
 async def lookup_client_prices(
     session: AsyncSession,
     trips: Sequence[TripPriceInfo],
@@ -70,12 +91,12 @@ async def lookup_client_prices(
 
     lane_map: dict[tuple, object] = {}
     for r in rows:
-        key = (r.client_id, r.pickup_location_id, r.dropoff_location_id, r.work_type)
+        key = (r.client_id, r.pickup_location_id, r.dropoff_location_id, _normalize_work_type(r.work_type))
         lane_map[key] = r
 
     result: dict[int, int] = {}
     for t in trips:
-        key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id, t.work_type)
+        key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id, _normalize_work_type(t.work_type))
         pricing = lane_map.get(key)
         result[t.id] = _price_for_cont_type(pricing, t.cont_type) if pricing else 0
 
@@ -101,12 +122,12 @@ async def lookup_vendor_prices(
 
     lane_map: dict[tuple, object] = {}
     for r in rows:
-        key = (r.vendor_id, r.pickup_location_id, r.dropoff_location_id, r.work_type)
+        key = (r.vendor_id, r.pickup_location_id, r.dropoff_location_id, _normalize_work_type(r.work_type))
         lane_map[key] = r
 
     result: dict[int, int] = {}
     for t in trips:
-        key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id, t.work_type)
+        key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id, _normalize_work_type(t.work_type))
         pricing = lane_map.get(key)
         result[t.id] = _price_for_cont_type(pricing, t.cont_type) if pricing else 0
 
@@ -132,12 +153,12 @@ async def lookup_driver_salaries(
 
     lane_map: dict[tuple, object] = {}
     for r in rows:
-        key = (r.client_id, r.pickup_location_id, r.dropoff_location_id, r.work_type)
+        key = (r.client_id, r.pickup_location_id, r.dropoff_location_id, _normalize_work_type(r.work_type))
         lane_map[key] = r
 
     result: dict[int, int] = {}
     for t in trips:
-        key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id, t.work_type)
+        key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id, _normalize_work_type(t.work_type))
         pricing = lane_map.get(key)
         result[t.id] = _salary_for_cont_type(pricing, t.cont_type) if pricing else 0
 
