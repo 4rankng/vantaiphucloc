@@ -133,6 +133,8 @@ async def create_route_pricing(
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise translate(e)
     return (await _to_out(db, [rp]))[0]
 
 

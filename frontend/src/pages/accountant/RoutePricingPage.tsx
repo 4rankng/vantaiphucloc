@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { Plus, Route, FileSpreadsheet, ArrowLeft, RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui'
+import { Button, Pagination, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
 import { Panel } from '@/components/shared/overlays/Panel'
 import { InlineSelect } from '@/components/shared/forms/InlineSelect/InlineSelect'
@@ -53,6 +53,12 @@ export function RoutePricingPage() {
 
   const {
     routePricings,
+    total,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages,
     isLoading,
     clients,
     locations,
@@ -198,7 +204,6 @@ export function RoutePricingPage() {
       </div>
 
       <Panel flush>
-
         <RoutePricingTable
           data={routePricings}
           isLoading={isLoading}
@@ -213,6 +218,37 @@ export function RoutePricingPage() {
           clients={clients}
           locations={locations}
         />
+        {total > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-4 border-t" style={{ borderColor: 'var(--theme-border-light)' }}>
+            <div className="flex items-center gap-4 flex-wrap">
+              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                Hiển thị {routePricings.length} trên tổng số {total} bản ghi
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Dòng mỗi trang:</span>
+                <Select value={String(pageSize)} onValueChange={(val) => { setPageSize(Number(val)); setPage(1); }}>
+                  <SelectTrigger className="w-[75px] h-7 text-xs py-0 px-2 rounded-md">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                    <SelectItem value="200">200</SelectItem>
+                    <SelectItem value="500">500</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+              />
+            )}
+          </div>
+        )}
       </Panel>
 
       {/* Create/edit dialog */}

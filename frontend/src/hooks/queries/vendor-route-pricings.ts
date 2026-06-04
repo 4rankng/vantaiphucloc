@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { queryKeys } from '../query-keys'
-import type { ApiResponse } from '@/data/domain'
+import type { ApiResponse, VendorRoutePricing, PaginatedResult } from '@/data/domain'
 import type {
   VendorRoutePricingCreatePayload,
   VendorRoutePricingUpdatePayload,
@@ -15,12 +15,19 @@ function unwrap<T>(res: ApiResponse<T>): T {
 export function useVendorRoutePricings(filters?: {
   vendorId?: number
   workType?: string
+  page?: number
+  pageSize?: number
 }) {
   return useQuery({
     queryKey: queryKeys.vendorRoutePricingsFiltered(filters),
     queryFn: async () => {
-      const res = await apiClient.getVendorRoutePricings(filters)
-      return res.items ?? []
+      const res = await apiClient.getVendorRoutePricings({
+        page: filters?.page,
+        pageSize: filters?.pageSize ?? 100,
+        vendorId: filters?.vendorId,
+        workType: filters?.workType,
+      })
+      return res
     },
   })
 }

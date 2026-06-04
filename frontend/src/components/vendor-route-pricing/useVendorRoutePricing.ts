@@ -44,17 +44,31 @@ function parsePrice(v: string): number | null {
 
 export function useVendorRoutePricing() {
   const toast = useToast()
-  const [vendorId, setVendorId] = useState<number | undefined>()
-  const [workType, setWorkType] = useState<string | undefined>()
+  const [vendorId, setVendorIdState] = useState<number | undefined>()
+  const [workType, setWorkTypeState] = useState<string | undefined>()
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(100)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<VendorRoutePricingFormData>(EMPTY_FORM)
   const [deleteId, setDeleteId] = useState<number | null>(null)
 
-  const { data: vendorRoutePricings = [], isLoading } = useVendorRoutePricings({
+  const { data: vendorRoutePricingsData, isLoading } = useVendorRoutePricings({
     vendorId,
     workType,
+    page,
+    pageSize,
   })
+
+  const setVendorId = useCallback((id?: number) => {
+    setVendorIdState(id)
+    setPage(1)
+  }, [])
+
+  const setWorkType = useCallback((wt?: string) => {
+    setWorkTypeState(wt)
+    setPage(1)
+  }, [])
   const { data: vendorsData } = useVendors()
   const { data: locationsData } = useLocations()
   const createMutation = useCreateVendorRoutePricing()
@@ -122,7 +136,7 @@ export function useVendorRoutePricing() {
             toast.success('Đã cập nhật cước trả')
             setDialogOpen(false)
           },
-          onError: () => toast.error('Không thể cập nhật'),
+          onError: (err) => toast.error('Không thể cập nhật', err.message),
         },
       )
     } else {
@@ -131,7 +145,7 @@ export function useVendorRoutePricing() {
           toast.success('Đã thêm cước trả')
           setDialogOpen(false)
         },
-        onError: () => toast.error('Không thể thêm'),
+        onError: (err) => toast.error('Không thể thêm', err.message),
       })
     }
   }, [form, editingId, createMutation, updateMutation, toast])
@@ -143,7 +157,7 @@ export function useVendorRoutePricing() {
         toast.success('Đã xoá cước trả')
         setDeleteId(null)
       },
-      onError: () => toast.error('Không thể xoá'),
+      onError: (err) => toast.error('Không thể xoá', err.message),
     })
   }, [deleteId, deleteMutation, toast])
 
@@ -156,8 +170,8 @@ export function useVendorRoutePricing() {
             toast.success('Đã cập nhật cước trả')
             callbacks?.onSuccess?.()
           },
-          onError: () => {
-            toast.error('Không thể cập nhật')
+          onError: (err) => {
+            toast.error('Không thể cập nhật', err.message)
             callbacks?.onError?.()
           },
         },
@@ -167,7 +181,13 @@ export function useVendorRoutePricing() {
   )
 
   return {
-    vendorRoutePricings,
+    vendorRoutePricings: vendorRoutePricingsData?.items ?? [],
+    total: vendorRoutePricingsData?.total ?? 0,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages: vendorRoutePricingsData?.totalPages ?? 0,
     isLoading,
     vendors,
     locations,

@@ -52,17 +52,31 @@ function parsePrice(v: string): number | null {
 
 export function useRoutePricing() {
   const toast = useToast()
-  const [clientId, setClientId] = useState<number | undefined>()
-  const [workType, setWorkType] = useState<string | undefined>()
+  const [clientId, setClientIdState] = useState<number | undefined>()
+  const [workType, setWorkTypeState] = useState<string | undefined>()
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(100)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<RoutePricingFormData>(EMPTY_FORM)
   const [deleteId, setDeleteId] = useState<number | null>(null)
 
-  const { data: routePricings = [], isLoading } = useRoutePricings({
+  const { data: routePricingsData, isLoading } = useRoutePricings({
     clientId,
     workType,
+    page,
+    pageSize,
   })
+
+  const setClientId = useCallback((id?: number) => {
+    setClientIdState(id)
+    setPage(1)
+  }, [])
+
+  const setWorkType = useCallback((wt?: string) => {
+    setWorkTypeState(wt)
+    setPage(1)
+  }, [])
   const { data: clientsData } = useClients()
   const { data: locationsData } = useLocations()
   const createMutation = useCreateRoutePricing()
@@ -138,7 +152,7 @@ export function useRoutePricing() {
             toast.success('Đã cập nhật cước tuyến')
             setDialogOpen(false)
           },
-          onError: () => toast.error('Không thể cập nhật'),
+          onError: (err) => toast.error('Không thể cập nhật', err.message),
         },
       )
     } else {
@@ -147,7 +161,7 @@ export function useRoutePricing() {
           toast.success('Đã thêm cước tuyến')
           setDialogOpen(false)
         },
-        onError: () => toast.error('Không thể thêm'),
+        onError: (err) => toast.error('Không thể thêm', err.message),
       })
     }
   }, [form, editingId, createMutation, updateMutation, toast])
@@ -159,7 +173,7 @@ export function useRoutePricing() {
         toast.success('Đã xoá cước tuyến')
         setDeleteId(null)
       },
-      onError: () => toast.error('Không thể xoá'),
+      onError: (err) => toast.error('Không thể xoá', err.message),
     })
   }, [deleteId, deleteMutation, toast])
 
@@ -172,8 +186,8 @@ export function useRoutePricing() {
             toast.success('Đã cập nhật cước tuyến')
             callbacks?.onSuccess?.()
           },
-          onError: () => {
-            toast.error('Không thể cập nhật')
+          onError: (err) => {
+            toast.error('Không thể cập nhật', err.message)
             callbacks?.onError?.()
           },
         },
@@ -183,7 +197,13 @@ export function useRoutePricing() {
   )
 
   return {
-    routePricings,
+    routePricings: routePricingsData?.items ?? [],
+    total: routePricingsData?.total ?? 0,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages: routePricingsData?.totalPages ?? 0,
     isLoading,
     clients,
     locations,

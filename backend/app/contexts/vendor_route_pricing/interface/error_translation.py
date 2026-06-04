@@ -14,7 +14,7 @@ def translate(exc: Exception) -> HTTPException:
     if isinstance(exc, NotFound):
         return HTTPException(status_code=404, detail=str(exc))
     if isinstance(exc, AlreadyExists):
-        return HTTPException(status_code=409, detail=str(exc))
+        return HTTPException(status_code=409, detail="Bảng phí thuê xe cho tuyến này đã tồn tại")
     if isinstance(exc, NoPriceSet):
         return HTTPException(status_code=422, detail=str(exc))
     return HTTPException(status_code=500, detail=str(exc))

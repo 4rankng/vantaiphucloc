@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { queryKeys } from '../query-keys'
-import type { ApiResponse, RoutePricing } from '@/data/domain'
+import type { ApiResponse, RoutePricing, PaginatedResult } from '@/data/domain'
 import type {
   RoutePricingCreatePayload,
   RoutePricingUpdatePayload,
@@ -15,12 +15,19 @@ function unwrap<T>(res: ApiResponse<T>): T {
 export function useRoutePricings(filters?: {
   clientId?: number
   workType?: string
+  page?: number
+  pageSize?: number
 }) {
   return useQuery({
     queryKey: queryKeys.routePricingsFiltered(filters),
     queryFn: async () => {
-      const res = await apiClient.getRoutePricings(filters)
-      return res.items ?? []
+      const res = await apiClient.getRoutePricings({
+        page: filters?.page,
+        pageSize: filters?.pageSize ?? 100,
+        clientId: filters?.clientId,
+        workType: filters?.workType,
+      })
+      return res
     },
   })
 }
@@ -48,16 +55,25 @@ export function useUpdateRoutePricing() {
     }) => apiClient.updateRoutePricing(id, data).then(unwrap),
     onMutate: async ({ id, data }) => {
       await qc.cancelQueries({ queryKey: ['route-pricings'] })
-      const previous = qc.getQueriesData<RoutePricing[]>({
+      const previous = qc.getQueriesData<PaginatedResult<RoutePricing>>({
         queryKey: ['route-pricings'],
       })
-      qc.setQueriesData<RoutePricing[]>({ queryKey: ['route-pricings'] }, (old) =>
-        old?.map((rp) =>
-          rp.id === id
-            ? { ...rp, ...data, pickupLocation: data.pickupLocationId ? rp.pickupLocation : rp.pickupLocation, dropoffLocation: data.dropoffLocationId ? rp.dropoffLocation : rp.dropoffLocation }
-            : rp,
-        ),
-      )
+      qc.setQueriesData<PaginatedResult<RoutePricing>>({ queryKey: ['route-pricings'] }, (old) => {
+        if (!old) return old
+        return {
+          ...old,
+          items: old.items.map((rp) =>
+            rp.id === id
+              ? {
+                  ...rp,
+                  ...data,
+                  pickupLocation: data.pickupLocationId ? rp.pickupLocation : rp.pickupLocation,
+                  dropoffLocation: data.dropoffLocationId ? rp.dropoffLocation : rp.dropoffLocation,
+                }
+              : rp,
+          ),
+        }
+      })
       return { previous }
     },
     onError: (_err, _vars, context) => {
