@@ -33,7 +33,7 @@ from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors i
 from app.contexts.operations.infrastructure.import_pipeline.pipeline import run_preview
 from app.contexts.operations.infrastructure.import_pipeline.llm import (
     NullBatchHeaderClassifier,
-    get_default_classifier,
+    get_batch_classifier,
 )
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
     build_cont_type,
@@ -686,15 +686,15 @@ async def test_ultima_e2e_preview(ultima_sheets):
 
 
 # ---------------------------------------------------------------------------
-# Gemini config flag — when enabled, get_default_classifier returns a
-# Gemini-backed classifier; when disabled (the default), NullHeaderClassifier.
+# Gemini config flag — when enabled, get_batch_classifier returns a
+# Gemini-backed classifier; when disabled (the default), NullBatchHeaderClassifier.
 # We don't hit the network — we just check the wiring.
 # ---------------------------------------------------------------------------
 
 def test_default_classifier_is_null_when_gemini_disabled(monkeypatch):
     from app.config import settings
     monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
-    clf = get_default_classifier()
+    clf = get_batch_classifier()
     assert isinstance(clf, type(NullBatchHeaderClassifier())) or \
         clf.__class__.__name__ == "CachedHeaderClassifier"
 
