@@ -32,7 +32,7 @@ from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors i
 )
 from app.contexts.operations.infrastructure.import_pipeline.pipeline import run_preview
 from app.contexts.operations.infrastructure.import_pipeline.llm import (
-    NullHeaderClassifier,
+    NullBatchHeaderClassifier,
     get_default_classifier,
 )
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
@@ -695,7 +695,7 @@ def test_default_classifier_is_null_when_gemini_disabled(monkeypatch):
     from app.config import settings
     monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
     clf = get_default_classifier()
-    assert isinstance(clf, type(NullHeaderClassifier())) or \
+    assert isinstance(clf, type(NullBatchHeaderClassifier())) or \
         clf.__class__.__name__ == "CachedHeaderClassifier"
 
 
