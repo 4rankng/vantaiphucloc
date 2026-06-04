@@ -696,7 +696,7 @@ def test_default_classifier_is_null_when_gemini_disabled(monkeypatch):
     monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
     clf = get_batch_classifier()
     assert isinstance(clf, type(NullBatchHeaderClassifier())) or \
-        clf.__class__.__name__ == "CachedHeaderClassifier"
+        clf.__class__.__name__ == "CachedBatchHeaderClassifier"
 
 
 def test_settings_has_gemini_enable_flag():
