@@ -516,3 +516,113 @@ async def confirm_matches(
     await db.flush()
 
     return {"matched_count": matched_count, "errors": errors}
+
+
+async def sync_matched_trips_pricing(
+    db: AsyncSession,
+    date_from: date | str,
+    date_to: date | str,
+) -> int:
+    """Update pricing (revenue and driver salary) for already matched DeliveredTrips
+    occurring within the specified date range based on the active RoutePricing
+    and VendorRoutePricing records.
+    """
+    from datetime import date, datetime, timezone
+    from sqlalchemy import select, and_
+    from app.models.domain import DeliveredTrip as WO
+    from app.core.pricing_lookup import (
+        TripPriceInfo,
+        lookup_client_prices,
+        lookup_driver_salaries,
+        lookup_vendor_prices,
+    )
+
+    if isinstance(date_from, str):
+        date_from = date.fromisoformat(date_from)
+    if isinstance(date_to, str):
+        date_to = date.fromisoformat(date_to)
+
+    stmt = (
+        select(WO)
+        .where(
+            and_(
+                WO.booked_trip_id.isnot(None),
+                WO.trip_date >= date_from,
+                WO.trip_date <= date_to,
+            )
+        )
+    )
+    wos = (await db.execute(stmt)).scalars().all()
+    if not wos:
+        return 0
+
+    client_infos = [
+        TripPriceInfo(
+            id=wo.id,
+            partner_id=wo.client_id,
+            pickup_location_id=wo.pickup_location_id,
+            dropoff_location_id=wo.dropoff_location_id,
+            work_type=wo.work_type,
+            cont_type=wo.cont_type,
+        )
+        for wo in wos
+    ]
+    client_prices = await lookup_client_prices(db, client_infos)
+
+    vendor_infos = [
+        TripPriceInfo(
+            id=wo.id,
+            partner_id=wo.vendor_id,
+            pickup_location_id=wo.pickup_location_id,
+            dropoff_location_id=wo.dropoff_location_id,
+            work_type=wo.work_type,
+            cont_type=wo.cont_type,
+        )
+        for wo in wos
+        if wo.vendor_id
+    ]
+    vendor_prices = await lookup_vendor_prices(db, vendor_infos) if vendor_infos else {}
+
+    driver_infos = [
+        TripPriceInfo(
+            id=wo.id,
+            partner_id=wo.client_id,
+            pickup_location_id=wo.pickup_location_id,
+            dropoff_location_id=wo.dropoff_location_id,
+            work_type=wo.work_type,
+            cont_type=wo.cont_type,
+        )
+        for wo in wos
+        if not wo.vendor_id
+    ]
+    driver_salaries = await lookup_driver_salaries(db, driver_infos) if driver_infos else {}
+
+    updated_count = 0
+    for wo in wos:
+        changed = False
+
+        # 1. Update revenue
+        new_rev = client_prices.get(wo.id, 0)
+        if new_rev > 0 and wo.revenue != new_rev:
+            wo.revenue = new_rev
+            changed = True
+
+        # 2. Update driver salary (cost)
+        if wo.vendor_id:
+            new_sal = vendor_prices.get(wo.id, 0)
+        else:
+            new_sal = driver_salaries.get(wo.id, 0)
+
+        if new_sal > 0 and wo.driver_salary != new_sal:
+            wo.driver_salary = new_sal
+            changed = True
+
+        if changed:
+            wo.updated_at = datetime.now(timezone.utc)
+            updated_count += 1
+
+    if updated_count > 0:
+        await db.commit()
+
+    return updated_count
+

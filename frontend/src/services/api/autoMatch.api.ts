@@ -112,3 +112,23 @@ export async function unmatchTrip(deliveredTripId: number) {
     return fail<UnmatchResponse>(err)
   }
 }
+
+export interface SyncPricingResponse {
+  updatedCount: number
+}
+
+export async function syncPricing(params: {
+  dateFrom: string
+  dateTo: string
+}) {
+  try {
+    const res = await api.post('/auto-match/sync-pricing', {
+      date_from: params.dateFrom,
+      date_to: params.dateTo,
+    })
+    return ok<SyncPricingResponse>(toCamel(res.data))
+  } catch (err) {
+    return fail<SyncPricingResponse>(err)
+  }
+}
+

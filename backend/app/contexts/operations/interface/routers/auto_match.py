@@ -16,6 +16,7 @@ from app.models.domain import Client, Location
 from app.contexts.operations.infrastructure.auto_match_service import (
     auto_match_preview,
     confirm_matches,
+    sync_matched_trips_pricing,
 )
 from app.contexts.operations.infrastructure.ai_reconciliation_service import (
     get_ai_match_suggestion,
@@ -269,3 +270,29 @@ async def ai_suggest_endpoint(
         reasoning=result.get("reasoning", ""),
         confidence=result.get("confidence", "low"),
     )
+
+
+class SyncPricingRequest(BaseModel):
+    date_from: str
+    date_to: str
+
+
+class SyncPricingResponse(BaseModel):
+    updated_count: int
+
+
+@router.post("/auto-match/sync-pricing", response_model=SyncPricingResponse)
+async def sync_pricing_endpoint(
+    body: SyncPricingRequest,
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        updated_count = await sync_matched_trips_pricing(
+            db, date_from=body.date_from, date_to=body.date_to
+        )
+        return SyncPricingResponse(updated_count=updated_count)
+    except Exception as exc:
+        from fastapi import HTTPException
+        _logger.exception("Failed to sync matched trips pricing")
+        raise HTTPException(500, detail=str(exc))

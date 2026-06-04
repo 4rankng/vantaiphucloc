@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Plus, Route, FileSpreadsheet, ArrowLeft } from 'lucide-react'
+import { Plus, Route, FileSpreadsheet, ArrowLeft, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
 import { Panel } from '@/components/shared/overlays/Panel'
@@ -12,11 +12,40 @@ import { useRoutePricing } from '@/components/route-pricing/useRoutePricing'
 import { WORK_TYPE_LABELS } from '@/data/domain'
 import type { WorkType, RoutePricing } from '@/data/domain'
 import type { RoutePricingUpdatePayload } from '@/services/api/routePricings.api'
-import { LinkButton } from '@/components/shared'
+import { LinkButton, SyncPricingDialog } from '@/components/shared'
+import { useSyncPricing } from '@/hooks/use-queries'
+import { useToast } from '@/components/atoms'
 
 export function RoutePricingPage() {
   const [importOpen, setImportOpen] = useState(false)
+  const [syncOpen, setSyncOpen] = useState(false)
   const [inlineEditId, setInlineEditId] = useState<number | null>(null)
+
+  const { toast } = useToast()
+  const syncPricing = useSyncPricing()
+
+  const handleConfirmSync = useCallback((dateFrom: string, dateTo: string) => {
+    syncPricing.mutate(
+      { dateFrom, dateTo },
+      {
+        onSuccess: (data) => {
+          toast({
+            title: 'Đồng bộ thành công',
+            description: `Đã cập nhật cước/lương cho ${data.updatedCount} chuyến đã đi.`,
+            variant: 'success',
+          })
+          setSyncOpen(false)
+        },
+        onError: (err) => {
+          toast({
+            title: 'Đồng bộ thất bại',
+            description: err.message || 'Đã có lỗi xảy ra khi đồng bộ.',
+            variant: 'error',
+          })
+        },
+      }
+    )
+  }, [syncPricing, toast])
   const [inlineEditField, setInlineEditField] = useState<
     'clientId' | 'pickupLocationId' | 'dropoffLocationId' | 'workType' | 'f20Price' | 'f40Price' | 'e20Price' | 'e40Price' | 'f20DriverSalary' | 'f40DriverSalary' | 'e20DriverSalary' | 'e40DriverSalary'
   >('f20Price')
@@ -153,6 +182,10 @@ export function RoutePricingPage() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => setSyncOpen(true)} className="flex-1 sm:flex-none gap-1.5 whitespace-nowrap">
+            <RefreshCw className="h-3.5 w-3.5" />
+            Đồng bộ cước/lương
+          </Button>
           <Button variant="outline" onClick={() => setImportOpen(true)} className="flex-1 sm:flex-none gap-1.5 whitespace-nowrap">
             <FileSpreadsheet className="h-3.5 w-3.5" />
             Nhập Excel
@@ -210,6 +243,13 @@ export function RoutePricingPage() {
       />
 
       <RoutePricingImportDialog open={importOpen} onOpenChange={setImportOpen} />
+
+      <SyncPricingDialog
+        open={syncOpen}
+        onClose={() => setSyncOpen(false)}
+        isPending={syncPricing.isPending}
+        onConfirm={handleConfirmSync}
+      />
     </div>
   )
 }

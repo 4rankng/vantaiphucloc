@@ -155,6 +155,8 @@ export { TripSummaryDialog } from './overlays/TripSummaryDialog'
 export { UserDetailDialog } from './overlays/UserDetailDialog'
 export { VendorManagementDrawer } from './overlays/VendorManagementDrawer'
 export { ExportDoiSoatDialog } from './overlays/ExportDoiSoatDialog'
+export { SyncPricingDialog } from './overlays/SyncPricingDialog/SyncPricingDialog'
+
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 export { AccountantSidebar } from './navigation/AccountantSidebar'
