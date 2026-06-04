@@ -1,5 +1,5 @@
 # Web framework
-fastapi==0.124.4
+fastapi==0.136.3
 uvicorn[standard]==0.30.6
 
 # Database
@@ -36,7 +36,7 @@ python-statemachine>=2.0.0
 # Push notifications
 pywebpush>=2.0
 
-# CORS & middleware — pinned by FastAPI: >=0.40.0,<0.51.0
+# CORS & middleware — pinned by Dependabot security update
 starlette==1.0.1
 
 # Date/time
@@ -44,7 +44,7 @@ python-dateutil==2.9.0
 
 # Monitoring
 sentry-sdk==2.13.0
-prometheus-fastapi-instrumentator==7.0.0
+prometheus-fastapi-instrumentator==8.0.0
 
 # Linting & formatting
 ruff>=0.8.0
