@@ -1,12 +1,18 @@
 """SQL implementation of `SettlementDataLoader`.
 
-Cross-context read: queries operations and customer_pricing ORM tables to
-build a `SettlementStatement`. This is reporting — no domain mutations
-happen here, so direct ORM access across context boundaries is OK.
+Cross-context read: queries operations ORM tables to build a
+`SettlementStatement`. This is reporting — no domain mutations happen here,
+so direct ORM access across context boundaries is OK.
+
+Source of truth: matched `DeliveredTrip` rows (`booked_trip_id IS NOT NULL`).
+Revenue is read from `DeliveredTrip.revenue`, which is populated at match
+time from `RoutePricing`. Unmatched booked trips are excluded — accounting
+follow-up runs on confirmed deliveries only.
 """
 
 from __future__ import annotations
 
+import logging
 from typing import Iterable
 
 from sqlalchemy import select
@@ -24,19 +30,28 @@ from app.contexts.billing.domain.value_objects import (
 from app.models.domain import (
     Location,
     Client,
-    BookedTrip,
+    DeliveredTrip,
 )
+
+_logger = logging.getLogger(__name__)
 
 
 def _aggregate_routes(lines: Iterable[TripLine]) -> list[RouteSummary]:
-    bucket: dict[tuple[str, str], RouteSummary] = {}
+    """Group TripLines by (pickup, dropoff, work_type) into RouteSummary.
+
+    work_type is part of the group key because the same pickup/dropoff pair
+    can carry different prices for different work types (e.g. CHUYỂN BÃI vs
+    XUẤT/NHẬP TÀU). Mixing them in a single bucket would lose pricing detail.
+    """
+    bucket: dict[tuple[str, str, str], RouteSummary] = {}
     for line in lines:
-        key = (line.pickup_location, line.dropoff_location)
+        key = (line.pickup_location, line.dropoff_location, line.work_type)
         s = bucket.get(key)
         if s is None:
             s = RouteSummary(
                 pickup_location=line.pickup_location,
                 dropoff_location=line.dropoff_location,
+                work_type=line.work_type,
             )
             bucket[key] = s
         if line.cont_type == "F20":
@@ -48,7 +63,11 @@ def _aggregate_routes(lines: Iterable[TripLine]) -> list[RouteSummary]:
         s.total_amount += line.unit_price
     return sorted(
         bucket.values(),
-        key=lambda r: (r.pickup_location.lower(), r.dropoff_location.lower()),
+        key=lambda r: (
+            r.pickup_location.lower(),
+            r.dropoff_location.lower(),
+            r.work_type.lower(),
+        ),
     )
 
 
@@ -76,15 +95,17 @@ class SqlSettlementDataLoader(SettlementDataLoader):
             tax_code=partner.tax_code,
         )
 
+        # Source of truth: MATCHED DeliveredTrips only. A booked trip that
+        # has not been confirmed by a driver/delivery is not yet billable.
         trip_query = (
-            select(BookedTrip)
-            .where(BookedTrip.client_id == client_id)
-            .where(BookedTrip.trip_date >= period.start)
-            .where(BookedTrip.trip_date <= period.end)
-            .where(True)
-            .order_by(BookedTrip.trip_date.asc(), BookedTrip.id.asc())
+            select(DeliveredTrip)
+            .where(DeliveredTrip.client_id == client_id)
+            .where(DeliveredTrip.booked_trip_id.is_not(None))
+            .where(DeliveredTrip.trip_date >= period.start)
+            .where(DeliveredTrip.trip_date <= period.end)
+            .order_by(DeliveredTrip.trip_date.asc(), DeliveredTrip.id.asc())
         )
-        trips: list[BookedTrip] = (
+        trips: list[DeliveredTrip] = (
             await self.session.execute(trip_query)
         ).scalars().all()
 
@@ -105,10 +126,12 @@ class SqlSettlementDataLoader(SettlementDataLoader):
 
         client_code = (partner.code or "").strip() or partner.name
 
-        # One TripLine per trip — cont_number and cont_type are now flat
-        # columns on BookedTrip.
+        zero_price_count = 0
         trip_lines: list[TripLine] = []
         for trip in trips:
+            unit_price = int(trip.revenue or 0)
+            if unit_price == 0:
+                zero_price_count += 1
             trip_lines.append(
                 TripLine(
                     trip_date=trip.trip_date,
@@ -124,8 +147,19 @@ class SqlSettlementDataLoader(SettlementDataLoader):
                     dropoff_location=name_by_loc_id.get(
                         trip.dropoff_location_id, ""
                     ),
-                    unit_price=int(trip.revenue or 0),
+                    unit_price=unit_price,
                 )
+            )
+
+        if zero_price_count:
+            _logger.warning(
+                "Settlement for client=%s period=%s..%s: %d/%d trips have revenue=0 "
+                "(likely missing RoutePricing or sync issue)",
+                client_id,
+                period.start,
+                period.end,
+                zero_price_count,
+                len(trips),
             )
 
         return SettlementStatement(

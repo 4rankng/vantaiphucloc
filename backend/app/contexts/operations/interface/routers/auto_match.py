@@ -15,6 +15,7 @@ from app.models.base import User
 from app.models.domain import Client, Location
 from app.contexts.operations.infrastructure.auto_match_service import (
     auto_match_preview,
+    backfill_vendor_driver_salary,
     confirm_matches,
     sync_matched_trips_pricing,
 )
@@ -64,6 +65,10 @@ class MatchPair(BaseModel):
     booked_trip_id: int
     sync_source: str | None = None
     field_choices: dict[str, str] | None = None
+    # Optional score from the preview. When multiple pairs share the same
+    # booked_trip_id, the one with the highest score wins; the rest are
+    # skipped to prevent double-matching a single booked trip.
+    score: float | None = None
 
 
 class ConfirmMatchRequest(BaseModel):
@@ -77,11 +82,14 @@ class ConfirmMatchResponse(BaseModel):
 
 class UnmatchRequest(BaseModel):
     delivered_trip_id: int
+    reason: str | None = None
 
 
 class UnmatchResponse(BaseModel):
     ok: bool
     booked_trip_id: int | None = None
+    cleared_revenue: int = 0
+    cleared_driver_salary: int = 0
 
 
 class BookedTripSummary(BaseModel):
@@ -176,7 +184,13 @@ async def auto_match_confirm_endpoint(
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await confirm_matches(db, [(p.delivered_trip_id, p.booked_trip_id, p.sync_source, p.field_choices) for p in body.pairs])
+    result = await confirm_matches(
+        db,
+        [
+            (p.delivered_trip_id, p.booked_trip_id, p.sync_source, p.field_choices, p.score)
+            for p in body.pairs
+        ],
+    )
     return ConfirmMatchResponse(**result)
 
 
@@ -186,7 +200,9 @@ async def unmatch_endpoint(
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     db: AsyncSession = Depends(get_db),
 ):
+    from fastapi import HTTPException
     from sqlalchemy import select
+    from app.core.audit_context import set_audit_reason
     from app.models.domain import DeliveredTrip, BookedTrip
 
     wo = (await db.execute(
@@ -194,16 +210,33 @@ async def unmatch_endpoint(
     )).scalar_one_or_none()
 
     if not wo:
-        from fastapi import HTTPException
         raise HTTPException(404, "Delivered trip not found")
     if not wo.booked_trip_id:
-        from fastapi import HTTPException
         raise HTTPException(400, "Trip is not matched")
+
+    # Snapshot the financial values BEFORE zeroing — the audit log captures
+    # the old values via auto-capture, but we also need to return them to
+    # the caller so the UI can confirm the unmatch effect.
     booked_id = wo.booked_trip_id
+    cleared_revenue = int(wo.revenue or 0)
+    cleared_driver_salary = int(wo.driver_salary or 0)
+
+    # Zero out financials so the trip no longer contributes to billing/P&L.
+    # The audit log (auto-captured via AuditableMixin) records the change.
     wo.booked_trip_id = None
+    wo.revenue = 0
+    wo.driver_salary = 0
+
+    reason = (body.reason or "").strip() or "UNMATCH"
+    set_audit_reason(reason)
 
     await db.flush()
-    return UnmatchResponse(ok=True, booked_trip_id=booked_id)
+    return UnmatchResponse(
+        ok=True,
+        booked_trip_id=booked_id,
+        cleared_revenue=cleared_revenue,
+        cleared_driver_salary=cleared_driver_salary,
+    )
 
 
 @router.post("/auto-match/ai-suggest/{delivered_trip_id}", response_model=AISuggestionResponse)
@@ -296,3 +329,32 @@ async def sync_pricing_endpoint(
         from fastapi import HTTPException
         _logger.exception("Failed to sync matched trips pricing")
         raise HTTPException(500, detail=str(exc))
+
+
+class BackfillVendorSalaryRequest(BaseModel):
+    date_from: str | None = None
+    date_to: str | None = None
+
+
+class BackfillVendorSalaryResponse(BaseModel):
+    updated_count: int
+
+
+@router.post(
+    "/auto-match/backfill-vendor-salary",
+    response_model=BackfillVendorSalaryResponse,
+)
+async def backfill_vendor_salary_endpoint(
+    body: BackfillVendorSalaryRequest,
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
+    db: AsyncSession = Depends(get_db),
+):
+    """One-shot backfill for matched vendor trips with driver_salary = 0.
+
+    Optional date range filters by trip_date. When omitted, runs over all
+    matched vendor trips with driver_salary = 0.
+    """
+    updated = await backfill_vendor_driver_salary(
+        db, date_from=body.date_from, date_to=body.date_to
+    )
+    return BackfillVendorSalaryResponse(updated_count=updated)

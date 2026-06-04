@@ -53,6 +53,7 @@ class RouteSummary:
 
     pickup_location: str
     dropoff_location: str
+    work_type: str = ""
     f20_count: int = 0
     f40_count: int = 0
     empty_count: int = 0

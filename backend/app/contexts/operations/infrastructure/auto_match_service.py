@@ -371,12 +371,15 @@ SYNCABLE_FIELDS = [
 
 async def confirm_matches(
     db: AsyncSession,
-    pairs: list[tuple[int, int, str | None, dict[str, str] | None]],
+    pairs: list[tuple[int, int, str | None, dict[str, str] | None, float | None]],
 ) -> dict:
     """Commit matched pairs: set matched=True, sync fields, and apply pricing.
 
-    Each pair is (wo_id, to_id, sync_source).
+    Each pair is (wo_id, to_id, sync_source, field_choices, score).
     sync_source: "delivered" | "booked" | None.
+    score: optional matching score from preview; used to resolve conflicts
+        when several DeliveredTrips target the same BookedTrip — the pair
+        with the highest score wins, the rest are skipped.
 
     After matching, auto-populates:
       - DeliveredTrip.revenue from RoutePricing (client, lane, work_type, cont_type)
@@ -393,11 +396,33 @@ async def confirm_matches(
         lookup_vendor_prices,
     )
 
+    # Resolve BookedTrips that are already matched in DB so we never double-match.
+    # (DeliveredTrips already matched are checked per-row below.)
+    requested_to_ids = {to_id for _, to_id, _, _, _ in pairs if to_id is not None}
+    db_matched_to_ids: set[int] = set()
+    if requested_to_ids:
+        matched_to_rows = (await db.execute(
+            select(WO.booked_trip_id).where(
+                WO.booked_trip_id.in_(requested_to_ids),
+                WO.booked_trip_id.isnot(None),
+            ).distinct()
+        )).scalars().all()
+        db_matched_to_ids = {tid for tid in matched_to_rows if tid is not None}
+
+    # Sort by score desc so the highest-scoring claim for each BookedTrip
+    # is processed first. Pairs without a score get 0.0 (lose all ties).
+    sorted_pairs = sorted(
+        pairs,
+        key=lambda p: (p[4] if p[4] is not None else 0.0),
+        reverse=True,
+    )
+
     matched_count = 0
     errors: list[str] = []
     matched_pairs: list[tuple] = []
+    claimed_to_ids: set[int] = set()
 
-    for wo_id, to_id, sync_source, field_choices in pairs:
+    for wo_id, to_id, sync_source, field_choices, _score in sorted_pairs:
         wo = (await db.execute(
             select(WO).where(WO.id == wo_id)
         )).scalar_one_or_none()
@@ -413,6 +438,13 @@ async def confirm_matches(
             continue
         if wo.booked_trip_id is not None:
             errors.append(f"DeliveredTrip#{wo_id} already matched")
+            continue
+        if to_id in claimed_to_ids or to_id in db_matched_to_ids:
+            # Skip — this BookedTrip has already been claimed in this batch
+            # (by a higher-scoring pair) or is already matched in DB.
+            errors.append(
+                f"BookedTrip#{to_id} already claimed by a higher-scoring match"
+            )
             continue
 
         for field in SYNCABLE_FIELDS:
@@ -452,6 +484,7 @@ async def confirm_matches(
         wo.booked_trip_id = to.id
         matched_count += 1
         matched_pairs.append((wo, to))
+        claimed_to_ids.add(to_id)
 
     # Auto-populate pricing for matched DeliveredTrips
     if matched_pairs:
@@ -516,6 +549,70 @@ async def confirm_matches(
     await db.flush()
 
     return {"matched_count": matched_count, "errors": errors}
+
+
+async def backfill_vendor_driver_salary(
+    db: AsyncSession,
+    date_from: date | str | None = None,
+    date_to: date | str | None = None,
+) -> int:
+    """Backfill driver_salary for matched vendor trips that have it = 0.
+
+    These trips were either matched before ``lookup_vendor_prices`` was wired
+    into ``confirm_matches``, or imported via the vendor reconciliation Excel
+    with freight_charge missing/empty. Re-runs the VendorRoutePricing lookup
+    and sets driver_salary when a price is found.
+
+    Returns the number of rows updated.
+    """
+    from app.models.domain import DeliveredTrip as WO
+    from app.core.pricing_lookup import (
+        TripPriceInfo,
+        lookup_vendor_prices,
+    )
+
+    if isinstance(date_from, str):
+        date_from = date.fromisoformat(date_from)
+    if isinstance(date_to, str):
+        date_to = date.fromisoformat(date_to)
+
+    stmt = select(WO).where(
+        WO.booked_trip_id.isnot(None),
+        WO.vendor_id.is_not(None),
+        WO.driver_salary == 0,
+    )
+    if date_from is not None:
+        stmt = stmt.where(WO.trip_date >= date_from)
+    if date_to is not None:
+        stmt = stmt.where(WO.trip_date <= date_to)
+
+    wos = (await db.execute(stmt)).scalars().all()
+    if not wos:
+        return 0
+
+    infos = [
+        TripPriceInfo(
+            id=wo.id,
+            partner_id=wo.vendor_id,
+            pickup_location_id=wo.pickup_location_id,
+            dropoff_location_id=wo.dropoff_location_id,
+            work_type=wo.work_type,
+            cont_type=wo.cont_type,
+        )
+        for wo in wos
+    ]
+    prices = await lookup_vendor_prices(db, infos)
+
+    updated = 0
+    for wo in wos:
+        new_sal = prices.get(wo.id, 0)
+        if new_sal > 0 and wo.driver_salary != new_sal:
+            wo.driver_salary = new_sal
+            updated += 1
+
+    if updated > 0:
+        await db.commit()
+    return updated
 
 
 async def sync_matched_trips_pricing(

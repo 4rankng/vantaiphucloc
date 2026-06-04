@@ -326,13 +326,16 @@ class GetMonthlyPnL:
             )
         ]
 
-        # ---- Productivity salary: Σ DeliveredTrip.driver_salary (no allowance) ----
+        # ---- Productivity salary: Σ DeliveredTrip.driver_salary (own-driver only) ----
+        # Vendor trips (vendor_id IS NOT NULL) carry their cost on
+        # `total_vendor_cost` line; including them here would double-count.
         wage_row = (
             await self.session.execute(
                 select(
                     func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
                 ).where(
                     DeliveredTrip.booked_trip_id.isnot(None),
+                    DeliveredTrip.vendor_id.is_(None),
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
                     >= start_date,
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
@@ -364,6 +367,8 @@ class GetMonthlyPnL:
                     select(DeliveredTrip.driver_id)
                     .where(
                         DeliveredTrip.booked_trip_id.isnot(None),
+                        DeliveredTrip.vendor_id.is_(None),
+                        DeliveredTrip.driver_id.is_not(None),
                         func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
                         >= start_date,
                         func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
