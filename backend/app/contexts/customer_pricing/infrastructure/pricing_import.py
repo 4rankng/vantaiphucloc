@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from io import BytesIO
-from typing import Iterable, Sequence
+from typing import Sequence
 
 import openpyxl
 from sqlalchemy import select

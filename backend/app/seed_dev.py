@@ -584,7 +584,6 @@ async def seed_dev() -> None:
         for trip in trips:
             pickup = trip["pickup"]
             dropoff = trip["dropoff"]
-            wt = "CHUYỂN BÃI"
             plate = trip["plate"]
             client_code = trip.get("client_code", "HAIAN")
 
@@ -658,7 +657,7 @@ async def seed_dev() -> None:
                 prices = client_pricing.get((pickup, dropoff))
                 if not prices:
                     prices = ALL_PRICING["HAIAN"].get((pickup, dropoff), {})
-                unit_price = prices.get("unit_price", 400000) if prices else 400000
+                prices.get("unit_price", 400000) if prices else 400000
                 trip_date = date(year, month, rng.randint(1, days_in_month))
 
                 to = BookedTrip(
@@ -790,7 +789,7 @@ async def seed_dev() -> None:
         print("\nDriver usernames (name → username):")
         for plate, info in DRIVER_VEHICLES.items():
             uname = _name_to_username(info["full_name"])
-            sec = f" +2nd" if info.get("secondary") else ""
+            sec = " +2nd" if info.get("secondary") else ""
             print(f"  {info['full_name']:25s} → {uname:10s} ({base // 1000000}TR{sec})")
         for ed in EXTRA_DRIVERS:
             print(f"  {ed['full_name']:25s} → {ed['username']}")

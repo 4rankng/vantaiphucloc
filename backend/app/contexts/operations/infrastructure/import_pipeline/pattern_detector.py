@@ -116,7 +116,6 @@ def _score_loading_list(sheet: SheetView) -> float:
     has_container_header = False
     has_fe_header = False
     has_size_header = False
-    header_row_idx = -1
 
     for r in range(8, min(16, len(sheet.rows))):
         row = sheet.rows[r]
@@ -124,7 +123,6 @@ def _score_loading_list(sheet: SheetView) -> float:
             t = _cell_text(cell).upper()
             if is_container_header(cell) or "CONTAINERNO" in t:
                 has_container_header = True
-                header_row_idx = r
             if t in ("F/E", "FE", "F E"):
                 has_fe_header = True
             if t == "SIZE" or t == "SZ":

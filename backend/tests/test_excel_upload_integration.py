@@ -7,12 +7,11 @@ end-to-end, including auth guards and response shape validation.
 
 from __future__ import annotations
 
-from datetime import date
 from pathlib import Path
 
 import pytest
 
-from app.models.domain import Location, Client
+from app.models.domain import Client
 
 
 # ---------------------------------------------------------------------------

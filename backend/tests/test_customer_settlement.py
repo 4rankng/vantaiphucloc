@@ -16,7 +16,6 @@ from app.contexts.billing.infrastructure.settlement_loader import (
     _aggregate_routes,
 )
 from app.contexts.billing.domain.value_objects import (
-    SettlementClientRef,
     SettlementPeriod,
     TripLine,
 )

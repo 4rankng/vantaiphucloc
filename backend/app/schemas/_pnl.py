@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 __all__ = [
     "ClientRevenueBreakdownOut",

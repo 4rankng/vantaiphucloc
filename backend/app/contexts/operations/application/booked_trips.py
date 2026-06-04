@@ -25,7 +25,6 @@ from app.contexts.operations.domain.exceptions import (
 )
 from app.contexts.operations.domain.repositories import (
     BookedTripRepository,
-    DeliveredTripRepository,
 )
 from app.contexts.operations.domain.value_objects import (
     BookedTripId,

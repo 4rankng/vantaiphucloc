@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, require_permission
+from app.core.deps import require_permission
 from app.database import get_db
 from app.models.base import User
 from app.models.domain import Vehicle, VehicleExpense

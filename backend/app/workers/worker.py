@@ -1,6 +1,5 @@
 import logging
 
-from arq import cron
 from arq.connections import RedisSettings
 
 from app.config import settings

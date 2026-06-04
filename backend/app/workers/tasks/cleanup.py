@@ -1,6 +1,5 @@
 import logging
 
-from redis.asyncio import Redis
 from arq.connections import ArqRedis
 
 logger = logging.getLogger(__name__)
@@ -17,7 +16,7 @@ async def cleanup_expired_sessions(ctx: dict) -> None:
     cursor = 0
     cleaned = 0
     import time
-    now = time.time()
+    time.time()
     while True:
         cursor, keys = await redis.scan(cursor, match="rl:*", count=100)
         if keys:
@@ -40,7 +39,7 @@ async def cleanup_expired_sessions(ctx: dict) -> None:
 async def cleanup_old_audit_logs(ctx: dict) -> None:
     """Delete audit_logs rows older than 1 year."""
     from datetime import datetime, timezone, timedelta
-    from sqlalchemy import delete, select, func
+    from sqlalchemy import delete
     from app.database import get_session
     from app.models.audit_log import AuditLog
 

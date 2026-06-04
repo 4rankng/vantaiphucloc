@@ -203,7 +203,7 @@ async def unmatch_endpoint(
     from fastapi import HTTPException
     from sqlalchemy import select
     from app.core.audit_context import set_audit_reason
-    from app.models.domain import DeliveredTrip, BookedTrip
+    from app.models.domain import DeliveredTrip
 
     wo = (await db.execute(
         select(DeliveredTrip).where(DeliveredTrip.id == body.delivered_trip_id)

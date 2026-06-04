@@ -8,7 +8,7 @@ domain layer doesn't import customer_pricing internals.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date
 
 

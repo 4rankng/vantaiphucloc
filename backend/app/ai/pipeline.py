@@ -22,7 +22,6 @@ from app.ai.parser import (
     ParsedRow,
     _compute_file_hash,
     sniff_columns,
-    CANONICAL_FIELDS,
 )
 from app.ai.mapping_cache import get_cached_mapping, save_mapping
 from app.ai.gemini_client import call_gemini_row_cleanup, estimate_cost

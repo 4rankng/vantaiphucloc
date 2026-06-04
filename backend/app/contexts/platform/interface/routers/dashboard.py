@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import Client, BookedTrip, Vehicle, VehicleDriver, VehicleExpense, DeliveredTrip, Vendor, Location
+from app.models.domain import Vehicle, VehicleDriver, VehicleExpense, DeliveredTrip, Vendor, Location
 from app.models.base import User
 from app.core.deps import get_current_user, require_permission
 from app.core.worker import get_arq_pool
@@ -395,7 +395,7 @@ async def get_vehicle_pnl(
 
     # ── 3. CP Lương sản lượng per vehicle ───────────────────────────────────
     # vehicle_id FK removed; join via vehicle_plate
-    plate_to_vid = {plate: vid for vid, plate in vehicles.items()}
+    {plate: vid for vid, plate in vehicles.items()}
     wo_salary_rows = (await db.execute(
         select(
             Vehicle.id,
@@ -1006,7 +1006,7 @@ async def _compute_vehicle_pnl_rows(db: AsyncSession, df, dt) -> list[VehiclePnL
         )
         .group_by(Vehicle.id)
     )).all()
-    trip_count_by_vehicle: dict[int, int] = {vid: int(cnt) for vid, cnt in wo_count_rows if vid}
+    {vid: int(cnt) for vid, cnt in wo_count_rows if vid}
 
     expense_rows = (await db.execute(
         select(

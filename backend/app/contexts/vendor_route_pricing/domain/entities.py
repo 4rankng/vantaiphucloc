@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from app.contexts.route_pricing.domain.value_objects import (
-    VALID_WORK_TYPES,
     validate_work_type,
 )
 from app.contexts.vendor_route_pricing.domain.exceptions import NoPriceSet

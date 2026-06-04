@@ -11,7 +11,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy import select as sa_select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import User
 from app.models.domain import Location, Client, Vehicle, VehicleDriver, Vendor

@@ -11,9 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.domain import (
     BookedTrip,
     Client,
-    PricingLine,
-    Vehicle,
-    VehicleDriver,
 )
 from app.utils.iso6346 import normalize_container_number, validate_container_number
 
@@ -155,7 +152,7 @@ async def import_booked_trips(
         first_row = group_rows[0]
         pickup = first_row.get("pickup_location")
         dropoff = first_row.get("dropoff_location")
-        route = first_row.get("route") or (f"{pickup} - {dropoff}" if pickup and dropoff else "")
+        first_row.get("route") or (f"{pickup} - {dropoff}" if pickup and dropoff else "")
 
         # Build containers (normalize numbers — strip hyphens, uppercase)
         containers_data = []
@@ -178,8 +175,7 @@ async def import_booked_trips(
 
         # Try auto-pricing
         revenue = int(first_row.get("revenue") or 0)
-        driver_salary = int(first_row.get("driver_salary") or 0)
-        pricing_id = None
+        int(first_row.get("driver_salary") or 0)
 
         # Resolve pickup/dropoff strings to Location FKs via the alias
         # resolver. Auto-creates if missing.
@@ -204,8 +200,6 @@ async def import_booked_trips(
             )
             if tiered:
                 revenue = tiered.unit_price
-                driver_salary = tiered.driver_salary
-                pricing_id = tiered.pricing.id
 
         # One BookedTrip per group — use first container's data
         booked_trip = BookedTrip(

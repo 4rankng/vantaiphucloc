@@ -10,7 +10,6 @@ import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.customer_pricing.application import (
     CreatePartner,
@@ -47,7 +46,6 @@ from app.core.audit_context import set_audit_reason
 from app.core.cache import CacheManager
 from app.core.deps import require_permission
 from app.core.redis import get_redis
-from app.database import get_db
 from app.models.base import User
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import SoftDeleteRequest

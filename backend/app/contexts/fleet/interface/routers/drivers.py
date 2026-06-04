@@ -300,7 +300,7 @@ async def delete_driver(
     try:
         await db.delete(user)
         await db.commit()
-    except IntegrityError as e:
+    except IntegrityError:
         await db.rollback()
         raise HTTPException(status_code=409, detail="Cannot delete driver: associated data prevents deletion. Please ensure the driver has no active work orders, locations, or expenses created.")
     await CacheManager(redis).invalidate_namespace("drivers")

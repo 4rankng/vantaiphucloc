@@ -5,7 +5,6 @@ no per-format branches, AND that programmatically stripping accountant-
 added columns/sheets produces the same canonical row count.
 """
 
-import asyncio
 import io
 from datetime import date
 from pathlib import Path
@@ -26,7 +25,6 @@ from app.contexts.operations.infrastructure.import_pipeline.column_mapper import
 )
 from app.contexts.operations.infrastructure.import_pipeline.pattern_detector import detect_pattern
 from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import (
-    ExtractedRow,
     extract_bay_plan,
     extract_invoice,
     extract_loading_list,

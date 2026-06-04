@@ -16,7 +16,6 @@ Check digit calculation:
 """
 
 import logging
-import re
 
 _logger = logging.getLogger(__name__)
 

@@ -111,7 +111,7 @@ def register_audit_events() -> None:
         if user_id is None:
             return
 
-        req = get_audit_request()
+        get_audit_request()
         reason = get_audit_reason()
 
         for item in pending:

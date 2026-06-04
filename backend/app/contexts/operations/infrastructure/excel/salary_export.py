@@ -1,7 +1,7 @@
 import logging
 from io import BytesIO
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (

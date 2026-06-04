@@ -11,11 +11,8 @@ Covers:
 """
 
 import base64
-import hashlib
-import os
-from datetime import date
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient

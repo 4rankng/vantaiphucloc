@@ -17,7 +17,6 @@ async def parse_customer_response_excel(file_content: bytes) -> list[dict]:
     """
     import openpyxl
     from datetime import date as date_type
-    from app.utils.iso6346 import normalize_container_number
 
     workbook = openpyxl.load_workbook(BytesIO(file_content), read_only=True)
     sheet = workbook.active

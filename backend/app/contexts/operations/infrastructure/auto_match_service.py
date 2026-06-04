@@ -42,7 +42,6 @@ from app.models.domain import (
 )
 from app.utils.iso6346 import normalize_container_number
 from app.utils.fuzzy import container_edit_distance
-from app.utils.fuzzy_thresholds import get_thresholds
 
 
 WEIGHTS = {

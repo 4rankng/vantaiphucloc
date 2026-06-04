@@ -9,7 +9,6 @@ skip patterns, with diverse-typed data below it).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     EXACT_LOOKUP,

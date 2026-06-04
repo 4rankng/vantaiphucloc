@@ -32,7 +32,6 @@ from app.contexts.customer_pricing.interface.dependencies import (
 from app.contexts.customer_pricing.interface.error_translation import translate
 from app.contexts.customer_pricing.interface.schemas import (
     PricingCreate,
-    PricingLineOut,
     PricingOut,
     PricingUpdate,
     pricing_line_to_out,

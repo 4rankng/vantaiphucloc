@@ -5,7 +5,6 @@ in operations.application.booked_trips.
 from __future__ import annotations
 
 from datetime import date
-from typing import Sequence
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -18,7 +18,7 @@ import hashlib
 import json
 import logging
 import re
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import date
 from typing import Any
 
@@ -37,14 +37,13 @@ from app.contexts.operations.infrastructure.import_pipeline.column_mapper import
     map_columns,
 )
 from app.contexts.operations.infrastructure.import_pipeline.header_finder import (
-    HeaderHit,
     find_header_row,
     header_row_text,
 )
 from app.contexts.operations.infrastructure.import_pipeline.llm import BatchHeaderClassifier
 from app.contexts.operations.infrastructure.import_pipeline.pattern_detector import DetectedPattern, detect_pattern
 from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import ExtractedRow, extract_bay_plan, extract_invoice, extract_loading_list, extract_settlement_list
-from app.contexts.operations.infrastructure.import_pipeline.sheet_picker import SheetScore, score_sheets
+from app.contexts.operations.infrastructure.import_pipeline.sheet_picker import score_sheets
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
     parse_container_no,
     parse_container_size,

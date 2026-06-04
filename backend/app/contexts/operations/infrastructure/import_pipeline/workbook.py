@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from io import BytesIO
-from typing import Any, Sequence
+from typing import Any
 
 
 @dataclass

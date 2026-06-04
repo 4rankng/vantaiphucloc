@@ -198,7 +198,7 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         sort_col = _SORTABLE_DIRECT.get(sort_by or '') if sort_by else None
 
         if sort_col is None and sort_by:
-            from app.models.domain import Client as ClientORM, Vehicle as VehicleORM, Location as LocationORM
+            from app.models.domain import Client as ClientORM, Location as LocationORM
             _JOIN_SORTS = {
                 'client_code': (ClientORM, DeliveredTripORM.client_id, 'code'),
                 'vehicle_plate': (None, DeliveredTripORM.vehicle_plate, None),

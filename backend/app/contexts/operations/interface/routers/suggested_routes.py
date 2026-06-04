@@ -12,13 +12,12 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
 from app.database import async_session
 from app.models.base import User
-from app.models.domain import DeliveredTrip as DeliveredTripORM
 
 router = APIRouter(prefix="/drivers", tags=["drivers"])
 

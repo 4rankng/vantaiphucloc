@@ -157,7 +157,7 @@ class ExcelParser:
         amount = _parse_amount(_get("amount"))
         cont_type_raw = _get("work_type")
         cont_type = str(cont_type_raw).strip().upper() if cont_type_raw is not None else None
-        notes = str(_get("notes")).strip() if _get("notes") is not None else None
+        str(_get("notes")).strip() if _get("notes") is not None else None
         vehicle_plate_raw = _get("vehicle_plate")
         vehicle_plate = str(vehicle_plate_raw).strip() if vehicle_plate_raw is not None else None
 

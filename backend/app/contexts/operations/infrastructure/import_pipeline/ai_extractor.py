@@ -10,11 +10,9 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any
 
 from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import ExtractedRow
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
-    build_cont_type,
     parse_container_no,
 )
 from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView

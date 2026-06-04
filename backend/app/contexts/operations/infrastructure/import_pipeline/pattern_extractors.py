@@ -10,7 +10,6 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass
-from typing import Any
 
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
     build_cont_type,
@@ -576,9 +575,8 @@ def extract_settlement_list(sheets: list[SheetView], filename: str = "") -> tupl
             if op_val:
                 work_type_val = _normalize_work_type(op_val)
 
-        trip_date = None
         if col_map.get("date") is not None and col_map["date"] < len(row):
-            trip_date = parse_date(row[col_map["date"]])
+            parse_date(row[col_map["date"]])
 
         pickup = ""
         if col_map.get("pickup") is not None and col_map["pickup"] < len(row):
