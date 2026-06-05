@@ -16,6 +16,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import logging
+import uuid
 from datetime import date
 
 from fastapi import (
@@ -203,10 +204,8 @@ async def enqueue_preview_customer_excel(
 ):
     """Enqueue a customer-Excel preview job. Returns job_id; the frontend
     polls `/imports/customer-excel/jobs/{job_id}` for the result.
-
-    Re-uploading the same file (sha256) on the same day returns the
-    same job id (deterministic), so accidental double-clicks don't
-    burn worker cycles.
+    
+    Generates a unique job ID for every upload to prevent stale caching issues.
     """
     if file.filename is None:
         raise HTTPException(status_code=400, detail="Tệp tải lên không có tên.")
@@ -215,8 +214,7 @@ async def enqueue_preview_customer_excel(
         raise HTTPException(status_code=400, detail="Tệp tải lên rỗng.")
 
     trip_date = default_trip_date or date.today()
-    content_sha = hashlib.sha256(content).hexdigest()[:16]
-    job_id = import_preview_job_id(content_sha, trip_date.isoformat())
+    job_id = uuid.uuid4().hex
 
     try:
         await enqueue(

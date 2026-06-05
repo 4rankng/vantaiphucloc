@@ -189,10 +189,15 @@ class BulkImportService:
         wb = openpyxl.load_workbook(io.BytesIO(content), data_only=True, read_only=True)
         rows_out: list[ImportRow] = []
 
+        from app.utils.excel_utils import flatten_complex_sheet
+
         for sheet in wb.worksheets:
             raw_rows = list(sheet.iter_rows(values_only=True))
             if not raw_rows:
                 continue
+
+            # Flatten side-by-side tables if any
+            raw_rows = flatten_complex_sheet(raw_rows)
 
             # Try to detect header row
             header_idx = self._find_header_row(raw_rows)
@@ -213,7 +218,7 @@ class BulkImportService:
                 if row.container_number or row.parse_error:
                     rows_out.append(row)
 
-            break  # Use first sheet with data
+            # Do not break; process all sheets in case data is split
 
         wb.close()
         return rows_out

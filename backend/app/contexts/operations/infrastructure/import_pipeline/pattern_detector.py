@@ -120,6 +120,9 @@ def _score_bay_plan(sheet: SheetView) -> float:
 
 _SIZE_SYNONYMS = {"KÍCH THƯỚC", "KICH THUOC", "SIZE", "SZ"}
 _POSITION_SYNONYMS = {"VỊ TRÍ", "VỊ TRỊ", "VI TRI", "VITRI"}
+# Precomputed normalized forms (spaces stripped) for fast cell matching
+_SIZE_NORM = frozenset(s.replace(" ", "").replace("​", "") for s in _SIZE_SYNONYMS)
+_POSITION_NORM = frozenset(s.replace(" ", "").replace("​", "") for s in _POSITION_SYNONYMS)
 
 
 def _score_stacking_plan(sheet: SheetView) -> float:
@@ -143,9 +146,9 @@ def _score_stacking_plan(sheet: SheetView) -> float:
             if is_container_header(cell):
                 container_cols.append(c)
             t_norm = t.replace(" ", "").replace("​", "")
-            if t_norm in {s.replace(" ", "") for s in _SIZE_SYNONYMS}:
+            if t_norm in _SIZE_NORM:
                 has_size = True
-            if t_norm in {s.replace(" ", "") for s in _POSITION_SYNONYMS}:
+            if t_norm in _POSITION_NORM:
                 has_position = True
 
         # Exactly 1 container header (not 3+ like bay_plan)
@@ -199,7 +202,7 @@ def _score_dual_panel(sheet: SheetView) -> float:
             if is_container_header(cell):
                 container_cols.append(c)
             t_norm = t.replace(" ", "").replace("​", "")
-            if t_norm in {s.replace(" ", "") for s in _SIZE_SYNONYMS}:
+            if t_norm in _SIZE_NORM:
                 has_size = True
 
         # Exactly 2 container headers

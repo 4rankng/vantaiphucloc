@@ -6,6 +6,7 @@ Also provides template-based parsing for customer Excel files.
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import unicodedata
@@ -278,7 +279,7 @@ async def parse_file(
     wb = load_workbook(file, read_only=True, data_only=True)
     ws = wb.active
 
-    # Extract all rows as lists
+    # Extract all rows as lists from the active sheet
     all_rows: list[list[Any]] = []
     for row in ws.iter_rows(max_row=max_rows + 1, values_only=True):
         all_rows.append([str(c) if c is not None else "" for c in row])
@@ -294,9 +295,17 @@ async def parse_file(
     sniff_cost = 0.0
 
     if cached:
+        from app.ai.parser import TableRegion
+        tables = []
+        for t in cached.get("tables", []):
+            tables.append(TableRegion(
+                start_column=t.get("start_column"),
+                end_column=t.get("end_column"),
+                mapping={int(k): v for k, v in t.get("mapping", {}).items()}
+            ))
         mapping = ColumnMapping(
             header_row=cached.get("header_row", 0),
-            mapping={int(k): v for k, v in cached.get("mapping", {}).items()},
+            tables=tables,
             confidence=cached.get("confidence", 0.5),
         )
         _logger.info(f"Using cached mapping for {filename}")
@@ -307,14 +316,20 @@ async def parse_file(
             output_tokens=200,
         )
         # Stage 2: Cache the mapping
-        if mapping.confidence > 0.3 and mapping.mapping:
+        if mapping.confidence > 0.3 and mapping.tables:
             save_mapping(source_id, file_hash, {
                 "header_row": mapping.header_row,
-                "mapping": mapping.mapping,
+                "tables": [
+                    {
+                        "start_column": t.start_column,
+                        "end_column": t.end_column,
+                        "mapping": t.mapping,
+                    } for t in mapping.tables
+                ],
                 "confidence": mapping.confidence,
             })
 
-    if not mapping.mapping:
+    if not mapping.tables:
         raise ValueError(
             f"Could not detect column mapping from file. "
             f"Confidence: {mapping.confidence}. "
@@ -330,44 +345,57 @@ async def parse_file(
 
     for i, raw_row in enumerate(data_rows):
         row_num = data_start + i + 1  # 1-indexed
-        cells: dict[str, ParsedCell] = {}
-        issues: list[str] = []
+        
+        for table in mapping.tables:
+            cells: dict[str, ParsedCell] = {}
+            issues: list[str] = []
+            
+            # Skip if this table region is completely out of bounds for this row
+            if table.start_column is not None and table.start_column >= len(raw_row):
+                continue
+                
+            has_data = False
+            for col_idx, field_name in table.mapping.items():
+                if col_idx >= len(raw_row):
+                    continue
 
-        for col_idx, field_name in mapping.mapping.items():
-            if col_idx >= len(raw_row):
+                raw_value = raw_row[col_idx]
+                cleaned_value, confidence, was_cleaned = _apply_programmatic(field_name, raw_value)
+
+                if raw_value is not None and str(raw_value).strip() != "":
+                    has_data = True
+
+                cells[field_name] = ParsedCell(
+                    value=cleaned_value,
+                    confidence=confidence,
+                    original_value=raw_value if was_cleaned else None,
+                    cleaned=was_cleaned,
+                )
+
+                if confidence < 0.5:
+                    issues.append(f"{field_name}: uncertain value '{raw_value}'")
+
+            # Only append if we found at least one non-empty mapped cell in this table region
+            if not has_data:
                 continue
 
-            raw_value = raw_row[col_idx]
-            cleaned_value, confidence, was_cleaned = _apply_programmatic(field_name, raw_value)
-
-            cells[field_name] = ParsedCell(
-                value=cleaned_value,
-                confidence=confidence,
-                original_value=raw_value if was_cleaned else None,
-                cleaned=was_cleaned,
+            # Add source reference
+            cells["source_row_ref"] = ParsedCell(
+                value=f"{filename}:R{row_num}",
+                confidence=1.0,
             )
 
-            if confidence < 0.5:
-                issues.append(f"{field_name}: uncertain value '{raw_value}'")
+            parsed_row = ParsedRow(
+                row_number=row_num,
+                cells=cells,
+                source_row_ref=f"{filename}:R{row_num}",
+            )
 
-        # Add source reference
-        cells["source_row_ref"] = ParsedCell(
-            value=f"{filename}:R{row_num}",
-            confidence=1.0,
-        )
+            parsed_rows.append(parsed_row)
 
-        parsed_row = ParsedRow(
-            row_number=row_num,
-            cells=cells,
-            source_row_ref=f"{filename}:R{row_num}",
-        )
-
-        parsed_rows.append(parsed_row)
-
-        # Stage 4 gate: only send to LLM if multiple issues
-        if len(issues) >= 2:
-            row_data = {k: str(v.value) for k, v in cells.items() if k != "source_row_ref"}
-            rows_needing_cleanup.append((i, parsed_row, issues))
+            # Stage 4 gate: only send to LLM if multiple issues (per table)
+            if len(issues) >= 2:
+                rows_needing_cleanup.append((i, parsed_row, issues))
 
     # Stage 4: Cleanup problematic rows via LLM (limited)
     MAX_CLEANUP_ROWS = 10  # Cost control
@@ -383,6 +411,11 @@ async def parse_file(
                     parsed_row.cells[field_name].confidence = 0.7
         except Exception as e:
             _logger.warning(f"Row cleanup failed for row {parsed_row.row_number}: {e}")
+
+    # Fallback to Strategy 2 if Strategy 1 found no rows
+    if not parsed_rows:
+        _logger.warning("Strategy 1 (Sniffing) returned no rows. Falling back to Strategy 2 (Whole-file extraction).")
+        return await parse_whole_file_gemini(all_rows, filename, max_rows)
 
     # Calculate total cost
     total_cost = sniff_cost
@@ -400,6 +433,113 @@ async def parse_file(
         rows=parsed_rows,
         total_rows=len(parsed_rows),
         cached_mapping=bool(cached),
+        sniff_cost_estimate=total_cost,
+    )
+
+
+async def parse_whole_file_gemini(all_rows: list[list[Any]], filename: str, max_rows: int = 1000) -> ParseResult:
+    """Strategy 2: Send the entire spreadsheet to Gemini 3.1 Pro to extract rows natively."""
+    import csv
+    import io
+    
+    # Convert first max_rows to CSV string
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerows(all_rows[:max_rows])
+    csv_text = output.getvalue()
+    
+    prompt = f"""You are a data parsing assistant. Extract ALL container trip records from this messy spreadsheet (provided as CSV).
+The spreadsheet may contain side-by-side tables, missing headers, or scattered data.
+
+Extract the data into a list of JSON objects matching these exact keys:
+- date: Trip date (YYYY-MM-DD)
+- route_from: Pickup location
+- route_to: Dropoff location
+- container_number: Container number (e.g. ABCU1234567)
+- container_type: Container type/size
+- amount: Amount/price (integer)
+- customer_name: Customer name
+- vendor_name: Vendor name
+- driver_name: Driver name
+- vehicle_plate: Vehicle plate
+- notes: Notes
+- source_row_ref: The CSV row index (0-based) where this record was found
+
+Only include fields that are actually present. Do not fabricate or guess data.
+Return ONLY raw JSON, matching this schema exactly:
+{{
+    "rows": [
+        {{"date": "2026-05-28", "container_number": "TRHU1234567", "source_row_ref": "4"}}
+    ]
+}}
+
+CSV Data:
+{csv_text}
+"""
+    
+    schema = {
+        "type": "OBJECT",
+        "properties": {
+            "rows": {
+                "type": "ARRAY",
+                "items": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "date": {"type": "STRING"},
+                        "route_from": {"type": "STRING"},
+                        "route_to": {"type": "STRING"},
+                        "container_number": {"type": "STRING"},
+                        "container_type": {"type": "STRING"},
+                        "amount": {"type": "INTEGER"},
+                        "customer_name": {"type": "STRING"},
+                        "vendor_name": {"type": "STRING"},
+                        "driver_name": {"type": "STRING"},
+                        "vehicle_plate": {"type": "STRING"},
+                        "notes": {"type": "STRING"},
+                        "source_row_ref": {"type": "STRING"}
+                    }
+                }
+            }
+        },
+        "required": ["rows"]
+    }
+
+    # Using Gemini 3.1 Pro for the large context window
+    response = await call_gemini(prompt, model="gemini-3.1-pro", max_tokens=8192, response_schema=schema)
+    
+    parsed_rows = []
+    total_cost = estimate_cost(len(prompt) // 4, 8192)  # rough estimate
+    
+    try:
+        data = json.loads(response)
+        rows_data = data.get("rows", [])
+        
+        for i, row_dict in enumerate(rows_data):
+            cells = {}
+            for k, v in row_dict.items():
+                if k == "source_row_ref": continue
+                cells[k] = ParsedCell(value=v, confidence=0.9, cleaned=True)
+                
+            source_ref = str(row_dict.get("source_row_ref", f"unknown_{i}"))
+            cells["source_row_ref"] = ParsedCell(value=f"{filename}:R{source_ref}", confidence=1.0)
+            
+            row_idx = int(source_ref) + 1 if source_ref.isdigit() else i + 1
+            parsed_rows.append(ParsedRow(
+                row_number=row_idx,
+                cells=cells,
+                source_row_ref=f"{filename}:R{source_ref}"
+            ))
+            
+    except Exception as e:
+        _logger.error(f"Fallback parsing failed: {e}\nResponse: {response[:200]}")
+
+    _logger.info(f"Fallback Strategy 2 extracted {len(parsed_rows)} rows. Cost estimate: ${total_cost:.4f}")
+
+    return ParseResult(
+        column_mapping=None,
+        rows=parsed_rows,
+        total_rows=len(parsed_rows),
+        cached_mapping=False,
         sniff_cost_estimate=total_cost,
     )
 

@@ -54,12 +54,27 @@ FIELD_DESCRIPTIONS = {
 
 
 @dataclass
-class ColumnMapping:
-    """LLM-detected column mapping."""
-    header_row: int  # 0-indexed row where headers are
+class TableRegion:
+    """A detected table region for side-by-side tables."""
+    start_column: int | None
+    end_column: int | None
     mapping: dict[int, str]  # {column_index: canonical_field_name}
+
+
+@dataclass
+class ColumnMapping:
+    """LLM-detected column mapping with multi-region support."""
+    header_row: int  # 0-indexed row where headers are
+    tables: list[TableRegion]
     confidence: float  # 0-1 overall confidence
     raw_response: str | None = None
+    
+    @property
+    def mapping(self) -> dict[int, str]:
+        """Backward compatibility: return mapping of first table."""
+        if self.tables:
+            return self.tables[0].mapping
+        return {}
 
 
 @dataclass
@@ -83,7 +98,7 @@ class ParsedRow:
 @dataclass
 class ParseResult:
     """Complete parse result."""
-    column_mapping: ColumnMapping
+    column_mapping: ColumnMapping | None
     rows: list[ParsedRow]
     total_rows: int
     cached_mapping: bool  # True if mapping was from cache
@@ -96,9 +111,8 @@ def _compute_file_hash(rows: list[list[Any]]) -> str:
     return hashlib.sha256(content.encode()).hexdigest()[:16]
 
 
-def _build_sniff_prompt(sample_rows: list[list[str]], max_cols: int = 20) -> str:
+def _build_sniff_prompt(sample_rows: list[list[str]], max_cols: int = 30) -> str:
     """Build the LLM prompt for column detection."""
-    # Format sample rows as a table
     table_lines = []
     for i, row in enumerate(sample_rows):
         cells = [str(c).strip() if c is not None else "" for c in row[:max_cols]]
@@ -109,6 +123,7 @@ def _build_sniff_prompt(sample_rows: list[list[str]], max_cols: int = 20) -> str
 
     return f"""You are a data mapping assistant for a Vietnamese trucking/logistics company.
 Given the following sample rows from a spreadsheet, identify which column corresponds to which canonical field.
+Some spreadsheets have multiple independent tables placed side-by-side horizontally (e.g. 40HC containers on the left, 20GP containers on the right of the exact same row).
 
 Canonical fields:
 {field_list}
@@ -116,55 +131,71 @@ Canonical fields:
 Sample data (first ~20 rows):
 {table}
 
-OUTPUT FORMAT — respond with ONLY raw JSON, no markdown fences, no explanation:
-{{"header_row": 0, "mapping": {{0: "date", 1: "route_from"}}, "confidence": 0.9}}
+OUTPUT FORMAT — respond with ONLY raw JSON:
+{{
+  "header_row": 0,
+  "tables": [
+    {{
+      "start_column": 0,
+      "end_column": 5,
+      "mapping": {{"0": "date", "1": "route_from"}}
+    }}
+  ],
+  "confidence": 0.9
+}}
 
 Rules:
-- Only map columns you are confident about. Skip uncertain columns.
+- Identify all side-by-side tables. If there's only one table, return one item in `tables`.
 - Column indices are 0-based.
-- If a field doesn't exist in the data, don't include it.
-- Vietnamese headers are common: ngày→date, từ/điểm đi→route_from, đến/điểm đến→route_to, container→container_number, loại→container_type, tiền/cước/amount→amount, khách→customer_name, nhà xe/nhà thầu→vendor_name, tài xế/lái xe→driver_name, biển số→vehicle_plate, ghi chú→notes
-- Amount columns might have currency suffixes (VND, đ, etc.)
-- Date formats vary: DD/MM/YYYY, YYYY-MM-DD, DD-MM-YY, etc.
+- If a field doesn't exist, don't include it.
+- Vietnamese headers: ngày→date, từ/điểm đi→route_from, đến/điểm đến→route_to, container/số cont/số container→container_number, loại/kích thước→container_type, tiền/cước/amount→amount, khách→customer_name, nhà xe/nhà thầu→vendor_name, tài xế/lái xe→driver_name, biển số→vehicle_plate, ghi chú→notes.
 """
 
 
-
-
-
 async def sniff_columns(sample_rows: list[list[str]], source_id: str | None = None) -> ColumnMapping:
-    """Stage 1: Detect column mapping using Gemini.
-
-    Args:
-        sample_rows: First ~20 rows from the file (as strings)
-        source_id: Optional source identifier for caching
-
-    Returns:
-        ColumnMapping with detected mapping
-    """
+    """Stage 1: Detect column mapping using Gemini."""
     prompt = _build_sniff_prompt(sample_rows)
 
     schema = {
         "type": "OBJECT",
         "properties": {
             "header_row": {"type": "INTEGER"},
-            "mapping": {
-                "type": "OBJECT",
-                "additionalProperties": {"type": "STRING"}
+            "tables": {
+                "type": "ARRAY",
+                "items": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "start_column": {"type": "INTEGER", "nullable": True},
+                        "end_column": {"type": "INTEGER", "nullable": True},
+                        "mapping": {
+                            "type": "OBJECT",
+                            "additionalProperties": {"type": "STRING"}
+                        }
+                    },
+                    "required": ["mapping"]
+                }
             },
             "confidence": {"type": "NUMBER"}
         },
-        "required": ["header_row", "mapping", "confidence"]
+        "required": ["header_row", "tables", "confidence"]
     }
 
     response = await call_gemini(prompt, response_schema=schema)
 
-    # Parse JSON from response
     try:
         data = json.loads(response)
+        tables = []
+        for t in data.get("tables", []):
+            mapping = {int(k): v for k, v in t.get("mapping", {}).items() if str(k).isdigit()}
+            tables.append(TableRegion(
+                start_column=t.get("start_column"),
+                end_column=t.get("end_column"),
+                mapping=mapping
+            ))
+            
         return ColumnMapping(
             header_row=data.get("header_row", 0),
-            mapping={int(k): v for k, v in data.get("mapping", {}).items() if k.isdigit()},
+            tables=tables,
             confidence=data.get("confidence", 0.5),
             raw_response=response,
         )
@@ -172,7 +203,7 @@ async def sniff_columns(sample_rows: list[list[str]], source_id: str | None = No
         _logger.error(f"Failed to parse LLM response: {e}\nResponse: {response[:200]}")
         return ColumnMapping(
             header_row=0,
-            mapping={},
+            tables=[],
             confidence=0.0,
             raw_response=response,
         )

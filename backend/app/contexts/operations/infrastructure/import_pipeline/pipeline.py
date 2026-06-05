@@ -217,6 +217,11 @@ def apply_mapping(
             (parsed_or_reasons.get("dropoff_location") or "").strip().lower(),
         )
         if row_key in seen_rows:
+            rejected.append(RejectedRow(
+                source_row_index=r,
+                reasons=["duplicate_in_file"],
+                raw=raw_dict,
+            ))
             continue
         seen_rows.add(row_key)
 
@@ -577,6 +582,11 @@ def _build_preview_from_extracted(
             (v.get("dropoff_location") or "").strip().lower(),
         )
         if key in seen:
+            deduped_rejected.append({
+                "source_row_index": item["source_row_index"],
+                "reasons": ["duplicate_in_file"],
+                "raw": item["values"],
+            })
             continue
         seen.add(key)
         deduped.append(item)
