@@ -35,6 +35,7 @@ class DeliveredTripCreate(BaseModel):
     cont_type: str | None = None
     cont_photo_url: str | None = None
     trip_date: date | None = None
+    note: str | None = None
 
     @model_validator(mode="after")
     def _check_driver_xor_vendor(self) -> "DeliveredTripCreate":
@@ -62,6 +63,7 @@ class DeliveredTripUpdate(BaseModel):
     trip_date: date | None = None
     revenue: int | None = None
     driver_salary: int | None = None
+    note: str | None = None
 
 
 class DeliveredTripOut(BaseModel):
@@ -81,6 +83,7 @@ class DeliveredTripOut(BaseModel):
     revenue: int
     driver_salary: int
     trip_date: date | None = None
+    note: str | None = None
     booked_trip_id: int | None = None
     created_at: datetime
     updated_at: datetime

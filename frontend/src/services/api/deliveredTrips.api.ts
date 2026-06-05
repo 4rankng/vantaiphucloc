@@ -42,6 +42,7 @@ export interface DeliveredTripCreatePayload {
   vessel?: string | null
   workType?: string | null
   tripDate?: string | null
+  note?: string | null
 }
 
 export interface DeliveredTripUpdatePayload {
@@ -59,6 +60,7 @@ export interface DeliveredTripUpdatePayload {
   tripDate?: string | null
   revenue?: number
   driverSalary?: number
+  note?: string | null
 }
 
 export async function getDeliveredTrip(id: number): Promise<ApiResponse<DeliveredTrip>> {

@@ -85,6 +85,7 @@ def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, vendors) -> Deliv
         revenue=w.revenue,
         driver_salary=w.driver_salary,
         trip_date=w.trip_date,
+        note=w.note,
         booked_trip_id=w.booked_trip_id,
         created_at=w.created_at,
         updated_at=w.updated_at,
@@ -195,6 +196,7 @@ async def create_delivered_trip_endpoint(
                 cont_type=body.cont_type,
                 cont_photo_url=body.cont_photo_url,
                 trip_date=body.trip_date,
+                note=body.note,
             ),
             _user_ctx(current_user),
         )
@@ -321,6 +323,7 @@ async def update_delivered_trip(
                 trip_date=body.trip_date,
                 revenue=body.revenue,
                 driver_salary=body.driver_salary,
+                note=body.note,
             ),
             _user_ctx(current_user),
         )

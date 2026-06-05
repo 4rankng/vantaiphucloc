@@ -1,4 +1,4 @@
-import { Pencil, Trash2, Camera } from 'lucide-react'
+import { Pencil, Trash2, Camera, StickyNote } from 'lucide-react'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { formatCurrencyFull, getWorkTypeLabel } from '@/data/domain'
@@ -464,6 +464,33 @@ export function JobDetail() {
             </div>
           </div>
         </Section>
+
+        {/* ── NOTE ── */}
+        {job.note && (
+          <Section label="Ghi chú">
+            <div
+              className="rounded-[18px] px-5 py-4 flex items-start gap-3"
+              style={{
+                background: 'var(--theme-bg-secondary)',
+                border: '1px solid var(--theme-border-default)',
+                boxShadow: '0 1px 2px rgba(15,23,20,0.04)',
+              }}
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                style={{
+                  background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)',
+                  color: 'var(--theme-brand-primary)',
+                }}
+              >
+                <StickyNote className="w-4 h-4" />
+              </div>
+              <p className="text-[13px] leading-relaxed" style={{ color: 'var(--theme-text-primary)' }}>
+                {job.note}
+              </p>
+            </div>
+          </Section>
+        )}
 
         {/* ── CONTAINER PHOTO ── */}
         <Section label="Ảnh container">

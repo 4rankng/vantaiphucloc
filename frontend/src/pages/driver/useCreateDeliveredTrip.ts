@@ -89,6 +89,11 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     `ttransport_recent_vessels_${user?.id ?? 'anon'}`
   )
 
+  // Recent note values (per-driver, stored in localStorage)
+  const { recentValues: recentNotes, addRecent: addRecentNote } = useRecentValues(
+    `ttransport_recent_notes_${user?.id ?? 'anon'}`
+  )
+
   // Form state — pre-populate from existing WO when editing
   const [containers, setContainers] = useState<ContainerForm[]>(
     existingDeliveredTrip ? woToContainers(existingDeliveredTrip) : [{ ...EMPTY_CONT }],
@@ -102,6 +107,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       ? existingDeliveredTrip.tripDate.slice(0, 10)
       : toISODate(new Date())
   )
+  const [note, setNote] = useState(existingDeliveredTrip?.note ?? '')
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
 
   // UI state
@@ -389,6 +395,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
           vessel: vessel || null,
           vehiclePlate: null,
           tripDate,
+          note: note.trim() || null,
         })
         // Upload photo if taken
         if (firstCont?.photoTaken && firstCont?.photoDataUrl) {
@@ -398,6 +405,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
         invalidateDeliveredTripDeps(qc)
         setShowSuccess(true)
         if (vessel.trim()) addRecentVessel(vessel.trim())
+        if (note.trim()) addRecentNote(note.trim())
         setTimeout(() => {
           setShowSuccess(false)
           navigate('/driver')
@@ -422,6 +430,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
             vessel: vessel || null,
             vehiclePlate: null,
             tripDate,
+            note: note.trim() || null,
           })
 
           if (!res.success) {
@@ -442,6 +451,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       invalidateDeliveredTripDeps(qc)
       setShowSuccess(true)
       if (vessel.trim()) addRecentVessel(vessel.trim())
+      if (note.trim()) addRecentNote(note.trim())
       setTimeout(() => {
         setShowSuccess(false)
         navigate('/driver')
@@ -450,7 +460,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       console.error('Submit failed:', err)
       setSubmitting(false)
     }
-  }, [containers, clientId, vessel, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingDeliveredTrip, addRecentVessel, tripDate])
+  }, [containers, clientId, vessel, note, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingDeliveredTrip, addRecentVessel, addRecentNote, tripDate])
 
   const onRequestSubmit = useCallback(async (): Promise<'validation-error' | undefined> => {
     if (!canSubmit) return
@@ -518,6 +528,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       dropoffLocation: existingDeliveredTrip.dropoffLocation.name,
       tripDateISO: tripDateRaw.slice(0, 10),
       tripDateLabel: formatISODate(tripDateRaw.slice(0, 10)),
+      note: existingDeliveredTrip.note ?? '',
     }
   }, [existingDeliveredTrip])
 
@@ -532,9 +543,11 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
 
     // Recent vessel suggestions (localStorage-backed)
     recentVessels,
+    // Recent note suggestions (localStorage-backed)
+    recentNotes,
 
     // Form state
-    containers, clientId, vessel, pickupLocation, dropoffLocation, tripDate,
+    containers, clientId, vessel, note, pickupLocation, dropoffLocation, tripDate,
     selectedTripId,
 
     // UI state
@@ -549,6 +562,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     // Actions
     setClientId: (v: string) => { setSelectedTripId(null); setClientId(v) },
     setVessel,
+    setNote,
     setPickupLocation: (v: string) => { setSelectedTripId(null); setPickupLocation(v) },
     setDropoffLocation: (v: string) => { setSelectedTripId(null); setDropoffLocation(v) },
     setTripDate,

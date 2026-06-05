@@ -102,6 +102,7 @@ class DeliveredTripCreateInput:
     cont_type: str | None = None
     cont_photo_url: str | None = None
     trip_date: date | None = None
+    note: str | None = None
 
 
 @dataclass
@@ -120,6 +121,7 @@ class DeliveredTripUpdateInput:
     trip_date: date | None = None
     revenue: int | None = None
     driver_salary: int | None = None
+    note: str | None = None
 
 
 @dataclass

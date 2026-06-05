@@ -63,6 +63,7 @@ class DeliveredTrip:
     revenue: Money = 0
     driver_salary: Money = 0
     trip_date: object | None = None
+    note: str | None = None
     created_at: datetime = field(default_factory=_utcnow)
     updated_at: datetime = field(default_factory=_utcnow)
 

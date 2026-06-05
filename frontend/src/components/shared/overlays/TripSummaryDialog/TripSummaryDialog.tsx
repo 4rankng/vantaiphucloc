@@ -27,6 +27,7 @@ interface TripSummaryDialogProps {
   containerCount?: number
   hasPhoto?: boolean
   photoUrls?: string[]
+  note?: string | null
 }
 
 export function TripSummaryDialog({
@@ -44,6 +45,7 @@ export function TripSummaryDialog({
   containerCount,
   hasPhoto,
   photoUrls = [],
+  note,
 }: TripSummaryDialogProps) {
   const handleConfirm = () => {
     hapticSuccess()
@@ -99,6 +101,14 @@ export function TripSummaryDialog({
             <div className="flex items-center gap-2 py-2 border-b" style={{ borderColor: 'var(--line)' }}>
               <span className="text-xs font-semibold w-20 shrink-0" style={{ color: 'var(--muted-2)' }}>Số tàu</span>
               <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{vessel}</span>
+            </div>
+          )}
+
+          {/* Note */}
+          {note && (
+            <div className="flex items-start gap-2 py-2 border-b" style={{ borderColor: 'var(--line)' }}>
+              <span className="text-xs font-semibold w-20 shrink-0 pt-0.5" style={{ color: 'var(--muted-2)' }}>Ghi chú</span>
+              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{note}</span>
             </div>
           )}
 

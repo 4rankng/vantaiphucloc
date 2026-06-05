@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   ScanLine, RotateCcw, Trash2, AlertCircle, Loader2, Plus,
   ChevronLeft, CheckCircle2, Container as ContainerIcon, Ship, MapPin,
-  Sparkles, Camera,
+  Sparkles, Camera, StickyNote,
 } from 'lucide-react'
 import { getWorkTypeLabel } from '@/data/domain'
 import { ContainerScanner } from '@/components/shared/overlays/ContainerScanner'
@@ -35,14 +35,15 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
     isEdit, original,
     clients, recentOrders,
     recentVessels,
-    containers, clientId, vessel, pickupLocation, dropoffLocation, tripDate,
+    recentNotes,
+    containers, clientId, vessel, note, pickupLocation, dropoffLocation, tripDate,
     selectedTripId,
     submitting, scannerOpen, summaryOpen, showSuccess,
     forceManualEntry, missingFields, containerErrors, containerSuggestions, suggestionLoading,
     canSubmit, summaryContNumber, summaryContType, summaryWorkType, summaryClientName,
     hasAnyPhoto, containerCount,
     tripDateLabel,
-    setClientId, setVessel, setPickupLocation, setDropoffLocation, setTripDate,
+    setClientId, setVessel, setNote, setPickupLocation, setDropoffLocation, setTripDate,
     openScanner, handleScanComplete, setScannerOpen,
     updateContainer, addContainer, removeContainer, validateContainerOnBlur,
     applyContainerSuggestion,
@@ -338,6 +339,30 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
           )}
         </Section>
 
+        {/* ────────────────────── ③b Note section ────────────────────── */}
+        <Section
+          icon={<StickyNote className="w-3.5 h-3.5" />}
+          label="Ghi chú"
+          hint="Ghi chú cho chuyến (nếu có)"
+        >
+          <RecentValuesInput
+            value={note}
+            onChange={setNote}
+            suggestions={recentNotes}
+            placeholder="VD: Chạy lẻ 1 cont 20, Cont hỏng cần chụp ảnh..."
+            className="w-full h-12 rounded-xl px-4 text-sm font-medium"
+            style={{
+              background: 'var(--theme-bg-secondary)',
+              border: `1.5px solid ${note ? 'color-mix(in srgb, var(--theme-brand-primary) 30%, transparent)' : 'var(--theme-border-default)'}`,
+              color: 'var(--theme-text-primary)',
+              boxShadow: 'var(--theme-shadow-card)',
+            }}
+          />
+          {isEdit && original && (
+            <OriginalHint current={note} original={original.note} />
+          )}
+        </Section>
+
         {/* ────────────────────── ④ Customer & route ────────────────────── */}
         <Section
           icon={<MapPin className="w-3.5 h-3.5" />}
@@ -499,6 +524,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
         pickupLocation={pickupLocation}
         dropoffLocation={dropoffLocation}
         tripDate={tripDateLabel}
+        note={note.trim() || null}
         containerCount={containerCount}
         hasPhoto={hasAnyPhoto}
         photoUrls={containers.filter(c => c.photoTaken && c.photoDataUrl).map(c => c.photoDataUrl!)}

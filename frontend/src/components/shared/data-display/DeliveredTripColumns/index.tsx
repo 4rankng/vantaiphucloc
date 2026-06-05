@@ -297,6 +297,20 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
       },
     },
     {
+      key: 'note',
+      header: 'Ghi chú',
+      width: 120,
+      render: (t) => (
+        <span
+          className="text-[12px] truncate block max-w-[120px]"
+          style={{ color: t.note ? 'var(--ink-2)' : 'var(--ink-4)' }}
+          title={t.note ?? undefined}
+        >
+          {t.note || '—'}
+        </span>
+      ),
+    },
+    {
       key: 'createdAt',
       header: 'Ngày tạo',
       width: 80,

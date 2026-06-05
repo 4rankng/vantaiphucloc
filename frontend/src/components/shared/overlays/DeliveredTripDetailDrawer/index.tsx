@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Camera } from 'lucide-react'
+import { Camera, StickyNote } from 'lucide-react'
 import { Drawer } from '@/components/shared/overlays/Drawer'
 import { PhotoLightbox } from '@/components/shared/overlays/PhotoLightbox'
 import { Pill, type PillVariant } from '@/components/shared/data-display/Pill'
@@ -154,6 +154,24 @@ export function DeliveredTripDetailDrawer({
                   options={clients.map((c) => ({ value: c.id, label: c.name }))}
                   onChange={(id) => updateTrip.mutate({ id: trip.id, data: { clientId: id } })}
                 />
+              </CriteriaEditRow>
+
+              <CriteriaEditRow label="Ghi chú" className="col-span-2 border-t border-[var(--line)]">
+                <div className="flex items-center gap-2">
+                  <StickyNote className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--ink-4)' }} />
+                  <InlineEditable
+                    display={
+                      <span style={{ color: trip.note ? 'var(--ink)' : 'var(--ink-4)' }}>
+                        {trip.note ?? '—'}
+                      </span>
+                    }
+                    value={trip.note ?? ''}
+                    placeholder="Ghi chú cho chuyến"
+                    onSave={async (v) => {
+                      await updateTrip.mutateAsync({ id: trip.id, data: { note: v } })
+                    }}
+                  />
+                </div>
               </CriteriaEditRow>
 
               <CriteriaEditRow label="Cước" className="col-span-1 border-t border-r border-[var(--line)]">

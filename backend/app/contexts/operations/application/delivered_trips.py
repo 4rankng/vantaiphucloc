@@ -120,6 +120,7 @@ class CreateDeliveredTrip:
             revenue=0,
             driver_salary=0,
             trip_date=data.trip_date if data.trip_date else date.today(),
+            note=data.note,
         )
 
         saved = await self.repo.add(w)
@@ -202,6 +203,8 @@ class UpdateDeliveredTrip:
             w.revenue = int(data.revenue)
         if data.driver_salary is not None:
             w.driver_salary = int(data.driver_salary)
+        if data.note is not None:
+            w.note = data.note or None
 
         if criteria_changed and w.booked_trip_id is not None:
             w.booked_trip_id = None
@@ -296,6 +299,7 @@ class BatchCreateDeliveredTrips:
                             cont_type=item.cont_type,
                             revenue=0, driver_salary=0,
                             trip_date=item.trip_date if item.trip_date else date.today(),
+                            note=item.note,
                         )
                         saved = await self.repo.add(w)
                         saved = await self.repo.save(saved)
