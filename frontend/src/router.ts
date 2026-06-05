@@ -105,6 +105,14 @@ export function createAppRouter() {
           element: h(Lazy, { component: R.AccountantLayout }),
           children: [
             { index: true, element: ebc('SuperAdminDashboard', h(Lazy, { component: R.SuperAdminApp })) },
+            // Director pages (accessible via GIÁM ĐỐC sidebar section)
+            { path: 'dashboard',              element: ebc('DirectorDashboard', h(Lazy, { component: R.DirectorDashboard })) },
+            { path: 'partners',               element: ebc('DirectorContacts', h(Lazy, { component: R.DirectorContacts })) },
+            { path: 'pricing',                element: ebc('DirectorPricingList', h(Lazy, { component: R.DirectorPricingList })) },
+            { path: 'pricing/:clientId',      element: ebc('DirectorPricingDetail', h(Lazy, { component: R.DirectorPricingDetail })) },
+            { path: 'notifications',          element: ebc('Notifications', h(Lazy, { component: R.DirectorNotifications })) },
+            { path: 'driver-jobs/:driverId',  element: ebc('DriverJobs', h(Lazy, { component: R.DriverJobs })) },
+            { path: 'client-jobs/:clientId',  element: ebc('ClientJobs', h(Lazy, { component: R.ClientJobs })) },
             { path: 'profile', element: ebc('Profile', h(Lazy, { component: R.Profile })) },
             { path: '*',       element: ebc('NotFound', h(Lazy, { component: R.NotFound })) },
           ],

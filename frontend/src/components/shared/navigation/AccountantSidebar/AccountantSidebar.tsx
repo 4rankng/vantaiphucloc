@@ -35,6 +35,8 @@ export interface SidebarItem {
   href: string
   icon: React.ElementType
   badge?: number
+  /** When true, only highlight on an exact pathname match. */
+  exact?: boolean
 }
 
 interface SidebarSection {
@@ -83,6 +85,16 @@ const ACCOUNTANT_NAV_SECTIONS: SidebarSection[] = [
   },
 ]
 
+const DIRECTOR_NAV_SECTION: SidebarSection = {
+  label: 'GIÁM ĐỐC',
+  items: [
+    { label: 'Tổng quan', href: '/superadmin/dashboard', icon: LayoutDashboard },
+    { label: 'Đối tác', href: '/superadmin/partners', icon: Building2 },
+    { label: 'Bảng giá', href: '/superadmin/pricing', icon: Route },
+    { label: 'Thông báo', href: '/superadmin/notifications', icon: Bell },
+  ],
+}
+
 export interface AccountantSidebarProps {
   collapsed?: boolean
   badges?: Record<string, number>
@@ -123,18 +135,19 @@ export function AccountantSidebar({
     : user?.role === 'superadmin'
       ? [
           ...ACCOUNTANT_NAV_SECTIONS,
+          DIRECTOR_NAV_SECTION,
           {
             label: 'HỆ THỐNG',
             items: [
-              { label: 'Quản lý tài khoản', href: '/superadmin', icon: UserCircle },
+              { label: 'Quản lý tài khoản', href: '/superadmin', icon: UserCircle, exact: true },
             ],
           },
         ]
       : ACCOUNTANT_NAV_SECTIONS
 
   const isActive = useCallback(
-    (href: string) => {
-      if (href === rootPath) return location.pathname === rootPath
+    (href: string, exact?: boolean) => {
+      if (exact || href === rootPath) return location.pathname === href
       return location.pathname.startsWith(href)
     },
     [location.pathname, rootPath],
@@ -192,7 +205,7 @@ export function AccountantSidebar({
             <div className="space-y-[2px]">
               {section.items.map((item) => {
                 const Icon = item.icon
-                const active = isActive(item.href)
+                const active = isActive(item.href, item.exact)
                 const badge = badges[item.href]
 
                 return (

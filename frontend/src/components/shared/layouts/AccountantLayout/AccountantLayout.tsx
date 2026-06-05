@@ -69,7 +69,7 @@ function AccountantMobileShell() {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const isHome = location.pathname === '/accountant'
+  const isHome = location.pathname === '/accountant' || location.pathname === '/superadmin'
   const isFullscreen = FULLSCREEN_PREFIXES.some(p => location.pathname.startsWith(p))
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
@@ -155,6 +155,11 @@ function resolveMobileTitle(pathname: string): string {
     '/accountant/settings/cuoc-tuyen': 'Bảng giá cước',
     '/accountant/settings/cuoc-tra-xe-ngoai': 'Bảng phí thuê xe',
     '/accountant/settings/tac-nghiep': 'Loại tác nghiệp',
+    '/superadmin/dashboard': 'Tổng quan (Giám đốc)',
+    '/superadmin/partners': 'Đối tác',
+    '/superadmin/pricing': 'Bảng giá',
+    '/superadmin/notifications': 'Thông báo',
+    '/superadmin/profile': 'Thông tin cá nhân',
   }
   if (TITLES[pathname]) return TITLES[pathname]
   return ''

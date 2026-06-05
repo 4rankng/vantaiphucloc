@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
 import { TripChartCard } from '@/components/shared/data-display/TripChartCard'
 import { KpiHeroCard } from '@/components/shared/data-display/KpiHeroCard'
 import { DashboardSectionHeader } from '@/components/shared/data-display/DashboardSectionHeader'
@@ -179,6 +180,7 @@ function VehicleBarList({ rows }: { rows: VehiclePnLRow[] }) {
 // ─── Main component ────────────────────────────────────────────────────────
 
 export function DirectorDashboard() {
+  const { user } = useAuth()
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
   const isMobile = useIsMobile(768)
   const { data: profile } = useProfile()
@@ -302,7 +304,7 @@ export function DirectorDashboard() {
 
           {/* CTA */}
           <Link
-            to="/director/users"
+            to={user?.role === 'superadmin' ? '/superadmin' : '/director/users'}
             className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', boxShadow: '0 1px 3px rgba(0,90,45,0.18)' }}
           >
