@@ -31,6 +31,8 @@ def detect_pattern(sheets: list[SheetView], filename: str = "") -> DetectedPatte
             continue
         scores = {
             "bay_plan": _score_bay_plan(sheet),
+            "stacking_plan": _score_stacking_plan(sheet),
+            "dual_panel": _score_dual_panel(sheet),
             "loading_list": _score_loading_list(sheet),
             "invoice": _score_invoice(sheet),
             "settlement_list": _score_settlement_list(sheet),
@@ -56,6 +58,7 @@ _CONTAINER_SYNONYMS = {
     "MÃ CONT", "MA CONT", "MÃ CONTAINER", "MA CONTAINER",
     "หมายเลขตู้", "CONT",
 }
+_CONTAINER_NO_RE = re.compile(r"^[A-Z]{4}\d{7}$")
 _PORT_CODE_RE = re.compile(r"^[A-Z]{2,5}$")
 
 
@@ -108,6 +111,130 @@ def _score_bay_plan(sheet: SheetView) -> float:
                     port_boost = 0.15
                     break
             return min(1.0, 0.8 + port_boost)
+    return 0.0
+
+
+# ---------------------------------------------------------------------------
+# Stacking Plan  (depot gate-out / bay arrangement — simple single table)
+# ---------------------------------------------------------------------------
+
+_SIZE_SYNONYMS = {"KÍCH THƯỚC", "KICH THUOC", "SIZE", "SZ"}
+_POSITION_SYNONYMS = {"VỊ TRÍ", "VỊ TRỊ", "VI TRI", "VITRI"}
+
+
+def _score_stacking_plan(sheet: SheetView) -> float:
+    """Stacking Plan: single Container header + Position/Size columns, ≤8 cols.
+
+    This is a simple depot stacking list (STT, Số cont, Vị trí, Kích thước)
+    — unlike the multi-section bay_plan which has 3+ Container columns.
+    """
+    for r in range(min(10, len(sheet.rows))):
+        row = sheet.rows[r]
+        container_cols: list[int] = []
+        has_size = False
+        has_position = False
+        non_empty = 0
+
+        for c, cell in enumerate(row):
+            t = _cell_upper(cell)
+            if not t:
+                continue
+            non_empty += 1
+            if is_container_header(cell):
+                container_cols.append(c)
+            t_norm = t.replace(" ", "").replace("​", "")
+            if t_norm in {s.replace(" ", "") for s in _SIZE_SYNONYMS}:
+                has_size = True
+            if t_norm in {s.replace(" ", "") for s in _POSITION_SYNONYMS}:
+                has_position = True
+
+        # Exactly 1 container header (not 3+ like bay_plan)
+        if len(container_cols) != 1:
+            continue
+
+        # Must have size or position, and be a narrow table
+        if not (has_size or has_position):
+            continue
+
+        if non_empty > 8:
+            continue
+
+        score = 0.7
+        if has_size and has_position:
+            score += 0.1
+
+        # Boost: data rows below with container-shaped values
+        data_containers = 0
+        for r2 in range(r + 1, min(r + 15, len(sheet.rows))):
+            for cell in sheet.rows[r2]:
+                if cell is not None and _CONTAINER_NO_RE.match(_cell_text(cell)):
+                    data_containers += 1
+                    break
+        if data_containers >= 5:
+            score += 0.15
+
+        return min(1.0, score)
+
+    return 0.0
+
+
+# ---------------------------------------------------------------------------
+# Dual Panel  (side-by-side 40HC + 20GP tables in a single sheet)
+# ---------------------------------------------------------------------------
+
+
+def _score_dual_panel(sheet: SheetView) -> float:
+    """Dual Panel: 2 Container headers in same row separated by a gap.
+
+    Layout: [STT | Số cont | Vị trí | ... | <gap> | STT | Số cont | ...]
+    Left panel = 40HC, right panel = 20GP (or vice versa).
+    """
+    for r in range(min(10, len(sheet.rows))):
+        row = sheet.rows[r]
+        container_cols: list[int] = []
+        has_size = False
+
+        for c, cell in enumerate(row):
+            t = _cell_upper(cell)
+            if is_container_header(cell):
+                container_cols.append(c)
+            t_norm = t.replace(" ", "").replace("​", "")
+            if t_norm in {s.replace(" ", "") for s in _SIZE_SYNONYMS}:
+                has_size = True
+
+        # Exactly 2 container headers
+        if len(container_cols) != 2:
+            continue
+
+        # Must have a gap between them (≥2 columns)
+        gap = container_cols[1] - container_cols[0]
+        if gap < 3:
+            continue
+
+        # Must have size column
+        if not has_size:
+            continue
+
+        score = 0.75
+
+        # Boost: data rows below with container-shaped values in both panels
+        left_containers = 0
+        right_containers = 0
+        for r2 in range(r + 1, min(r + 15, len(sheet.rows))):
+            row2 = sheet.rows[r2]
+            for c, cell in enumerate(row2):
+                if cell is not None and _CONTAINER_NO_RE.match(_cell_text(cell)):
+                    if c < container_cols[1]:
+                        left_containers += 1
+                    else:
+                        right_containers += 1
+                    break
+
+        if left_containers >= 3 and right_containers >= 3:
+            score += 0.15
+
+        return min(1.0, score)
+
     return 0.0
 
 

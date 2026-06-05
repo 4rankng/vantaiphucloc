@@ -129,6 +129,7 @@ SYNONYMS: dict[str, list[str]] = {
         "rong hang", "rỗng hàng", "hang rong", "hàng rỗng",
         "rong", "rỗng", "hang", "hàng",
         "f", "e", "full", "empty",
+        "空/重", "空/重(e/f)",  # Chinese: empty/heavy (E/F)
     ],
     "gross_weight_kg": [
         "weight", "vgm", "vgm (kgm)", "gross weight", "gross weight (kg)",
@@ -160,6 +161,7 @@ SYNONYMS: dict[str, list[str]] = {
     "pickup_date": [
         "pickup date", "from date", "ngay lay", "ngày lấy",
         "loading date", "ngay di", "ngày đi",
+        "箱子进场时间",  # Chinese: container gate-in time
     ],
     "dropoff_date": [
         "dropoff date", "to date", "delivery date",

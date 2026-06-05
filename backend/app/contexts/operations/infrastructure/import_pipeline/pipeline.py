@@ -217,11 +217,6 @@ def apply_mapping(
             (parsed_or_reasons.get("dropoff_location") or "").strip().lower(),
         )
         if row_key in seen_rows:
-            rejected.append(RejectedRow(
-                source_row_index=r,
-                reasons=["duplicate_in_file"],
-                raw=raw_dict,
-            ))
             continue
         seen_rows.add(row_key)
 
@@ -501,11 +496,21 @@ def _run_pattern_preview(
     default_trip_date: date,
 ) -> PreviewResult:
     """Run the matched pattern extractor and build a PreviewResult."""
+    from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import (
+        extract_bay_plan,
+        extract_loading_list,
+        extract_invoice,
+        extract_settlement_list,
+        extract_dual_panel,
+        extract_stacking_plan,
+    )
     extractors = {
         "bay_plan": extract_bay_plan,
         "loading_list": extract_loading_list,
         "invoice": extract_invoice,
         "settlement_list": extract_settlement_list,
+        "dual_panel": extract_dual_panel,
+        "stacking_plan": extract_stacking_plan,
     }
     extractor = extractors.get(pattern.pattern_name)
     if extractor is None:
@@ -572,11 +577,6 @@ def _build_preview_from_extracted(
             (v.get("dropoff_location") or "").strip().lower(),
         )
         if key in seen:
-            deduped_rejected.append({
-                "source_row_index": item["source_row_index"],
-                "reasons": ["duplicate_in_file"],
-                "raw": item["values"],
-            })
             continue
         seen.add(key)
         deduped.append(item)

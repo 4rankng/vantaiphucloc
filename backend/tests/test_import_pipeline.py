@@ -26,9 +26,11 @@ from app.contexts.operations.infrastructure.import_pipeline.column_mapper import
 from app.contexts.operations.infrastructure.import_pipeline.pattern_detector import detect_pattern
 from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import (
     extract_bay_plan,
+    extract_dual_panel,
     extract_invoice,
     extract_loading_list,
     extract_settlement_list,
+    extract_stacking_plan,
 )
 from app.contexts.operations.infrastructure.import_pipeline.pipeline import run_preview
 from app.contexts.operations.infrastructure.import_pipeline.llm import (
@@ -60,6 +62,11 @@ HAIAN_BETA = DOCS / "Loading list of HAIAN BETA 062S.xls"
 PHUC_LOC = DOCS / "Phúc Lộc - Shipside T4.26 HAP.xlsx"
 SAMPLE_IO = DOCS / "templates" / "sample-input-output.xlsx"
 ULTIMA = DOCS / "templates" / "ultima02.06.xlsx"
+
+# New chu hang formats (stacking plan + dual panel)
+REAL_LIFE = DOCS / "real-life-data"
+GLORY_STACKING = REAL_LIFE / "3.GLORY SHANGHAI 2621N.xlsx"
+CONSERO_DUAL = REAL_LIFE / "4.CONSERO 2621N.xlsx"
 
 
 # ---------------------------------------------------------------------------
@@ -683,6 +690,134 @@ async def test_ultima_e2e_preview(ultima_sheets):
     assert first["freight_kind"] in ("F", "E")
     assert first["container_size"] in ("20", "40")
     assert "ULTIMA" in (first.get("vessel") or "")
+
+
+# ---------------------------------------------------------------------------
+# New chu hang formats — Stacking Plan + Dual Panel
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def glory_stacking_sheets():
+    if not GLORY_STACKING.exists():
+        pytest.skip("3.GLORY SHANGHAI 2621N.xlsx missing")
+    return load_workbook(GLORY_STACKING.read_bytes(), GLORY_STACKING.name)
+
+
+@pytest.fixture
+def consero_dual_sheets():
+    if not CONSERO_DUAL.exists():
+        pytest.skip("4.CONSERO 2621N.xlsx missing")
+    return load_workbook(CONSERO_DUAL.read_bytes(), CONSERO_DUAL.name)
+
+
+def test_detect_stacking_plan_glory(glory_stacking_sheets):
+    pattern = detect_pattern(glory_stacking_sheets, "3.GLORY SHANGHAI 2621N.xlsx")
+    assert pattern is not None
+    assert pattern.pattern_name == "stacking_plan"
+    assert pattern.confidence >= 0.6
+
+
+def test_detect_dual_panel_consero(consero_dual_sheets):
+    pattern = detect_pattern(consero_dual_sheets, "4.CONSERO 2621N.xlsx")
+    assert pattern is not None
+    assert pattern.pattern_name == "dual_panel"
+    assert pattern.confidence >= 0.6
+
+
+def test_extract_stacking_plan_glory(glory_stacking_sheets):
+    accepted, rejected = extract_stacking_plan(
+        glory_stacking_sheets, "3.GLORY SHANGHAI 2621N.xlsx",
+    )
+    assert len(accepted) > 0
+    for row in accepted:
+        assert len(row.container_number) == 11
+        assert row.cont_type in ("E20", "E40", "F20", "F40")
+        assert row.vessel_name != ""  # extracted from filename
+
+
+def test_extract_dual_panel_consero(consero_dual_sheets):
+    accepted, rejected = extract_dual_panel(
+        consero_dual_sheets, "4.CONSERO 2621N.xlsx",
+    )
+    assert len(accepted) > 0
+    for row in accepted:
+        assert len(row.container_number) == 11
+        assert row.cont_type in ("E20", "E40", "F20", "F40")
+        assert row.vessel_name != ""  # extracted from filename
+
+
+def test_stacking_plan_has_vessel_from_filename(glory_stacking_sheets):
+    accepted, _ = extract_stacking_plan(
+        glory_stacking_sheets, "3.GLORY SHANGHAI 2621N.xlsx",
+    )
+    assert len(accepted) > 0
+    assert "GLORY SHANGHAI" in accepted[0].vessel_name
+
+
+def test_dual_panel_has_vessel_from_filename(consero_dual_sheets):
+    accepted, _ = extract_dual_panel(
+        consero_dual_sheets, "4.CONSERO 2621N.xlsx",
+    )
+    assert len(accepted) > 0
+    assert "CONSERO" in accepted[0].vessel_name
+
+
+def test_dual_panel_extracts_both_panels(consero_dual_sheets):
+    """Dual panel should extract containers from BOTH left and right panels."""
+    accepted, _ = extract_dual_panel(
+        consero_dual_sheets, "4.CONSERO 2621N.xlsx",
+    )
+    cont_types = {r.cont_type for r in accepted}
+    # Should have both 20ft and 40ft containers (from different panels)
+    sizes = {ct[1:] for ct in cont_types}
+    assert "20" in sizes or "40" in sizes
+
+
+@pytest.mark.asyncio
+async def test_glory_stacking_e2e_preview():
+    if not GLORY_STACKING.exists():
+        pytest.skip("3.GLORY SHANGHAI 2621N.xlsx missing")
+    res = await run_preview(
+        GLORY_STACKING.read_bytes(), GLORY_STACKING.name,
+        default_trip_date=date(2026, 6, 1),
+    )
+    assert res.stats["accepted_count"] > 0
+    first = res.accepted[0]["values"]
+    assert first["container_no"]
+    assert first["cont_type"] in ("E20", "E40", "F20", "F40")
+    assert "GLORY SHANGHAI" in (first.get("vessel") or "")
+
+
+@pytest.mark.asyncio
+async def test_consero_dual_e2e_preview():
+    if not CONSERO_DUAL.exists():
+        pytest.skip("4.CONSERO 2621N.xlsx missing")
+    res = await run_preview(
+        CONSERO_DUAL.read_bytes(), CONSERO_DUAL.name,
+        default_trip_date=date(2026, 6, 1),
+    )
+    assert res.stats["accepted_count"] > 0
+    first = res.accepted[0]["values"]
+    assert first["container_no"]
+    assert first["cont_type"] in ("E20", "E40", "F20", "F40")
+    assert "CONSERO" in (first.get("vessel") or "")
+
+
+# ---------------------------------------------------------------------------
+# Chinese synonyms
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "header,expected_field",
+    [
+        ("空/重", "freight_kind"),
+        ("空/重(E/F)", "freight_kind"),
+        ("箱子进场时间", "pickup_date"),
+    ],
+)
+def test_chinese_synonyms(header: str, expected_field: str):
+    norm = normalize_header_text(header)
+    assert EXACT_LOOKUP.get(norm) == expected_field, f"{header!r} → {EXACT_LOOKUP.get(norm)} ≠ {expected_field}"
 
 
 # ---------------------------------------------------------------------------
