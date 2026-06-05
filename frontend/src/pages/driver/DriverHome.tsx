@@ -189,7 +189,7 @@ function MobileDriverHome() {
 
       {/* Stat card: trips breakdown + salary */}
       <div
-        className="bento-card overflow-hidden flex relative"
+        className="flex overflow-hidden relative rounded-2xl"
         style={{
           background: 'linear-gradient(135deg, color-mix(in srgb, var(--theme-brand-primary) 5%, var(--theme-bg-secondary)) 0%, var(--theme-bg-secondary) 55%)',
           padding: 0,
