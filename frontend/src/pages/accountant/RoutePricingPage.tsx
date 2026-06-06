@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Plus, Route, FileSpreadsheet, ArrowLeft, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
@@ -17,6 +18,8 @@ import { useSyncPricing } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms'
 
 export function RoutePricingPage() {
+  const { pathname } = useLocation()
+  const backTo = pathname.startsWith('/accountant') ? '/accountant/settings' : undefined
   const [importOpen, setImportOpen] = useState(false)
   const [syncOpen, setSyncOpen] = useState(false)
   const [inlineEditId, setInlineEditId] = useState<number | null>(null)
@@ -203,7 +206,9 @@ export function RoutePricingPage() {
         subtitle="Quản lý bảng giá cước theo tuyến đường và loại hình tác nghiệp"
         lucideIcon={Route}
         breadcrumbs={
-          <LinkButton to="/accountant/settings" icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
+          backTo
+            ? <LinkButton to={backTo} icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
+            : undefined
         }
       />
 

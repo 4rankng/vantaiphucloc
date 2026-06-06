@@ -12,7 +12,6 @@ from app.contexts.customer_pricing.interface import (
     location_aliases_router,
     locations_router,
     contacts_router,
-    pricings_router,
 )
 from app.contexts.route_pricing.interface import route_pricings_router
 from app.contexts.vendor_route_pricing.interface import vendor_route_pricings_router
@@ -51,7 +50,6 @@ router.include_router(auth_router)
 router.include_router(contacts_router)
 router.include_router(locations_router)
 router.include_router(location_aliases_router)
-router.include_router(pricings_router)
 router.include_router(route_pricings_router)
 router.include_router(vendor_route_pricings_router)
 router.include_router(delivered_trips_router)
