@@ -419,7 +419,7 @@ async def parse_preview(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         _logger.exception("parse_preview failed: %s", exc)
-        raise HTTPException(status_code=500, detail=f"Lỗi phân tích file: {exc}") from exc
+        raise HTTPException(status_code=500, detail="Lỗi phân tích file") from exc
 
     return {
         "filename": result.filename,
