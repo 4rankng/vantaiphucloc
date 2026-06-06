@@ -123,11 +123,12 @@ dev-worker:
 
 # ── Cleanup ────────────────────────────────────────────────────────────────────
 
-## clean: Kill stale dev processes and free ports
+## clean: Kill stale dev processes, clear Vite cache, free ports
 clean:
 	@pkill -TERM -f "uvicorn app.main:app" 2>/dev/null || true
 	@pkill -TERM -f "arq app.workers.worker" 2>/dev/null || true
 	@pkill -TERM -f "vite" 2>/dev/null || true
+	@rm -rf frontend/node_modules/.vite
 	@sleep 1
 	@lsof -ti :$(BACKEND_PORT),$(FRONTEND_PORT) 2>/dev/null | xargs -r kill -9 2>/dev/null || true
 	@pkill -KILL -f "uvicorn app.main:app" 2>/dev/null || true
