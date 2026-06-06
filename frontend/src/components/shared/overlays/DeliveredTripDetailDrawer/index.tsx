@@ -57,7 +57,7 @@ export function DeliveredTripDetailDrawer({
         onOpenChange={(o) => {
           if (!o) onClose()
         }}
-        breadcrumb={`Đối soát · ${trip.client?.name ?? ''}`}
+        breadcrumb={`Đối soát · ${trip.client?.code ?? ''}`}
         title={
           <>
             <span>Chuyến đã đi</span>
@@ -150,7 +150,7 @@ export function DeliveredTripDetailDrawer({
               <CriteriaEditRow label="Khách hàng" className="col-span-2">
                 <InlineSelect
                   value={trip.client?.id ?? null}
-                  displayValue={trip.client?.name}
+                  displayValue={trip.client?.code || trip.client?.name}
                   options={clients.map((c) => ({ value: c.id, label: c.name }))}
                   onChange={(id) => updateTrip.mutate({ id: trip.id, data: { clientId: id } })}
                 />

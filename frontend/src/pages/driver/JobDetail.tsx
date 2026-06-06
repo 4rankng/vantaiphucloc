@@ -430,13 +430,13 @@ export function JobDetail() {
                     <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4" />
                     <path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01" />
                   </svg>
-                  Chủ hàng
+                  Mã KH
                 </div>
                 <div
                   className="text-[13.5px] font-bold leading-snug"
                   style={{ color: 'var(--theme-text-primary)' }}
                 >
-                  {job.client.name || '—'}
+                  {job.client.code || job.client.name || '—'}
                 </div>
               </div>
 

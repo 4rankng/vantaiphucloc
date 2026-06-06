@@ -131,11 +131,11 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
     },
     {
       key: 'client',
-      header: 'Chủ hàng',
+      header: 'Mã KH',
       sortKey: 'client_code',
       render: (t) => (
         <span className="text-[13px] font-semibold whitespace-nowrap" style={{ color: 'var(--ink)' }}>
-          {t.client?.code || t.client?.name || '—'}
+          {t.client?.code || '—'}
         </span>
       ),
     },

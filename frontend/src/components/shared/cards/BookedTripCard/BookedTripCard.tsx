@@ -27,7 +27,7 @@ export function BookedTripCard({ trip, onClick }: BookedTripCardProps) {
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-            {trip.client.name}
+            {trip.client.code || trip.client.name}
           </p>
           <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
             {trip.pickupLocation.name} → {trip.dropoffLocation.name}

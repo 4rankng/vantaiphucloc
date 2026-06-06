@@ -92,7 +92,7 @@ export function TripSummaryDialog({
 
           {/* Client */}
           <div className="flex items-center gap-2 py-2 border-b" style={{ borderColor: 'var(--line)' }}>
-            <span className="text-xs font-semibold w-20 shrink-0" style={{ color: 'var(--muted-2)' }}>Khách hàng</span>
+            <span className="text-xs font-semibold w-20 shrink-0" style={{ color: 'var(--muted-2)' }}>Mã KH</span>
             <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{clientName}</span>
           </div>
 

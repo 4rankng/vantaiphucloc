@@ -50,7 +50,7 @@ export function RecentTripSuggestions({
             onClick={() => onSelect({
               tripId: idx,
               clientId: String(route.client.id),
-              clientName: route.client.name,
+              clientName: route.client?.code || route.client?.name || '',
               pickupLocation: pickup,
               dropoffLocation: dropoff,
             })}

@@ -163,7 +163,7 @@ function DriverCard({ wo, onClick }: { wo: DeliveredTrip; onClick: () => void })
         className="mt-1 text-[12px] font-medium truncate"
         style={{ color: 'var(--theme-text-secondary)' }}
       >
-        {wo.client.code ? `${wo.client.code} · ${wo.client.name}` : wo.client.name}
+        {wo.client.code || wo.client.name || '—'}
       </p>
 
       {/* Row 3 — route arrow (left) + date · status (right) */}
@@ -203,7 +203,7 @@ function AccountantCard({ wo }: { wo: DeliveredTrip }) {
       </p>
 
       <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-        {wo.client.code ? `${wo.client.code} · ` : ''}{wo.client.name}
+        {wo.client.code || wo.client.name || '—'}
       </p>
 
       <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>

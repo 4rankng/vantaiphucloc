@@ -500,7 +500,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
 
   const summaryClientName = useMemo(() => {
     const client = clients.find(c => String(c.id) === clientId)
-    return client?.name ?? ''
+    return client?.code || client?.name || ''
   }, [clients, clientId])
 
   // ─── Original values for edit-mode "Trước:" hints ────────────────────────
@@ -522,7 +522,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       contType,
       workType,
       clientId: String(existingDeliveredTrip.client.id),
-      clientName: existingDeliveredTrip.client.name,
+      clientName: existingDeliveredTrip.client.code || existingDeliveredTrip.client.name,
       vessel: existingDeliveredTrip.vessel ?? '',
       pickupLocation: existingDeliveredTrip.pickupLocation.name,
       dropoffLocation: existingDeliveredTrip.dropoffLocation.name,
