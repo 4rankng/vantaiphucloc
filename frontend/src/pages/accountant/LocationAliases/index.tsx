@@ -88,7 +88,7 @@ export function LocationAliasesPage() {
   useEffect(() => {
     if (locations.length === 0) {
       if (selectedId !== null) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+         
         setSelectedId(null)
       }
       return

@@ -143,7 +143,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   useEffect(() => {
     if (!user || user.role !== 'driver') return
     let cancelled = false
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setSuggestionLoading(true)
 
     const fetchSuggestions = async () => {

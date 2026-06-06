@@ -36,7 +36,7 @@ export function SalaryPeriodSettings() {
 
   useEffect(() => {
     if (config) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setFromDay(config.fromDay)
       setToDay(config.toDay)
     }
@@ -44,7 +44,7 @@ export function SalaryPeriodSettings() {
 
   useEffect(() => {
     if (config) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setDirty(config.fromDay !== fromDay || config.toDay !== toDay)
     }
   }, [fromDay, toDay, config])

@@ -42,7 +42,7 @@ from app.contexts.operations.infrastructure.import_pipeline.header_finder import
 )
 from app.contexts.operations.infrastructure.import_pipeline.llm import BatchHeaderClassifier
 from app.contexts.operations.infrastructure.import_pipeline.pattern_detector import DetectedPattern, detect_pattern
-from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import ExtractedRow, extract_bay_plan, extract_invoice, extract_loading_list, extract_settlement_list
+from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import ExtractedRow
 from app.contexts.operations.infrastructure.import_pipeline.sheet_picker import score_sheets
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
     parse_container_no,
@@ -261,10 +261,17 @@ def _parse_row(
         size = None
 
     try:
-        kind = parse_freight_kind(raw_dict.get("freight_kind"))
+        kind = parse_freight_kind(raw_dict.get("freight_kind"), raise_on_unknown=True)
+        freight_kind_unknown = False
     except ValueError as exc:
-        reasons.append(str(exc))
-        kind = None
+        if "unknown_freight_kind" in str(exc):
+            # Mark row as having unknown freight kind but allow it to continue
+            kind = "F"  # Default to F for now, will be resolved in preview
+            freight_kind_unknown = True
+        else:
+            reasons.append(str(exc))
+            kind = None
+            freight_kind_unknown = False
 
     if reasons:
         return raw_dict, reasons
@@ -329,6 +336,7 @@ def _parse_row(
         "vehicle_plate": plate,
         "freight_charge": freight_charge,
         "remarks": remarks,
+        "freight_kind_unknown": freight_kind_unknown,
     }
     return raw_dict, parsed
 
@@ -561,6 +569,7 @@ def _build_preview_from_extracted(
                 "vehicle_plate": row.vehicle_plate,
                 "freight_charge": row.freight_charge,
                 "remarks": "",
+                "freight_kind_unknown": row.freight_kind_unknown,
             },
         })
 

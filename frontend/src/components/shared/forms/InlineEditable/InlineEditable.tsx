@@ -37,7 +37,7 @@ export function InlineEditable({
   }, [editing])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setDraft(value)
   }, [value])
 

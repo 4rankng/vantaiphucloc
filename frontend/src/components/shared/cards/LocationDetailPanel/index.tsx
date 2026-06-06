@@ -43,7 +43,7 @@ export function LocationDetailPanel({
     [location, allLocations, aliasesByLocAll],
   )
 
-  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {  
  setNewAlias(''); setAdding(false) }, [location.id])
   useEffect(() => { if (adding) newAliasRef.current?.focus() }, [adding])
 

@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/set-state-in-effect */
+ 
 export { AutoMatchDateDialog } from './AutoMatchDateDialog'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { RobotDialogHero, useTypewriter } from '@/components/shared/feedback/RobotHead'
