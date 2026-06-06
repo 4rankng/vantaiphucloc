@@ -497,12 +497,21 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
       <>
         {importType === 'client' && (
           clientId ? (
-            <span
-              className="text-[12px] font-medium px-2.5 py-1 rounded-full mr-auto"
+            <button
+              type="button"
+              onClick={() => setClientId('')}
+              className="group text-[12px] font-medium pl-2.5 pr-1.5 py-1 rounded-full mr-auto flex items-center gap-1 transition-colors cursor-pointer"
               style={{ background: 'var(--success-soft)', color: 'var(--success)' }}
+              title="Nhấn để chọn lại chủ hàng"
             >
-              {clients.find((c) => String(c.id) === clientId)?.name ?? 'Chủ hàng'} ✓
-            </span>
+              <span>{clients.find((c) => String(c.id) === clientId)?.name ?? 'Chủ hàng'}</span>
+              <span
+                className="inline-flex items-center justify-center rounded-full ml-0.5 transition-colors"
+                style={{ width: 18, height: 18, fontSize: 10 }}
+              >
+                <X className="h-3 w-3 opacity-50 group-hover:opacity-100" style={{ color: 'var(--danger)' }} />
+              </span>
+            </button>
           ) : (
             <InlineSelect
               placeholder="Chọn chủ hàng"
@@ -1065,8 +1074,68 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                     className="h-4 w-4 mt-0.5 flex-shrink-0"
                     style={{ color: 'var(--warning)' }}
                   />
-                  <div style={{ color: 'var(--warning)' }} className="text-[13px]">
-                    <strong>{unresolvedCount}</strong> dòng cần xác định loại container (E/F) trước khi lưu. Vui lòng chọn E hoặc F trong cột "Loại Cont".
+                  <div className="flex-1 min-w-0">
+                    <div style={{ color: 'var(--warning)' }} className="text-[13px]">
+                      <strong>{unresolvedCount}</strong> dòng cần xác định loại container (E/F) trước khi lưu. Vui lòng chọn E hoặc F trong cột "Loại Cont".
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = { ...resolvedFreightKinds }
+                          ;(previewResult?.accepted ?? []).forEach((r, idx) => {
+                            if (r.values?.freight_kind_unknown && !resolvedFreightKinds[idx]) {
+                              updated[idx] = 'E'
+                              const size = r.values.container_size ?? ''
+                              r.values.freight_kind = 'E'
+                              r.values.cont_type = `E${size}`
+                              setPreviewData(prev => {
+                                const d = [...prev]
+                                d[idx] = { ...d[idx], 'Loại Cont': `E${size}` }
+                                return d
+                              })
+                            }
+                          })
+                          setResolvedFreightKinds(updated)
+                        }}
+                        className="px-2.5 py-1 rounded text-[12px] font-semibold transition-colors"
+                        style={{
+                          background: 'var(--surface)',
+                          border: '1px solid var(--warning)',
+                          color: 'var(--warning)',
+                        }}
+                      >
+                        Chọn tất cả E
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = { ...resolvedFreightKinds }
+                          ;(previewResult?.accepted ?? []).forEach((r, idx) => {
+                            if (r.values?.freight_kind_unknown && !resolvedFreightKinds[idx]) {
+                              updated[idx] = 'F'
+                              const size = r.values.container_size ?? ''
+                              r.values.freight_kind = 'F'
+                              r.values.cont_type = `F${size}`
+                              setPreviewData(prev => {
+                                const d = [...prev]
+                                d[idx] = { ...d[idx], 'Loại Cont': `F${size}` }
+                                return d
+                              })
+                            }
+                          })
+                          setResolvedFreightKinds(updated)
+                        }}
+                        className="px-2.5 py-1 rounded text-[12px] font-semibold transition-colors"
+                        style={{
+                          background: 'var(--surface)',
+                          border: '1px solid var(--warning)',
+                          color: 'var(--warning)',
+                        }}
+                      >
+                        Chọn tất cả F
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1079,7 +1148,9 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                   <tr>
                     <th style={{ width: 40 }}>#</th>
                     {previewCols.map((key) => (
-                      <th key={key} className={`text-left ${NUMERIC_COLS.has(key) ? 'text-right' : ''}`}>
+                      <th key={key} className={`text-left ${NUMERIC_COLS.has(key) ? 'text-right' : ''}`}
+                        style={key === 'Loại Cont' ? { width: 80 } : undefined}
+                      >
                         {key}
                       </th>
                     ))}
@@ -1100,14 +1171,15 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                           const isNumeric = NUMERIC_COLS.has(key)
                           const isFreightKindUnknown = previewResult?.accepted?.[realIndex]?.values?.freight_kind_unknown ?? false
                           const isFreightKindCol = key === 'Loại Cont'
-                          const needsResolution = isFreightKindCol && isFreightKindUnknown && !resolvedFreightKinds[realIndex]
-                          
+                          const showFreightPicker = isFreightKindCol && isFreightKindUnknown
+                          const resolved = resolvedFreightKinds[realIndex]
+
                           return (
                             <td key={key} className={isNumeric ? 'text-right' : ''}>
-                              {needsResolution ? (
+                              {showFreightPicker ? (
                                 <InlineSelect
                                   placeholder="Chọn E/F"
-                                  value={resolvedFreightKinds[realIndex] ?? ''}
+                                  value={resolved ?? ''}
                                   options={[
                                     { value: 'E', label: `E${previewResult?.accepted?.[realIndex]?.values?.container_size ?? ''}` },
                                     { value: 'F', label: `F${previewResult?.accepted?.[realIndex]?.values?.container_size ?? ''}` },
@@ -1115,8 +1187,8 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                                   onChange={(v) => v && resolveFreightKind(realIndex, v as 'E' | 'F')}
                                   style={{
                                     minWidth: 70,
-                                    borderColor: 'var(--warning)',
-                                    background: 'var(--warning-soft)',
+                                    borderColor: resolved ? 'var(--success)' : 'var(--warning)',
+                                    background: resolved ? 'var(--success-soft)' : 'var(--warning-soft)',
                                   }}
                                 />
                               ) : (
