@@ -459,10 +459,18 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     if (step === 'preview' && !clientId && excelClientName && !creatingClient) {
       // Don't auto-open — let user choose. Just pre-fill if they open.
-       
+
       setClientForm(prev => prev.name ? prev : { ...EMPTY_CLIENT_FORM, name: excelClientName })
     }
   }, [step, clientId, excelClientName, creatingClient])
+
+  // When client is selected, fill "Chủ hàng" column in all preview rows
+  useEffect(() => {
+    if (step !== 'preview' || !clientId || !previewData.length) return
+    const clientName = clients.find(c => String(c.id) === clientId)?.name
+    if (!clientName) return
+    setPreviewData(prev => prev.map(row => ({ ...row, 'Chủ hàng': clientName })))
+  }, [step, clientId, clients])
 
   const previewCols = previewColumns.length > 0 ? previewColumns : []
 
