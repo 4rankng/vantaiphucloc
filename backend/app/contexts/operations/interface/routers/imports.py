@@ -87,6 +87,7 @@ class CommitRow(BaseModel):
     driver_name: str = ""
     vessel: str = ""
     remarks: str = ""
+    freight_kind_unknown: bool = False  # True if freight_kind needs ketoan resolution
 
 
 class CommitRequest(BaseModel):
@@ -386,11 +387,21 @@ async def commit_customer_excel(
             driver_name=r.driver_name,
             vessel=r.vessel,
             remarks=r.remarks,
+            freight_kind_unknown=r.freight_kind_unknown,
         )
         for r in body.rows
     ]
 
-    try:
+    # Validate that all rows have resolved freight kinds
+    unresolved_indices = [
+        i for i, row in enumerate(rows) if row.freight_kind_unknown
+    ]
+    if unresolved_indices:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Các dòng sau cần xác định loại container (E/F): {unresolved_indices}. "
+                   f"Vui lòng giải quyết trong preview trước khi lưu.",
+        )
         result = await use_case(ImportCommitInput(
             client_id=body.client_id,
             rows=rows,
