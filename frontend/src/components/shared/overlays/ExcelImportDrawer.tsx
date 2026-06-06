@@ -85,6 +85,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
   const [previewResult, setPreviewResult] = useState<PreviewResultDto | null>(null)
   const [reconResult, setReconResult] = useState<VendorImportResponse | DriverImportResponse | null>(null)
   const [driverCommitResult, setDriverCommitResult] = useState<DriverCommitResponse | null>(null)
+  const [resolvedFreightKinds, setResolvedFreightKinds] = useState<Record<number, 'E' | 'F'>>({})
   const fileRef = useRef<HTMLInputElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
 
@@ -109,6 +110,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
 
   const applyPreviewResult = useCallback((data: PreviewResultDto) => {
     setPreviewResult(data)
+    setResolvedFreightKinds({})  // Clear resolved kinds when new preview is loaded
     const cols = ['Ngày đi', 'Chủ hàng', 'Số Cont', 'Loại Cont', 'Số xe chạy', 'Điểm đi', 'Điểm đến', 'Cước']
     const rows = (data.accepted ?? []).map(r => ({
       'Ngày đi': r.values.trip_date,
@@ -158,6 +160,35 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
     }
     setStep('preview')
   }, [clientId, clients])
+
+  const unresolvedCount = useMemo(() => {
+    if (!previewResult) return 0
+    return (previewResult.accepted ?? []).filter((_, idx) => {
+      return (previewResult.accepted?.[idx]?.values?.freight_kind_unknown ?? false) && !resolvedFreightKinds[idx]
+    }).length
+  }, [previewResult, resolvedFreightKinds])
+
+  const resolveFreightKind = useCallback((rowIndex: number, kind: 'E' | 'F') => {
+    setResolvedFreightKinds(prev => ({
+      ...prev,
+      [rowIndex]: kind
+    }))
+    // Update the previewData to reflect the resolution
+    if (previewResult?.accepted?.[rowIndex]) {
+      const row = previewResult.accepted[rowIndex]
+      const size = row.values.container_size ?? ''
+      row.values.freight_kind = kind
+      row.values.cont_type = `${kind}${size}`
+      setPreviewData(prev => {
+        const newData = [...prev]
+        newData[rowIndex] = {
+          ...newData[rowIndex],
+          'Loại Cont': `${kind}${size}`
+        }
+        return newData
+      })
+    }
+  }, [previewResult])
 
   // Polling hook fires the callback once per status transition to a
   // terminal state. The hook handles its own ref-keeping internally so
@@ -316,7 +347,11 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
       commitClientExcel.mutate(
         {
           client_id: Number(clientId),
-          rows: (previewResult?.accepted ?? []).map(r => r.values)
+          rows: (previewResult?.accepted ?? []).map((r, idx) => ({
+            ...r.values,
+            // If the row had an unknown freight kind, it should have been resolved
+            freight_kind_unknown: r.values.freight_kind_unknown && !resolvedFreightKinds[idx],
+          }))
         },
         {
           onSuccess: () => setStep('done'),
@@ -501,7 +536,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
           Quay lại
         </Button>
         <Button size="sm" onClick={handleImport}
-          disabled={importType === 'client' ? (commitClientExcel.isPending || !clientId) : (commitDriverRecon.isPending || commitVendorRecon.isPending)}
+          disabled={importType === 'client' ? (commitClientExcel.isPending || !clientId || unresolvedCount > 0) : (commitDriverRecon.isPending || commitVendorRecon.isPending || unresolvedCount > 0)}
         >
           {commitClientExcel.isPending || commitDriverRecon.isPending || commitVendorRecon.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -1025,6 +1060,25 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
               Không có dữ liệu
             </p>
           ) : (
+            <>
+              {unresolvedCount > 0 && (
+                <div
+                  className="flex items-start gap-2.5 px-3.5 py-3 mb-3"
+                  style={{
+                    background: 'var(--warning-soft)',
+                    border: '1px solid var(--warning)',
+                    borderRadius: 'var(--r-sm)',
+                  }}
+                >
+                  <AlertTriangle
+                    className="h-4 w-4 mt-0.5 flex-shrink-0"
+                    style={{ color: 'var(--warning)' }}
+                  />
+                  <div style={{ color: 'var(--warning)' }} className="text-[13px]">
+                    <strong>{unresolvedCount}</strong> dòng cần xác định loại container (E/F) trước khi lưu. Vui lòng chọn E hoặc F trong cột "Loại Cont".
+                  </div>
+                </div>
+              )}
             <div
               className="nepo-table-scroll"
               style={{
@@ -1070,16 +1124,37 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                         </td>
                         {previewCols.map((key) => {
                           const val = row[key]
+                          const isFreightKindUnknown = previewResult?.accepted?.[realIndex]?.values?.freight_kind_unknown ?? false
+                          const isFreightKindCol = key === 'Loại Cont'
+                          const needsResolution = isFreightKindCol && isFreightKindUnknown && !resolvedFreightKinds[realIndex]
+                          
                           return (
                             <td key={key}>
-                              <span
-                                style={{
-                                  color: val == null ? 'var(--ink-3)' : 'var(--ink-2)',
-                                  fontSize: 12.5,
-                                }}
-                              >
-                                {val != null ? String(val) : '—'}
-                              </span>
+                              {needsResolution ? (
+                                <InlineSelect
+                                  placeholder="Chọn E/F"
+                                  value={resolvedFreightKinds[realIndex] ?? ''}
+                                  options={[
+                                    { value: 'E', label: `E${previewResult?.accepted?.[realIndex]?.values?.container_size ?? ''}` },
+                                    { value: 'F', label: `F${previewResult?.accepted?.[realIndex]?.values?.container_size ?? ''}` },
+                                  ]}
+                                  onChange={(v) => v && resolveFreightKind(realIndex, v as 'E' | 'F')}
+                                  style={{
+                                    minWidth: 70,
+                                    borderColor: 'var(--warning)',
+                                    background: 'var(--warning-soft)',
+                                  }}
+                                />
+                              ) : (
+                                <span
+                                  style={{
+                                    color: val == null ? 'var(--ink-3)' : 'var(--ink-2)',
+                                    fontSize: 12.5,
+                                  }}
+                                >
+                                  {val != null ? String(val) : '—'}
+                                </span>
+                              )}
                             </td>
                           )
                         })}
@@ -1089,6 +1164,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                 </tbody>
               </table>
             </div>
+            </>
           )}
 
           <p className="text-[12px] m-0" style={{ color: 'var(--ink-3)' }}>
