@@ -279,7 +279,7 @@ export function AppSidebar({ role }: AppSidebarProps) {
   // Auto-expand active group
   useEffect(() => {
     if (activeGroupKey && activeGroupKey !== 'top') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setExpandedGroups((prev) => {
         if (prev.has(activeGroupKey)) return prev
         const next = new Set(prev)

@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/set-state-in-effect */
+ 
 import { useState, useCallback, useEffect } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog'
 import { Input } from '@/components/ui/Input'

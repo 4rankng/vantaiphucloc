@@ -137,7 +137,7 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       {/* SĐT */}
       {activeField === 'phone' ? (
         <td style={tdActive}>
-          {/* eslint-disable-next-line react-hooks/refs */}
+          { }
           <input ref={phoneRef} className="nepo-input text-[12px]" style={{ minWidth: 90, width: '100%' }}
             type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="SĐT"
           />
@@ -152,7 +152,7 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       {/* Địa chỉ */}
       {activeField === 'address' ? (
         <td style={tdActive}>
-          {/* eslint-disable-next-line react-hooks/refs */}
+          { }
           <input ref={addressRef} className="nepo-input text-[12px]" style={{ minWidth: 100, width: '100%' }}
             value={form.address} onChange={e => set('address', e.target.value)} placeholder="Địa chỉ"
           />
@@ -167,7 +167,7 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       {/* Liên hệ */}
       {activeField === 'contactPerson' ? (
         <td style={tdActive}>
-          {/* eslint-disable-next-line react-hooks/refs */}
+          { }
           <input ref={contactPersonRef} className="nepo-input text-[12px]" style={{ minWidth: 80, width: '100%' }}
             value={form.contactPerson} onChange={e => set('contactPerson', e.target.value)} placeholder="Người liên hệ"
           />
@@ -182,7 +182,7 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       {/* MST */}
       {activeField === 'taxCode' ? (
         <td style={tdActive}>
-          {/* eslint-disable-next-line react-hooks/refs */}
+          { }
           <input ref={taxCodeRef} className="nepo-input text-[12px]"
             style={{ width: '100%', borderColor: errors.taxCode ? 'var(--status-error, #e53)' : undefined }}
             value={form.taxCode} onChange={e => set('taxCode', e.target.value)} placeholder="MST"
@@ -485,7 +485,7 @@ export function VendorsPage() {
   const [editingField, setEditingField] = useState<FocusableField>(null)
   const [deleteTarget, setDeleteTarget] = useState<Vendor | null>(null)
 
-  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {  
  setLimit(BATCH) }, [debouncedSearch])
 
   const visible = vendors.slice(0, limit)

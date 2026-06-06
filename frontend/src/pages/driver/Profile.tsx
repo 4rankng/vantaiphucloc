@@ -31,7 +31,7 @@ function EditableRow({
   const [draft, setDraft] = useState(value)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {  
 if (!editing) setDraft(value) }, [value, editing])
 
   const handleSave = async () => {

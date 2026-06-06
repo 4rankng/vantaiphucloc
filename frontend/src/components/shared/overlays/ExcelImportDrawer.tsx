@@ -64,6 +64,8 @@ function stepIndex(step: ImportStep): number {
   return step === 'upload' ? 0 : step === 'preview' ? 1 : 2
 }
 
+const NUMERIC_COLS = new Set(['Cước'])
+
 interface PreviewRow {
   [key: string]: unknown
 }
@@ -457,7 +459,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     if (step === 'preview' && !clientId && excelClientName && !creatingClient) {
       // Don't auto-open — let user choose. Just pre-fill if they open.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setClientForm(prev => prev.name ? prev : { ...EMPTY_CLIENT_FORM, name: excelClientName })
     }
   }, [step, clientId, excelClientName, creatingClient])
@@ -468,10 +470,11 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
 
   // Build a map of row index → duplicate type for highlighting
   const duplicateRowMap = useMemo(() => {
-    const map = new Map<number, 'exact'>()
+    const map = new Map<number, 'exact' | 'near'>()
     for (const g of duplicateGroups) {
+      const kind: 'exact' | 'near' = g.type === 'exact' ? 'exact' : 'near'
       for (const idx of g.rowIndices) {
-        if (!map.has(idx)) map.set(idx, g.type)
+        if (!map.has(idx)) map.set(idx, kind)
       }
     }
     return map
@@ -769,7 +772,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
 
       {/* ── Preview step ── */}
       {step === 'preview' && (
-        <div className="space-y-4">
+        <div className="space-y-4 preview-step-enter">
           {/* Duplicate warning banner */}
           {previewWarnings.length > 0 && (
             <div
@@ -1080,20 +1083,15 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                 </div>
               )}
             <div
-              className="nepo-table-scroll"
-              style={{
-                border: '1px solid var(--line)',
-                borderRadius: 'var(--r-sm)',
-                overflow: 'auto',
-                maxHeight: 'calc(100vh - 280px)',
-              }}
+              className="preview-table-wrap"
+              style={{ maxHeight: 'calc(100vh - 280px)' }}
             >
               <table className="nepo-table w-full" style={{ minWidth: 600 }}>
                 <thead>
                   <tr>
                     <th style={{ width: 40 }}>#</th>
                     {previewCols.map((key) => (
-                      <th key={key} className="text-left">
+                      <th key={key} className={`text-left ${NUMERIC_COLS.has(key) ? 'text-right' : ''}`}>
                         {key}
                       </th>
                     ))}
@@ -1103,33 +1101,43 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                   {previewData.map((row, i) => {
                     const realIndex = i
                     const dupType = duplicateRowMap.get(realIndex)
-                    const rowBg = dupType === 'exact' ? 'var(--danger-soft)' : undefined
+                    const dupAccent = dupType === 'exact' ? 'var(--danger)' : dupType === 'near' ? 'var(--warning)' : undefined
+                    const dupBg = dupType === 'exact' ? 'color-mix(in srgb, var(--danger-soft) 60%, transparent)' : dupType === 'near' ? 'color-mix(in srgb, var(--warning-soft) 60%, transparent)' : undefined
                     return (
-                      <tr key={realIndex} style={rowBg ? { background: rowBg } : undefined}>
+                      <tr
+                        key={realIndex}
+                        style={dupBg ? {
+                          background: dupBg,
+                          boxShadow: `inset 3px 0 0 ${dupAccent}`,
+                        } : undefined}
+                      >
                         <td>
-                          <span
-                            className="tabular-nums text-[12px]"
-                            style={{ color: 'var(--ink-3)' }}
-                          >
+                          <div className="flex items-center gap-1 tabular-nums text-[12px]" style={{ color: 'var(--ink-3)' }}>
                             {dupType ? (
-                              <AlertTriangle
-                                className="inline h-3 w-3 mr-0.5"
+                              <span
+                                className="inline-flex items-center justify-center rounded text-[9px] font-bold px-1"
                                 style={{
-                                  color: 'var(--danger)',
+                                  background: dupAccent,
+                                  color: '#fff',
+                                  minWidth: 18,
+                                  lineHeight: '14px',
                                 }}
-                              />
+                              >
+                                {dupType === 'exact' ? 'T' : '~'}
+                              </span>
                             ) : null}
                             {realIndex + 1}
-                          </span>
+                          </div>
                         </td>
                         {previewCols.map((key) => {
                           const val = row[key]
+                          const isNumeric = NUMERIC_COLS.has(key)
                           const isFreightKindUnknown = previewResult?.accepted?.[realIndex]?.values?.freight_kind_unknown ?? false
                           const isFreightKindCol = key === 'Loại Cont'
                           const needsResolution = isFreightKindCol && isFreightKindUnknown && !resolvedFreightKinds[realIndex]
                           
                           return (
-                            <td key={key}>
+                            <td key={key} className={isNumeric ? 'text-right' : ''}>
                               {needsResolution ? (
                                 <InlineSelect
                                   placeholder="Chọn E/F"
@@ -1152,7 +1160,11 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                                     fontSize: 12.5,
                                   }}
                                 >
-                                  {val != null ? String(val) : '—'}
+                                  {val != null
+                                    ? isNumeric && typeof val === 'number'
+                                      ? val.toLocaleString('vi-VN')
+                                      : String(val)
+                                    : '—'}
                                 </span>
                               )}
                             </td>

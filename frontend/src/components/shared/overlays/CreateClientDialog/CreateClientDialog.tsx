@@ -36,7 +36,7 @@ export function CreateClientDialog({ open, onClose, onConfirm, defaultName, init
 
   useEffect(() => {
     if (open) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setForm(
         initial
           ? { ...EMPTY_FORM, ...initial }

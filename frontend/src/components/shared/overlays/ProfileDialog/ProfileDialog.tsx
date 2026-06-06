@@ -32,7 +32,7 @@ function EditableField({ label, value, onSave, placeholder }: {
 
   useEffect(() => {
     if (!editing) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setDraft(value)
     }
   }, [value, editing])
