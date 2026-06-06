@@ -273,6 +273,19 @@ def test_parse_freight_kind(raw, expected):
     assert parse_freight_kind(raw) == expected
 
 
+def test_parse_freight_kind_raises_on_unknown():
+    """Test that raise_on_unknown=True causes exception for empty/unknown values."""
+    with pytest.raises(ValueError, match="unknown_freight_kind"):
+        parse_freight_kind("", raise_on_unknown=True)
+    with pytest.raises(ValueError, match="unknown_freight_kind"):
+        parse_freight_kind(None, raise_on_unknown=True)
+    # Explicit E/F should still work with raise_on_unknown=True
+    assert parse_freight_kind("E", raise_on_unknown=True) == "E"
+    assert parse_freight_kind("F", raise_on_unknown=True) == "F"
+    assert parse_freight_kind("FULL", raise_on_unknown=True) == "F"
+    assert parse_freight_kind("EMPTY", raise_on_unknown=True) == "E"
+
+
 @pytest.mark.parametrize(
     "raw,expected",
     [
@@ -303,9 +316,44 @@ def test_parse_date_excel_serial():
     assert parsed.year == 2026 and parsed.month == 4
 
 
-# ---------------------------------------------------------------------------
-# End-to-end preview against the 4 sample files
-# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_import_preview_marks_unknown_freight_kinds():
+    """Test that empty freight_kind cells are marked with freight_kind_unknown flag."""
+    import openpyxl
+    import tempfile
+    from pathlib import Path
+    
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        # Create a workbook with some rows having empty freight_kind
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["Ngày đi", "Số cont", "Kích thước", "Loại Cont", "Điểm đi", "Điểm đến"])
+        ws.append(["2026-06-01", "CAIU6167954", "20", "F", "HaiPhong", "HCMC"])
+        ws.append(["2026-06-01", "CAIU6386850", "40", "", "HaiPhong", "HCMC"])  # Empty freight_kind
+        ws.append(["2026-06-01", "FCIU6219871", "20", "E", "HaiPhong", "HCMC"])
+        
+        path = Path(tmp_dir) / "test_unknown.xlsx"
+        wb.save(path)
+        
+        res = await run_preview(
+            path.read_bytes(),
+            path.name,
+            default_trip_date=date(2026, 6, 1),
+            classifier=NullBatchHeaderClassifier(),
+        )
+        
+        # Check that the row with empty freight_kind is marked as unknown
+        assert len(res.accepted) == 3
+        assert res.accepted[0]["values"]["freight_kind_unknown"] == False
+        assert res.accepted[0]["values"]["freight_kind"] == "F"
+        
+        assert res.accepted[1]["values"]["freight_kind_unknown"] == True
+        assert res.accepted[1]["values"]["freight_kind"] == "F"  # Defaults to F but marked unknown
+        
+        assert res.accepted[2]["values"]["freight_kind_unknown"] == False
+        assert res.accepted[2]["values"]["freight_kind"] == "E"
+
+
 
 @pytest.fixture
 def files_present():

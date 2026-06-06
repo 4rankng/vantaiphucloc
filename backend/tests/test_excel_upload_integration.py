@@ -230,3 +230,34 @@ async def test_commit_requires_accountant_role(
         headers=headers,
     )
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_commit_rejects_unresolved_freight_kind(
+    async_client, make_auth_headers, db_session, seeded_partner,
+):
+    """Test that commit endpoint rejects rows with unresolved freight_kind."""
+    headers = await make_auth_headers("accountant")
+    
+    # Try to commit a row with freight_kind_unknown=True (unresolved)
+    resp = await async_client.post(
+       COMMIT_URL,
+       json={
+           "partner_id": seeded_partner.id,
+           "rows": [{
+               "container_no": "ABCD1234567",
+               "container_size": "20",
+               "freight_kind": "F",  # Defaulted, not explicitly provided
+               "cont_type": "F20",
+               "work_type": "CHUYỂN BÃI",
+               "trip_date": "2026-04-15",
+               "freight_kind_unknown": True,  # Mark as unresolved
+           }],
+       },
+       headers=headers,
+    )
+    # Should reject with 400 error
+    assert resp.status_code == 400, f"Expected 400, got {resp.status_code}: {resp.text}"
+    result = resp.json()
+    assert "freight_kind" in result.get("detail", "").lower()
+    assert "xác định" in result.get("detail", "")  # Vietnamese: "xác định" (resolve)
