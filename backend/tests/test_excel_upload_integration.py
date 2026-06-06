@@ -243,7 +243,7 @@ async def test_commit_rejects_unresolved_freight_kind(
     resp = await async_client.post(
        COMMIT_URL,
        json={
-           "partner_id": seeded_partner.id,
+           "client_id": seeded_partner.id,
            "rows": [{
                "container_no": "ABCD1234567",
                "container_size": "20",

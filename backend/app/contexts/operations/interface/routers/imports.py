@@ -14,7 +14,7 @@ Two-stage flow per upload:
 from __future__ import annotations
 
 import base64
-import hashlib
+
 import logging
 import uuid
 from datetime import date
@@ -55,7 +55,7 @@ from app.contexts.operations.infrastructure.import_pipeline.pipeline import (
 )
 from app.contexts.operations.infrastructure.import_pipeline.workbook import load_workbook
 from app.core.worker import get_arq_pool
-from app.workers import enqueue, import_preview_job_id
+from app.workers import enqueue
 
 _logger = logging.getLogger(__name__)
 

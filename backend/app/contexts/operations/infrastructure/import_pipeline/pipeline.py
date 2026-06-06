@@ -42,7 +42,7 @@ from app.contexts.operations.infrastructure.import_pipeline.header_finder import
 )
 from app.contexts.operations.infrastructure.import_pipeline.llm import BatchHeaderClassifier
 from app.contexts.operations.infrastructure.import_pipeline.pattern_detector import DetectedPattern, detect_pattern
-from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import ExtractedRow, extract_bay_plan, extract_invoice, extract_loading_list, extract_settlement_list
+from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import ExtractedRow
 from app.contexts.operations.infrastructure.import_pipeline.sheet_picker import score_sheets
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
     parse_container_no,

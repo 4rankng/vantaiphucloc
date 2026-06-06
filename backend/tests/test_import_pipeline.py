@@ -327,7 +327,7 @@ async def test_import_preview_marks_unknown_freight_kinds():
         # Create a workbook with some rows having empty freight_kind
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.append(["Ngày đi", "Số cont", "Kích thước", "Loại Cont", "Điểm đi", "Điểm đến"])
+        ws.append(["Ngày đi", "Số cont", "Kích thước", "F/E", "Điểm đi", "Điểm đến"])
         ws.append(["2026-06-01", "CAIU6167954", "20", "F", "HaiPhong", "HCMC"])
         ws.append(["2026-06-01", "CAIU6386850", "40", "", "HaiPhong", "HCMC"])  # Empty freight_kind
         ws.append(["2026-06-01", "FCIU6219871", "20", "E", "HaiPhong", "HCMC"])
@@ -344,13 +344,13 @@ async def test_import_preview_marks_unknown_freight_kinds():
         
         # Check that the row with empty freight_kind is marked as unknown
         assert len(res.accepted) == 3
-        assert res.accepted[0]["values"]["freight_kind_unknown"] == False
+        assert not res.accepted[0]["values"]["freight_kind_unknown"]
         assert res.accepted[0]["values"]["freight_kind"] == "F"
         
-        assert res.accepted[1]["values"]["freight_kind_unknown"] == True
+        assert res.accepted[1]["values"]["freight_kind_unknown"]
         assert res.accepted[1]["values"]["freight_kind"] == "F"  # Defaults to F but marked unknown
         
-        assert res.accepted[2]["values"]["freight_kind_unknown"] == False
+        assert not res.accepted[2]["values"]["freight_kind_unknown"]
         assert res.accepted[2]["values"]["freight_kind"] == "E"
 
 

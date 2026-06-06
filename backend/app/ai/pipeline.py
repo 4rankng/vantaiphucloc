@@ -517,7 +517,8 @@ CSV Data:
         for i, row_dict in enumerate(rows_data):
             cells = {}
             for k, v in row_dict.items():
-                if k == "source_row_ref": continue
+                if k == "source_row_ref":
+                    continue
                 cells[k] = ParsedCell(value=v, confidence=0.9, cleaned=True)
                 
             source_ref = str(row_dict.get("source_row_ref", f"unknown_{i}"))
