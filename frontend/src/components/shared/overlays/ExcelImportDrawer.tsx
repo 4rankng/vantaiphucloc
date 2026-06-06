@@ -468,18 +468,6 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
 
   const isProcessing = enqueueClientExcel.isPending || !!activeJobId || previewDriverRecon.isPending || previewVendorRecon.isPending
 
-  // Build a map of row index → duplicate type for highlighting
-  const duplicateRowMap = useMemo(() => {
-    const map = new Map<number, 'exact' | 'near'>()
-    for (const g of duplicateGroups) {
-      const kind: 'exact' | 'near' = g.type === 'exact' ? 'exact' : 'near'
-      for (const idx of g.rowIndices) {
-        if (!map.has(idx)) map.set(idx, kind)
-      }
-    }
-    return map
-  }, [duplicateGroups])
-
   const footer =
     step === 'upload' ? (
       <>
@@ -1100,34 +1088,12 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                 <tbody>
                   {previewData.map((row, i) => {
                     const realIndex = i
-                    const dupType = duplicateRowMap.get(realIndex)
-                    const dupAccent = dupType === 'exact' ? 'var(--danger)' : dupType === 'near' ? 'var(--warning)' : undefined
-                    const dupBg = dupType === 'exact' ? 'color-mix(in srgb, var(--danger-soft) 60%, transparent)' : dupType === 'near' ? 'color-mix(in srgb, var(--warning-soft) 60%, transparent)' : undefined
                     return (
-                      <tr
-                        key={realIndex}
-                        style={dupBg ? {
-                          background: dupBg,
-                          boxShadow: `inset 3px 0 0 ${dupAccent}`,
-                        } : undefined}
-                      >
+                      <tr key={realIndex}>
                         <td>
-                          <div className="flex items-center gap-1 tabular-nums text-[12px]" style={{ color: 'var(--ink-3)' }}>
-                            {dupType ? (
-                              <span
-                                className="inline-flex items-center justify-center rounded text-[9px] font-bold px-1"
-                                style={{
-                                  background: dupAccent,
-                                  color: '#fff',
-                                  minWidth: 18,
-                                  lineHeight: '14px',
-                                }}
-                              >
-                                {dupType === 'exact' ? 'T' : '~'}
-                              </span>
-                            ) : null}
+                          <span className="tabular-nums text-[12px]" style={{ color: 'var(--ink-3)' }}>
                             {realIndex + 1}
-                          </div>
+                          </span>
                         </td>
                         {previewCols.map((key) => {
                           const val = row[key]
