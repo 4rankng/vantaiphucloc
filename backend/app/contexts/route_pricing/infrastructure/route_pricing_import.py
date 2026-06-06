@@ -240,6 +240,7 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
     skipped = 0
     created_clients = 0
     created_locations = 0
+    affected_keys: set[tuple[int, int, int, str]] = set()
 
     resolver = LocationResolverService(db)
 
@@ -361,6 +362,8 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
                     changed = True
             updated += 1 if changed else 0
             skipped += 1 if not changed else 0
+            if changed:
+                affected_keys.add((client_id, pickup_id, dropoff_id, work_type))
         else:
             db.add(RoutePricingORM(
                 client_id=client_id,
@@ -378,8 +381,16 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
                 is_active=True,
             ))
             created += 1
+            affected_keys.add((client_id, pickup_id, dropoff_id, work_type))
 
     await db.commit()
+
+    # Auto-sync unmatched trips with updated salary
+    if affected_keys:
+        from app.core.pricing_lookup import sync_unmatched_trip_salaries
+        for cid, pid, did, wt in affected_keys:
+            await sync_unmatched_trip_salaries(db, cid, pid, did, wt)
+        await db.commit()
     return {
         "created": created,
         "updated": updated,

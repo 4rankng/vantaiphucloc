@@ -11,6 +11,7 @@ from typing import Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.domain import DeliveredTrip as DeliveredTripORM
 from app.models.domain import RoutePricing as ClientRoutePricingORM
 from app.models.domain import VendorRoutePricing as VendorRoutePricingORM
 
@@ -163,3 +164,55 @@ async def lookup_driver_salaries(
         result[t.id] = _salary_for_cont_type(pricing, t.cont_type) if pricing else 0
 
     return result
+
+
+async def sync_unmatched_trip_salaries(
+    session: AsyncSession,
+    client_id: int,
+    pickup_location_id: int,
+    dropoff_location_id: int,
+    work_type: str,
+) -> int:
+    """Re-estimate driver salary for unmatched trips when RoutePricing changes.
+
+    Finds all unmatched DeliveredTrips matching the pricing key and updates
+    their driver_salary from the RoutePricing salary columns.
+
+    Returns the number of trips updated.
+    """
+    wt = _normalize_work_type(work_type)
+
+    pricing = (await session.execute(
+        select(ClientRoutePricingORM).where(
+            ClientRoutePricingORM.client_id == client_id,
+            ClientRoutePricingORM.pickup_location_id == pickup_location_id,
+            ClientRoutePricingORM.dropoff_location_id == dropoff_location_id,
+            ClientRoutePricingORM.work_type == wt,
+            ClientRoutePricingORM.is_active.is_(True),
+        )
+    )).scalar_one_or_none()
+
+    if not pricing:
+        return 0
+
+    trips = (await session.execute(
+        select(DeliveredTripORM).where(
+            DeliveredTripORM.booked_trip_id.is_(None),
+            DeliveredTripORM.client_id == client_id,
+            DeliveredTripORM.pickup_location_id == pickup_location_id,
+            DeliveredTripORM.dropoff_location_id == dropoff_location_id,
+            DeliveredTripORM.work_type == wt,
+        )
+    )).scalars().all()
+
+    updated = 0
+    for trip in trips:
+        salary = _salary_for_cont_type(pricing, trip.cont_type)
+        if salary != trip.driver_salary:
+            trip.driver_salary = salary
+            updated += 1
+
+    if updated:
+        await session.flush()
+
+    return updated

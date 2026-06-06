@@ -516,13 +516,13 @@ async def confirm_matches(
                 cont_type=wo.cont_type,
             )
             for wo, _ in matched_pairs
-            if wo.vendor_id and wo.driver_salary == 0
+            if wo.vendor_id
         ]
         if vendor_infos:
             vendor_prices = await lookup_vendor_prices(db, vendor_infos)
             for wo, _ in matched_pairs:
                 vprice = vendor_prices.get(wo.id, 0)
-                if vprice and wo.driver_salary == 0:
+                if vprice:
                     wo.driver_salary = vprice
 
         # Own-driver salary from RoutePricing driver salary columns
@@ -536,13 +536,13 @@ async def confirm_matches(
                 cont_type=wo.cont_type,
             )
             for wo, _ in matched_pairs
-            if not wo.vendor_id and wo.driver_salary == 0
+            if not wo.vendor_id
         ]
         if driver_infos:
             driver_salaries = await lookup_driver_salaries(db, driver_infos)
             for wo, _ in matched_pairs:
                 sal = driver_salaries.get(wo.id, 0)
-                if sal and wo.driver_salary == 0:
+                if sal:
                     wo.driver_salary = sal
 
     await db.flush()

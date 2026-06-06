@@ -7,6 +7,11 @@ from datetime import date, datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.pricing_lookup import (
+    TripPriceInfo,
+    lookup_driver_salaries,
+    lookup_vendor_prices,
+)
 from app.models.vehicle_helpers import (
     resolve_driver_plate,
     resolve_driver_plates_batch,
@@ -104,6 +109,22 @@ class CreateDeliveredTrip:
         if not vehicle_plate and driver_id is not None:
             vehicle_plate = await resolve_driver_plate(self.session, driver_id)
 
+        # Estimate driver salary from RoutePricing at creation time
+        trip_info = TripPriceInfo(
+            id=-1,
+            partner_id=data.vendor_id if data.vendor_id is not None else data.client_id,
+            pickup_location_id=data.pickup_location_id,
+            dropoff_location_id=data.dropoff_location_id,
+            work_type=work_type,
+            cont_type=data.cont_type,
+        )
+        if data.vendor_id is not None:
+            prices = await lookup_vendor_prices(self.session, [trip_info])
+            estimated_salary = prices.get(-1, 0)
+        else:
+            salaries = await lookup_driver_salaries(self.session, [trip_info])
+            estimated_salary = salaries.get(-1, 0)
+
         w = DeliveredTrip(
             id=None,
             client_id=data.client_id,
@@ -118,7 +139,7 @@ class CreateDeliveredTrip:
             cont_type=data.cont_type,
             cont_photo_url=data.cont_photo_url,
             revenue=0,
-            driver_salary=0,
+            driver_salary=estimated_salary,
             trip_date=data.trip_date if data.trip_date else date.today(),
             note=data.note,
         )
@@ -271,6 +292,31 @@ class BatchCreateDeliveredTrips:
         })
         plate_map = await resolve_driver_plates_batch(self.session, driver_ids_batch)
 
+        # Pre-compute salary estimates for all items in one batch
+        own_driver_infos = []
+        vendor_infos = []
+        for i, item in enumerate(items):
+            wt = item.work_type or "CHUYỂN BÃI"
+            if wt:
+                wt = normalize_work_type(wt)
+            info = TripPriceInfo(
+                id=i,
+                partner_id=item.vendor_id or item.client_id,
+                pickup_location_id=item.pickup_location_id,
+                dropoff_location_id=item.dropoff_location_id,
+                work_type=wt,
+                cont_type=item.cont_type,
+            )
+            if item.vendor_id:
+                vendor_infos.append(info)
+            else:
+                own_driver_infos.append(info)
+        salary_map: dict[int, int] = {}
+        if vendor_infos:
+            salary_map.update(await lookup_vendor_prices(self.session, vendor_infos))
+        if own_driver_infos:
+            salary_map.update(await lookup_driver_salaries(self.session, own_driver_infos))
+
         async with self.session.begin():
             for i, item in enumerate(items):
                 async with self.session.begin_nested():
@@ -297,7 +343,8 @@ class BatchCreateDeliveredTrips:
                             work_type=work_type,
                             cont_number=item.cont_number,
                             cont_type=item.cont_type,
-                            revenue=0, driver_salary=0,
+                            revenue=0,
+                            driver_salary=salary_map.get(i, 0),
                             trip_date=item.trip_date if item.trip_date else date.today(),
                             note=item.note,
                         )

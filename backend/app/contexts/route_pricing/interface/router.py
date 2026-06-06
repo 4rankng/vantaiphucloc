@@ -32,6 +32,7 @@ from app.contexts.route_pricing.infrastructure.route_pricing_import import (
     commit_import_rows,
 )
 from app.core.deps import require_permission
+from app.core.pricing_lookup import sync_unmatched_trip_salaries
 from app.core.summaries import (
     get_client_summary,
     get_location_summary,
@@ -135,6 +136,10 @@ async def create_route_pricing(
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise translate(e)
+    await sync_unmatched_trip_salaries(
+        db, rp.client_id, rp.pickup_location_id, rp.dropoff_location_id, rp.work_type,
+    )
+    await db.commit()
     return (await _to_out(db, [rp]))[0]
 
 
@@ -166,6 +171,10 @@ async def update_route_pricing(
         )
     except Exception as e:
         raise translate(e)
+    await sync_unmatched_trip_salaries(
+        db, rp.client_id, rp.pickup_location_id, rp.dropoff_location_id, rp.work_type,
+    )
+    await db.commit()
     return (await _to_out(db, [rp]))[0]
 
 
