@@ -23,12 +23,20 @@ from app.schemas.domain import (
 
 class PartnerCreateBody(BaseModel):
     name: str
-    code: str | None = None
+    code: str
     partner_type: Literal["client", "vendor"]
     phone: str | None = None
     tax_code: str | None = None
     address: str | None = None
     contact_person: str | None = None
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Mã KH không được để trống")
+        return v
 
     @field_validator("tax_code")
     @classmethod
@@ -48,6 +56,15 @@ class PartnerUpdateBody(BaseModel):
     address: str | None = None
     contact_person: str | None = None
     is_active: bool | None = None
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, v: str | None) -> str | None:
+        if v is not None:
+            v = v.strip()
+            if not v:
+                raise ValueError("Mã KH không được để trống")
+        return v
 
     @field_validator("tax_code")
     @classmethod

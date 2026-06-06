@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 class PartnerCreateInput:
     name: str
     partner_type: str  # "client" | "vendor"
-    code: str | None = None
+    code: str
     phone: str | None = None
     tax_code: str | None = None
     address: str | None = None

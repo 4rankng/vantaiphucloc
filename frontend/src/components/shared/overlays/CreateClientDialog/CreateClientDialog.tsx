@@ -68,7 +68,7 @@ export function CreateClientDialog({ open, onClose, onConfirm, defaultName, init
       errs.taxCode = 'MST phải 10 hoặc 13 chữ số'
     }
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
-    if (!form.name.trim()) return
+    if (!form.name.trim() || !(form.code ?? '').trim()) return
     setInternalSaving(true)
     try {
       await onConfirm({ ...form, name: form.name.trim() })
@@ -102,7 +102,7 @@ export function CreateClientDialog({ open, onClose, onConfirm, defaultName, init
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mã KH</Label>
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mã KH <span style={{ color: 'var(--theme-status-error)' }}>*</span></Label>
               <Input
                 value={form.code ?? ''}
                 onChange={e => updateField('code', e.target.value)}
@@ -185,7 +185,7 @@ export function CreateClientDialog({ open, onClose, onConfirm, defaultName, init
           <Button
             size="sm"
             onClick={handleConfirm}
-            disabled={!form.name.trim() || saving}
+            disabled={!form.name.trim() || !(form.code ?? '').trim() || saving}
             className="flex-1"
           >
             {saving ? (isEdit ? 'Đang lưu...' : 'Đang tạo...') : (isEdit ? 'Lưu thay đổi' : 'Xác nhận')}
