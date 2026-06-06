@@ -38,7 +38,15 @@ export function PreviewTable({
               <th
                 key={key}
                 className={`text-left ${NUMERIC_COLS.has(key) ? 'text-right' : ''}`}
-                style={key === 'Loại Cont' ? { width: 60 } : key === 'Số Cont' ? { width: 100 } : undefined}
+                style={
+                  key === 'Loại Cont'
+                    ? { width: 60 }
+                    : key === 'Số Cont'
+                    ? { width: 100 }
+                    : key === 'Chủ hàng'
+                    ? { width: 160, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }
+                    : undefined
+                }
               >
                 {key}
               </th>
@@ -62,7 +70,15 @@ export function PreviewTable({
                 const resolved = resolvedFreightKinds[i]
 
                 return (
-                  <td key={key} className={isNumeric ? 'text-right' : ''}>
+                  <td
+                    key={key}
+                    className={isNumeric ? 'text-right' : ''}
+                    style={
+                      key === 'Chủ hàng'
+                        ? { maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
+                        : undefined
+                    }
+                  >
                     {showFreightPicker ? (
                       <InlineSelect
                         placeholder="Chọn E/F"
@@ -80,6 +96,7 @@ export function PreviewTable({
                       />
                     ) : (
                       <span
+                        title={val != null ? String(val) : undefined}
                         style={{
                           color: val == null ? 'var(--ink-3)' : 'var(--ink-2)',
                           fontSize: 12.5,

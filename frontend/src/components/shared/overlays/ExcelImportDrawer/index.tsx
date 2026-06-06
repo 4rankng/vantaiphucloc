@@ -268,75 +268,50 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
 
   const isCommitting = commitClientExcel.isPending || commitDriverRecon.isPending || commitVendorRecon.isPending
 
-  const footer =
-    step === 'upload' ? (
-      <>
-        <Button variant="outline" size="sm" onClick={onClose}>
-          Huỷ
-        </Button>
-        {isProcessing && (
-          <div className="flex items-center gap-2" style={{ color: 'var(--ink-2)', fontSize: 13 }}>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            {activeJobId ? 'AI đang phân tích file...' : 'Đang tải file lên...'}
-          </div>
-        )}
-      </>
-    ) : step === 'preview' ? (
-      <>
-        {importType === 'client' && (
-          clientId ? (
-            <button
-              type="button"
-              onClick={() => setClientId('')}
-              className="group text-[12px] font-medium pl-2.5 pr-1.5 py-1 rounded-full mr-auto flex items-center gap-1 transition-colors cursor-pointer"
-              style={{ background: 'var(--success-soft)', color: 'var(--success)' }}
-              title="Nhấn để chọn lại chủ hàng"
-            >
-              <span>{clients.find((c) => String(c.id) === clientId)?.name ?? 'Chủ hàng'}</span>
-              <span
-                className="inline-flex items-center justify-center rounded-full ml-0.5 transition-colors"
-                style={{ width: 18, height: 18, fontSize: 10 }}
-              >
-                <X className="h-3 w-3 opacity-50 group-hover:opacity-100" style={{ color: 'var(--danger)' }} />
-              </span>
-            </button>
-          ) : (
-            <InlineSelect
-              placeholder="Chọn chủ hàng"
-              value={clientId}
-              options={clients.map((c) => ({ value: String(c.id), label: c.name }))}
-              onChange={setClientId}
-              className="mr-auto"
-              style={{ minWidth: 180, borderColor: 'var(--warning)' }}
-            />
-          )
-        )}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => { setStep('upload'); setPreviewData([]); setPreviewColumns([]); setActiveJobId(null) }}
-        >
-          Quay lại
-        </Button>
-        <Button
-          size="sm"
-          onClick={handleImport}
-          disabled={importType === 'client' ? (!clientId || isCommitting || unresolvedCount > 0) : (isCommitting || unresolvedCount > 0)}
-        >
-          {isCommitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-          {isCommitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
-        </Button>
-      </>
-    ) : (
-      <>
-        <Button variant="outline" size="sm" onClick={handleReset}>
-          Nhập file khác
-        </Button>
-        <Button size="sm" onClick={onClose}>
-          Xong
-        </Button>
-      </>
-    )
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      {step === 'upload' ? (
+        <>
+          {isProcessing && (
+            <div className="flex items-center gap-2 mr-2" style={{ color: 'var(--ink-2)', fontSize: 13 }}>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>{activeJobId ? 'AI đang phân tích file...' : 'Đang tải file lên...'}</span>
+            </div>
+          )}
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Huỷ
+          </Button>
+        </>
+      ) : step === 'preview' ? (
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setStep('upload'); setPreviewData([]); setPreviewColumns([]); setActiveJobId(null) }}
+          >
+            Quay lại
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleImport}
+            disabled={importType === 'client' ? (!clientId || isCommitting || unresolvedCount > 0) : (isCommitting || unresolvedCount > 0)}
+          >
+            {isCommitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+            {isCommitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
+          </Button>
+        </>
+      ) : (
+        <>
+          <Button variant="outline" size="sm" onClick={handleReset}>
+            Nhập file khác
+          </Button>
+          <Button size="sm" onClick={onClose}>
+            Xong
+          </Button>
+        </>
+      )}
+    </div>
+  )
 
   function handleResolveAll(kind: 'E' | 'F') {
     const updated = { ...resolvedFreightKinds }
@@ -361,9 +336,13 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
       open
       onOpenChange={(o) => { if (!o) onClose() }}
       breadcrumb="Đối soát"
-      title="Nhập Excel"
+      title={
+        <div className="flex items-center justify-between w-full pr-4">
+          <span>Nhập Excel</span>
+          {headerActions}
+        </div>
+      }
       width="80vw"
-      footer={footer}
     >
       {/* Step indicator */}
       <div className="mb-6">
@@ -451,17 +430,70 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* Client resolution card */}
-          {importType === 'client' && !clientId && excelClientName && (
-            <ClientResolutionCard
-              excelClientName={excelClientName}
-              clientId={clientId}
-              onClientIdChange={setClientId}
-              clients={clients}
-              createClientMutate={createClient.mutateAsync as (data: ClientFormData) => Promise<{ id: number | string } | null>}
-              isCreating={createClient.isPending}
-              onError={(msg) => setError(msg)}
-            />
+          {/* Client resolution card or selected client status */}
+          {importType === 'client' && (
+            clientId ? (
+              <div
+                className="flex items-center justify-between px-4 py-3"
+                style={{
+                  background: 'var(--success-soft)',
+                  borderRadius: 'var(--r-md, var(--r-sm))',
+                  border: '1px solid var(--success)',
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-[13.5px] font-semibold" style={{ color: 'var(--success)' }}>
+                    Chủ hàng đã chọn:
+                  </span>
+                  <span className="text-[13.5px] font-medium" style={{ color: 'var(--ink)' }}>
+                    {clients.find((c) => String(c.id) === clientId)?.name ?? '—'}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setClientId('')}
+                  style={{
+                    color: 'var(--danger)',
+                    borderColor: 'var(--danger)',
+                    background: 'transparent',
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                  Chọn lại chủ hàng
+                </Button>
+              </div>
+            ) : excelClientName ? (
+              <ClientResolutionCard
+                excelClientName={excelClientName}
+                clientId={clientId}
+                onClientIdChange={setClientId}
+                clients={clients}
+                createClientMutate={createClient.mutateAsync as (data: ClientFormData) => Promise<{ id: number | string } | null>}
+                isCreating={createClient.isPending}
+                onError={(msg) => setError(msg)}
+              />
+            ) : (
+              <div
+                className="flex items-center gap-3 px-4 py-3"
+                style={{
+                  background: 'var(--warning-soft)',
+                  borderRadius: 'var(--r-md, var(--r-sm))',
+                  border: '1px solid var(--warning)',
+                }}
+              >
+                <span className="text-[13px] font-semibold" style={{ color: 'var(--warning)' }}>
+                  Vui lòng chọn chủ hàng:
+                </span>
+                <InlineSelect
+                  placeholder="Chọn chủ hàng..."
+                  value={clientId}
+                  options={clients.map((c) => ({ value: String(c.id), label: c.name }))}
+                  onChange={setClientId}
+                  style={{ minWidth: 200 }}
+                />
+              </div>
+            )
           )}
 
           {/* Summary row */}
