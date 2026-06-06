@@ -14,7 +14,7 @@ Two-stage flow per upload:
 from __future__ import annotations
 
 import base64
-import hashlib
+
 import logging
 import uuid
 from datetime import date
@@ -55,7 +55,7 @@ from app.contexts.operations.infrastructure.import_pipeline.pipeline import (
 )
 from app.contexts.operations.infrastructure.import_pipeline.workbook import load_workbook
 from app.core.worker import get_arq_pool
-from app.workers import enqueue, import_preview_job_id
+from app.workers import enqueue
 
 _logger = logging.getLogger(__name__)
 
@@ -87,6 +87,7 @@ class CommitRow(BaseModel):
     driver_name: str = ""
     vessel: str = ""
     remarks: str = ""
+    freight_kind_unknown: bool = False  # True if freight_kind needs ketoan resolution
 
 
 class CommitRequest(BaseModel):
@@ -386,9 +387,21 @@ async def commit_customer_excel(
             driver_name=r.driver_name,
             vessel=r.vessel,
             remarks=r.remarks,
+            freight_kind_unknown=r.freight_kind_unknown,
         )
         for r in body.rows
     ]
+
+    # Validate that all rows have resolved freight kinds
+    unresolved_indices = [
+        i for i, row in enumerate(rows) if row.freight_kind_unknown
+    ]
+    if unresolved_indices:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Các dòng sau cần xác định loại container (E/F): {unresolved_indices}. "
+                   f"Vui lòng giải quyết trong preview trước khi lưu.",
+        )
 
     try:
         result = await use_case(ImportCommitInput(

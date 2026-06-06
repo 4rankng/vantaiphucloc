@@ -37,6 +37,7 @@ class ExtractedRow:
     consignee: str = ""
     vehicle_plate: str = ""
     freight_charge: float | None = None
+    freight_kind_unknown: bool = False  # True if container E/F kind was not explicitly found
 
 
 # ---------------------------------------------------------------------------
@@ -117,6 +118,7 @@ def extract_bay_plan(sheets: list[SheetView], filename: str = "") -> tuple[list[
                 continue
 
             size_val = _cell_text(row[size_col]) if size_col is not None and size_col < len(row) else ""
+            fe_unknown = cont_no not in fe_lookup
             fe = fe_lookup.get(cont_no, "E")
             work_type = build_cont_type(fe, size_val)
 
@@ -127,6 +129,7 @@ def extract_bay_plan(sheets: list[SheetView], filename: str = "") -> tuple[list[
                 dropoff=port or "",
                 vessel_name=vessel_name,
                 source_row_index=r,
+                freight_kind_unknown=fe_unknown,
             ))
 
     return accepted, rejected
@@ -370,6 +373,7 @@ def _extract_panel_row(
         dropoff="",
         vessel_name=vessel_name,
         source_row_index=row_idx,
+        freight_kind_unknown=True,  # Hardcoded to E, not explicitly provided
     ))
 
 
@@ -450,6 +454,7 @@ def extract_stacking_plan(sheets: list[SheetView], filename: str = "") -> tuple[
         size_val = _cell_text(row[size_col]) if size_col is not None and size_col < len(row) else ""
         pos_val = _cell_text(row[pos_col]) if pos_col is not None and pos_col < len(row) else ""
 
+        fe_unknown = cont_no not in fe_lookup
         fe = fe_lookup.get(cont_no, "E")
         work_type = build_cont_type(fe, size_val)
 
@@ -460,6 +465,7 @@ def extract_stacking_plan(sheets: list[SheetView], filename: str = "") -> tuple[
             dropoff="",
             vessel_name=vessel_name,
             source_row_index=r,
+            freight_kind_unknown=fe_unknown,
         ))
 
     return accepted, rejected

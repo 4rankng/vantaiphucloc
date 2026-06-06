@@ -22,7 +22,7 @@ export function LocationMergeDialog({
 
   useEffect(() => {
     if (open) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setSource(presetSource ?? '')
       setTarget(presetTarget ?? '')
     }

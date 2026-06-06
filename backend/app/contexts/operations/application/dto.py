@@ -64,6 +64,7 @@ class ImportTripRow:
     driver_name: str = ""
     vessel: str = ""
     remarks: str = ""
+    freight_kind_unknown: bool = False  # True if freight_kind was not explicitly provided
 
 
 @dataclass

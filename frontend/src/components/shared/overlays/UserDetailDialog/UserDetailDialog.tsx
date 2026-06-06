@@ -54,7 +54,7 @@ export function UserDetailDialog({
 
   useEffect(() => {
     if (user) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setEditForm({
         username: user.username,
         fullName: user.fullName ?? '',

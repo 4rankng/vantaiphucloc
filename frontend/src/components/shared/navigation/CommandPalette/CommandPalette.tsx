@@ -80,7 +80,7 @@ export function CommandPalette({
   // Focus input on open
   useEffect(() => {
     if (open) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setQuery('')
        
       setSelectedIndex(0)
@@ -90,7 +90,7 @@ export function CommandPalette({
 
   // Reset selection when filtered list changes
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setSelectedIndex(0)
   }, [query])
 

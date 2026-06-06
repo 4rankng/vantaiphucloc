@@ -13,7 +13,7 @@ export function InlineCell({ value, onSave, placeholder, type }: InlineCellProps
   const ref = useRef<HTMLInputElement>(null)
 
   useEffect(() => { if (editing) { ref.current?.focus(); ref.current?.select() } }, [editing])
-  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {  
  setDraft(value) }, [value])
 
   const save = () => {

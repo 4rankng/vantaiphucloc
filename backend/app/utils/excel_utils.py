@@ -134,8 +134,6 @@ def flatten_complex_sheet(raw_rows: list[tuple]) -> list[tuple]:
     if not raw_rows:
         return []
         
-    key_patterns = ["số cont", "container", "số container"]
-
     header_idx = -1
     container_cols = []
 

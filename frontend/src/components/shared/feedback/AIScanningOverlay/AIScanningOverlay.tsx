@@ -45,7 +45,7 @@ export function AIScanningOverlay({
   const [aspectRatio, setAspectRatio] = useState(1)
   useEffect(() => {
     if (!visible || !imageSrc) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setAspectRatio(1)
       return
     }

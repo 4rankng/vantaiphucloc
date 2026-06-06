@@ -11,14 +11,14 @@ export function SuccessOverlay({ visible, message = 'Đã gửi chuyến', onDon
   const [show, setShow] = useState(false)
 
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
+     
     if (!visible) { setShow(false); return }
     setShow(true)
     const timer = setTimeout(() => {
       setShow(false)
       onDone?.()
     }, 2000)
-    /* eslint-enable react-hooks/set-state-in-effect */
+     
     return () => clearTimeout(timer)
   }, [visible, onDone])
 

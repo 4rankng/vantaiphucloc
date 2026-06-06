@@ -73,15 +73,23 @@ def parse_container_size(raw: Any, iso_hint: str | None = None) -> str:
     raise ValueError("unknown_size")
 
 
-def parse_freight_kind(raw: Any, default: str = "F") -> str:
-    """Return 'F' or 'E'."""
+def parse_freight_kind(raw: Any, default: str = "F", raise_on_unknown: bool = False) -> str:
+    """Return 'F' or 'E'. 
+    
+    If raise_on_unknown is True, raises ValueError for empty/unknown freight kind instead of using default.
+    This allows the import pipeline to detect rows that need manual resolution.
+    """
     if raw is None or (isinstance(raw, str) and not raw.strip()):
+        if raise_on_unknown:
+            raise ValueError("unknown_freight_kind")
         return default
     s = str(raw).strip().upper()
     if s.startswith("F") or s in ("FULL", "1", "Y", "YES", "HÀNG", "HANG"):
         return "F"
     if s.startswith("E") or s in ("EMPTY", "0", "N", "NO", "RỖNG", "RONG", "VỎ", "VO"):
         return "E"
+    if raise_on_unknown:
+        raise ValueError("unknown_freight_kind")
     raise ValueError("unknown_freight_kind")
 
 

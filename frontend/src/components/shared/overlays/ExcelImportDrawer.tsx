@@ -64,6 +64,8 @@ function stepIndex(step: ImportStep): number {
   return step === 'upload' ? 0 : step === 'preview' ? 1 : 2
 }
 
+const NUMERIC_COLS = new Set(['Cước'])
+
 interface PreviewRow {
   [key: string]: unknown
 }
@@ -85,6 +87,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
   const [previewResult, setPreviewResult] = useState<PreviewResultDto | null>(null)
   const [reconResult, setReconResult] = useState<VendorImportResponse | DriverImportResponse | null>(null)
   const [driverCommitResult, setDriverCommitResult] = useState<DriverCommitResponse | null>(null)
+  const [resolvedFreightKinds, setResolvedFreightKinds] = useState<Record<number, 'E' | 'F'>>({})
   const fileRef = useRef<HTMLInputElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
 
@@ -109,6 +112,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
 
   const applyPreviewResult = useCallback((data: PreviewResultDto) => {
     setPreviewResult(data)
+    setResolvedFreightKinds({})  // Clear resolved kinds when new preview is loaded
     const cols = ['Ngày đi', 'Chủ hàng', 'Số Cont', 'Loại Cont', 'Số xe chạy', 'Điểm đi', 'Điểm đến', 'Cước']
     const rows = (data.accepted ?? []).map(r => ({
       'Ngày đi': r.values.trip_date,
@@ -158,6 +162,35 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
     }
     setStep('preview')
   }, [clientId, clients])
+
+  const unresolvedCount = useMemo(() => {
+    if (!previewResult) return 0
+    return (previewResult.accepted ?? []).filter((_, idx) => {
+      return (previewResult.accepted?.[idx]?.values?.freight_kind_unknown ?? false) && !resolvedFreightKinds[idx]
+    }).length
+  }, [previewResult, resolvedFreightKinds])
+
+  const resolveFreightKind = useCallback((rowIndex: number, kind: 'E' | 'F') => {
+    setResolvedFreightKinds(prev => ({
+      ...prev,
+      [rowIndex]: kind
+    }))
+    // Update the previewData to reflect the resolution
+    if (previewResult?.accepted?.[rowIndex]) {
+      const row = previewResult.accepted[rowIndex]
+      const size = row.values.container_size ?? ''
+      row.values.freight_kind = kind
+      row.values.cont_type = `${kind}${size}`
+      setPreviewData(prev => {
+        const newData = [...prev]
+        newData[rowIndex] = {
+          ...newData[rowIndex],
+          'Loại Cont': `${kind}${size}`
+        }
+        return newData
+      })
+    }
+  }, [previewResult])
 
   // Polling hook fires the callback once per status transition to a
   // terminal state. The hook handles its own ref-keeping internally so
@@ -316,7 +349,11 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
       commitClientExcel.mutate(
         {
           client_id: Number(clientId),
-          rows: (previewResult?.accepted ?? []).map(r => r.values)
+          rows: (previewResult?.accepted ?? []).map((r, idx) => ({
+            ...r.values,
+            // If the row had an unknown freight kind, it should have been resolved
+            freight_kind_unknown: r.values.freight_kind_unknown && !resolvedFreightKinds[idx],
+          }))
         },
         {
           onSuccess: () => setStep('done'),
@@ -422,25 +459,22 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     if (step === 'preview' && !clientId && excelClientName && !creatingClient) {
       // Don't auto-open — let user choose. Just pre-fill if they open.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+
       setClientForm(prev => prev.name ? prev : { ...EMPTY_CLIENT_FORM, name: excelClientName })
     }
   }, [step, clientId, excelClientName, creatingClient])
 
+  // When client is selected, fill "Chủ hàng" column in all preview rows
+  useEffect(() => {
+    if (step !== 'preview' || !clientId || !previewData.length) return
+    const clientName = clients.find(c => String(c.id) === clientId)?.name
+    if (!clientName) return
+    setPreviewData(prev => prev.map(row => ({ ...row, 'Chủ hàng': clientName })))
+  }, [step, clientId, clients])
+
   const previewCols = previewColumns.length > 0 ? previewColumns : []
 
   const isProcessing = enqueueClientExcel.isPending || !!activeJobId || previewDriverRecon.isPending || previewVendorRecon.isPending
-
-  // Build a map of row index → duplicate type for highlighting
-  const duplicateRowMap = useMemo(() => {
-    const map = new Map<number, 'exact'>()
-    for (const g of duplicateGroups) {
-      for (const idx of g.rowIndices) {
-        if (!map.has(idx)) map.set(idx, g.type)
-      }
-    }
-    return map
-  }, [duplicateGroups])
 
   const footer =
     step === 'upload' ? (
@@ -471,12 +505,21 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
       <>
         {importType === 'client' && (
           clientId ? (
-            <span
-              className="text-[12px] font-medium px-2.5 py-1 rounded-full mr-auto"
+            <button
+              type="button"
+              onClick={() => setClientId('')}
+              className="group text-[12px] font-medium pl-2.5 pr-1.5 py-1 rounded-full mr-auto flex items-center gap-1 transition-colors cursor-pointer"
               style={{ background: 'var(--success-soft)', color: 'var(--success)' }}
+              title="Nhấn để chọn lại chủ hàng"
             >
-              {clients.find((c) => String(c.id) === clientId)?.name ?? 'Chủ hàng'} ✓
-            </span>
+              <span>{clients.find((c) => String(c.id) === clientId)?.name ?? 'Chủ hàng'}</span>
+              <span
+                className="inline-flex items-center justify-center rounded-full ml-0.5 transition-colors"
+                style={{ width: 18, height: 18, fontSize: 10 }}
+              >
+                <X className="h-3 w-3 opacity-50 group-hover:opacity-100" style={{ color: 'var(--danger)' }} />
+              </span>
+            </button>
           ) : (
             <InlineSelect
               placeholder="Chọn chủ hàng"
@@ -501,7 +544,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
           Quay lại
         </Button>
         <Button size="sm" onClick={handleImport}
-          disabled={importType === 'client' ? (commitClientExcel.isPending || !clientId) : (commitDriverRecon.isPending || commitVendorRecon.isPending)}
+          disabled={importType === 'client' ? (commitClientExcel.isPending || !clientId || unresolvedCount > 0) : (commitDriverRecon.isPending || commitVendorRecon.isPending || unresolvedCount > 0)}
         >
           {commitClientExcel.isPending || commitDriverRecon.isPending || commitVendorRecon.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -734,7 +777,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
 
       {/* ── Preview step ── */}
       {step === 'preview' && (
-        <div className="space-y-4">
+        <div className="space-y-4 preview-step-enter">
           {/* Duplicate warning banner */}
           {previewWarnings.length > 0 && (
             <div
@@ -1025,21 +1068,97 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
               Không có dữ liệu
             </p>
           ) : (
+            <>
+              {unresolvedCount > 0 && (
+                <div
+                  className="flex items-start gap-2.5 px-3.5 py-3 mb-3"
+                  style={{
+                    background: 'var(--warning-soft)',
+                    border: '1px solid var(--warning)',
+                    borderRadius: 'var(--r-sm)',
+                  }}
+                >
+                  <AlertTriangle
+                    className="h-4 w-4 mt-0.5 flex-shrink-0"
+                    style={{ color: 'var(--warning)' }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div style={{ color: 'var(--warning)' }} className="text-[13px]">
+                      <strong>{unresolvedCount}</strong> dòng cần xác định loại container (E/F) trước khi lưu. Vui lòng chọn E hoặc F trong cột "Loại Cont".
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = { ...resolvedFreightKinds }
+                          ;(previewResult?.accepted ?? []).forEach((r, idx) => {
+                            if (r.values?.freight_kind_unknown && !resolvedFreightKinds[idx]) {
+                              updated[idx] = 'E'
+                              const size = r.values.container_size ?? ''
+                              r.values.freight_kind = 'E'
+                              r.values.cont_type = `E${size}`
+                              setPreviewData(prev => {
+                                const d = [...prev]
+                                d[idx] = { ...d[idx], 'Loại Cont': `E${size}` }
+                                return d
+                              })
+                            }
+                          })
+                          setResolvedFreightKinds(updated)
+                        }}
+                        className="px-2.5 py-1 rounded text-[12px] font-semibold transition-colors"
+                        style={{
+                          background: 'var(--surface)',
+                          border: '1px solid var(--warning)',
+                          color: 'var(--warning)',
+                        }}
+                      >
+                        Chọn tất cả E
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = { ...resolvedFreightKinds }
+                          ;(previewResult?.accepted ?? []).forEach((r, idx) => {
+                            if (r.values?.freight_kind_unknown && !resolvedFreightKinds[idx]) {
+                              updated[idx] = 'F'
+                              const size = r.values.container_size ?? ''
+                              r.values.freight_kind = 'F'
+                              r.values.cont_type = `F${size}`
+                              setPreviewData(prev => {
+                                const d = [...prev]
+                                d[idx] = { ...d[idx], 'Loại Cont': `F${size}` }
+                                return d
+                              })
+                            }
+                          })
+                          setResolvedFreightKinds(updated)
+                        }}
+                        className="px-2.5 py-1 rounded text-[12px] font-semibold transition-colors"
+                        style={{
+                          background: 'var(--surface)',
+                          border: '1px solid var(--warning)',
+                          color: 'var(--warning)',
+                        }}
+                      >
+                        Chọn tất cả F
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             <div
-              className="nepo-table-scroll"
-              style={{
-                border: '1px solid var(--line)',
-                borderRadius: 'var(--r-sm)',
-                overflow: 'auto',
-                maxHeight: 'calc(100vh - 280px)',
-              }}
+              className="preview-table-wrap"
+              style={{ maxHeight: 'calc(100vh - 280px)' }}
             >
               <table className="nepo-table w-full" style={{ minWidth: 600 }}>
                 <thead>
                   <tr>
                     <th style={{ width: 40 }}>#</th>
                     {previewCols.map((key) => (
-                      <th key={key} className="text-left">
+                      <th key={key} className={`text-left ${NUMERIC_COLS.has(key) ? 'text-right' : ''}`}
+                        style={key === 'Loại Cont' ? { width: 60 } : key === 'Số Cont' ? { width: 100 } : undefined}
+                      >
                         {key}
                       </th>
                     ))}
@@ -1048,38 +1167,52 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                 <tbody>
                   {previewData.map((row, i) => {
                     const realIndex = i
-                    const dupType = duplicateRowMap.get(realIndex)
-                    const rowBg = dupType === 'exact' ? 'var(--danger-soft)' : undefined
                     return (
-                      <tr key={realIndex} style={rowBg ? { background: rowBg } : undefined}>
+                      <tr key={realIndex}>
                         <td>
-                          <span
-                            className="tabular-nums text-[12px]"
-                            style={{ color: 'var(--ink-3)' }}
-                          >
-                            {dupType ? (
-                              <AlertTriangle
-                                className="inline h-3 w-3 mr-0.5"
-                                style={{
-                                  color: 'var(--danger)',
-                                }}
-                              />
-                            ) : null}
+                          <span className="tabular-nums text-[12px]" style={{ color: 'var(--ink-3)' }}>
                             {realIndex + 1}
                           </span>
                         </td>
                         {previewCols.map((key) => {
                           const val = row[key]
+                          const isNumeric = NUMERIC_COLS.has(key)
+                          const isFreightKindUnknown = previewResult?.accepted?.[realIndex]?.values?.freight_kind_unknown ?? false
+                          const isFreightKindCol = key === 'Loại Cont'
+                          const showFreightPicker = isFreightKindCol && isFreightKindUnknown
+                          const resolved = resolvedFreightKinds[realIndex]
+
                           return (
-                            <td key={key}>
-                              <span
-                                style={{
-                                  color: val == null ? 'var(--ink-3)' : 'var(--ink-2)',
-                                  fontSize: 12.5,
-                                }}
-                              >
-                                {val != null ? String(val) : '—'}
-                              </span>
+                            <td key={key} className={isNumeric ? 'text-right' : ''}>
+                              {showFreightPicker ? (
+                                <InlineSelect
+                                  placeholder="Chọn E/F"
+                                  value={resolved ?? ''}
+                                  options={[
+                                    { value: 'E', label: `E${previewResult?.accepted?.[realIndex]?.values?.container_size ?? ''}` },
+                                    { value: 'F', label: `F${previewResult?.accepted?.[realIndex]?.values?.container_size ?? ''}` },
+                                  ]}
+                                  onChange={(v) => v && resolveFreightKind(realIndex, v as 'E' | 'F')}
+                                  style={{
+                                    minWidth: 70,
+                                    borderColor: resolved ? 'var(--success)' : 'var(--warning)',
+                                    background: resolved ? 'var(--success-soft)' : 'var(--warning-soft)',
+                                  }}
+                                />
+                              ) : (
+                                <span
+                                  style={{
+                                    color: val == null ? 'var(--ink-3)' : 'var(--ink-2)',
+                                    fontSize: 12.5,
+                                  }}
+                                >
+                                  {val != null
+                                    ? isNumeric && typeof val === 'number'
+                                      ? val.toLocaleString('vi-VN')
+                                      : String(val)
+                                    : '—'}
+                                </span>
+                              )}
                             </td>
                           )
                         })}
@@ -1089,6 +1222,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                 </tbody>
               </table>
             </div>
+            </>
           )}
 
           <p className="text-[12px] m-0" style={{ color: 'var(--ink-3)' }}>

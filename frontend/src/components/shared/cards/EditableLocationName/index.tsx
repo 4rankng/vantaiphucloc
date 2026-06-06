@@ -12,7 +12,7 @@ export function EditableLocationName({ name, onSave, saving }: EditableLocationN
   const [value, setValue] = useState(name)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {  
  setValue(name); setEditing(false) }, [name])
   useEffect(() => { if (editing) inputRef.current?.focus() }, [editing])
 

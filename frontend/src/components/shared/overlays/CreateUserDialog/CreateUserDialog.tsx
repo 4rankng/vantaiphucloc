@@ -55,7 +55,7 @@ export function CreateUserDialog({
 
   useEffect(() => {
     if (form.vendor === '' && vendors && vendors.length > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setForm(f => ({ ...f, vendor: String(vendors[0].id) }))
     }
   }, [vendors, form.vendor])
