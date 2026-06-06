@@ -216,3 +216,99 @@ async def sync_unmatched_trip_salaries(
         await session.flush()
 
     return updated
+
+
+async def sync_all_trip_pricing(session: AsyncSession) -> int:
+    """Universal sync: update ALL delivered trips with latest pricing.
+
+    - Matched trips (booked_trip_id IS NOT NULL): update revenue + driver_salary
+    - Unmatched trips (booked_trip_id IS NULL): update driver_salary only
+
+    Returns total count of updated trips.
+    """
+    from datetime import datetime, timezone
+
+    stmt = select(DeliveredTripORM)
+    all_trips = (await session.execute(stmt)).scalars().all()
+    if not all_trips:
+        return 0
+
+    matched = [t for t in all_trips if t.booked_trip_id is not None]
+    unmatched = [t for t in all_trips if t.booked_trip_id is None]
+
+    updated = 0
+
+    if matched:
+        client_infos = [
+            TripPriceInfo(
+                id=t.id, partner_id=t.client_id,
+                pickup_location_id=t.pickup_location_id,
+                dropoff_location_id=t.dropoff_location_id,
+                work_type=t.work_type, cont_type=t.cont_type,
+            )
+            for t in matched
+        ]
+        client_prices = await lookup_client_prices(session, client_infos)
+
+        driver_infos = [
+            TripPriceInfo(
+                id=t.id, partner_id=t.client_id,
+                pickup_location_id=t.pickup_location_id,
+                dropoff_location_id=t.dropoff_location_id,
+                work_type=t.work_type, cont_type=t.cont_type,
+            )
+            for t in matched if not t.vendor_id
+        ]
+        driver_salaries = await lookup_driver_salaries(session, driver_infos) if driver_infos else {}
+
+        vendor_infos = [
+            TripPriceInfo(
+                id=t.id, partner_id=t.vendor_id,
+                pickup_location_id=t.pickup_location_id,
+                dropoff_location_id=t.dropoff_location_id,
+                work_type=t.work_type, cont_type=t.cont_type,
+            )
+            for t in matched if t.vendor_id
+        ]
+        vendor_prices = await lookup_vendor_prices(session, vendor_infos) if vendor_infos else {}
+
+        for t in matched:
+            changed = False
+            new_rev = client_prices.get(t.id, 0)
+            if new_rev > 0 and t.revenue != new_rev:
+                t.revenue = new_rev
+                changed = True
+            if t.vendor_id:
+                new_sal = vendor_prices.get(t.id, 0)
+            else:
+                new_sal = driver_salaries.get(t.id, 0)
+            if new_sal > 0 and t.driver_salary != new_sal:
+                t.driver_salary = new_sal
+                changed = True
+            if changed:
+                t.updated_at = datetime.now(timezone.utc)
+                updated += 1
+
+    if unmatched:
+        driver_infos = [
+            TripPriceInfo(
+                id=t.id, partner_id=t.client_id,
+                pickup_location_id=t.pickup_location_id,
+                dropoff_location_id=t.dropoff_location_id,
+                work_type=t.work_type, cont_type=t.cont_type,
+            )
+            for t in unmatched
+        ]
+        driver_salaries = await lookup_driver_salaries(session, driver_infos)
+
+        for t in unmatched:
+            new_sal = driver_salaries.get(t.id, 0)
+            if new_sal > 0 and t.driver_salary != new_sal:
+                t.driver_salary = new_sal
+                t.updated_at = datetime.now(timezone.utc)
+                updated += 1
+
+    if updated > 0:
+        await session.flush()
+
+    return updated

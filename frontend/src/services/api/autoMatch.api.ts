@@ -132,3 +132,12 @@ export async function syncPricing(params: {
   }
 }
 
+
+export async function syncAllPricing() {
+  try {
+    const res = await api.post('/auto-match/sync-all-pricing', {})
+    return ok<SyncPricingResponse>(toCamel(res.data))
+  } catch (err) {
+    return fail<SyncPricingResponse>(err)
+  }
+}

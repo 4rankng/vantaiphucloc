@@ -154,9 +154,16 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
       key: 'driverName',
       header: 'Lái xe',
       render: (t) => (
-        <span className="text-[13px] whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
-          {t.driver?.name || '—'}
-        </span>
+        <div className="flex flex-col">
+          <span className="text-[13px] whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
+            {t.driver?.name || '—'}
+          </span>
+          {t.driver?.phone && (
+            <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>
+              {t.driver.phone}
+            </span>
+          )}
+        </div>
       ),
     },
     {

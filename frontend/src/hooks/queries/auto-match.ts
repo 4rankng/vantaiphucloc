@@ -5,6 +5,7 @@ import {
   aiSuggestMatch,
   unmatchTrip,
   syncPricing,
+  syncAllPricing,
   type AutoMatchPreviewResponse,
   type ConfirmMatchResponse,
   type AISuggestionResponse,
@@ -72,6 +73,18 @@ export function useSyncPricing() {
     mutationFn: async (params) => {
       const res = await syncPricing(params)
       if (!res.success) throw new Error(res.error || 'Sync pricing failed')
+      return res.data
+    },
+    onSuccess: () => invalidateDeliveredTripDeps(qc),
+  })
+}
+
+export function useSyncAllPricing() {
+  const qc = useQueryClient()
+  return useMutation<SyncPricingResponse, Error>({
+    mutationFn: async () => {
+      const res = await syncAllPricing()
+      if (!res.success) throw new Error(res.error || 'Sync all pricing failed')
       return res.data
     },
     onSuccess: () => invalidateDeliveredTripDeps(qc),

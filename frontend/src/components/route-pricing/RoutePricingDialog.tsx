@@ -136,7 +136,7 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
   )
 
   const clientOptions = useMemo(
-    () => clients.map((c) => ({ value: c.id.toString(), label: c.code ? `${c.code} - ${c.name}` : c.name })),
+    () => clients.map((c) => ({ value: c.id.toString(), label: c.name })),
     [clients],
   )
   const locationOptions = useMemo(

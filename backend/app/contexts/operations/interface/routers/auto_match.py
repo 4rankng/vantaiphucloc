@@ -19,6 +19,7 @@ from app.contexts.operations.infrastructure.auto_match_service import (
     confirm_matches,
     sync_matched_trips_pricing,
 )
+from app.core.pricing_lookup import sync_all_trip_pricing
 from app.contexts.operations.infrastructure.ai_reconciliation_service import (
     get_ai_match_suggestion,
 )
@@ -358,3 +359,18 @@ async def backfill_vendor_salary_endpoint(
         db, date_from=body.date_from, date_to=body.date_to
     )
     return BackfillVendorSalaryResponse(updated_count=updated)
+
+
+@router.post("/auto-match/sync-all-pricing", response_model=SyncPricingResponse)
+async def sync_all_pricing_endpoint(
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Universal pricing sync: update ALL delivered trips (matched + unmatched)."""
+    try:
+        updated_count = await sync_all_trip_pricing(db)
+        return SyncPricingResponse(updated_count=updated_count)
+    except Exception as exc:
+        from fastapi import HTTPException
+        _logger.exception("Failed to sync all trips pricing")
+        raise HTTPException(500, detail=str(exc))

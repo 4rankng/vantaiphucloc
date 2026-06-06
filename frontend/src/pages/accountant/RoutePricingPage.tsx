@@ -14,7 +14,7 @@ import { WORK_TYPE_LABELS } from '@/data/domain'
 import type { WorkType, RoutePricing } from '@/data/domain'
 import type { RoutePricingUpdatePayload } from '@/services/api/routePricings.api'
 import { LinkButton, SyncPricingDialog } from '@/components/shared'
-import { useSyncPricing } from '@/hooks/use-queries'
+import { useSyncAllPricing } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms'
 
 export function RoutePricingPage() {
@@ -25,30 +25,27 @@ export function RoutePricingPage() {
   const [inlineEditId, setInlineEditId] = useState<number | null>(null)
 
   const { toast } = useToast()
-  const syncPricing = useSyncPricing()
+  const syncAllPricing = useSyncAllPricing()
 
-  const handleConfirmSync = useCallback((dateFrom: string, dateTo: string) => {
-    syncPricing.mutate(
-      { dateFrom, dateTo },
-      {
-        onSuccess: (data) => {
-          toast({
-            title: 'Đồng bộ thành công',
-            description: `Đã cập nhật cước/lương cho ${data.updatedCount} chuyến đã đi.`,
-            variant: 'success',
-          })
-          setSyncOpen(false)
-        },
-        onError: (err) => {
-          toast({
-            title: 'Đồng bộ thất bại',
-            description: err.message || 'Đã có lỗi xảy ra khi đồng bộ.',
-            variant: 'error',
-          })
-        },
+  const handleConfirmSync = useCallback(() => {
+    syncAllPricing.mutate(undefined, {
+      onSuccess: (data) => {
+        toast({
+          title: 'Đồng bộ thành công',
+          description: `Đã cập nhật cước/lương cho ${data.updatedCount} chuyến.`,
+          variant: 'success',
+        })
+        setSyncOpen(false)
       },
-    )
-  }, [syncPricing, toast])
+      onError: (err) => {
+        toast({
+          title: 'Đồng bộ thất bại',
+          description: err.message || 'Đã có lỗi xảy ra khi đồng bộ.',
+          variant: 'error',
+        })
+      },
+    })
+  }, [syncAllPricing, toast])
 
   const [inlineEditField, setInlineEditField] = useState<
     'clientId' | 'pickupLocationId' | 'dropoffLocationId' | 'workType' | 'f20Price' | 'f40Price' | 'e20Price' | 'e40Price' | 'f20DriverSalary' | 'f40DriverSalary' | 'e20DriverSalary' | 'e40DriverSalary'
@@ -317,7 +314,7 @@ export function RoutePricingPage() {
       <SyncPricingDialog
         open={syncOpen}
         onClose={() => setSyncOpen(false)}
-        isPending={syncPricing.isPending}
+        isPending={syncAllPricing.isPending}
         onConfirm={handleConfirmSync}
       />
     </div>

@@ -20,7 +20,7 @@ export { useUsers, useUsersPaged, useProfile, useUpdateProfile, useChangePasswor
 export { useNotifications } from './queries/notifications'
 export { useBulkImportAndMatch, useParsePreview, useExportDoiSoatExcel, useToggleTripConfirmation, usePreviewCustomerExcel, useCommitCustomerExcel, useEnqueueCustomerExcelPreview, useCustomerExcelPreviewStatus, useUploadVendorReconciliation, usePreviewVendorReconciliation, useCommitVendorReconciliation, useUploadDriverReconciliation, usePreviewDriverReconciliation, useCommitDriverReconciliation } from './queries/imports'
 export { useLocationAliases, useCreateAlias, usePromoteAlias, useDeleteAlias, useMergeLocations, usePendingReviewLocations } from './queries/location-aliases'
-export { useAutoMatchPreview, useConfirmAutoMatch, useAISuggestMatch, useUnmatchTrip, useSyncPricing } from './queries/auto-match'
+export { useAutoMatchPreview, useConfirmAutoMatch, useAISuggestMatch, useUnmatchTrip, useSyncPricing, useSyncAllPricing } from './queries/auto-match'
 export { useRoutePricings, useCreateRoutePricing, useUpdateRoutePricing, useDeleteRoutePricing } from './queries/route-pricings'
 export { usePreviewRoutePricingImport, useCommitRoutePricingImport } from './queries/route-pricings-import'
 export { useVendorRoutePricings, useCreateVendorRoutePricing, useUpdateVendorRoutePricing, useDeleteVendorRoutePricing } from './queries/vendor-route-pricings'

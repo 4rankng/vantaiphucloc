@@ -11,9 +11,10 @@ from app.core.deps import require_permission
 from app.database import get_db
 from app.models.base import User
 from app.models.domain import (
-    Pricing,
     BookedTrip,
     DeliveredTrip,
+    RoutePricing,
+    VendorRoutePricing,
 )
 from app.schemas.domain import (
     CreateAliasRequest,
@@ -220,8 +221,10 @@ async def merge_locations(
         (DeliveredTrip, "dropoff_location_id"),
         (BookedTrip, "pickup_location_id"),
         (BookedTrip, "dropoff_location_id"),
-        (Pricing, "pickup_location_id"),
-        (Pricing, "dropoff_location_id"),
+        (RoutePricing, "pickup_location_id"),
+        (RoutePricing, "dropoff_location_id"),
+        (VendorRoutePricing, "pickup_location_id"),
+        (VendorRoutePricing, "dropoff_location_id"),
     ]:
         count = (await db.execute(
             update(table)
