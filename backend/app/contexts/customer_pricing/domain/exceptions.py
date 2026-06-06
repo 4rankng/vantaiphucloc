@@ -35,7 +35,3 @@ class LocationInUse(CustomerPricingError):
         super().__init__(f"location is referenced in {table}.{column}")
         self.table = table
         self.column = column
-
-
-class PricingNotMatched(CustomerPricingError):
-    """No pricing rule matches the (client, work_type, lane, qty) tuple."""

@@ -223,56 +223,6 @@ class LocationAlias(Base):
 
 
 # ---------------------------------------------------------------------------
-# Pricing
-# ---------------------------------------------------------------------------
-
-
-class Pricing(AuditableMixin, Base):
-    __tablename__ = "pricings"
-    __audit_context_fields__ = {"client_id", "work_type", "pickup_location_id", "dropoff_location_id"}
-
-    id = Column(Integer, primary_key=True, index=True)
-    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
-    work_type = Column(String(30), nullable=False)  # CHUYỂN BÃI | XUẤT/NHẬP TÀU | ...
-    pickup_location_id = Column(
-        Integer, ForeignKey("locations.id"), nullable=False, index=True
-    )
-    dropoff_location_id = Column(
-        Integer, ForeignKey("locations.id"), nullable=False, index=True
-    )
-    is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
-    updated_at = Column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
-    )
-
-    __table_args__ = (
-        UniqueConstraint(
-            "client_id",
-            "work_type",
-            "pickup_location_id",
-            "dropoff_location_id",
-            name="uq_pricings_lane",
-        ),
-    )
-
-
-class PricingLine(Base):
-    __tablename__ = "pricing_lines"
-
-    id = Column(Integer, primary_key=True, index=True)
-    pricing_id = Column(
-        Integer,
-        ForeignKey("pricings.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    quantity = Column(Integer, nullable=False)
-    unit_price = Column(Integer, nullable=False, default=0)
-    driver_salary = Column(Integer, nullable=False, default=0)
-
-
-# ---------------------------------------------------------------------------
 # RoutePricing — flat per-route rates (Cước tuyến)
 # ---------------------------------------------------------------------------
 

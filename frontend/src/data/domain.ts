@@ -180,24 +180,6 @@ export interface DeliveredTrip {
 }
 
 
-export interface PricingLine {
-  id?: number
-  quantity: number
-  unitPrice: number
-  driverSalary: number
-}
-
-export interface Pricing {
-  id: number
-  client: ClientSummary
-  workType: ContType
-  pickupLocation: LocationSummary
-  dropoffLocation: LocationSummary
-  lines: PricingLine[]
-  createdAt: string
-  updatedAt: string
-}
-
 export interface BookedTrip {
   id: number
   tripDate: string

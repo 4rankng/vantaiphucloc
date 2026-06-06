@@ -106,7 +106,6 @@ async def list_audit_logs(
     client_ids = (
         _collect_ids("delivered_trips", "client_id")
         | _collect_ids("booked_trips", "client_id")
-        | _collect_ids("pricings", "client_id")
         | _collect_ids("route_pricings", "client_id")
     )
     vendor_ids = (
@@ -118,9 +117,7 @@ async def list_audit_logs(
         | _collect_ids("vehicle_drivers", "vehicle_id")
     )
     location_ids = (
-        _collect_ids("pricings", "pickup_location_id")
-        | _collect_ids("pricings", "dropoff_location_id")
-        | _collect_ids("route_pricings", "pickup_location_id")
+        _collect_ids("route_pricings", "pickup_location_id")
         | _collect_ids("route_pricings", "dropoff_location_id")
         | _collect_ids("vendor_route_pricings", "pickup_location_id")
         | _collect_ids("vendor_route_pricings", "dropoff_location_id")
@@ -319,20 +316,6 @@ async def list_audit_logs(
             if cont:
                 parts.append(cont)
             return " – ".join(parts) if parts else None
-
-        if table_name == "pricings":
-            d = data or {}
-            parts = []
-            cid = d.get("client_id")
-            if cid:
-                parts.append(client_name_map.get(cid, ""))
-            lane = _lane_str(d)
-            if lane:
-                parts.append(lane)
-            wt = d.get("work_type")
-            if wt:
-                parts.append(wt)
-            return " – ".join(p for p in parts if p) or None
 
         if table_name == "route_pricings":
             d = data or {}

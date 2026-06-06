@@ -7,9 +7,7 @@ from typing import NewType
 
 PartnerId = NewType("PartnerId", int)
 LocationId = NewType("LocationId", int)
-PricingId = NewType("PricingId", int)
 LocationAliasId = NewType("LocationAliasId", int)
-PricingLineId = NewType("PricingLineId", int)
 
 
 # Work types describe the operation: CHUYỂN BÃI, XUẤT/NHẬP TÀU, etc.

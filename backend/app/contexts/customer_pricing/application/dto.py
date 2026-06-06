@@ -55,31 +55,3 @@ class LocationPinInput:
     lat: float
     lng: float
     user_id: int | None = None
-
-
-# -- Pricing ---------------------------------------------------------
-
-
-@dataclass
-class PricingLineInput:
-    quantity: int
-    unit_price: int = 0
-    driver_salary: int = 0
-
-
-@dataclass
-class PricingCreateInput:
-    client_id: int
-    work_type: str
-    pickup_location_id: int
-    dropoff_location_id: int
-    lines: list[PricingLineInput] = field(default_factory=list)
-
-
-@dataclass
-class PricingUpdateInput:
-    client_id: int | None = None
-    work_type: str | None = None
-    pickup_location_id: int | None = None
-    dropoff_location_id: int | None = None
-    lines: list[PricingLineInput] | None = None

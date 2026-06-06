@@ -13,7 +13,6 @@ import * as clientsApi from './clients.api'
 import * as vendorsApi from './vendors.api'
 import * as locationsApi from './locations.api'
 import * as locationAliasesApi from './locationAliases.api'
-import * as pricingsApi from './pricings.api'
 import * as deliveredTripsApi from './deliveredTrips.api'
 import * as bookedTripsApi from './bookedTrips.api'
 import * as salaryApi from './salary.api'
@@ -61,12 +60,6 @@ export const apiClient = {
   reopenAlias: locationAliasesApi.reopenAlias,
   mergeLocations: locationAliasesApi.mergeLocations,
   getPendingReviewLocations: locationAliasesApi.getPendingReviewLocations,
-
-  // Pricings
-  getPricings: pricingsApi.getPricings,
-  createPricing: pricingsApi.createPricing,
-  updatePricing: pricingsApi.updatePricing,
-  deletePricing: pricingsApi.deletePricing,
 
   // Work Orders
   getDeliveredTrip: deliveredTripsApi.getDeliveredTrip,

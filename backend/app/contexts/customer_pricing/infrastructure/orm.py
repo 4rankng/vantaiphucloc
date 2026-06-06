@@ -6,14 +6,10 @@ from app.models.domain import (
     Location as LocationORM,
     LocationAlias as LocationAliasORM,
     Client as ClientORM,
-    Pricing as PricingORM,
-    PricingLine as PricingLineORM,
 )
 
 __all__ = [
     "LocationORM",
     "LocationAliasORM",
     "ClientORM",
-    "PricingORM",
-    "PricingLineORM",
 ]

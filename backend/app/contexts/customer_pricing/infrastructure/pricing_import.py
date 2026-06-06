@@ -10,11 +10,10 @@ The preview returns parsed `TariffRow`s + per-route location resolutions
 (same shape as orders import) so the accountant can review and override
 before committing.
 
-The commit upserts Pricing + PricingLine rows. Idempotent on
-`(client_id, work_type, pickup_location_id, dropoff_location_id)` for the
-header row, and on `(pricing_id, quantity)` for the line. Re-running with
-the same file is a no-op; running with a changed unit price updates the
-existing PricingLine.
+The commit upserts RoutePricing rows. Idempotent on
+`(client_id, work_type, pickup_location_id, dropoff_location_id)`.
+Multiple container-type rows for the same route set the appropriate flat
+column (f20_price, f40_price, e20_price, e40_price).
 """
 
 from __future__ import annotations
@@ -24,10 +23,10 @@ from io import BytesIO
 from typing import Sequence
 
 import openpyxl
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import Client, Pricing, PricingLine
+from app.models.domain import Client, RoutePricing
 from app.contexts.customer_pricing.infrastructure.location_resolver import (
     LocationResolverService,
     ResolverSource,
@@ -38,6 +37,14 @@ from app.contexts.customer_pricing.infrastructure.location_resolver import (
 _AGGREGATE_TOKENS = ("TỔNG", "TOTAL", "GHI CHU", "GHI CHÚ", "CỘNG", "GRAND TOTAL")
 
 SUPPORTED_FORMATS = ("pan", "hap", "newway")
+
+# Map container-type to RoutePricing price column
+_CONT_TYPE_PRICE_COL = {
+    "F20": "f20_price",
+    "F40": "f40_price",
+    "E20": "e20_price",
+    "E40": "e40_price",
+}
 
 
 @dataclass
@@ -296,13 +303,13 @@ async def commit_tariff_rows(
     user_id: int | None = None,
     update_existing_lines: bool = False,
 ) -> CommitResult:
-    """Upsert pricing + lines, idempotent on
-    (client_id, work_type, pickup_location_id, dropoff_location_id) for the
-    header and (pricing_id, quantity) for the line.
+    """Upsert RoutePricing rows from tariff import data.
 
-    If `update_existing_lines` is False (default), an existing line is left
-    alone — common case for "import a fresh tariff but keep manually-tuned
-    splits". When True, the line's `unit_price` is overwritten.
+    Groups rows by unique (client_id, pickup, dropoff, work_type) route.
+    Each group maps to one RoutePricing row with container-type prices set
+    in the appropriate flat columns (f20_price, f40_price, etc.).
+
+    Idempotent: re-running with the same file is a no-op.
     """
     # Backward compat: callers may still pass client= instead of partner=
     _partner = partner or client
@@ -312,6 +319,8 @@ async def commit_tariff_rows(
     locations_before = await _location_count(db)
     result = CommitResult()
 
+    # Resolve locations and group by route
+    route_groups: dict[tuple[int, int, str], list[TariffRow]] = {}
     for row in rows:
         if not row.pickup_raw or not row.dropoff_raw:
             result.skipped_no_locations += 1
@@ -327,50 +336,48 @@ async def commit_tariff_rows(
         if pickup_loc is None or dropoff_loc is None:
             result.skipped_no_locations += 1
             continue
+        key = (pickup_loc.id, dropoff_loc.id, row.work_type)
+        route_groups.setdefault(key, []).append(row)
 
-        existing_pricing = (await db.execute(
-            select(Pricing).where(
-                Pricing.client_id == _partner.id,
-                Pricing.work_type == row.work_type,
-                Pricing.pickup_location_id == pickup_loc.id,
-                Pricing.dropoff_location_id == dropoff_loc.id,
+    for (pickup_id, dropoff_id, work_type), group_rows in route_groups.items():
+        existing = (await db.execute(
+            select(RoutePricing).where(
+                RoutePricing.client_id == _partner.id,
+                RoutePricing.work_type == work_type,
+                RoutePricing.pickup_location_id == pickup_id,
+                RoutePricing.dropoff_location_id == dropoff_id,
             )
         )).scalar_one_or_none()
-        if existing_pricing is None:
-            pricing = Pricing(
+
+        if existing is None:
+            existing = RoutePricing(
                 client_id=_partner.id,
-                work_type=row.work_type,
-                pickup_location_id=pickup_loc.id,
-                dropoff_location_id=dropoff_loc.id,
+                work_type=work_type,
+                pickup_location_id=pickup_id,
+                dropoff_location_id=dropoff_id,
                 is_active=True,
             )
-            db.add(pricing)
+            db.add(existing)
             await db.flush()
             result.pricings_created += 1
         else:
-            pricing = existing_pricing
             result.pricings_existing += 1
 
-        existing_line = (await db.execute(
-            select(PricingLine).where(
-                PricingLine.pricing_id == pricing.id,
-                PricingLine.quantity == row.quantity,
-            )
-        )).scalar_one_or_none()
-        if existing_line is None:
-            db.add(PricingLine(
-                pricing_id=pricing.id,
-                quantity=row.quantity,
-                unit_price=row.unit_price,
-                driver_salary=row.driver_salary,
-            ))
-            result.lines_created += 1
-        elif update_existing_lines and existing_line.unit_price != row.unit_price:
-            existing_line.unit_price = row.unit_price
-            existing_line.driver_salary = row.driver_salary
-            result.lines_updated += 1
-        else:
-            result.lines_existing += 1
+        for row in group_rows:
+            ct = row.cont_type or "F20"
+            col_name = _CONT_TYPE_PRICE_COL.get(ct)
+            if not col_name:
+                result.lines_existing += 1
+                continue
+            current = getattr(existing, col_name)
+            if current is None:
+                setattr(existing, col_name, row.unit_price)
+                result.lines_created += 1
+            elif update_existing_lines and current != row.unit_price:
+                setattr(existing, col_name, row.unit_price)
+                result.lines_updated += 1
+            else:
+                result.lines_existing += 1
 
     locations_after = await _location_count(db)
     result.locations_created = max(0, locations_after - locations_before)
@@ -379,10 +386,7 @@ async def commit_tariff_rows(
 
 
 async def _location_count(db: AsyncSession) -> int:
-    from sqlalchemy import func
-
     from app.models.domain import Location
-
     res = await db.execute(select(func.count()).select_from(Location))
     return int(res.scalar_one())
 
@@ -424,31 +428,30 @@ async def resolve_preview_locations(
 
     # If we have a client, look up existing prices to show Old vs New
     if client_id and rows:
-        from app.models.domain import Pricing, PricingLine
-
         for row in rows:
             pickup_data = location_map.get(row.pickup_raw)
             dropoff_data = location_map.get(row.dropoff_raw)
             if not pickup_data or not dropoff_data:
                 continue
-            
+
             p_id = pickup_data.get("location_id")
             d_id = dropoff_data.get("location_id")
             if not p_id or not d_id:
                 continue
 
-            existing = (await db.execute(
-                select(PricingLine.unit_price)
-                .join(Pricing)
-                .where(
-                    Pricing.client_id == client_id,
-                    Pricing.pickup_location_id == p_id,
-                    Pricing.dropoff_location_id == d_id,
-                    Pricing.work_type == row.work_type,
-                    PricingLine.quantity == row.quantity
+            existing_rp = (await db.execute(
+                select(RoutePricing).where(
+                    RoutePricing.client_id == client_id,
+                    RoutePricing.pickup_location_id == p_id,
+                    RoutePricing.dropoff_location_id == d_id,
+                    RoutePricing.work_type == row.work_type,
                 )
             )).scalar_one_or_none()
-            if existing is not None:
-                row.old_unit_price = int(existing)
+            if existing_rp is not None and row.cont_type:
+                col = _CONT_TYPE_PRICE_COL.get(row.cont_type)
+                if col:
+                    existing_price = getattr(existing_rp, col)
+                    if existing_price is not None:
+                        row.old_unit_price = int(existing_price)
 
     return location_map

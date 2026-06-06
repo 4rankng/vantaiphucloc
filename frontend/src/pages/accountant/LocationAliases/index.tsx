@@ -155,7 +155,11 @@ export function LocationAliasesPage() {
         setDeleteTarget(null)
         if (selectedId === deleteTarget.id) setSelectedId(null)
       },
-      onError: () => toast.error('Không thể xoá địa điểm'),
+      onError: (err: unknown) => {
+        const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+          || (err instanceof Error ? err.message : undefined)
+        toast.error('Không thể xoá địa điểm', detail)
+      },
     })
   }, [deleteTarget, deleteLocation, toast, selectedId])
 

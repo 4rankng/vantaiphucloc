@@ -39,11 +39,12 @@ export function looksLikeDuplicate(
 ): boolean {
   const normA = normalizeVietnamese(a)
   const normB = normalizeVietnamese(b)
-  if (!normA || !normB || normA === normB) return false
-
-  // 1. Alias cross-check
-  if (aAliases.some(alias => normalizeVietnamese(alias) === normB)) return true
-  if (bAliases.some(alias => normalizeVietnamese(alias) === normA)) return true
+  if (!normA || !normB) return false
+  if (normA !== normB) {
+    // 1. Alias cross-check (only needed when names differ)
+    if (aAliases.some(alias => normalizeVietnamese(alias) === normB)) return true
+    if (bAliases.some(alias => normalizeVietnamese(alias) === normA)) return true
+  }
 
   const flatA = normA.replace(/\s+/g, '')
   const flatB = normB.replace(/\s+/g, '')

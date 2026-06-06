@@ -14,17 +14,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.contexts.customer_pricing.domain.entities import (
     Location,
     Partner,
-    Pricing,
 )
 from app.contexts.customer_pricing.domain.repositories import (
     LocationRepository,
     PartnerRepository,
-    PricingRepository,
 )
 from app.contexts.customer_pricing.domain.value_objects import (
     LocationId,
     PartnerId,
-    PricingId,
     WorkType,
 )
 from app.contexts.customer_pricing.infrastructure.mappers import (
@@ -33,16 +30,11 @@ from app.contexts.customer_pricing.infrastructure.mappers import (
     client_to_orm,
     location_to_domain,
     location_to_orm,
-    pricing_line_to_orm,
-    pricing_to_domain,
-    pricing_to_orm,
 )
 from app.contexts.customer_pricing.infrastructure.orm import (
     LocationAliasORM,
     LocationORM,
     ClientORM,
-    PricingLineORM,
-    PricingORM,
 )
 
 
@@ -138,8 +130,10 @@ class SqlLocationRepository(LocationRepository):
         ("delivered_trips", "dropoff_location_id"),
         ("booked_trips", "pickup_location_id"),
         ("booked_trips", "dropoff_location_id"),
-        ("pricings", "pickup_location_id"),
-        ("pricings", "dropoff_location_id"),
+        ("route_pricings", "pickup_location_id"),
+        ("route_pricings", "dropoff_location_id"),
+        ("vendor_route_pricings", "pickup_location_id"),
+        ("vendor_route_pricings", "dropoff_location_id"),
     )
 
     def __init__(self, session: AsyncSession) -> None:
@@ -233,120 +227,3 @@ class SqlLocationRepository(LocationRepository):
             if row.scalar():
                 return (table, col)
         return None
-
-
-# -- Pricing ---------------------------------------------------------
-
-
-class SqlPricingRepository(PricingRepository):
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
-
-    async def _lines_for(self, pid: int) -> list[PricingLineORM]:
-        rows = (await self.session.execute(
-            select(PricingLineORM)
-            .where(PricingLineORM.pricing_id == pid)
-            .order_by(PricingLineORM.quantity.asc())
-        )).scalars().all()
-        return list(rows)
-
-    async def get_by_id(self, pid: PricingId) -> Pricing | None:
-        orm = (await self.session.execute(
-            select(PricingORM).where(PricingORM.id == int(pid))
-        )).scalar_one_or_none()
-        if orm is None:
-            return None
-        lines = await self._lines_for(orm.id)
-        return pricing_to_domain(orm, lines)
-
-    async def find_by_lane(
-        self,
-        *,
-        client_id: PartnerId,
-        work_type: WorkType,
-        pickup_location_id: LocationId,
-        dropoff_location_id: LocationId,
-    ) -> Pricing | None:
-        orm = (await self.session.execute(
-            select(PricingORM).where(
-                PricingORM.client_id == int(client_id),
-                PricingORM.work_type == work_type,
-                PricingORM.pickup_location_id == int(pickup_location_id),
-                PricingORM.dropoff_location_id == int(dropoff_location_id),
-                PricingORM.is_active.is_(True),
-            )
-        )).scalar_one_or_none()
-        if orm is None:
-            return None
-        lines = await self._lines_for(orm.id)
-        return pricing_to_domain(orm, lines)
-
-    async def list_for_partner(
-        self, client_id: PartnerId, *, active_only: bool = True
-    ) -> Sequence[Pricing]:
-        q = select(PricingORM).where(PricingORM.client_id == int(client_id))
-        if active_only:
-            q = q.where(PricingORM.is_active.is_(True))
-        rows = list((await self.session.execute(q)).scalars().all())
-        out: list[Pricing] = []
-        for orm in rows:
-            lines = await self._lines_for(orm.id)
-            out.append(pricing_to_domain(orm, lines))
-        return out
-
-    async def list(
-        self, *, offset: int, limit: int, client_id: PartnerId | None = None,
-        active_only: bool = True,
-    ) -> tuple[Sequence[Pricing], int]:
-        q = select(PricingORM)
-        if client_id is not None:
-            q = q.where(PricingORM.client_id == int(client_id))
-        if active_only:
-            q = q.where(PricingORM.is_active.is_(True))
-        total = await self.session.scalar(
-            select(func.count()).select_from(q.subquery())
-        ) or 0
-        q = q.order_by(PricingORM.id.desc()).offset(offset).limit(limit)
-        rows = list((await self.session.execute(q)).scalars().all())
-        out: list[Pricing] = []
-        for orm in rows:
-            lines = await self._lines_for(orm.id)
-            out.append(pricing_to_domain(orm, lines))
-        return out, int(total)
-
-    async def add(self, p: Pricing) -> Pricing:
-        orm = pricing_to_orm(p)
-        self.session.add(orm)
-        await self.session.flush()
-        for ln in p.lines:
-            ln.pricing_id = PricingId(orm.id)
-            ln_orm = pricing_line_to_orm(ln)
-            self.session.add(ln_orm)
-        await self.session.flush()
-        lines = await self._lines_for(orm.id)
-        return pricing_to_domain(orm, lines)
-
-    async def save(self, p: Pricing) -> Pricing:
-        existing = (await self.session.execute(
-            select(PricingORM).where(PricingORM.id == int(p.id))
-        )).scalar_one()
-        pricing_to_orm(p, existing)
-        # Reconcile lines by quantity (the natural key inside the aggregate):
-        # update matches, add new, delete orphans not present in p.lines.
-        existing_lines = await self._lines_for(existing.id)
-        existing_by_qty = {ln.quantity: ln for ln in existing_lines}
-        new_quantities = {int(ln.quantity) for ln in p.lines}
-        for ln in p.lines:
-            if ln.quantity in existing_by_qty:
-                row = existing_by_qty[ln.quantity]
-                row.unit_price = int(ln.unit_price)
-                row.driver_salary = int(ln.driver_salary)
-            else:
-                ln.pricing_id = PricingId(existing.id)
-                self.session.add(pricing_line_to_orm(ln))
-        for qty, row in existing_by_qty.items():
-            if qty not in new_quantities:
-                await self.session.delete(row)
-        await self.session.flush()
-        refreshed = await self._lines_for(existing.id)
-        return pricing_to_domain(existing, refreshed)

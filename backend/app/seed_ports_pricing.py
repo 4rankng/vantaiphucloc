@@ -20,7 +20,7 @@ from openpyxl import load_workbook
 from sqlalchemy import select
 
 from app.database import async_session
-from app.models.domain import Location, Client, Pricing, PricingLine
+from app.models.domain import Location, Client
 
 # ---------------------------------------------------------------------------
 # Config
@@ -203,96 +203,12 @@ async def seed_ports_pricing() -> None:
         await db.commit()
         print(f"  Clients: {created_partners} created, {len(chu_hang_names) - created_partners} existing")
 
-        # ── 3. Pricings + PricingLines ──────────────────────────────────
-        print("\n=== Seeding Pricings ===")
-
-        # client_id on Pricing = the client (khách hàng/chủ hàng) directly.
-        # No PHUCLOC intermediary — Phúc Lộc is the company itself, not a client_name.
-
-        # Load existing pricings for dedup
-        result = await db.execute(select(Pricing))
-        existing_pricings: dict[tuple, Pricing] = {}
-        for p in result.scalars().all():
-            key = (
-                p.client_id,
-                p.work_type,
-                p.pickup_location_id,
-                p.dropoff_location_id,
-            )
-            existing_pricings[key] = p
-
-        created_pricings = 0
-        skipped_no_loc = 0
-        skipped_no_price = 0
-        skipped_existing = 0
-
-        for row in pricing_rows:
-            client_code = row["client_name"].upper().replace(" ", "_")
-            client = client_map.get(client_code)
-            if not client:
-                print(f"  ⚠ Skip: client_name '{row['client_name']}' not found")
-                continue
-
-            pickup_name = row["pickup"]
-            dropoff_name = row["dropoff"]
-            pickup_loc = loc_map.get(pickup_name)
-            dropoff_loc = loc_map.get(dropoff_name)
-
-            if not pickup_loc or not dropoff_loc:
-                skipped_no_loc += 1
-                print(f"  ⚠ Skip: location not found — {pickup_name} → {dropoff_name}")
-                continue
-
-            work_type = row.get("work_type", "CHUYỂN BÃI")
-            price = row.get("price")
-            if price is None or price == 0:
-                skipped_no_price += 1
-                continue
-
-            dedup_key = (
-                client.id,
-                work_type,
-                pickup_loc.id,
-                dropoff_loc.id,
-            )
-
-            if dedup_key in existing_pricings:
-                skipped_existing += 1
-                continue
-
-            pricing = Pricing(
-                client_id=client.id,
-                work_type=work_type,
-                pickup_location_id=pickup_loc.id,
-                dropoff_location_id=dropoff_loc.id,
-                is_active=True,
-            )
-            db.add(pricing)
-            await db.flush()
-
-            db.add(PricingLine(
-                pricing_id=pricing.id,
-                quantity=1,
-                unit_price=price,
-                driver_salary=0,
-                allowance=0,
-            ))
-            await db.flush()
-
-            existing_pricings[dedup_key] = pricing
-            created_pricings += 1
-            print(f"  + {client.code}: {pickup_name} → {dropoff_name} {work_type} = {price:,}")
-
-        await db.commit()
-
         # ── Summary ─────────────────────────────────────────────────────
         print("\n" + "=" * 60)
-        print("SEED COMPLETE — Ports & Pricing from Excel")
+        print("SEED COMPLETE — Ports from Excel")
         print("=" * 60)
         print(f"  Locations:  {created_locs} created")
         print(f"  Partners:   {created_partners} created")
-        print(f"  Pricings:   {created_pricings} created")
-        print(f"  Skipped:    {skipped_existing} existing, {skipped_no_loc} missing location, {skipped_no_price} no price")
 
 
 if __name__ == "__main__":

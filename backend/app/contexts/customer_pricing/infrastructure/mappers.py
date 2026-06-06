@@ -6,22 +6,16 @@ from app.contexts.customer_pricing.domain.entities import (
     Location,
     LocationAlias,
     Partner,
-    Pricing,
-    PricingLine,
 )
 from app.contexts.customer_pricing.domain.value_objects import (
     LocationAliasId,
     LocationId,
     PartnerId,
-    PricingId,
-    PricingLineId,
 )
 from app.contexts.customer_pricing.infrastructure.orm import (
     LocationAliasORM,
     LocationORM,
     ClientORM,
-    PricingLineORM,
-    PricingORM,
 )
 
 
@@ -121,57 +115,4 @@ def location_to_orm(loc: Location, orm: LocationORM | None = None) -> LocationOR
     orm.created_via = loc.created_via
     orm.created_by_id = loc.created_by_id
     orm.location_review_needed = loc.location_review_needed
-    return orm
-
-
-# -- Pricing (with lines) --------------------------------------------
-
-
-def pricing_line_to_domain(orm: PricingLineORM) -> PricingLine:
-    return PricingLine(
-        id=PricingLineId(orm.id) if orm.id is not None else None,
-        pricing_id=PricingId(orm.pricing_id) if orm.pricing_id is not None else None,
-        quantity=int(orm.quantity),
-        unit_price=int(orm.unit_price or 0),
-        driver_salary=int(orm.driver_salary or 0),
-    )
-
-
-def pricing_line_to_orm(ln: PricingLine, orm: PricingLineORM | None = None) -> PricingLineORM:
-    if orm is None:
-        orm = PricingLineORM()
-    if ln.id is not None:
-        orm.id = int(ln.id)
-    if ln.pricing_id is not None:
-        orm.pricing_id = int(ln.pricing_id)
-    orm.quantity = int(ln.quantity)
-    orm.unit_price = int(ln.unit_price)
-    orm.driver_salary = int(ln.driver_salary)
-    return orm
-
-
-def pricing_to_domain(orm: PricingORM, lines: list[PricingLineORM] | None = None) -> Pricing:
-    return Pricing(
-        id=PricingId(orm.id) if orm.id is not None else None,
-        client_id=PartnerId(orm.client_id),
-        work_type=orm.work_type,
-        pickup_location_id=LocationId(orm.pickup_location_id),
-        dropoff_location_id=LocationId(orm.dropoff_location_id),
-        is_active=bool(orm.is_active),
-        created_at=orm.created_at,
-        updated_at=orm.updated_at,
-        lines=[pricing_line_to_domain(ln) for ln in (lines or [])],
-    )
-
-
-def pricing_to_orm(p: Pricing, orm: PricingORM | None = None) -> PricingORM:
-    if orm is None:
-        orm = PricingORM()
-    if p.id is not None:
-        orm.id = int(p.id)
-    orm.client_id = int(p.client_id)
-    orm.work_type = p.work_type
-    orm.pickup_location_id = int(p.pickup_location_id)
-    orm.dropoff_location_id = int(p.dropoff_location_id)
-    orm.is_active = p.is_active
     return orm

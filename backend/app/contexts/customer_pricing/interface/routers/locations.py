@@ -150,9 +150,17 @@ async def delete_location(
     except NotFound as e:
         raise translate(e)
     except LocationInUse as e:
+        _TABLE_LABELS = {
+            "delivered_trips": "chuyến hàng",
+            "booked_trips": "chuyến đặt",
+            "route_pricings": "bảng giá cước",
+            "vendor_route_pricings": "bảng giá nhà xe",
+        }
+        label = _TABLE_LABELS.get(e.table, e.table)
+        col_label = "điểm đi" if "pickup" in e.column else "điểm đến"
         raise HTTPException(
             status_code=409,
-            detail=f"Cannot delete: location is referenced in {e.table}.{e.column}",
+            detail=f"Không thể xoá: địa điểm đang được sử dụng làm {col_label} trong {label}.",
         )
     await CacheManager(redis).invalidate_namespace("locations")
     return Response()

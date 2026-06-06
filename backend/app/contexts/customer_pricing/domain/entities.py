@@ -9,17 +9,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from app.contexts.customer_pricing.domain.exceptions import (
-    PricingNotMatched,
-)
 from app.contexts.customer_pricing.domain.value_objects import (
     GeocodeSource,
     LocationAliasId,
     LocationId,
     Money,
     PartnerId,
-    PricingId,
-    PricingLineId,
     WorkType,
     normalize_work_type,
 )
@@ -158,88 +153,3 @@ class Location:
         self.updated_at = _utcnow()
 
 
-# -- Pricing aggregate (with PricingLines) -------------------------
-
-
-@dataclass
-class PricingLine:
-    """Quantity-tier inside a Pricing aggregate.
-
-    The accountant defines tiers like "1 cont = 2,000,000 / 2 conts =
-    3,500,000 / >=3 = 4,800,000". We store each tier as its own row keyed
-    by the integer `quantity`.
-    """
-
-    id: PricingLineId | None
-    pricing_id: PricingId | None    # None until parent is saved
-    quantity: int
-    unit_price: Money = 0
-    driver_salary: Money = 0
-
-
-@dataclass
-class Pricing:
-    """Pricing aggregate root.
-
-    One row per (partner, work_type, lane). Quantity tiers are inside
-    the aggregate and modified together with the parent.
-    """
-
-    id: PricingId | None
-    client_id: PartnerId
-    work_type: WorkType
-    pickup_location_id: LocationId
-    dropoff_location_id: LocationId
-    is_active: bool = True
-    created_at: datetime = field(default_factory=_utcnow)
-    updated_at: datetime = field(default_factory=_utcnow)
-    lines: list[PricingLine] = field(default_factory=list)
-
-    def __post_init__(self) -> None:
-        self.work_type = normalize_work_type(self.work_type)
-
-    # -- tier lookup -------------------
-
-    def line_for_quantity(self, quantity: int) -> PricingLine:
-        """Find the matching tier for `quantity` containers.
-
-        Matching: the highest tier whose `quantity` is <= the requested
-        count (e.g. 3 conts -> tier 3 if exists, else tier 2, else tier 1).
-        Raises PricingNotMatched if no tier matches (i.e. requested qty
-        is below the smallest defined tier).
-        """
-        candidates = [ln for ln in self.lines if ln.quantity <= quantity]
-        if not candidates:
-            raise PricingNotMatched(
-                f"no pricing tier <= {quantity} on pricing {self.id!r}"
-            )
-        return max(candidates, key=lambda ln: ln.quantity)
-
-    def upsert_line(
-        self,
-        *,
-        quantity: int,
-        unit_price: Money,
-        driver_salary: Money = 0,
-    ) -> PricingLine:
-        """Add or update the tier for `quantity`."""
-        for ln in self.lines:
-            if ln.quantity == quantity:
-                ln.unit_price = int(unit_price)
-                ln.driver_salary = int(driver_salary)
-                self.updated_at = _utcnow()
-                return ln
-        new = PricingLine(
-            id=None,
-            pricing_id=self.id,
-            quantity=int(quantity),
-            unit_price=int(unit_price),
-            driver_salary=int(driver_salary),
-        )
-        self.lines.append(new)
-        self.updated_at = _utcnow()
-        return new
-
-    def deactivate(self) -> None:
-        self.is_active = False
-        self.updated_at = _utcnow()

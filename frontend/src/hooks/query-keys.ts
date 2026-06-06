@@ -1,13 +1,10 @@
 import type { ContType } from '@/data/domain'
 import type { DriverEarnings } from '@/services/api/salary.api'
-import type { PricingCreatePayload, PricingUpdatePayload } from '@/services/api/pricings.api'
 import type { DeliveredTripCreatePayload, DeliveredTripUpdatePayload } from '@/services/api/deliveredTrips.api'
 import type { BookedTripCreatePayload, BookedTripUpdatePayload } from '@/services/api/bookedTrips.api'
 import type { PricingFormat, PricingCommitRequest } from '@/services/api/imports.api'
 
 export type {
-  PricingCreatePayload,
-  PricingUpdatePayload,
   DeliveredTripCreatePayload,
   DeliveredTripUpdatePayload,
   BookedTripCreatePayload,
@@ -30,9 +27,6 @@ export const queryKeys = {
   vendors: ['vendors'] as const,
   vendor: (id: number) => ['vendors', id] as const,
   locations: ['locations'] as const,
-  pricings: ['pricings'] as const,
-  pricingsFiltered: (filters?: { clientId?: number; workType?: ContType }) =>
-    ['pricings', filters] as const,
   deliveredTrips: ['delivered-trips'] as const,
   deliveredTrip: (id: number) => ['delivered-trips', id] as const,
   deliveredTripsFiltered: (filters?: Record<string, string>) =>
@@ -96,10 +90,6 @@ export function invalidateVendorDeps(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: ['vendors-paged'] })
 }
 
-export function invalidatePricingDeps(qc: QueryClient) {
-  qc.invalidateQueries({ queryKey: ['pricings'] })
-}
-
 export function invalidateDriverDeps(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: ['drivers'] })
   qc.invalidateQueries({ queryKey: ['drivers-paged'] })
@@ -121,7 +111,7 @@ export function invalidateLocationDeps(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: ['locations'] })
   qc.invalidateQueries({ queryKey: ['location-aliases'] })
   qc.invalidateQueries({ queryKey: ['routes'] })
-  qc.invalidateQueries({ queryKey: ['pricings'] })
+  qc.invalidateQueries({ queryKey: ['route-pricings'] })
   qc.invalidateQueries({ queryKey: ['delivered-trips'] })
   qc.invalidateQueries({ queryKey: ['delivered-trips-infinite'] })
   qc.invalidateQueries({ queryKey: ['booked-trips'] })

@@ -195,8 +195,8 @@ async def import_booked_trips(
         if not revenue:
             tiered = await find_tiered_pricing(
                 db, client_id=client.id, work_type=work_type,
-                quantity=container_count,
                 pickup_location_id=pickup_id, dropoff_location_id=dropoff_id,
+                cont_type=containers_data[0]["cont_type"] if containers_data else None,
             )
             if tiered:
                 revenue = tiered.unit_price
