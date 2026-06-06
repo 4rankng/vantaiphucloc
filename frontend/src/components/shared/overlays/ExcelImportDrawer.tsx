@@ -1149,7 +1149,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                     <th style={{ width: 40 }}>#</th>
                     {previewCols.map((key) => (
                       <th key={key} className={`text-left ${NUMERIC_COLS.has(key) ? 'text-right' : ''}`}
-                        style={key === 'Loại Cont' ? { width: 80 } : undefined}
+                        style={key === 'Loại Cont' ? { width: 60 } : key === 'Số Cont' ? { width: 100 } : undefined}
                       >
                         {key}
                       </th>
