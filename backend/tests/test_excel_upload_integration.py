@@ -259,5 +259,5 @@ async def test_commit_rejects_unresolved_freight_kind(
     # Should reject with 400 error
     assert resp.status_code == 400, f"Expected 400, got {resp.status_code}: {resp.text}"
     result = resp.json()
-    assert "freight_kind" in result.get("detail", "").lower()
+    assert "e/f" in result.get("detail", "").lower()
     assert "xác định" in result.get("detail", "")  # Vietnamese: "xác định" (resolve)

@@ -57,15 +57,6 @@ jobs:
       - name: Lint (ruff check)
         run: ruff check .
 
-      - name: Run alembic migrations against SQLite test DB
-        env:
-          DATABASE_URL: sqlite+aiosqlite:///./ci_migrations.db
-          SECRET_KEY: ci-secret-key-not-for-production
-          REDIS_URL: redis://localhost:6379/0
-        run: |
-          PYTHONPATH=. alembic upgrade head || \
-            echo "::warning::alembic upgrade head failed against SQLite — migrations may be Postgres-only. Tests use Base.metadata.create_all instead, so this is non-blocking."
-
       - name: Run pytest with coverage
         env:
           SECRET_KEY: ci-secret-key-not-for-production

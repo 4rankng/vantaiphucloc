@@ -327,10 +327,10 @@ async def test_import_preview_marks_unknown_freight_kinds():
         # Create a workbook with some rows having empty freight_kind
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.append(["Ngày đi", "Số cont", "Kích thước", "F/E", "Điểm đi", "Điểm đến"])
-        ws.append(["2026-06-01", "CAIU6167954", "20", "F", "HaiPhong", "HCMC"])
-        ws.append(["2026-06-01", "CAIU6386850", "40", "", "HaiPhong", "HCMC"])  # Empty freight_kind
-        ws.append(["2026-06-01", "FCIU6219871", "20", "E", "HaiPhong", "HCMC"])
+        ws.append(["Ngày đi", "Số cont", "Kích thước", "F/E", "Điểm đi", "Điểm đến", "Người gửi", "Ghi chú", "Trọng lượng"])
+        ws.append(["2026-06-01", "CAIU6167954", "20", "F", "HaiPhong", "HCMC", "ABC", "", "5000"])
+        ws.append(["2026-06-01", "CAIU6386850", "40", "", "HaiPhong", "HCMC", "DEF", "", "8000"])  # Empty freight_kind
+        ws.append(["2026-06-01", "FCIU6219871", "20", "E", "HaiPhong", "HCMC", "GHI", "", "3000"])
         
         path = Path(tmp_dir) / "test_unknown.xlsx"
         wb.save(path)
