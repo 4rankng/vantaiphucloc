@@ -138,7 +138,7 @@ export function LocationAliasesPage() {
       },
       onError: () => toast.error('Không thể thêm địa điểm'),
     })
-  }, [createLocation, toast])
+  }, [createLocation, toast, isMobile])
 
   const handleUpdate = useCallback((id: number, name: string) => {
     updateLocation.mutate({ id, data: { name } }, {

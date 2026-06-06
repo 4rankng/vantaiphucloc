@@ -142,7 +142,7 @@ export interface DirectorDashboard {
   profitDelta: number | null
   buckets: TripDayBucket[]
   topRoutes: { name: string; count: number }[]
-  topDrivers: { name: string; tripCount: number }[]
+  topDrivers: { name: string; tripCount: number; plate: string }[]
   ownFleetPnl: VehiclePnLGroup
   vendorPnl: VehiclePnLGroup
 }

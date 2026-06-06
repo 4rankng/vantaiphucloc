@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
-  Settings,
   LogOut,
   Bell,
   UserCircle,

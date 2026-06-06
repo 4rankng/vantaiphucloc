@@ -6,7 +6,7 @@ import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
 import { DeliveredTripCard } from '@/components/shared/cards/DeliveredTripCard'
 import { FloatingActionButton } from '@/components/shared/feedback/FloatingActionButton'
 import { useMyEarnings, useSalaryConfig, useDeliveredTrips } from '@/hooks/use-queries'
-import { getSalaryPeriodDates, getSalaryPeriodForMonth, dayBefore, dayAfter, toISODate } from '@/lib/salaryPeriod'
+import { getSalaryPeriodDates, dayBefore, dayAfter, toISODate } from '@/lib/salaryPeriod'
 import { AnimatedNumber } from '@/components/shared/data-display/AnimatedNumber'
 
 const PAGE_SIZE = 10

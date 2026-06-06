@@ -1,4 +1,3 @@
-import type { ContType } from '@/data/domain'
 import type { DriverEarnings } from '@/services/api/salary.api'
 import type { DeliveredTripCreatePayload, DeliveredTripUpdatePayload } from '@/services/api/deliveredTrips.api'
 import type { BookedTripCreatePayload, BookedTripUpdatePayload } from '@/services/api/bookedTrips.api'

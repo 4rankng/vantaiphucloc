@@ -262,7 +262,7 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
     const clientName = clients.find(c => String(c.id) === clientId)?.name
     if (!clientName) return
     setPreviewData(prev => prev.map(row => ({ ...row, 'Chủ hàng': clientName })))
-  }, [step, clientId, clients])
+  }, [step, clientId, clients, previewData.length])
 
   const isProcessing = enqueueClientExcel.isPending || !!activeJobId || previewDriverRecon.isPending || previewVendorRecon.isPending
 

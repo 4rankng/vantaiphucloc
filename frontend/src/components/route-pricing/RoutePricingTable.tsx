@@ -5,7 +5,7 @@ import { EmptyState } from '@/components/shared/feedback/EmptyState'
 import { TableSkeleton } from '@/components/shared/data-display/TableSkeleton/TableSkeleton'
 import { RoutePricingEditRow } from './RoutePricingEditRow'
 import { RoutePricingRow } from './RoutePricingRow'
-import { COL, SALARY_TINT, SALARY_BORDER, GROUPED_TABLE_MIN_WIDTH, GROUPED_LEFT_GROUP_WIDTH, FARE_GROUP_WIDTH, SALARY_GROUP_WIDTH, RIGHT_GROUP_WIDTH } from './RoutePricingTable.constants'
+import { COL, SALARY_TINT, SALARY_BORDER, GROUPED_LEFT_GROUP_WIDTH, FARE_GROUP_WIDTH, SALARY_GROUP_WIDTH, RIGHT_GROUP_WIDTH } from './RoutePricingTable.constants'
 import type { FocusableField, RoutePricingFormData, RoutePricingTableProps, ClientGroup } from './RoutePricingTable.types'
 
 export type { FocusableField, RoutePricingFormData, RoutePricingTableProps }

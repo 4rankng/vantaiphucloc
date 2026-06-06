@@ -206,8 +206,6 @@ export function DirectorDashboard() {
   const ownFleetProfit = stats?.ownFleetPnl?.totalProfit ?? 0
   const vendorProfit   = stats?.vendorPnl?.totalProfit ?? 0
 
-  const prevMonth = month === 1 ? 12 : month - 1
-
   // ── Audit log ──
   const PAGE_SIZE = 15
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([])
@@ -404,7 +402,7 @@ export function DirectorDashboard() {
                 )}
                 {topDrivers.slice(0, 5).map((d, i) => (
                   <div
-                    key={d.name + (d as any).plate}
+                    key={d.name + d.plate}
                     className="flex items-center gap-3 py-2 px-2 rounded-lg"
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--theme-bg-tertiary)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -414,8 +412,8 @@ export function DirectorDashboard() {
                     </span>
                     <div className="flex-grow min-w-0">
                       <p className="truncate text-[12.5px] font-semibold leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</p>
-                      {(d as any).plate && (
-                        <p className="truncate text-[10px] leading-tight mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{(d as any).plate}</p>
+                      {d.plate && (
+                        <p className="truncate text-[10px] leading-tight mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{d.plate}</p>
                       )}
                     </div>
                     <span className="text-[12px] font-bold font-mono tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{d.tripCount} chuyến</span>

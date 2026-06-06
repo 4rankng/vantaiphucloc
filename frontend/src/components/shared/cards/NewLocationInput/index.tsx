@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Check, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 
 export interface NewLocationInputProps {
   onCreate: (name: string) => void

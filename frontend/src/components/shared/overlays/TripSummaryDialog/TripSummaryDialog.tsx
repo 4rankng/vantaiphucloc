@@ -42,7 +42,6 @@ export function TripSummaryDialog({
   pickupLocation,
   dropoffLocation,
   tripDate,
-  containerCount,
   hasPhoto,
   photoUrls = [],
   note,

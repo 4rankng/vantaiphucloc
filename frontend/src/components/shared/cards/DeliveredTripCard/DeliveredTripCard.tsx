@@ -1,5 +1,5 @@
 import { Clock, CheckCircle, Lock } from 'lucide-react'
-import { formatCurrencyFull, getWorkTypeLabel, type DeliveredTrip } from '@/data/domain'
+import { formatCurrencyFull, type DeliveredTrip } from '@/data/domain'
 import { formatDate } from '@/lib/format'
 import { resolveRoute } from '@/lib/route-utils'
 

@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Fuel, Plus, Coins, Wrench, History, Truck, Search, Loader2 } from 'lucide-react'
-import { Button, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
 import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
 import { Panel } from '@/components/shared/overlays/Panel'

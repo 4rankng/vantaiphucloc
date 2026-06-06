@@ -331,7 +331,6 @@ export function UserDropdown({ open, onClose, anchorRef }: {
 export function SidebarProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const toast = useToast()
   const [showPwDialog, setShowPwDialog] = useState(false)
 
   const handleLogout = useCallback(() => {

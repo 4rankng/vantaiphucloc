@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { queryKeys, invalidateOperationTypeDeps } from '../query-keys'
 import type { ApiResponse } from '@/data/domain'
-import type { OperationTypeDTO } from '@/services/api/operationTypes.api'
 
 function unwrap<T>(res: ApiResponse<T>): T {
   if (res.success) return res.data

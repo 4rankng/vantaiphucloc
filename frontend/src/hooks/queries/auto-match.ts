@@ -12,7 +12,7 @@ import {
   type UnmatchResponse,
   type SyncPricingResponse,
 } from '@/services/api/autoMatch.api'
-import { queryKeys, invalidateDeliveredTripDeps } from '@/hooks/query-keys'
+import { invalidateDeliveredTripDeps } from '@/hooks/query-keys'
 
 export function useAutoMatchPreview() {
   return useMutation<AutoMatchPreviewResponse, Error, { dateFrom?: string; dateTo?: string }>({

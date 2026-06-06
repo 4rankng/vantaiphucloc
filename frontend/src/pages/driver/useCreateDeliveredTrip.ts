@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiClient } from '@/services/api'
-import { useLocations, useProfile } from '@/hooks/use-queries'
+import { useLocations } from '@/hooks/use-queries'
 import { useRecentValues } from '@/hooks/use-recent-values'
 import type { PhotoMeta } from '@/components/shared/overlays/ContainerScanner'
 import type { Client, ContType, WorkType, DeliveredTrip } from '@/data/domain'
@@ -82,7 +82,6 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   const [clients, setClients] = useState<Client[]>([])
   const [recentOrders, setRecentOrders] = useState<DeliveredTrip[]>([])
   const { data: locations = [] } = useLocations()
-  const { data: profile } = useProfile()
 
   // Recent vessel values (per-driver, stored in localStorage)
   const { recentValues: recentVessels, addRecent: addRecentVessel } = useRecentValues(
@@ -460,7 +459,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       console.error('Submit failed:', err)
       setSubmitting(false)
     }
-  }, [containers, clientId, vessel, note, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingDeliveredTrip, addRecentVessel, addRecentNote, tripDate])
+  }, [containers, qc, clientId, vessel, note, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingDeliveredTrip, addRecentVessel, addRecentNote, tripDate])
 
   const onRequestSubmit = useCallback(async (): Promise<'validation-error' | undefined> => {
     if (!canSubmit) return

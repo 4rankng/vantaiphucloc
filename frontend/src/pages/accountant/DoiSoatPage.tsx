@@ -1,10 +1,11 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import {
   ClipboardList,
   Loader2,
   FileSpreadsheet,
   Zap,
   Unlink,
+  ArrowLeftRight,
 } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
@@ -122,6 +123,26 @@ export function DoiSoatPage() {
     },
     [confirmMatch]
   )
+
+  const tablePanelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const panel = tablePanelRef.current
+    if (!panel) return
+    const handler = (e: KeyboardEvent) => {
+      const scroller = panel.querySelector('.nepo-table-scroll')
+      if (!scroller) return
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        scroller.scrollBy({ left: -120, behavior: 'smooth' })
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        scroller.scrollBy({ left: 120, behavior: 'smooth' })
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   const handleSort = useCallback((key: string, order: SortOrder) => {
     setSortBy(key as DeliveredTripSortBy)
@@ -335,7 +356,7 @@ export function DoiSoatPage() {
         {!isLoading && filtered.length > 0 && (
           <div className="flex items-center justify-between mb-1.5">
             <p className="text-[11.5px]" style={{ color: 'var(--ink-4)' }}>
-              Nhấp vào hàng để xem chi tiết
+              Nhấp vào hàng để xem chi tiết · <ArrowLeftRight className="inline h-3 w-3 relative -top-px" /> ← → cuộn ngang
             </p>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--ink-3)' }}>
@@ -349,6 +370,7 @@ export function DoiSoatPage() {
             </div>
           </div>
         )}
+        <div ref={tablePanelRef}>
         <Panel flush>
           <DataTable
             columns={columns}
@@ -380,6 +402,7 @@ export function DoiSoatPage() {
             }
           />
         </Panel>
+        </div>
       </section>
 
       {/* ── Drawers ── */}
