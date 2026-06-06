@@ -77,7 +77,7 @@ export type { AppNotification } from './data-display/NotificationList'
 export { NotificationPanel, useUnreadCount } from './data-display/NotificationPanel'
 export { Plate } from './data-display/Plate'
 export type { PlateProps } from './data-display/Plate'
-export { PricingClientCards, PricingClientDetail, PricingForm, LineEditor } from './data-display/Pricing'
+
 export { RouteDisplay } from './data-display/RouteDisplay'
 export { SectionHeader } from './data-display/SectionHeader'
 export { SortableTableHeader } from './data-display/SortableTableHeader'
