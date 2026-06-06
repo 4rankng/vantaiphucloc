@@ -54,8 +54,7 @@ export function useRoutePricing() {
   const toast = useToast()
   const [clientId, setClientIdState] = useState<number | undefined>()
   const [workType, setWorkTypeState] = useState<string | undefined>()
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(100)
+  const [pageSize] = useState(1000)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<RoutePricingFormData>(EMPTY_FORM)
@@ -64,18 +63,15 @@ export function useRoutePricing() {
   const { data: routePricingsData, isLoading } = useRoutePricings({
     clientId,
     workType,
-    page,
     pageSize,
   })
 
   const setClientId = useCallback((id?: number) => {
     setClientIdState(id)
-    setPage(1)
   }, [])
 
   const setWorkType = useCallback((wt?: string) => {
     setWorkTypeState(wt)
-    setPage(1)
   }, [])
   const { data: clientsData } = useClients()
   const { data: locationsData } = useLocations()
@@ -199,11 +195,6 @@ export function useRoutePricing() {
   return {
     routePricings: routePricingsData?.items ?? [],
     total: routePricingsData?.total ?? 0,
-    page,
-    setPage,
-    pageSize,
-    setPageSize,
-    totalPages: routePricingsData?.totalPages ?? 0,
     isLoading,
     clients,
     locations,

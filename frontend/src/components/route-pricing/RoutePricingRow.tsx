@@ -1,14 +1,15 @@
-import { MapPin, Flag, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import type { RoutePricing } from '@/data/domain'
 import { OpBadge, PriceCell } from './RoutePricingCells'
 import { COL, SALARY_TINT, SALARY_BORDER } from './RoutePricingTable.constants'
 import type { FocusableField } from './RoutePricingTable.types'
 
-export function RoutePricingRow({ rp, idx, onEdit, onDelete }: {
+export function RoutePricingRow({ rp, idx, onEdit, onDelete, hideClient }: {
   rp: RoutePricing
   idx: number
   onEdit: (field: FocusableField) => void
   onDelete: () => void
+  hideClient?: boolean
 }) {
   const cell = (field: FocusableField) => (e: React.MouseEvent) => { e.stopPropagation(); onEdit(field) }
 
@@ -27,33 +28,33 @@ export function RoutePricingRow({ rp, idx, onEdit, onDelete }: {
         </button>
       </td>
 
-      <td onClick={cell('clientId')} style={{ overflow: 'hidden' }}>
-        <span
-          className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold"
-          style={{
-            background: 'color-mix(in srgb, var(--theme-text-primary) 7%, transparent)',
-            color: 'var(--theme-text-primary)',
-            maxWidth: '100%',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            display: 'inline-block',
-          }}
-          title={rp.client.name}
-        >
-          {rp.client.name}
-        </span>
-      </td>
+      {!hideClient && (
+        <td onClick={cell('clientId')} style={{ overflow: 'hidden' }}>
+          <span
+            className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold"
+            style={{
+              background: 'color-mix(in srgb, var(--theme-text-primary) 7%, transparent)',
+              color: 'var(--theme-text-primary)',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              display: 'inline-block',
+            }}
+            title={rp.client.name}
+          >
+            {rp.client.name}
+          </span>
+        </td>
+      )}
 
-      <td onClick={cell('pickupLocationId')}>
-        <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>
-          <MapPin className="h-3 w-3 shrink-0" style={{ color: 'var(--theme-status-info)' }} />
+      <td onClick={cell('pickupLocationId')} style={{ whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.3' }}>
+        <span className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>
           {rp.pickupLocation.name}
         </span>
       </td>
-      <td onClick={cell('dropoffLocationId')}>
-        <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>
-          <Flag className="h-3 w-3 shrink-0" style={{ color: 'var(--theme-status-warning)' }} />
+      <td onClick={cell('dropoffLocationId')} style={{ whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.3' }}>
+        <span className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>
           {rp.dropoffLocation.name}
         </span>
       </td>

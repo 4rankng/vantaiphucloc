@@ -29,6 +29,14 @@ export type RoutePricingFormData = {
   e40DriverSalary: string
 }
 
+export interface ClientGroup {
+  clientId: number
+  clientName: string
+  clientCode: string | null
+  routeCount: number
+  routes: RoutePricing[]
+}
+
 export interface RoutePricingTableProps {
   data: RoutePricing[]
   isLoading: boolean
@@ -42,4 +50,10 @@ export interface RoutePricingTableProps {
   isSaving?: boolean
   clients: Array<{ id: number; name: string; code?: string | null }>
   locations: Array<{ id: number; name: string }>
+  // Grouping props
+  groups: ClientGroup[]
+  expandedClients: Set<number>
+  onToggleClient: (clientId: number) => void
+  onExpandAll: () => void
+  onCollapseAll: () => void
 }

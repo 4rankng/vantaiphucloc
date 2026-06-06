@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { Plus, Route, FileSpreadsheet, ArrowLeft, RefreshCw } from 'lucide-react'
-import { Button, Pagination, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui'
+import { Button } from '@/components/ui'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
 import { Panel } from '@/components/shared/overlays/Panel'
 import { InlineSelect } from '@/components/shared/forms/InlineSelect/InlineSelect'
 import { DangerConfirmDialog } from '@/components/shared/overlays/DangerConfirmDialog/DangerConfirmDialog'
-import { RoutePricingTable, type RoutePricingFormData } from '@/components/route-pricing/RoutePricingTable'
+import { RoutePricingTable, type RoutePricingFormData, type ClientGroup } from '@/components/route-pricing/RoutePricingTable'
 import { RoutePricingDialog } from '@/components/route-pricing/RoutePricingDialog'
 import { RoutePricingImportDialog } from '@/components/route-pricing/RoutePricingImportDialog'
 import { useRoutePricing } from '@/components/route-pricing/useRoutePricing'
@@ -43,9 +43,10 @@ export function RoutePricingPage() {
             variant: 'error',
           })
         },
-      }
+      },
     )
   }, [syncPricing, toast])
+
   const [inlineEditField, setInlineEditField] = useState<
     'clientId' | 'pickupLocationId' | 'dropoffLocationId' | 'workType' | 'f20Price' | 'f40Price' | 'e20Price' | 'e40Price' | 'f20DriverSalary' | 'f40DriverSalary' | 'e20DriverSalary' | 'e40DriverSalary'
   >('f20Price')
@@ -53,12 +54,6 @@ export function RoutePricingPage() {
 
   const {
     routePricings,
-    total,
-    page,
-    setPage,
-    pageSize,
-    setPageSize,
-    totalPages,
     isLoading,
     clients,
     locations,
@@ -81,7 +76,60 @@ export function RoutePricingPage() {
     isUpdating,
   } = useRoutePricing()
 
-  // ─── Inline edit handlers ─────────────────────────────────────────────────
+  // ─── Group route pricings by client ──────────────────────────────────────
+
+  const groups = useMemo<ClientGroup[]>(() => {
+    const map = new Map<number, ClientGroup>()
+    for (const rp of routePricings) {
+      const existing = map.get(rp.client.id)
+      if (existing) {
+        existing.routes.push(rp)
+        existing.routeCount++
+      } else {
+        map.set(rp.client.id, {
+          clientId: rp.client.id,
+          clientName: rp.client.name,
+          clientCode: rp.client.code ?? null,
+          routeCount: 1,
+          routes: [rp],
+        })
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.clientName.localeCompare(b.clientName, 'vi'))
+  }, [routePricings])
+
+  // ─── Expand/collapse state ───────────────────────────────────────────────
+
+  const [expandedClients, setExpandedClients] = useState<Set<number>>(new Set())
+
+  // Auto-expand when filtering to a specific client
+  useEffect(() => {
+    if (clientId) {
+      setExpandedClients(new Set([clientId]))
+    }
+  }, [clientId])
+
+  const toggleClient = useCallback((id: number) => {
+    setExpandedClients(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }, [])
+
+  const expandAll = useCallback(() => {
+    setExpandedClients(new Set(groups.map(g => g.clientId)))
+  }, [groups])
+
+  const collapseAll = useCallback(() => {
+    setExpandedClients(new Set())
+  }, [])
+
+  // ─── Inline edit handlers ────────────────────────────────────────────────
 
   const handleStartEdit = useCallback((rp: RoutePricing, field?: typeof inlineEditField) => {
     setInlineEditId(rp.id)
@@ -99,6 +147,13 @@ export function RoutePricingPage() {
       f40DriverSalary: rp.f40DriverSalary?.toString() ?? '',
       e20DriverSalary: rp.e20DriverSalary?.toString() ?? '',
       e40DriverSalary: rp.e40DriverSalary?.toString() ?? '',
+    })
+    // Auto-expand the group containing this row
+    setExpandedClients(prev => {
+      if (prev.has(rp.client.id)) return prev
+      const next = new Set(prev)
+      next.add(rp.client.id)
+      return next
     })
   }, [])
 
@@ -127,7 +182,7 @@ export function RoutePricingPage() {
 
   const handleCancelInline = useCallback(() => setInlineEditId(null), [])
 
-  // ─── Filter options ───────────────────────────────────────────────────────
+  // ─── Filter options ──────────────────────────────────────────────────────
 
   const workTypeOptions = [
     { value: 'all', label: 'Tất cả tác nghiệp' },
@@ -217,38 +272,12 @@ export function RoutePricingPage() {
           isSaving={isUpdating}
           clients={clients}
           locations={locations}
+          groups={groups}
+          expandedClients={expandedClients}
+          onToggleClient={toggleClient}
+          onExpandAll={expandAll}
+          onCollapseAll={collapseAll}
         />
-        {total > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-4 border-t" style={{ borderColor: 'var(--theme-border-light)' }}>
-            <div className="flex items-center gap-4 flex-wrap">
-              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                Hiển thị {routePricings.length} trên tổng số {total} bản ghi
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Dòng mỗi trang:</span>
-                <Select value={String(pageSize)} onValueChange={(val) => { setPageSize(Number(val)); setPage(1); }}>
-                  <SelectTrigger className="w-[75px] h-7 text-xs py-0 px-2 rounded-md">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="25">25</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                    <SelectItem value="200">200</SelectItem>
-                    <SelectItem value="500">500</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            {totalPages > 1 && (
-              <Pagination
-                currentPage={page}
-                totalPages={totalPages}
-                onPageChange={setPage}
-              />
-            )}
-          </div>
-        )}
       </Panel>
 
       {/* Create/edit dialog */}

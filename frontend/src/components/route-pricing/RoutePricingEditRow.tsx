@@ -1,6 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { MapPin, Flag } from 'lucide-react'
 import { formatCurrency, WORK_TYPE_LABELS } from '@/data/domain'
+
+/** Format raw digits as X.XXX while typing (e.g. "12345" → "12.345") */
+function formatTypingNumber(raw: string): string {
+  if (!raw) return ''
+  return raw.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
 import type { WorkType } from '@/data/domain'
 import { useInlineEditForm } from '@/components/shared/forms/useInlineEditForm'
 import { tdActive, tdDimmed } from '@/components/shared/forms/editCellStyles'
@@ -23,6 +29,7 @@ export function RoutePricingEditRow({
   clients,
   locations,
   initialFocus = 'f20Price',
+  hideClient,
 }: {
   initial: RoutePricingFormData
   onSave: (data: RoutePricingFormData) => void
@@ -31,6 +38,7 @@ export function RoutePricingEditRow({
   clients: Array<{ id: number; name: string; code?: string | null }>
   locations: Array<{ id: number; name: string }>
   initialFocus?: FocusableField
+  hideClient?: boolean
 }) {
   const [activeField, setActiveField] = useState<FocusableField>(initialFocus)
   const fieldRefs = useRef<Record<string, HTMLInputElement | null>>({})
@@ -90,23 +98,39 @@ export function RoutePricingEditRow({
     if (activeField === field) {
       return (
         <td style={{ ...tdActive, textAlign: 'right', ...salaryBg, ...salaryLeft }}>
-          <div style={{ position: 'relative' }}>
+          {/* Dimmed display value for visual continuity */}
+          <span className="tabular-nums text-xs" style={{ color: 'var(--theme-text-muted)', fontFamily: 'var(--theme-font-mono)', opacity: 0.4 }}>
+            {form[field] ? formatCurrency(Number(form[field])) : '—'}
+          </span>
+          {/* Floating input overlay — not constrained by column width */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 30,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+          }}>
             <input
               ref={(el) => { fieldRefs.current[field] = el }}
               type="text"
               inputMode="numeric"
               className="nepo-input text-[12px] tabular-nums"
               style={{
-                width: '100%',
+                width: 130,
                 textAlign: 'right',
-                borderColor: errors[field] ? 'var(--theme-status-error)' : undefined,
+                borderColor: errors[field] ? 'var(--theme-status-error)' : 'var(--theme-status-info)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06)',
+                background: 'var(--theme-bg-primary)',
               }}
-              value={form[field]}
+              value={formatTypingNumber(form[field])}
               onChange={e => set(field, e.target.value.replace(/[^0-9]/g, ''))}
               placeholder="—"
             />
+            {floatingActions}
           </div>
-          {floatingActions}
         </td>
       )
     }
@@ -123,7 +147,7 @@ export function RoutePricingEditRow({
     <tr style={{ background: 'var(--theme-status-warning-light)' }}>
       <td style={{ ...tdDimmed, color: 'var(--theme-text-muted)', fontSize: 12 }} />
 
-      {activeField === 'clientId' ? (
+      {!hideClient && (activeField === 'clientId' ? (
         <td style={tdActive}>
           <InlineSelect
             placeholder="— Chủ hàng —"
@@ -143,7 +167,7 @@ export function RoutePricingEditRow({
               </span>
             : <span className="text-[12px]" style={{ color: 'var(--theme-text-muted)' }}>— Chủ hàng —</span>}
         </td>
-      )}
+      ))}
 
       {activeField === 'pickupLocationId' ? (
         <td style={tdActive}>

@@ -18,17 +18,19 @@ export const SALARY_FIELDS: PriceField[] = [
 ]
 
 export const COL = {
-  index: 40,
+  index: 28,
   client: 240,
-  pickup: 140,
-  dropoff: 140,
-  price: 130,
-  salary: 130,
+  pickup: 90,
+  dropoff: 90,
+  price: 80,
+  salary: 80,
   workType: 120,
 } as const
 
 export const FARE_GROUP_WIDTH = COL.price * 4
 export const SALARY_GROUP_WIDTH = COL.salary * 4
 export const LEFT_GROUP_WIDTH = COL.index + COL.client + COL.pickup + COL.dropoff
+export const GROUPED_LEFT_GROUP_WIDTH = COL.index + COL.pickup + COL.dropoff
 export const RIGHT_GROUP_WIDTH = COL.workType
 export const TABLE_MIN_WIDTH = LEFT_GROUP_WIDTH + FARE_GROUP_WIDTH + SALARY_GROUP_WIDTH + RIGHT_GROUP_WIDTH
+export const GROUPED_TABLE_MIN_WIDTH = GROUPED_LEFT_GROUP_WIDTH + FARE_GROUP_WIDTH + SALARY_GROUP_WIDTH + RIGHT_GROUP_WIDTH
