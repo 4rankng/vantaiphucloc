@@ -5,18 +5,7 @@ import { StepIndicator } from '@/components/shared/navigation/StepIndicator'
 import { Button } from '@/components/ui'
 import { usePreviewLocationImport, useCommitLocationImport } from '@/hooks/use-queries'
 import type { ApiResponse } from '@/data/domain'
-
-type ImportStep = 'upload' | 'preview' | 'done'
-
-const IMPORT_STEPS = [
-  { label: 'Nhập file' },
-  { label: 'Soát duyệt' },
-  { label: 'Lưu dữ liệu' },
-]
-
-function stepIndex(step: ImportStep): number {
-  return step === 'upload' ? 0 : step === 'preview' ? 1 : 2
-}
+import { type ImportStep, IMPORT_STEPS, stepIndex } from './importTypes'
 
 interface PreviewRow {
   name: string
