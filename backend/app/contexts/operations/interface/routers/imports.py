@@ -402,6 +402,8 @@ async def commit_customer_excel(
             detail=f"Các dòng sau cần xác định loại container (E/F): {unresolved_indices}. "
                    f"Vui lòng giải quyết trong preview trước khi lưu.",
         )
+
+    try:
         result = await use_case(ImportCommitInput(
             client_id=body.client_id,
             rows=rows,
