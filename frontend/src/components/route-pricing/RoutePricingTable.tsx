@@ -259,8 +259,8 @@ export function RoutePricingTable({
 
   if (isMobile) {
     return (
-      <div className="space-y-3 p-3">
-        <div className="px-1 flex items-center justify-between gap-2">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>
             💡 Nhấp vào thẻ để chỉnh sửa • {groups.length} chủ hàng, {totalRoutes} tuyến
           </span>

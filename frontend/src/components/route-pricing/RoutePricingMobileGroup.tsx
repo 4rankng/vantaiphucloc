@@ -80,7 +80,7 @@ export function RoutePricingMobileGroup({
 
       {/* Routes stack */}
       {isExpanded && (
-        <div className="flex flex-col gap-2.5 pl-1.5">
+        <div className="flex flex-col gap-2.5">
           {group.routes.map((rp, idx) => (
             <RoutePricingMobileCard
               key={rp.id}

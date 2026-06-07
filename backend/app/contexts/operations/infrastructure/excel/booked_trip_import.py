@@ -170,8 +170,6 @@ async def import_booked_trips(
             errors.append(f"Nhóm {key}: không có số container")
             continue
 
-        cont_type = containers_data[0]["cont_type"]
-
         # Try auto-pricing
         revenue = int(first_row.get("revenue") or 0)
         int(first_row.get("driver_salary") or 0)

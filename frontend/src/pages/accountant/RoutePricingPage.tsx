@@ -220,7 +220,7 @@ export function RoutePricingPage() {
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 flex-wrap">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
-          <div className="w-full sm:w-[190px]">
+          <div className={isMobile ? 'w-full' : 'w-full sm:w-[190px]'}>
             <InlineSelect
               placeholder="Tất cả chủ hàng"
               value={clientId ? String(clientId) : 'all'}
@@ -230,7 +230,7 @@ export function RoutePricingPage() {
             />
           </div>
 
-          <div className="w-full sm:w-[180px]">
+          <div className={isMobile ? 'w-full' : 'w-full sm:w-[180px]'}>
             <InlineSelect
               placeholder="Tất cả tác nghiệp"
               value={workType ?? 'all'}
@@ -254,14 +254,18 @@ export function RoutePricingPage() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button variant="outline" onClick={() => setSyncOpen(true)} className="flex-1 sm:flex-none gap-1.5 whitespace-nowrap">
-            <RefreshCw className="h-3.5 w-3.5" />
-            Đồng bộ cước/lương
-          </Button>
-          <Button variant="outline" onClick={() => setImportOpen(true)} className="flex-1 sm:flex-none gap-1.5 whitespace-nowrap">
-            <FileSpreadsheet className="h-3.5 w-3.5" />
-            Nhập Excel
-          </Button>
+          {!isMobile && (
+            <Button variant="outline" onClick={() => setSyncOpen(true)} className="flex-1 sm:flex-none gap-1.5 whitespace-nowrap">
+              <RefreshCw className="h-3.5 w-3.5" />
+              Đồng bộ cước/lương
+            </Button>
+          )}
+          {!isMobile && (
+            <Button variant="outline" onClick={() => setImportOpen(true)} className="flex-1 sm:flex-none gap-1.5 whitespace-nowrap">
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              Nhập Excel
+            </Button>
+          )}
           <Button onClick={openCreate} className="flex-1 sm:flex-none gap-1.5 whitespace-nowrap">
             <Plus className="h-3.5 w-3.5" />
             Thêm cước tuyến
@@ -269,7 +273,7 @@ export function RoutePricingPage() {
         </div>
       </div>
 
-      <Panel flush>
+      {isMobile ? (
         <RoutePricingTable
           data={routePricings}
           isLoading={isLoading}
@@ -288,8 +292,32 @@ export function RoutePricingPage() {
           onToggleClient={toggleClient}
           onExpandAll={expandAll}
           onCollapseAll={collapseAll}
+          isMobile={isMobile}
+          onEditOpenDialog={handleEditOpenDialog}
         />
-      </Panel>
+      ) : (
+        <Panel flush>
+          <RoutePricingTable
+            data={routePricings}
+            isLoading={isLoading}
+            editingId={inlineEditId}
+            editingField={inlineEditField}
+            onStartEdit={handleStartEdit}
+            onSave={handleSaveInline}
+            onCancelEdit={handleCancelInline}
+            onDelete={setDeleteId}
+            editInitial={inlineEditInitial}
+            isSaving={isUpdating}
+            clients={clients}
+            locations={locations}
+            groups={groups}
+            expandedClients={expandedClients}
+            onToggleClient={toggleClient}
+            onExpandAll={expandAll}
+            onCollapseAll={collapseAll}
+          />
+        </Panel>
+      )}
 
       {/* Create/edit dialog */}
       <RoutePricingDialog
