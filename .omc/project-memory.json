@@ -145,8 +145,8 @@
   "hotPaths": [
     {
       "path": "frontend/src/components/route-pricing/RoutePricingMobileCard.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1780817697840,
+      "accessCount": 2,
+      "lastAccessed": 1780817826772,
       "type": "file"
     }
   ],

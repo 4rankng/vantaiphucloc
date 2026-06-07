@@ -205,7 +205,10 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl p-0 gap-0">
+      <DialogContent
+        className={`sm:max-w-3xl p-0 gap-0 ${isMobile ? 'flex flex-col' : ''}`}
+        {...(isMobile ? { 'data-mobile-fullscreen': '' } : {})}
+      >
         {/* ── Header ─────────────────────────────────────────── */}
         <DialogHeader
           className="px-6 pt-6 pb-4"
@@ -220,7 +223,7 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
         </DialogHeader>
 
         {/* ── Body ───────────────────────────────────────────── */}
-        <div className="px-6 py-5 space-y-6 overflow-y-auto">
+        <div className={`px-6 py-5 space-y-6 overflow-y-auto ${isMobile ? 'flex-1' : ''}`}>
           {/* Section 1: Route info */}
           <section>
             <SectionHeader icon={Route} title="Thông tin tuyến" />

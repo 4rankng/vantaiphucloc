@@ -71,10 +71,21 @@
         Targets the Radix Dialog Content element (which has role="dialog" and
         data-state), but excludes Sheet drawers by checking the parent does
         NOT have a data-side attribute (sheets use Popover with data-side). */
-  [role="dialog"][data-state="open"]:not([data-side]) {
+  [role="dialog"][data-state="open"]:not([data-side]):not([data-mobile-fullscreen]) {
     width: calc(100vw - 16px) !important;
     max-width: calc(100vw - 16px) !important;
     margin: 8px !important;
+  }
+
+  /* ── Full-screen dialog: opt-in via data-mobile-fullscreen attribute.
+        Overrides the default 8px-margin rule above. */
+  [role="dialog"][data-state="open"][data-mobile-fullscreen] {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
   }
 
   /* ── Sheet (drawer) — Sheet wraps DialogPrimitive.Content which renders
