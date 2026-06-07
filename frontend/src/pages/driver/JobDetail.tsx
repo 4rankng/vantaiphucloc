@@ -42,7 +42,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   return (
     <section className="px-4 mb-[18px]">
       <p
-        className="text-[10.5px] font-bold uppercase tracking-[0.14em] px-1.5 pb-2.5"
+        className="type-overline tracking-[0.14em] px-1.5 pb-2.5"
         style={{ color: 'var(--theme-text-muted)' }}
       >
         {label}
@@ -232,7 +232,7 @@ export function JobDetail() {
               <div className="flex items-center justify-between mb-3.5">
                 <div className="flex items-center gap-2">
                   <span
-                    className="text-[10.5px] font-bold uppercase tracking-[0.16em]"
+                    className="type-overline tracking-[0.16em]"
                     style={{ color: 'var(--theme-text-muted)' }}
                   >
                     Container
@@ -305,7 +305,7 @@ export function JobDetail() {
                   {job.pickupLocation?.name ?? '—'}
                 </div>
                 <div
-                  className="text-[10px] font-semibold uppercase tracking-wide mt-1"
+                  className="type-overline tracking-wide mt-1"
                   style={{ color: 'var(--theme-text-muted)' }}
                 >
                   Điểm đi
@@ -356,7 +356,7 @@ export function JobDetail() {
                   {job.dropoffLocation?.name ?? '—'}
                 </div>
                 <div
-                  className="text-[10px] font-semibold uppercase tracking-wide mt-1"
+                  className="type-overline tracking-wide mt-1"
                   style={{ color: 'var(--theme-text-muted)' }}
                 >
                   Điểm đến

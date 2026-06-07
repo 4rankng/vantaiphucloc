@@ -160,10 +160,10 @@ export function ExportDoiSoatDialog({ open, onClose, defaultDateFrom, defaultDat
           className="px-6 pt-5 pb-4"
           style={{ background: 'linear-gradient(135deg, var(--theme-status-success) 0%, var(--theme-brand-primary) 100%)' }}
         >
-          <h3 className="text-white text-base font-semibold" style={{ letterSpacing: '-0.01em' }}>
+          <h3 className="type-h2 text-white">
             Xuất file đối soát
           </h3>
-          <p className="text-emerald-100 text-[13px] mt-1">
+          <p className="text-emerald-100 type-body-sm mt-1">
             Chọn chủ hàng và khoảng thời gian để xuất Excel
           </p>
         </div>

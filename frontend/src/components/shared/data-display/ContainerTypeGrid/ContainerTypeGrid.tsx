@@ -162,7 +162,7 @@ export function ContainerTypeGrid({
     <div className="space-y-3">
       {/* ─── Group 1: Loại cont ─── */}
       <div className="space-y-1.5">
-        <p className="text-[10px] font-bold uppercase tracking-wider px-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+        <p className="type-overline px-0.5" style={{ color: 'var(--theme-text-muted)' }}>
           Loại cont
         </p>
         <div className="grid grid-cols-4 gap-2">
@@ -182,7 +182,7 @@ export function ContainerTypeGrid({
 
       {/* ─── Group 2: Tác nghiệp ─── */}
       <div className="space-y-1.5">
-        <p className="text-[10px] font-bold uppercase tracking-wider px-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+        <p className="type-overline px-0.5" style={{ color: 'var(--theme-text-muted)' }}>
           Tác nghiệp
         </p>
         <div className="flex flex-wrap gap-2">

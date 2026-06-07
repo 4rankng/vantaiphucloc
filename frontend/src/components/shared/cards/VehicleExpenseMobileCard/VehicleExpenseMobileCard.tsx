@@ -116,7 +116,7 @@ export function ExpenseAuditCard({ expense: e, edited }: ExpenseAuditCardProps) 
         </Pill>
         {edited && (
           <span
-            className="text-[10px] font-bold uppercase tracking-wide"
+            className="type-overline tracking-wide"
             style={{ color: 'var(--theme-status-warning, #f59e0b)' }}
           >
             Đã sửa

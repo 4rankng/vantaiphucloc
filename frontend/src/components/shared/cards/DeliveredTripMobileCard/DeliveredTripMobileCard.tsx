@@ -52,7 +52,7 @@ export function DeliveredTripMobileCard({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span
-            className="inline-flex items-center gap-1 shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
+            className="inline-flex items-center gap-1 shrink-0 type-overline tracking-wide px-2 py-0.5 rounded-full"
             style={{
               background: isMatched
                 ? 'color-mix(in srgb, var(--accent-2, #10b981) 12%, transparent)'
@@ -81,7 +81,7 @@ export function DeliveredTripMobileCard({
           )}
           {trip.contType && (
             <span
-              className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0"
+              className="type-overline tracking-wide px-1.5 py-0.5 rounded shrink-0"
               style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
             >
               {trip.contType}
@@ -192,7 +192,7 @@ export function DeliveredTripMobileCard({
         <div className="flex items-center gap-1.5 flex-wrap text-[11px]" style={{ color: 'var(--ink-3)' }}>
           {trip.workType && (
             <span
-              className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded"
+              className="type-overline px-1.5 py-0.5 rounded"
               style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
             >
               {getWorkTypeLabel(trip.workType)}

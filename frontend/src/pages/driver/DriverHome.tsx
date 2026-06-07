@@ -203,21 +203,21 @@ function MobileDriverHome() {
 
         {/* Left: trip breakdown — label + two sub-columns */}
         <div className="flex-1 min-w-0 flex flex-col justify-center px-4 py-3.5 gap-2">
-          <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+          <p className="type-overline" style={{ color: 'var(--theme-text-muted)' }}>
             Số chuyến
           </p>
           <div className="flex items-start">
             {/* Đã ghép */}
             <div className="flex-1 flex flex-col gap-0.5">
               <p className="text-[11px] font-medium" style={{ color: 'var(--theme-success, #16a34a)' }}>Đã ghép</p>
-              <p className="text-xl font-bold tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{matchedCount}</p>
+              <p className="type-display tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{matchedCount}</p>
             </div>
             {/* Inner divider */}
             <div className="w-px self-stretch mx-3" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 14%, var(--theme-border-default))' }} />
             {/* Chưa ghép */}
             <div className="flex-1 flex flex-col gap-0.5">
               <p className="text-[11px] font-medium" style={{ color: 'var(--theme-warning, #d97706)' }}>Chưa ghép</p>
-              <p className="text-xl font-bold tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{pendingCount}</p>
+              <p className="type-display tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{pendingCount}</p>
             </div>
           </div>
         </div>
@@ -226,10 +226,10 @@ function MobileDriverHome() {
         <div className="flex-1 min-w-0 flex items-center gap-2.5 px-4 py-3.5">
           <img src="/icons/money.png" alt="" aria-hidden className="shrink-0 w-9 h-9 object-contain" />
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+            <p className="type-overline" style={{ color: 'var(--theme-text-muted)' }}>
               Lương
             </p>
-            <p className="text-[15px] font-bold tabular-nums leading-tight whitespace-nowrap" style={{ color: 'var(--theme-brand-primary)' }}>
+            <p className="type-display tabular-nums leading-tight whitespace-nowrap" style={{ color: 'var(--theme-brand-primary)' }}>
               <AnimatedNumber value={earningsValue} format="currency" duration={700} />
             </p>
           </div>
@@ -249,7 +249,7 @@ function MobileDriverHome() {
               style={i > 0 ? { borderLeft: '1px solid var(--theme-border-default)' } : undefined}
             >
               <span className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>{ct}</span>
-              <span className="text-lg font-bold tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>
+              <span className="type-display tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>
                 {contTypeStats[ct] ?? 0}
               </span>
             </div>
@@ -288,7 +288,7 @@ function MobileDriverHome() {
       {/* Trip list */}
       <div className="space-y-2.5">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+          <p className="type-h3" style={{ color: 'var(--theme-text-primary)' }}>
             Chuyến đã đi
           </p>
 
@@ -326,7 +326,7 @@ function MobileDriverHome() {
           >
             <img src="/icons/calkey.png" alt="" aria-hidden className="w-32 h-32 object-contain" />
             <div>
-              <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+              <p className="type-h3" style={{ color: 'var(--theme-text-primary)' }}>
                 {debouncedSearch ? 'Không tìm thấy chuyến nào' : 'Chưa có chuyến nào'}
               </p>
               <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>

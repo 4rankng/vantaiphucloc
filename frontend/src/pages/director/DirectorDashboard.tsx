@@ -129,10 +129,10 @@ function VehicleBarList({ rows }: { rows: VehiclePnLRow[] }) {
         className="grid items-center gap-x-3 px-2 pb-2 mb-1"
         style={{ gridTemplateColumns: '76px 1fr 68px 38px', borderBottom: '1px solid var(--theme-border-light)' }}
       >
-        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Biển số</span>
+        <span className="type-overline" style={{ color: 'var(--theme-text-muted)' }}>Biển số</span>
         <span />
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--theme-text-muted)' }}>Lãi</span>
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--theme-text-muted)' }}>Biên</span>
+        <span className="type-overline text-right" style={{ color: 'var(--theme-text-muted)' }}>Lãi</span>
+        <span className="type-overline text-right" style={{ color: 'var(--theme-text-muted)' }}>Biên</span>
       </div>
       <div>
         {rows.map(row => {
@@ -270,13 +270,13 @@ export function DirectorDashboard() {
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-7">
         <div>
           <h1
-            className="text-[22px] font-extrabold tracking-tight leading-tight"
+            className="type-h1"
             style={{ color: 'var(--theme-text-primary)' }}
           >
             {greeting()},{' '}
             <span>{profile?.fullName || 'bạn'}</span>
           </h1>
-          <p className="mt-1.5 text-[13px]" style={{ color: 'var(--theme-text-secondary)' }}>
+          <p className="mt-1.5 type-body-sm" style={{ color: 'var(--theme-text-secondary)' }}>
             {total} chuyến · {matched} đã ghép · {pending} chờ xử lý
           </p>
         </div>
@@ -427,7 +427,7 @@ export function DirectorDashboard() {
         {/* Hoạt động gần đây */}
         <div className="bento-card bento-col-12 lg:bento-col-4 flex flex-col">
           <div className="pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-            <div className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Hoạt động gần đây</div>
+            <div className="type-h3" style={{ color: 'var(--theme-text-primary)' }}>Hoạt động gần đây</div>
           </div>
           <div className="flex-grow overflow-y-auto mt-2 px-1 custom-scrollbar" style={{ maxHeight: 520 }}>
             {auditLogs.length === 0 && !auditLoading ? (

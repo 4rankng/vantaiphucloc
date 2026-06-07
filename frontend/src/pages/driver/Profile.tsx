@@ -57,7 +57,7 @@ if (!editing) setDraft(value) }, [value, editing])
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-medium uppercase tracking-wide mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+        <p className="type-overline mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>
           {label}
         </p>
         {editing ? (

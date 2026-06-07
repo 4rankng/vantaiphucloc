@@ -117,7 +117,7 @@ export function EntityTable<T>({
             {columns.map(col => (
               <span
                 key={col.key}
-                className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap"
+                className="flex items-center gap-1 type-overline whitespace-nowrap"
                 style={{ color: 'var(--theme-text-muted)' }}
               >
                 {col.header}

@@ -43,7 +43,7 @@ export function AliasManager({ aliases, onAddAlias, onPromoteAlias, onDeleteAlia
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
+      <p className="type-overline" style={{ color: 'var(--theme-text-muted)' }}>
         Tên phụ
         {aliases.length > 0 && (
           <span className="ml-1.5 font-normal normal-case">{aliases.length}</span>

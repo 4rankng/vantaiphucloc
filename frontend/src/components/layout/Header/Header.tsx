@@ -169,7 +169,7 @@ export function MobileHeader({ title }: MobileHeaderProps) {
         }}
       >
         <div className="w-full px-4 h-14 flex items-center justify-between">
-          <h1 className="text-base font-bold font-display text-[var(--theme-text-primary)] truncate">{title}</h1>
+          <h1 className="type-h2 text-[var(--theme-text-primary)] truncate">{title}</h1>
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-1.5 px-2 py-1 rounded-lg transition-colors hover:bg-[var(--theme-bg-tertiary)]">
               <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-secondary)' }}>
@@ -229,7 +229,7 @@ export function DesktopHeader({ title }: DesktopHeaderProps) {
           borderBottom: '1px solid var(--theme-header-border)',
         }}
       >
-        <h2 className="text-base font-bold font-display text-[var(--theme-text-primary)]">{title}</h2>
+        <h2 className="type-h2 text-[var(--theme-text-primary)]">{title}</h2>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors hover:bg-[var(--theme-bg-tertiary)]">

@@ -60,7 +60,7 @@ export function Sidebar({ items, basePath }: SidebarProps) {
             TTransport
           </strong>
           <span
-            className="text-[10px] font-semibold uppercase"
+            className="type-overline"
             style={{
               color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))',
               letterSpacing: '0.1em',
@@ -75,7 +75,7 @@ export function Sidebar({ items, basePath }: SidebarProps) {
       <nav className="flex-1 overflow-y-auto pb-3 sidebar-scroll">
         {/* Main section */}
         <div
-          className="text-[10px] font-bold uppercase"
+          className="type-overline"
           style={{
             color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))',
             letterSpacing: '0.12em',
@@ -121,7 +121,7 @@ export function Sidebar({ items, basePath }: SidebarProps) {
         {hasAdmin && (
           <>
             <div
-              className="text-[10px] font-bold uppercase"
+              className="type-overline"
               style={{
                 color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))',
                 letterSpacing: '0.12em',

@@ -202,7 +202,7 @@ export function LocationImportDrawer({ onClose }: LocationImportDrawerProps) {
                   >
                     {file.name}
                   </p>
-                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>
+                  <p className="type-caption m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>
                     {(file.size / 1024).toFixed(1)} KB · xlsx / xls
                   </p>
                 </div>
@@ -295,19 +295,19 @@ export function LocationImportDrawer({ onClose }: LocationImportDrawerProps) {
               <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color: 'var(--accent)' }}>
                 {previewResult.totalCount}
               </p>
-              <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Tổng số địa điểm trong file</p>
+              <p className="type-caption m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Tổng số địa điểm trong file</p>
             </div>
             <div className="p-3 rounded-lg border" style={{ background: 'var(--success-soft)', borderColor: 'var(--success)' }}>
               <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color: 'var(--success)' }}>
                 {previewResult.newNames?.length || 0}
               </p>
-              <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Địa điểm mới sẽ tạo</p>
+              <p className="type-caption m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Địa điểm mới sẽ tạo</p>
             </div>
             <div className="p-3 rounded-lg border" style={{ background: 'var(--surface-2)', borderColor: 'var(--line)' }}>
               <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color: 'var(--ink-2)' }}>
                 {previewResult.alreadyExist?.length || 0}
               </p>
-              <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Đã tồn tại (bỏ qua)</p>
+              <p className="type-caption m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Đã tồn tại (bỏ qua)</p>
             </div>
           </div>
 
@@ -472,13 +472,13 @@ export function LocationImportDrawer({ onClose }: LocationImportDrawerProps) {
               <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color: 'var(--success)' }}>
                 {commitResult.created}
               </p>
-              <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Địa điểm đã tạo</p>
+              <p className="type-caption m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Địa điểm đã tạo</p>
             </div>
             <div className="p-3 rounded-lg border border-solid" style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}>
               <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color: 'var(--ink-2)' }}>
                 {commitResult.skippedExisting}
               </p>
-              <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Bỏ qua (đã tồn tại)</p>
+              <p className="type-caption m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Bỏ qua (đã tồn tại)</p>
             </div>
           </div>
 

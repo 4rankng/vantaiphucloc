@@ -35,10 +35,10 @@ export function SyncPricingDialog({ open, onClose, isPending, onConfirm }: Props
           className="px-6 pt-5 pb-4"
           style={{ background: 'linear-gradient(135deg, var(--theme-brand-primary, #059669) 0%, var(--theme-brand-primary-dark, #047857) 100%)' }}
         >
-          <h3 className="text-white text-base font-semibold" style={{ letterSpacing: '-0.01em' }}>
+          <h3 className="type-h2 text-white">
             Đồng bộ cước/lương tất cả chuyến
           </h3>
-          <p className="text-white/80 text-[13px] mt-1">
+          <p className="text-white/80 type-body-sm mt-1">
             Cập nhật lại giá cước và lương lái xe cho tất cả các chuyến (đã ghép và chưa ghép) theo bảng giá mới nhất
           </p>
         </div>

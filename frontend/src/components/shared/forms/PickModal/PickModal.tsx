@@ -43,7 +43,7 @@ export function PickModal<T extends { id: number }>({
           className="flex items-center justify-between px-4 py-3 shrink-0"
           style={{ borderBottom: '1px solid var(--theme-border-light)' }}
         >
-          <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+          <p className="type-h3" style={{ color: 'var(--theme-text-primary)' }}>
             {title}
             {items.length > 0 && (
               <span

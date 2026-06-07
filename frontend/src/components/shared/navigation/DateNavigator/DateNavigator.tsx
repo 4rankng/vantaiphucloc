@@ -65,7 +65,7 @@ export function DateNavigator({
       </button>
 
       <span
-        className="text-[15px] font-bold tabular-nums min-w-[90px] text-center"
+        className="type-display tabular-nums min-w-[90px] text-center"
         style={{ color: 'var(--theme-text-primary)' }}
       >
         {formatISODate(value)}

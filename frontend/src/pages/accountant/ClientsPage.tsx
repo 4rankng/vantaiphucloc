@@ -216,8 +216,8 @@ function ClientMobileCard({ client, onEdit, onDelete }: {
           <div className="min-w-0 flex-1 pt-0.5">
             <div className="flex items-center gap-1.5 flex-wrap">
               <h3
-                className="text-[14.5px] font-bold leading-tight truncate"
-                style={{ color: 'var(--ink)', letterSpacing: '-0.005em' }}
+                className="type-h3 leading-tight truncate"
+                style={{ color: 'var(--ink)' }}
               >
                 {client.name}
               </h3>
@@ -433,8 +433,8 @@ export function ClientsPage() {
       {isMobile ? (
         <div className="flex items-center justify-between gap-3 -mb-1">
           <h1
-            className="text-[17px] font-bold tracking-tight"
-            style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}
+            className="type-h1"
+            style={{ color: 'var(--ink)' }}
           >
             Chủ hàng
           </h1>

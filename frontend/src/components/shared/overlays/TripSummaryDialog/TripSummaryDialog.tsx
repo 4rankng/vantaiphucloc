@@ -56,8 +56,8 @@ export function TripSummaryDialog({
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose() }}>
       <DialogContent className="max-w-sm p-0 overflow-hidden">
         <DialogHeader className="px-4 pt-4 pb-3" style={{ borderBottom: '1px solid var(--line)' }}>
-          <DialogTitle className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Xác nhận</DialogTitle>
-          <DialogDescription className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Xác nhận thông tin trước khi gửi</DialogDescription>
+          <DialogTitle style={{ color: 'var(--text-primary)' }}>Xác nhận</DialogTitle>
+          <DialogDescription className="mt-0.5" style={{ color: 'var(--muted)' }}>Xác nhận thông tin trước khi gửi</DialogDescription>
         </DialogHeader>
 
         <div className="px-4 py-2 space-y-0">

@@ -64,10 +64,10 @@ export function AIProcessingScreen({ fileName }: AIProcessingScreenProps) {
         </div>
       </div>
 
-      <h3 className="text-xl font-bold mb-3 tracking-tight" style={{ color: 'var(--ink)' }}>
+      <h3 className="type-h2 mb-3" style={{ color: 'var(--ink)' }}>
         Hệ thống AI đang đọc và trích xuất dữ liệu
       </h3>
-      <p className="text-sm max-w-md text-center" style={{ color: 'var(--ink-3)' }}>
+      <p className="type-body-sm max-w-md text-center" style={{ color: 'var(--ink-3)' }}>
         Antigravity đang phân tích hàng ngàn dòng dữ liệu từ file <strong style={{ color: 'var(--ink)' }}>{fileName}</strong>. Quá trình này được tối ưu hoá cực kỳ nhanh và chuẩn xác.
       </p>
 

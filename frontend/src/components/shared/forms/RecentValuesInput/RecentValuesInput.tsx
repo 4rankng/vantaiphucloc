@@ -144,7 +144,7 @@ export function RecentValuesInput({
               style={{ color: 'var(--theme-text-muted)' }}
             />
             <span
-              className="text-[10px] font-bold uppercase tracking-[0.1em]"
+              className="type-overline tracking-[0.1em]"
               style={{ color: 'var(--theme-text-muted)' }}
             >
               Đã dùng gần đây

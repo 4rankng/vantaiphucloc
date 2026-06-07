@@ -81,13 +81,8 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn(className)}
+    className={cn("type-h2", className)}
     style={{
-      fontFamily: 'var(--theme-font-display)',
-      fontSize: '1rem',       /* 16px — precise, not oversized */
-      fontWeight: 700,
-      lineHeight: 1.3,
-      letterSpacing: '-0.02em',
       color: 'var(--ink)',
     }}
     {...props}
@@ -99,7 +94,7 @@ const DialogDescription = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Description ref={ref} className={cn("text-sm text-[var(--theme-text-muted)]", className)} {...props} />
+  <DialogPrimitive.Description ref={ref} className={cn("type-caption text-[var(--theme-text-muted)]", className)} {...props} />
 ))
 DialogDescription.displayName = DialogPrimitive.Description.displayName
 

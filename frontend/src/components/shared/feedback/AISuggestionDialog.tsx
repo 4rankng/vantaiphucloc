@@ -351,7 +351,7 @@ export function AISuggestionDialog({ trip, onClose }: { trip: DeliveredTrip; onC
                         outlineOffset: -2,
                       }}
                     >
-                      <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: syncChoice === 'delivered' ? 'var(--theme-ai-accent)' : 'var(--theme-text-muted)' }}>
+                      <p className="type-overline mb-1.5" style={{ color: syncChoice === 'delivered' ? 'var(--theme-ai-accent)' : 'var(--theme-text-muted)' }}>
                         Dữ liệu đã đi
                       </p>
                       <p className="font-mono text-[15px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
@@ -373,7 +373,7 @@ export function AISuggestionDialog({ trip, onClose }: { trip: DeliveredTrip; onC
                         outlineOffset: -2,
                       }}
                     >
-                      <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: syncChoice === 'booked' ? 'var(--theme-ai-accent)' : 'var(--theme-text-muted)' }}>
+                      <p className="type-overline mb-1.5" style={{ color: syncChoice === 'booked' ? 'var(--theme-ai-accent)' : 'var(--theme-text-muted)' }}>
                         Dữ liệu chủ hàng
                       </p>
                       <p className="font-mono text-[15px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>

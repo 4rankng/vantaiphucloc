@@ -193,7 +193,7 @@ function UserManagementInner() {
                   </p>
                   {inactive && (
                     <span
-                      className="shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                      className="shrink-0 type-overline px-1.5 py-0.5 rounded"
                       style={{
                         background: 'var(--theme-status-error-light)',
                         color: 'var(--theme-status-error)',

@@ -146,7 +146,7 @@ function DriverCard({ wo, onClick }: { wo: DeliveredTrip; onClick: () => void })
         </div>
         {hasEarning ? (
           <span
-            className="text-[15px] font-bold tabular-nums whitespace-nowrap shrink-0"
+            className="type-display tabular-nums whitespace-nowrap shrink-0"
             style={{ color: 'var(--theme-brand-primary)' }}
           >
             +{formatCurrencyFull(wo.driverSalary)}

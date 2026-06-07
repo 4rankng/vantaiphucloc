@@ -109,8 +109,8 @@ function CostDonut({ slices, total }: { slices: DonutSlice[]; total: string }) {
         ))}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-base font-bold tabular-nums leading-none" style={{ fontFamily: 'var(--theme-font-display, inherit)', color: 'var(--theme-text-primary)' }}>{total}</span>
-        <span className="text-[9px] font-semibold uppercase tracking-wider mt-1" style={{ color: 'var(--theme-text-muted)' }}>Tổng CP</span>
+        <span className="type-display tabular-nums leading-none" style={{ fontFamily: 'var(--theme-font-display, inherit)', color: 'var(--theme-text-primary)' }}>{total}</span>
+        <span className="type-overline mt-1" style={{ color: 'var(--theme-text-muted)' }}>Tổng CP</span>
       </div>
     </div>
   )
@@ -168,7 +168,7 @@ function NoiBoBarList({ rows }: { rows: VehiclePnLRow[] }) {
         <SortPill label="Biển số" active={sort.col === 'plate'} descending={sort.dir === 'desc'} onClick={() => toggleSort('plate')} />
         <span />
         <SortPill label="Lãi" active={sort.col === 'profit'} descending={sort.dir === 'desc'} onClick={() => toggleSort('profit')} />
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--theme-text-muted)' }}>Biên</span>
+        <span className="type-overline text-right" style={{ color: 'var(--theme-text-muted)' }}>Biên</span>
       </div>
 
       {/* Vehicle rows */}
@@ -280,7 +280,7 @@ function NgoaiBarList({ rows }: { rows: VehiclePnLRow[] }) {
         <SortPill label="Biển số" active={sort.col === 'plate'} descending={sort.dir === 'desc'} onClick={() => toggleSort('plate')} />
         <span />
         <SortPill label="Lãi" active={sort.col === 'profit'} descending={sort.dir === 'desc'} onClick={() => toggleSort('profit')} />
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--theme-text-muted)' }}>Biên</span>
+        <span className="type-overline text-right" style={{ color: 'var(--theme-text-muted)' }}>Biên</span>
       </div>
 
       {/* Vehicle rows */}
@@ -459,7 +459,7 @@ function DesktopDashboard() {
         {/* Cost donut */}
         <div className="bento-card bento-col-12 md:bento-col-4">
           <div className="mb-4">
-            <h3 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Cơ cấu chi phí</h3>
+            <h3 className="type-h3" style={{ color: 'var(--theme-text-primary)' }}>Cơ cấu chi phí</h3>
             <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
               {costSlices.length > 0 ? `Tháng ${pad(month)}/${year} · tổng ${fmt(chiPhi)}` : 'Chưa có chi phí ghi nhận'}
             </p>
@@ -599,7 +599,7 @@ function MobileDashboard() {
       {/* ── Greeting header ── */}
       <header className="flex flex-col gap-3">
         <h1
-          className="text-lg font-extrabold tracking-tight leading-tight"
+          className="type-h1"
           style={{ color: 'var(--theme-text-primary)' }}
         >
           {greeting()},{' '}
@@ -654,7 +654,7 @@ function MobileDashboard() {
         {/* Cost donut */}
         <div className="bento-card bento-col-12">
           <div className="mb-4">
-            <h3 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Cơ cấu chi phí</h3>
+            <h3 className="type-h3" style={{ color: 'var(--theme-text-primary)' }}>Cơ cấu chi phí</h3>
             <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
               {costSlices.length > 0 ? `Tháng ${pad(month)}/${year} · tổng ${fmt(chiPhi)}` : 'Chưa có chi phí ghi nhận'}
             </p>

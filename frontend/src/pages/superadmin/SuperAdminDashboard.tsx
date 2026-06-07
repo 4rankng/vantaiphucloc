@@ -144,7 +144,7 @@ function UserCard({
         {/* Paused badge */}
         {inactive && (
           <span
-            className="flex-shrink-0 flex items-center gap-1 px-2 py-[3px] rounded-[6px] text-[10px] font-bold uppercase tracking-wider"
+            className="flex-shrink-0 flex items-center gap-1 px-2 py-[3px] rounded-[6px] type-overline"
             style={{
               background: 'var(--theme-status-error-light)',
               color: 'var(--theme-status-error)',

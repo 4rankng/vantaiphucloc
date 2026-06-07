@@ -21,7 +21,7 @@ export function ImportResultDialog({ open, onClose, result, onCreateManual }: Im
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base font-bold"
+          <DialogTitle className="flex items-center gap-2"
             style={{ color: 'var(--theme-text-primary)' }}>
             Kết quả nhập Excel
           </DialogTitle>

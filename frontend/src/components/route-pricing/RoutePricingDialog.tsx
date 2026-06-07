@@ -306,7 +306,7 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
                 <div>
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <Wallet className="h-2.5 w-2.5" style={{ color: 'var(--accent)' }} />
-                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-status-warning)' }}>
+                    <span className="type-overline" style={{ color: 'var(--theme-status-warning)' }}>
                       Lương sản lượng
                     </span>
                   </div>

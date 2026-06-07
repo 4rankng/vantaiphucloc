@@ -8,7 +8,7 @@ export function StatsRow({ items }: { items: { label: string; value: string | nu
           style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}
         >
           {item.icon && <div className="flex items-center gap-2 mb-1">{item.icon}</div>}
-          <p className="text-lg font-bold tabular-nums font-display" style={{ color: 'var(--theme-text-primary)' }}>{item.value}</p>
+          <p className="type-display tabular-nums font-display" style={{ color: 'var(--theme-text-primary)' }}>{item.value}</p>
           <p className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>{item.label}</p>
         </div>
       ))}

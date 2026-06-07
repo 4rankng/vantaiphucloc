@@ -31,7 +31,7 @@ export function DayStepperInput({ value, onChange, label, hint }: DayStepperInpu
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
+      <label className="flex items-center gap-1 type-overline" style={{ color: 'var(--theme-text-muted)' }}>
         {label}
         {hint && <InfoTip text={hint} />}
       </label>

@@ -267,7 +267,7 @@ export function DoiSoatPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 mb-2.5">
           <div className="flex items-center gap-2">
             <span style={{ color: 'var(--ink-2)' }}><ClipboardList className="h-4 w-4" /></span>
-            <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>
+            <h2 className="type-h2" style={{ color: 'var(--ink)' }}>
               Chuyến đã đi
             </h2>
           </div>

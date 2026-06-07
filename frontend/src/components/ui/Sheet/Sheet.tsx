@@ -67,7 +67,7 @@ const SheetTitle = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Title ref={ref} className={cn("text-lg font-semibold text-[var(--theme-text-primary)]", className)} {...props} />
+  <DialogPrimitive.Title ref={ref} className={cn("type-h2 text-[var(--theme-text-primary)]", className)} {...props} />
 ))
 SheetTitle.displayName = DialogPrimitive.Title.displayName
 
@@ -75,7 +75,7 @@ const SheetDescription = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Description ref={ref} className={cn("text-sm text-[var(--theme-text-muted)]", className)} {...props} />
+  <DialogPrimitive.Description ref={ref} className={cn("type-caption text-[var(--theme-text-muted)]", className)} {...props} />
 ))
 SheetDescription.displayName = DialogPrimitive.Description.displayName
 

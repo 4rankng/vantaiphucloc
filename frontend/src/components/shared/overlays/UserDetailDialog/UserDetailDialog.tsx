@@ -181,7 +181,7 @@ export function UserDetailDialog({
                   <RoleIcon className="w-6 h-6" style={{ color: 'var(--theme-brand-primary)' }} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{user.fullName || user.username}</p>
+                  <p className="type-h3" style={{ color: 'var(--theme-text-primary)' }}>{user.fullName || user.username}</p>
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5"
                     style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
                     {ROLE_LABELS[user.role]}

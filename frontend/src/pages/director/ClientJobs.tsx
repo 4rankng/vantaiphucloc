@@ -34,7 +34,7 @@ export function ClientJobs() {
   return (
     <div className="space-y-3 w-full">
       <BackButton />
-      <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{clientName}</p>
+      <p className="type-h3" style={{ color: 'var(--theme-text-primary)' }}>{clientName}</p>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-2">

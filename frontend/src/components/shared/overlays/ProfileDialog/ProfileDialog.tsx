@@ -49,7 +49,7 @@ function EditableField({ label, value, onSave, placeholder }: {
 
   return (
     <div className="px-5 py-3">
-      <p className="text-[11px] font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
+      <p className="type-overline mb-1" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
       {editing ? (
         <div className="flex items-center gap-1.5">
           <Input

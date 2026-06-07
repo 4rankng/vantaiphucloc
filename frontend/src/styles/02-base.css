@@ -30,10 +30,34 @@
     min-height: 100dvh;
   }
 
-  /* Headings tighter */
-  h1, h2, h3, h4, h5, h6 {
-    letter-spacing: -0.02em;
-    font-weight: 600;
+  /* Headings — use typography scale */
+  h1 {
+    font-family: var(--theme-font-display);
+    font-size: var(--t-h1-size);
+    font-weight: var(--t-h1-weight);
+    letter-spacing: var(--t-h1-tracking);
+    line-height: var(--t-h1-lh);
+    color: var(--theme-text-primary, #09090B);
+  }
+  h2 {
+    font-family: var(--theme-font-display);
+    font-size: var(--t-h2-size);
+    font-weight: var(--t-h2-weight);
+    letter-spacing: var(--t-h2-tracking);
+    line-height: var(--t-h2-lh);
+    color: var(--theme-text-primary, #09090B);
+  }
+  h3 {
+    font-size: var(--t-h3-size);
+    font-weight: var(--t-h3-weight);
+    letter-spacing: var(--t-h3-tracking);
+    line-height: var(--t-h3-lh);
+    color: var(--theme-text-primary, #09090B);
+  }
+  h4, h5, h6 {
+    font-size: var(--t-label-size);
+    font-weight: var(--t-label-weight);
+    letter-spacing: var(--t-label-tracking);
     color: var(--theme-text-primary, #09090B);
   }
 

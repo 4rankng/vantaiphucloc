@@ -24,8 +24,8 @@ export function DriverJobs() {
         {/* Summary */}
         <div className="rounded-lg p-3 flex items-center justify-between" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
           <div>
-            <p className="text-[10px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)' }}>Tổng thu nhập</p>
-            <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(totalEarning)}</p>
+            <p className="type-overline" style={{ color: 'var(--theme-text-muted)' }}>Tổng thu nhập</p>
+            <p className="type-display tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(totalEarning)}</p>
           </div>
           <span className="text-xs font-semibold px-2 py-1 rounded-lg" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
             {jobs.length} chuyến

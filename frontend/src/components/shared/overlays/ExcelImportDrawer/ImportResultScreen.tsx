@@ -45,13 +45,13 @@ export function ImportResultScreen({
         <CheckCircle className="h-8 w-8" strokeWidth={1.75} />
       </div>
       <h3
-        className="m-0 text-[18px] font-bold"
-        style={{ letterSpacing: '-0.02em', color: 'var(--ink)' }}
+        className="m-0 type-h1"
+        style={{ color: 'var(--ink)' }}
       >
         Nhập dữ liệu thành công
       </h3>
       <p
-        className="m-0 mt-2 text-[13px] leading-relaxed"
+        className="m-0 mt-2 type-body-sm leading-relaxed"
         style={{ color: 'var(--ink-2)' }}
       >
         Dữ liệu từ tệp{' '}
@@ -78,7 +78,7 @@ export function ImportResultScreen({
             <StatCard value={vendorResult?.created ?? 0} label="Chuyến thầu tạo mới" color="var(--success)" />
             <StatCard value={vendorResult?.matched ?? 0} label="Chuyến tự động so khớp" color="var(--accent)" />
             <div className="col-span-2 p-2.5 rounded-lg border border-solid" style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}>
-              <p className="text-[14px] font-semibold m-0" style={{ color: 'var(--ink)' }}>
+              <p className="type-h3 m-0" style={{ color: 'var(--ink)' }}>
                 Tổng số dòng xử lý: {totalRows}
               </p>
             </div>
@@ -89,7 +89,7 @@ export function ImportResultScreen({
       {/* Errors list */}
       {errors.length > 0 && (
         <div className="w-full text-left mt-5 space-y-1.5">
-          <h4 className="text-[12.5px] font-bold m-0 text-red-600" style={{ color: 'var(--danger)' }}>
+          <h4 className="type-label m-0 text-red-600" style={{ color: 'var(--danger)' }}>
             Một số dòng gặp lỗi khi xử lý ({errors.length}):
           </h4>
           <div
@@ -111,10 +111,10 @@ export function ImportResultScreen({
 function StatCard({ value, label, color = 'var(--ink)' }: { value: number; label: string; color?: string }) {
   return (
     <div className="p-3 rounded-lg border border-solid" style={{ borderColor: 'var(--line)', background: 'var(--surface-2)' }}>
-      <p className="text-[20px] font-bold m-0 tabular-nums" style={{ color }}>
+      <p className="type-display m-0 tabular-nums" style={{ color }}>
         {value}
       </p>
-      <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>{label}</p>
+      <p className="type-caption m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>{label}</p>
     </div>
   )
 }

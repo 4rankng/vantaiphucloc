@@ -40,7 +40,7 @@ export function StatBreakdownCard({ label, total, items = [], minRows = 0 }: Sta
             >
               {item.label ? (
                 <>
-                  <span className="text-[10px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)' }}>{item.label}</span>
+                  <span className="type-overline" style={{ color: 'var(--theme-text-muted)' }}>{item.label}</span>
                   <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{item.value}</span>
                 </>
               ) : (

@@ -207,7 +207,7 @@ export function CommandPalette({
             Object.entries(groupedCommands).map(([category, items]) => (
               <div key={category}>
                 <p
-                  className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider"
+                  className="px-4 py-1.5 type-overline"
                   style={{ color: 'var(--theme-text-muted)' }}
                 >
                   {category}

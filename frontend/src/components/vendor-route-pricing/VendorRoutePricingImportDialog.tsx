@@ -149,7 +149,7 @@ export function VendorRoutePricingImportDialog({ open, onOpenChange }: Props) {
                   <FileSpreadsheet className="h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} />
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] font-semibold truncate m-0" style={{ color: 'var(--ink)' }}>{file.name}</p>
-                    <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>{(file.size / 1024).toFixed(1)} KB</p>
+                    <p className="type-caption m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>{(file.size / 1024).toFixed(1)} KB</p>
                   </div>
                 </div>
               ) : (
@@ -252,24 +252,24 @@ export function VendorRoutePricingImportDialog({ open, onOpenChange }: Props) {
               <h3 className="m-0 text-[16px] font-bold" style={{ color: 'var(--ink)' }}>Nhập dữ liệu thành công</h3>
               <div className="grid grid-cols-5 gap-3 w-full mt-4">
                 <div className="p-2.5 rounded-lg" style={{ border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
-                  <p className="text-[18px] font-bold m-0 tabular-nums" style={{ color: 'var(--success)' }}>{commitMut.data?.created ?? 0}</p>
-                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Cước trả mới</p>
+                  <p className="type-display m-0 tabular-nums" style={{ color: 'var(--success)' }}>{commitMut.data?.created ?? 0}</p>
+                  <p className="type-caption m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Cước trả mới</p>
                 </div>
                 <div className="p-2.5 rounded-lg" style={{ border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
-                  <p className="text-[18px] font-bold m-0 tabular-nums" style={{ color: 'var(--accent)' }}>{commitMut.data?.updated ?? 0}</p>
-                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Cập nhật giá</p>
+                  <p className="type-display m-0 tabular-nums" style={{ color: 'var(--accent)' }}>{commitMut.data?.updated ?? 0}</p>
+                  <p className="type-caption m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Cập nhật giá</p>
                 </div>
                 <div className="p-2.5 rounded-lg" style={{ border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
-                  <p className="text-[18px] font-bold m-0 tabular-nums" style={{ color: 'var(--ink-3)' }}>{commitMut.data?.skipped ?? 0}</p>
-                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Bỏ qua</p>
+                  <p className="type-display m-0 tabular-nums" style={{ color: 'var(--ink-3)' }}>{commitMut.data?.skipped ?? 0}</p>
+                  <p className="type-caption m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Bỏ qua</p>
                 </div>
                 <div className="p-2.5 rounded-lg" style={{ border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
-                  <p className="text-[18px] font-bold m-0 tabular-nums" style={{ color: 'var(--warning)' }}>{commitMut.data?.createdVendors ?? 0}</p>
-                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Nhà thầu mới</p>
+                  <p className="type-display m-0 tabular-nums" style={{ color: 'var(--warning)' }}>{commitMut.data?.createdVendors ?? 0}</p>
+                  <p className="type-caption m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Nhà thầu mới</p>
                 </div>
                 <div className="p-2.5 rounded-lg" style={{ border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
-                  <p className="text-[18px] font-bold m-0 tabular-nums" style={{ color: 'var(--warning)' }}>{commitMut.data?.createdLocations ?? 0}</p>
-                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Địa điểm mới</p>
+                  <p className="type-display m-0 tabular-nums" style={{ color: 'var(--warning)' }}>{commitMut.data?.createdLocations ?? 0}</p>
+                  <p className="type-caption m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>Địa điểm mới</p>
                 </div>
               </div>
             </div>
