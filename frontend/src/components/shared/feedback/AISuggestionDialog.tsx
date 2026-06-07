@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog'
 import { AlertCircle, Check, Loader2 } from 'lucide-react'
 import { useAISuggestMatch, useConfirmAutoMatch } from '@/hooks/use-queries'
 import type { DeliveredTrip } from '@/data/domain'
-import { RobotDialogHero, useTypewriter } from '@/components/shared/feedback/RobotHead'
+import { AIVisualizerHero, useTypewriter } from '@/components/shared/feedback/RobotHead'
 import type { BookedTripSummary } from '@/services/api/autoMatch.api'
 
 // Minimum "thinking" duration before results are revealed, even if the
@@ -236,7 +236,7 @@ export function AISuggestionDialog({ trip, onClose }: { trip: DeliveredTrip; onC
         <DialogTitle className="sr-only">AI Đề xuất ghép chuyến</DialogTitle>
 
         {/* ── Hero Header ──────────────────────────────────── */}
-        <RobotDialogHero
+        <AIVisualizerHero
           title={
             isLoading
               ? 'AI đang phân tích…'

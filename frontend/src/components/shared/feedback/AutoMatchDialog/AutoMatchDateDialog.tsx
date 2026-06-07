@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog'
 import { Input } from '@/components/ui/Input'
 import { useSalaryConfig } from '@/hooks/use-queries'
 import { ChevronLeft, ChevronRight, Zap } from 'lucide-react'
-import { RobotDialogHero } from '@/components/shared/feedback/RobotHead'
+import { AIVisualizerHero } from '@/components/shared/feedback/RobotHead'
 
 interface Props {
   open: boolean
@@ -194,33 +194,18 @@ export function AutoMatchDateDialog({ open, onClose, defaultDateFrom, defaultDat
         </DialogTitle>
 
         {/* ── Hero Header ─────────────────────────────── */}
-        <RobotDialogHero
+        <AIVisualizerHero
           title={
             isPending ? (
               <h2 className="text-base font-bold text-white tracking-tight select-none animate-pulse" style={{ margin: 0 }}>
                 Đang quét dữ liệu…
               </h2>
-            ) : (
-              <div className="flex flex-col items-center gap-1 select-none">
-                <span
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.16)',
-                    border: '1px solid rgba(255, 255, 255, 0.28)',
-                    color: 'white',
-                    boxShadow: '0 2px 8px rgba(99,102,241,0.2)'
-                  }}
-                >
-                  <Zap className="w-2.8 h-2.8 text-yellow-300 fill-yellow-300" />
-                  Hệ thống quét AI
-                </span>
-              </div>
-            )
+            ) : null
           }
           thinking={isPending}
         >
           {isPending && <ScanMessages />}
-        </RobotDialogHero>
+        </AIVisualizerHero>
 
         {/* ── Pickers ───────────────────────────────────── */}
         {!isPending && (

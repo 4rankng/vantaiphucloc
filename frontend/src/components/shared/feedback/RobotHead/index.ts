@@ -1,3 +1,2 @@
-export { RobotHead } from './RobotHead'
-export { RobotDialogHero } from './RobotDialogHero'
+export { AIVisualizerHero } from './AIVisualizerHero'
 export { useTypewriter } from './useTypewriter'

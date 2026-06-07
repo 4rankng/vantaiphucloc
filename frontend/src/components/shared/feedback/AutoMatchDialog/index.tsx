@@ -1,7 +1,7 @@
  
 export { AutoMatchDateDialog } from './AutoMatchDateDialog'
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { RobotDialogHero, useTypewriter } from '@/components/shared/feedback/RobotHead'
+import { AIVisualizerHero, useTypewriter } from '@/components/shared/feedback/RobotHead'
 import { cn } from '@/lib/utils'
 import { Loader2, Zap, CheckCircle2, AlertCircle, XCircle, Check, ArrowRight } from 'lucide-react'
 import {
@@ -108,7 +108,7 @@ function AILoadingState() {
   }, [])
 
   return (
-    <RobotDialogHero title="Đang tìm chuyến khớp..." thinking>
+    <AIVisualizerHero title="Đang tìm chuyến khớp..." thinking>
       <p style={{
         color: 'rgba(196,181,253,0.85)', fontSize: 13, fontWeight: 500,
         margin: '8px 0 0', minHeight: 20,
@@ -118,7 +118,7 @@ function AILoadingState() {
       }}>
         {SCAN_MSGS[idx]}
       </p>
-    </RobotDialogHero>
+    </AIVisualizerHero>
   )
 }
 
@@ -135,7 +135,7 @@ function NoResultState({ onClose, allMatched = false }: { onClose: () => void; a
   return (
     <div style={{ borderRadius: 20, overflow: 'hidden' }}>
       {/* ── Hero ── */}
-      <RobotDialogHero title={title} _externalTyping={isTyping} />
+      <AIVisualizerHero title={title} _externalTyping={isTyping} />
 
       {/* ── Body ── */}
       <div style={{ background: 'white', padding: '20px 24px 4px' }}>

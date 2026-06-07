@@ -1,23 +1,25 @@
-import { RobotHead } from './RobotHead'
+import { useMemo } from 'react'
+import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-visualizer-aura'
+import type { AIAgentState } from '@/hooks/agents-ui/use-agent-audio-visualizer-aura'
 import { useTypewriter } from './useTypewriter'
 
-interface RobotDialogHeroProps {
+interface AIVisualizerHeroProps {
   /** Main bold title */
   title: React.ReactNode
-  /** Subtitle — if provided, plays as typewriter while mouth opens/closes */
+  /** Subtitle — if provided, plays as typewriter */
   subtitle?: string
   /** Typewriter speed in ms per character (default 18) */
   typewriterSpeed?: number
-  /** Robot state */
-  thinking?: boolean   // waiting for backend — red blinking antenna
-  success?: boolean    // match found — green eyes
-  error?: boolean      // error state — red eyes/mouth
+  /** AI state */
+  thinking?: boolean
+  success?: boolean
+  error?: boolean
   /**
-   * External typing signal — when the caller drives the typewriter (e.g. body text)
-   * and needs the robot mouth to sync with it.
+   * External typing signal — when the caller drives the typewriter
+   * and needs the visualizer to sync with it.
    */
   _externalTyping?: boolean
-  /** Extra content rendered below subtitle (e.g. ScanMessages, stat card) */
+  /** Extra content rendered below subtitle */
   children?: React.ReactNode
 }
 
@@ -33,7 +35,28 @@ function Particle({ style }: { style: React.CSSProperties }) {
   )
 }
 
-export function RobotDialogHero({
+/** Map AIVisualizerHero boolean props to AgentAudioVisualizerAura state */
+function getAuraState(
+  thinking: boolean,
+  success: boolean,
+  error: boolean,
+  isTyping: boolean,
+): AIAgentState {
+  if (error) return 'connecting'
+  if (thinking) return 'thinking'
+  if (success) return 'speaking'
+  if (isTyping) return 'speaking'
+  return 'listening'
+}
+
+/** Map state to aura color override */
+function getAuraColor(success: boolean, error: boolean): `#${string}` | undefined {
+  if (success) return '#00B14F'  // green for success
+  if (error) return '#EF4444'    // red for error
+  return undefined               // use default cyan
+}
+
+export function AIVisualizerHero({
   title,
   subtitle,
   typewriterSpeed = 18,
@@ -42,10 +65,19 @@ export function RobotDialogHero({
   error = false,
   _externalTyping = false,
   children,
-}: RobotDialogHeroProps) {
+}: AIVisualizerHeroProps) {
   const { displayed, done } = useTypewriter(subtitle ?? '', typewriterSpeed)
   const isTyping = _externalTyping || (!!displayed && !done)
-  const talking = thinking || isTyping
+
+  const auraState = useMemo(
+    () => getAuraState(thinking, success, error, isTyping),
+    [thinking, success, error, isTyping],
+  )
+
+  const auraColor = useMemo(
+    () => getAuraColor(success, error),
+    [success, error],
+  )
 
   return (
     <div
@@ -68,9 +100,16 @@ export function RobotDialogHero({
       <Particle style={{ top: '50%', left: '5%',   animationDelay: '1.1s', transform: 'scale(0.45)' }} />
       <Particle style={{ top: '48%', right: '6%',  animationDelay: '1.8s', transform: 'scale(0.6)' }} />
 
-      {/* Robot */}
-      <div style={{ zIndex: 2, marginBottom: 6 }}>
-        <RobotHead talking={talking} typing={isTyping} thinking={thinking} success={success} error={error} />
+      {/* Aura Visualizer */}
+      <div style={{ zIndex: 2, marginBottom: 6, width: 160, height: 160 }}>
+        <AgentAudioVisualizerAura
+          size="lg"
+          state={auraState}
+          color={auraColor ?? '#1FD5F9'}
+          colorShift={0.15}
+          themeMode="dark"
+          className="w-full h-full"
+        />
       </div>
 
       {/* Title */}
