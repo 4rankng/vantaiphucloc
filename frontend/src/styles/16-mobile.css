@@ -88,6 +88,11 @@
     border-radius: 0 !important;
   }
 
+  /* Remove outer wrapper padding when child dialog is fullscreen */
+  .fixed:has(> [data-mobile-fullscreen]) {
+    padding: 0 !important;
+  }
+
   /* ── Sheet (drawer) — Sheet wraps DialogPrimitive.Content which renders
         with role="dialog" and data-state. Limit width on tiny screens.
         Sheets are positioned via inline styles from the SheetContent wrapper,
