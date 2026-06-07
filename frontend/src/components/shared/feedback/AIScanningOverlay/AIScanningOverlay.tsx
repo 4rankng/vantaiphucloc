@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Sparkles, ScanLine } from 'lucide-react'
+import { ScanLine, Sparkles } from 'lucide-react'
+import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-visualizer-aura'
 
 interface AIScanningOverlayProps {
   /** When true, the overlay is shown. */
@@ -102,26 +103,16 @@ export function AIScanningOverlay({
       aria-live="polite"
       aria-label={title}
     >
-      {/* ── AI badge above the image ─────────────────────────────────────── */}
-      <div className="flex items-center gap-2 mb-5 animate-[ai-fade-in_0.4s_ease-out]">
-        <div
-          className="w-7 h-7 rounded-full flex items-center justify-center"
-          style={{
-            background: 'var(--theme-brand-primary)',
-            boxShadow: '0 0 24px color-mix(in srgb, var(--theme-brand-primary) 60%, transparent)',
-          }}
-        >
-          <Sparkles className="w-4 h-4 animate-[ai-pulse_1.6s_ease-in-out_infinite]" style={{ color: 'var(--theme-text-on-brand, #fff)' }} />
-        </div>
-        <span
-          className="text-[11px] font-bold uppercase tracking-[0.18em]"
-          style={{
-            color: 'var(--theme-brand-primary)',
-            textShadow: '0 0 12px color-mix(in srgb, var(--theme-brand-primary) 50%, transparent)',
-          }}
-        >
-          AI Scanner
-        </span>
+      {/* ── Aura visualizer above the image ────────────────────────────────── */}
+      <div className="w-20 h-20 mb-4 animate-[ai-fade-in_0.4s_ease-out]">
+        <AgentAudioVisualizerAura
+          size="sm"
+          state="thinking"
+          color="#1FD5F9"
+          colorShift={0.15}
+          themeMode="dark"
+          className="w-full h-full"
+        />
       </div>
 
       {/* ── Scan stage: image + scan line + brackets + sparkles ──────────
