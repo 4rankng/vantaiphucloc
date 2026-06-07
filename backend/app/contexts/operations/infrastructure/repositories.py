@@ -154,6 +154,7 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         if search:
             from sqlalchemy import exists
             from app.core.vi_search import vi_ilike
+            from app.models.domain import Location as LocationORM
             client_exists = exists().where(
                 ClientORM.id == DeliveredTripORM.client_id,
                 or_(
@@ -161,10 +162,21 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
                     vi_ilike(ClientORM.code, search),
                 ),
             )
+            pickup_exists = exists().where(
+                LocationORM.id == DeliveredTripORM.pickup_location_id,
+                vi_ilike(LocationORM.name, search),
+            )
+            dropoff_exists = exists().where(
+                LocationORM.id == DeliveredTripORM.dropoff_location_id,
+                vi_ilike(LocationORM.name, search),
+            )
             q = q.where(or_(
                 vi_ilike(DeliveredTripORM.vessel, search),
                 vi_ilike(DeliveredTripORM.cont_number, search),
+                vi_ilike(DeliveredTripORM.work_type, search),
                 client_exists,
+                pickup_exists,
+                dropoff_exists,
             ))
         if date_from is not None:
             q = q.where(

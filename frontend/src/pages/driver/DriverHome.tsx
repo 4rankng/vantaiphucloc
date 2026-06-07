@@ -1,15 +1,14 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, Search, X } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
 import { DeliveredTripCard } from '@/components/shared/cards/DeliveredTripCard'
 import { FloatingActionButton } from '@/components/shared/feedback/FloatingActionButton'
-import { useMyEarnings, useSalaryConfig, useDeliveredTrips } from '@/hooks/use-queries'
+import { useMyEarnings, useSalaryConfig, useDeliveredTrips, useDeliveredTripsInfinite } from '@/hooks/use-queries'
+import { useDebounce } from '@/hooks/use-debounce'
 import { getSalaryPeriodDates, dayBefore, dayAfter, toISODate } from '@/lib/salaryPeriod'
 import { AnimatedNumber } from '@/components/shared/data-display/AnimatedNumber'
-
-const PAGE_SIZE = 10
 
 type FilterTab = 'all' | 'pending'
 
@@ -22,6 +21,10 @@ function MobileDriverHome() {
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
 
+  // Search
+  const [searchRaw, setSearchRaw] = useState('')
+  const debouncedSearch = useDebounce(searchRaw, 300)
+
   // Filter persisted in URL (?filter=pending). Survives navigate(-1) back from trip detail.
   const filter = (searchParams.get('filter') as FilterTab | null) ?? 'all'
   const setFilter = useCallback((tab: FilterTab) => {
@@ -30,10 +33,6 @@ function MobileDriverHome() {
       { replace: true },
     )
   }, [setSearchParams])
-
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
-
-  const sentinelRef = useRef<HTMLDivElement>(null)
 
   // Salary period config + navigation
   const { data: config } = useSalaryConfig()
@@ -89,21 +88,45 @@ function MobileDriverHome() {
     )
   }, [currentPeriodStartISO, setSearchParams])
 
-  // Fetch trips WITH date range so the API returns only the current period
   const startISO = currentPeriodStartISO
   const endISO = toISODate(currentPeriod.endDate)
-  const { data: _deliveredTrips, isLoading: loading } = useDeliveredTrips({
-    driverId: Number(user!.id),
+  const driverId = Number(user!.id)
+
+  // ── Stats: lightweight queries (pageSize=1) to get accurate totals from pagination ──
+  const { data: allTripsPage } = useDeliveredTrips({
+    driverId, dateFrom: startISO, dateTo: endISO, pageSize: 1,
+  })
+  const { data: matchedTripsPage } = useDeliveredTrips({
+    driverId, dateFrom: startISO, dateTo: endISO, matched: true, pageSize: 1,
+  })
+  const totalCount = allTripsPage?.total ?? 0
+  const matchedCount = matchedTripsPage?.total ?? 0
+  const pendingCount = totalCount - matchedCount
+
+  // ── List: server-side infinite query with search + matched filter ──
+  const matchedFilter = filter === 'pending' ? false : undefined
+  const {
+    data: infiniteData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: loadingTrips,
+  } = useDeliveredTripsInfinite({
+    driverId,
     dateFrom: startISO,
     dateTo: endISO,
+    search: debouncedSearch || undefined,
+    matched: matchedFilter,
   })
-  const deliveredTrips = useMemo(() => _deliveredTrips?.items ?? [], [_deliveredTrips])
+
+  // Flatten infinite pages into a single list
+  const deliveredTrips = useMemo(
+    () => infiniteData?.pages.flatMap(p => p.items) ?? [],
+    [infiniteData],
+  )
 
   // Fetch driver earnings for current period
   const { data: myEarnings } = useMyEarnings(startISO, endISO)
-
-  // Reset visible count when period or filter changes
-  useEffect(() => { setVisibleCount(PAGE_SIZE) }, [periodStart, filter])
 
   const handlePrevPeriod = useCallback(() => {
     setPeriodStart(getSalaryPeriodDates(dayBefore(currentPeriod.startDate), { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }).startDate)
@@ -113,65 +136,23 @@ function MobileDriverHome() {
     setPeriodStart(getSalaryPeriodDates(dayAfter(currentPeriod.endDate), { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }).startDate)
   }, [currentPeriod.endDate, config?.fromDay, config?.toDay, setPeriodStart])
 
-  // Trips in the current pay period (already filtered by API date range).
-  // Uses tripDate (actual execution date) rather than createdAt (seed date).
-  const periodJobs = deliveredTrips
+  // Use on-the-fly earnings from backend if available, otherwise fallback to local calc
+  const earningsValue = myEarnings?.totalEarnings ?? 0
+  const displayMonth = currentPeriod.endDate.getMonth() + 1
+  const displayYear = currentPeriod.endDate.getFullYear()
 
-  // Trips that match BOTH the period and the active list filter — used by the list.
-  const filteredJobs = useMemo(() => {
-    const byFilter = filter === 'pending'
-      ? periodJobs.filter(w => !w.bookedTripId)
-      : periodJobs
-    return [...byFilter].sort((a, b) => {
-      const da = a.tripDate ?? a.createdAt.slice(0, 10)
-      const db = b.tripDate ?? b.createdAt.slice(0, 10)
-      return db.localeCompare(da)
-    })
-  }, [periodJobs, filter])
-
-  const visibleJobs = useMemo(
-    () => filteredJobs.slice(0, visibleCount),
-    [filteredJobs, visibleCount],
-  )
-
-  const hasMore = visibleCount < filteredJobs.length
-
-  // Infinite scroll
-  const loadMore = useCallback(() => {
-    setVisibleCount(n => n + PAGE_SIZE)
-  }, [])
-
+  // ── Infinite scroll observer ──
+  const sentinelRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
     const observer = new IntersectionObserver(
-      entries => { if (entries[0].isIntersecting && hasMore) loadMore() },
-      { rootMargin: '120px' },
+      entries => { if (entries[0].isIntersecting && hasNextPage) fetchNextPage() },
+      { rootMargin: '200px' },
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [hasMore, loadMore])
-
-  // Stat card aggregations use periodJobs (NOT filteredJobs) so the totals
-  // reflect the whole month regardless of which list tab the driver is viewing.
-  const totalEarnings = useMemo(() =>
-    periodJobs.reduce((sum, w) => sum + w.driverSalary, 0),
-    [periodJobs],
-  )
-
-  const matchedCount = useMemo(() =>
-    periodJobs.filter(w => w.bookedTripId).length,
-    [periodJobs],
-  )
-  const pendingCount = useMemo(() =>
-    periodJobs.filter(w => !w.bookedTripId).length,
-    [periodJobs],
-  )
-
-  // Use on-the-fly earnings from backend if available, otherwise fallback to local calc
-  const earningsValue = myEarnings?.totalEarnings ?? totalEarnings
-  const displayMonth = currentPeriod.endDate.getMonth() + 1
-  const displayYear = currentPeriod.endDate.getFullYear()
+  }, [hasNextPage, fetchNextPage])
 
   return (
     <div className="space-y-4">
@@ -249,6 +230,34 @@ function MobileDriverHome() {
         </div>
       </div>
 
+      {/* Search input */}
+      <div className="relative">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--theme-text-muted)' }} />
+        <input
+          type="text"
+          placeholder="Tìm số cont, mã KH, địa điểm, tác nghiệp..."
+          value={searchRaw}
+          onChange={e => setSearchRaw(e.target.value)}
+          className="w-full h-10 pl-9 pr-8 rounded-lg border text-sm outline-none focus:ring-2"
+          style={{
+            background: 'var(--theme-bg-secondary)',
+            borderColor: 'var(--theme-border-default)',
+            color: 'var(--theme-text-primary)',
+            // @ts-expect-error CSS variable
+            '--tw-ring-color': 'var(--theme-brand-secondary)',
+          }}
+        />
+        {searchRaw && (
+          <button
+            onClick={() => setSearchRaw('')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded"
+            style={{ color: 'var(--theme-text-muted)' }}
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
       {/* Trip list */}
       <div className="space-y-2.5">
         <div className="flex items-center justify-between">
@@ -277,13 +286,13 @@ function MobileDriverHome() {
           </div>
         </div>
 
-        {loading ? (
+        {loadingTrips && deliveredTrips.length === 0 ? (
           <div className="space-y-2.5">
             {[1, 2, 3].map(i => (
               <div key={i} className="h-24 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
             ))}
           </div>
-        ) : filteredJobs.length === 0 ? (
+        ) : deliveredTrips.length === 0 ? (
           <div
             className="rounded-lg p-10 flex flex-col items-center justify-center text-center gap-3"
             style={{ background: 'var(--theme-bg-secondary)' }}
@@ -291,17 +300,17 @@ function MobileDriverHome() {
             <img src="/icons/calkey.png" alt="" aria-hidden className="w-32 h-32 object-contain" />
             <div>
               <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-                Chưa có chuyến nào
+                {debouncedSearch ? 'Không tìm thấy chuyến nào' : 'Chưa có chuyến nào'}
               </p>
               <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
-                Nhấn + để tạo chuyến mới
+                {debouncedSearch ? 'Thử tìm kiếm với từ khóa khác' : 'Nhấn + để tạo chuyến mới'}
               </p>
             </div>
           </div>
         ) : (
           <>
             <div className="space-y-2.5">
-              {visibleJobs.map(job => (
+              {deliveredTrips.map(job => (
                 <DeliveredTripCard
                   key={job.id}
                   variant="driver"
@@ -313,7 +322,7 @@ function MobileDriverHome() {
 
             <div ref={sentinelRef} className="h-1" />
 
-            {hasMore && (
+            {isFetchingNextPage && (
               <div className="flex justify-center py-2">
                 <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--theme-brand-primary)', borderTopColor: 'transparent' }} />
               </div>
