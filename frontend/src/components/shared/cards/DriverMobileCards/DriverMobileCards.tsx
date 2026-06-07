@@ -20,97 +20,104 @@ export function DriverMobileCard({
 }: DriverMobileCardProps) {
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={onEdit}
-      className="p-4 rounded-xl border flex flex-col gap-3 transition-colors active:scale-[0.99] touch-manipulation cursor-pointer"
-      style={{
-        background: 'var(--theme-bg-secondary, #ffffff)',
-        borderColor: 'var(--theme-border-default, #e4e4e7)',
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onEdit()
+        }
       }}
+      aria-label={`Sửa ${driver.fullName || driver.username}`}
+      className="py-3 px-1 flex items-start gap-3 transition-colors active:scale-[0.99] touch-manipulation cursor-pointer"
+      style={{ borderBottom: '1px solid var(--line)' }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0 flex-1">
-          <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style={{
-              background: 'var(--surface-3)',
-              color: 'var(--ink-2)',
-            }}
-          >
-            <User className="h-4.5 w-4.5" />
-          </div>
-          <div className="min-w-0 flex-1 leading-normal">
-            <span
-              className="text-sm font-bold block"
-              style={{ color: 'var(--ink)' }}
-            >
-              {driver.fullName || driver.username}
-            </span>
-            <span
-              className="block text-[11px] font-mono mt-0.5"
-              style={{ color: 'var(--ink-3)' }}
-            >
-              {driver.username}
-            </span>
-            {driver.phone && (
-              <a
-                href={`tel:${driver.phone}`}
-                onClick={(e) => e.stopPropagation()}
-                className="text-xs font-medium block mt-1 hover:underline tabular-nums"
-                style={{ color: 'var(--accent)' }}
-              >
-                {driver.phone}
-              </a>
-            )}
-            {driver.vehiclePlate && (
-              <div className="mt-1.5">
-                <Plate>{driver.vehiclePlate}</Plate>
-              </div>
-            )}
-          </div>
-        </div>
-
+      <div className="flex items-start gap-3 min-w-0 flex-1">
         <div
-          className="flex items-center gap-1 shrink-0"
-          onClick={(e) => e.stopPropagation()}
+          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+          style={{
+            background: 'var(--surface-3)',
+            color: 'var(--ink-2)',
+          }}
         >
+          <User className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1 leading-normal">
+          <span
+            className="text-sm font-bold block"
+            style={{ color: 'var(--ink)' }}
+          >
+            {driver.fullName || driver.username}
+          </span>
+          <span
+            className="block text-[11px] font-mono mt-0.5"
+            style={{ color: 'var(--ink-3)' }}
+          >
+            {driver.username}
+          </span>
+          {driver.phone && (
+            <a
+              href={`tel:${driver.phone}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-xs font-medium block mt-1 hover:underline tabular-nums"
+              style={{ color: 'var(--accent)' }}
+            >
+              {driver.phone}
+            </a>
+          )}
+          {driver.vehiclePlate && (
+            <div className="mt-1.5">
+              <Plate>{driver.vehiclePlate}</Plate>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div
+        className="flex items-center gap-1 shrink-0"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onEdit}
+          aria-label={`Sửa ${driver.fullName || driver.username}`}
+          className="min-h-[44px] min-w-[44px] w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
+          style={{
+            borderColor: 'var(--theme-border-default)',
+            color: 'var(--ink-2)',
+          }}
+          title="Sửa"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+        {onResetPassword && (
           <button
-            onClick={onEdit}
-            className="w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
+            onClick={onResetPassword}
+            aria-label={`Đổi mật khẩu ${driver.fullName || driver.username}`}
+            className="min-h-[44px] min-w-[44px] w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
             style={{
               borderColor: 'var(--theme-border-default)',
-              color: 'var(--ink-2)',
+              color: 'var(--ink-3)',
             }}
-            title="Sửa"
+            title="Đổi mật khẩu"
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <Key className="h-3.5 w-3.5" />
           </button>
-          {onResetPassword && (
-            <button
-              onClick={onResetPassword}
-              className="w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
-              style={{
-                borderColor: 'var(--theme-border-default)',
-                color: 'var(--ink-3)',
-              }}
-              title="Đổi mật khẩu"
-            >
-              <Key className="h-3.5 w-3.5" />
-            </button>
-          )}
-          {onDelete && (
-            <button
-              onClick={onDelete}
-              className="w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
-              style={{
-                borderColor: 'var(--theme-border-default)',
-                color: 'var(--theme-status-error, var(--status-error, #e53))',
-              }}
-              title="Vô hiệu hoá"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
+        )}
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            aria-label={`Vô hiệu hoá ${driver.fullName || driver.username}`}
+            className="min-h-[44px] min-w-[44px] w-9 h-9 flex items-center justify-center rounded-lg border touch-target"
+            style={{
+              borderColor: 'var(--theme-border-default)',
+              color: 'var(--theme-status-error, var(--status-error, #e53e3e))',
+            }}
+            title="Vô hiệu hoá"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
     </div>
   )

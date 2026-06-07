@@ -86,10 +86,10 @@ export function KpiHeroCard({
       <div className="flex items-center gap-3 px-4 py-3">
         {/* icon — vertically centered */}
         <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px]"
           style={{ background: c.iconBg }}
         >
-          <Icon className="h-5 w-5" style={{ color: c.iconText }} />
+          <Icon className="h-3.5 w-3.5" style={{ color: c.iconText }} />
         </div>
 
         {/* right column: label+pill / value / sublabel — stacked */}
@@ -135,11 +135,11 @@ export function KpiHeroCard({
 
           {/* row 2: value — display font for financial impact */}
           <p
-            className="mt-1 truncate font-bold tabular-nums leading-none"
+            className="mt-1 font-bold tabular-nums leading-none"
             style={{
               color: 'var(--theme-text-primary)',
               fontFamily: 'var(--theme-font-display)',
-              fontSize: '1.25rem',       /* 20px — readable but not cramped */
+              fontSize: '0.875rem',       /* 14px — fits full numbers on mobile */
               letterSpacing: '-0.025em',
             }}
           >

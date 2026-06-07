@@ -1,5 +1,5 @@
 .PHONY: help install migrate dev dev-infra dev-backend dev-frontend dev-worker lint seed stop clean \
-        push-all deploy-all push-backend push-frontend deploy-backend deploy-frontend \
+        push-all deploy-all push-backend push-frontend deploy-backend deploy-frontend deploy \
         api-test test test-backend test-frontend backup adminer-on adminer-off
 
 # ── Config ─────────────────────────────────────────────────────────────────────
@@ -35,6 +35,7 @@ help:
 	@echo "  POSTGRES_PORT=$(POSTGRES_PORT)  REDIS_PORT=$(REDIS_PORT)  ADMINER_PORT=$(ADMINER_PORT)"
 	@echo ""
 	@echo "Production deploy (Docker Hub → droplet):"
+	@echo "  deploy           Push all images AND deploy all services to droplet"
 	@echo "  push-all         Build & push all images to Docker Hub"
 	@echo "  push-backend     Build & push backend image"
 	@echo "  push-frontend    Build & push frontend image"
@@ -198,6 +199,9 @@ deploy-frontend:
 
 ## deploy-all: Pull & restart all services on droplet
 deploy-all: deploy-backend deploy-frontend
+
+## deploy: Push all images to Docker Hub AND deploy all services to droplet
+deploy: push-all deploy-all
 
 ## restore: Restore latest backup from OneDrive to local dev PostgreSQL
 restore:

@@ -79,3 +79,4 @@ heartbeat*.json
 .antigravitycli/
 .agents
 .mavis
+.omo

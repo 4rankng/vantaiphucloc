@@ -22,7 +22,6 @@ from app.contexts.customer_pricing.domain.repositories import (
 from app.contexts.customer_pricing.domain.value_objects import (
     LocationId,
     PartnerId,
-    WorkType,
 )
 from app.contexts.customer_pricing.infrastructure.mappers import (
     alias_to_orm,

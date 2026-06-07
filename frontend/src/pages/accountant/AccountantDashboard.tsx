@@ -597,17 +597,17 @@ function MobileDashboard() {
   return (
     <div className="space-y-4 pb-8">
       {/* ── Greeting header ── */}
-      <header className="flex items-end justify-between gap-3 flex-wrap">
-        <div>
-          <h1
-            className="text-lg font-extrabold tracking-tight leading-tight"
-            style={{ color: 'var(--theme-text-primary)' }}
-          >
-            {greeting()},{' '}
-            <span>{profile?.fullName || 'bạn'}</span>
-          </h1>
+      <header className="flex flex-col gap-3">
+        <h1
+          className="text-lg font-extrabold tracking-tight leading-tight"
+          style={{ color: 'var(--theme-text-primary)' }}
+        >
+          {greeting()},{' '}
+          <span>{profile?.fullName || 'bạn'}</span>
+        </h1>
+        <div className="flex justify-center">
+          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
         </div>
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
       </header>
 
       {/* ── KPI cards (2×2) ── */}

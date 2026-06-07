@@ -13,10 +13,7 @@ from app.contexts.customer_pricing.domain.value_objects import (
     GeocodeSource,
     LocationAliasId,
     LocationId,
-    Money,
     PartnerId,
-    WorkType,
-    normalize_work_type,
 )
 
 

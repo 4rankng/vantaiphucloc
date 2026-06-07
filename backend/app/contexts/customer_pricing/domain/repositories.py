@@ -16,7 +16,6 @@ from app.contexts.customer_pricing.domain.entities import (
 from app.contexts.customer_pricing.domain.value_objects import (
     LocationId,
     PartnerId,
-    WorkType,
 )
 
 

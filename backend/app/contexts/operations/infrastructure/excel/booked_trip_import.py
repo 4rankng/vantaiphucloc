@@ -171,7 +171,6 @@ async def import_booked_trips(
             continue
 
         cont_type = containers_data[0]["cont_type"]
-        container_count = sum(1 for c in containers_data if c["cont_type"] == cont_type) or 1
 
         # Try auto-pricing
         revenue = int(first_row.get("revenue") or 0)

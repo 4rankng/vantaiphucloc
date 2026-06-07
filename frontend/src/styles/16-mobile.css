@@ -82,7 +82,10 @@
         Sheets are positioned via inline styles from the SheetContent wrapper,
         so we scope by the side attribute set by the Sheet component. */
   [role="dialog"][data-state="open"][data-side] {
-    max-width: 85vw !important;
+    max-width: 300px !important;
+    border: none !important;
+    outline: none !important;
+    overflow: hidden !important;
   }
 
   /* ── App content padding from AccountantMobileShell ('px-4 py-4') is fine,

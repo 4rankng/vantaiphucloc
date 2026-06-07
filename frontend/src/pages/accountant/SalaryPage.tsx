@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Wallet, Download, Coins, BadgePercent } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
@@ -18,6 +18,8 @@ import { useMonthParams } from './use-month-params'
 import { formatCurrency } from '@/data/domain'
 import { AnimatedNumber, LinkButton } from '@/components/shared'
 import { FieldActions } from '@/components/shared/data-display/ListUtils'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { SalaryMobileCard, type SalaryMobileRow } from '@/components/shared/cards/SalaryMobileCard'
 import type { DriverEarnings, DriverSalaryRecord } from '@/services/api/salary.api'
 
 const monoStyle = { fontFamily: 'var(--theme-font-mono)' } as React.CSSProperties
@@ -88,7 +90,16 @@ function InlineEditCell({
 
   return (
     <span
+      role="button"
+      tabIndex={0}
       onClick={() => setEditing(true)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          setEditing(true)
+        }
+      }}
+      aria-label={`Sửa giá trị ${formatCurrency(value)}`}
       className="block w-full text-right tabular-nums transition-colors"
       style={{ cursor: 'text', color: 'var(--ink)', ...monoStyle, borderRadius: 4, padding: '2px 4px', margin: '-2px -4px' }}
       onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = 'var(--surface-3)')}
@@ -103,6 +114,7 @@ function InlineEditCell({
 
 export function SalaryPage() {
   const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
+  const isMobile = useIsMobile(768)
   const [dialogDriver, setDialogDriver] = useState<{ id: number; name: string } | null>(null)
 
   const { data: salaryRecords = [], isLoading: periodLoading } = useSalaryPeriod(dateFrom, dateTo)
@@ -119,48 +131,55 @@ export function SalaryPage() {
 
   type SalaryRow = DriverSalaryRecord & { matchedOrderCount: number; totalEarnings: number }
 
-  const rows: SalaryRow[] = salaryRecords.length > 0
-    ? salaryRecords.map((sr) => {
-        const dash = dashboard.find((d) => d.driverId === sr.driverId)
-        const matchedOrderCount = dash?.matchedOrderCount ?? 0
-        const totalEarnings = sr.basicSalary + sr.bonusSalary + sr.allowance
-        return { ...sr, matchedOrderCount, totalEarnings }
-      })
-    : dashboard.map((d) => ({
-        id: 0,
-        driverId: d.driverId,
-        driverName: d.driverName ?? null,
-        driverUsername: null,
-        fromDate: dateFrom,
-        toDate: dateTo,
-        basicSalary: d.baseSalary,
-        bonusSalary: d.totalSalary,
-        bonusSalaryAuto: null,
-        allowance: d.totalAllowance,
-        note: null,
-        matchedOrderCount: d.matchedOrderCount,
-        // Compute the same way as the salaryRecords branch (basic + bonus + allowance)
-        // so the hero total never flashes a different number when one query
-        // resolves before the other. Previously this used the server-side
-        // `d.totalEarnings`, which is aggregated differently and produced a
-        // misleading flash on the "Tổng thực lĩnh" hero card.
-        totalEarnings: d.baseSalary + d.totalSalary + d.totalAllowance,
-      }))
+  const rows = useMemo<SalaryRow[]>(
+    () =>
+      salaryRecords.length > 0
+        ? salaryRecords.map((sr) => {
+            const dash = dashboard.find((d) => d.driverId === sr.driverId)
+            const matchedOrderCount = dash?.matchedOrderCount ?? 0
+            const totalEarnings = sr.basicSalary + sr.bonusSalary + sr.allowance
+            return { ...sr, matchedOrderCount, totalEarnings }
+          })
+        : dashboard.map((d) => ({
+            id: 0,
+            driverId: d.driverId,
+            driverName: d.driverName ?? null,
+            driverUsername: null,
+            fromDate: dateFrom,
+            toDate: dateTo,
+            basicSalary: d.baseSalary,
+            bonusSalary: d.totalSalary,
+            bonusSalaryAuto: null,
+            allowance: d.totalAllowance,
+            note: null,
+            matchedOrderCount: d.matchedOrderCount,
+            // Compute the same way as the salaryRecords branch (basic + bonus + allowance)
+            // so the hero total never flashes a different number when one query
+            // resolves before the other. Previously this used the server-side
+            // `d.totalEarnings`, which is aggregated differently and produced a
+            // misleading flash on the "Tổng thực lĩnh" hero card.
+            totalEarnings: d.baseSalary + d.totalSalary + d.totalAllowance,
+          })),
+    [salaryRecords, dashboard, dateFrom, dateTo],
+  )
 
-  const totalEarnings = rows.reduce((s, d) => s + d.totalEarnings, 0)
-  const totalBaseSalary = rows.reduce((s, d) => s + d.basicSalary, 0)
-  const totalAllowance = rows.reduce((s, d) => s + d.allowance, 0)
-  const totalProductivity = rows.reduce((s, d) => s + d.bonusSalary, 0)
+  const totalEarnings = useMemo(() => rows.reduce((s, d) => s + d.totalEarnings, 0), [rows])
+  const totalBaseSalary = useMemo(() => rows.reduce((s, d) => s + d.basicSalary, 0), [rows])
+  const totalAllowance = useMemo(() => rows.reduce((s, d) => s + d.allowance, 0), [rows])
+  const totalProductivity = useMemo(() => rows.reduce((s, d) => s + d.bonusSalary, 0), [rows])
   const driverCount = rows.length
-  const totalTrips = rows.reduce((s, d) => s + d.matchedOrderCount, 0)
+  const totalTrips = useMemo(() => rows.reduce((s, d) => s + d.matchedOrderCount, 0), [rows])
 
   const notInitialized = salaryRecords.length === 0 && !periodLoading
 
-  function handleUpsert(driverId: number, data: { basicSalary?: number; allowance?: number }) {
-    upsertMutation.mutate({ driverId, fromDate: dateFrom, toDate: dateTo, data })
-  }
+  const handleUpsert = useCallback(
+    (driverId: number, data: { basicSalary?: number; allowance?: number }) => {
+      upsertMutation.mutate({ driverId, fromDate: dateFrom, toDate: dateTo, data })
+    },
+    [upsertMutation, dateFrom, dateTo],
+  )
 
-  function handleExport() {
+  const handleExport = useCallback(() => {
     exportMutation.mutate(
       { startDate: dateFrom, endDate: dateTo },
       {
@@ -172,119 +191,126 @@ export function SalaryPage() {
           document.body.appendChild(a)
           a.click()
           document.body.removeChild(a)
-          URL.revokeObjectURL(url)
+          // Defer revoke — some browsers need a tick to start the download
+          setTimeout(() => URL.revokeObjectURL(url), 0)
         },
       },
     )
-  }
+  }, [exportMutation, dateFrom, dateTo, month, year])
 
-  const columns: NepoColumn<SalaryRow>[] = [
-    {
-      key: 'driver',
-      header: 'Lái xe',
-      render: (d) => (
-        <div className="flex flex-col gap-0.5">
-          <span className="font-semibold leading-tight" style={{ color: 'var(--ink)' }}>
-            {d.driverName ?? d.driverUsername ?? '—'}
-          </span>
-          {d.driverUsername && (
-            <span className="text-xs leading-tight" style={{ color: 'var(--ink-3)' }}>
-              {d.driverUsername}
+  const columns = useMemo<NepoColumn<SalaryRow>[]>(
+    () => [
+      {
+        key: 'driver',
+        header: 'Lái xe',
+        render: (d) => (
+          <div className="flex flex-col gap-0.5">
+            <span className="font-semibold leading-tight" style={{ color: 'var(--ink)' }}>
+              {d.driverName ?? d.driverUsername ?? '—'}
             </span>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: 'trips',
-      header: 'Chuyến',
-      align: 'right',
-      width: 80,
-      render: (d) => (
-        <span
-          className="tabular-nums inline-flex items-center justify-center rounded-md px-2 py-0.5 text-xs font-semibold"
-          style={{ background: 'var(--surface-3)', color: 'var(--ink-2)', minWidth: 32 }}
-        >
-          {d.matchedOrderCount}
-        </span>
-      ),
-    },
-    {
-      key: 'base',
-      header: 'Lương CB',
-      align: 'right',
-      width: 145,
-      render: (d) => (
-        <button
-          type="button"
-          onClick={() => setDialogDriver({ id: d.driverId, name: d.driverName ?? null })}
-          className="tabular-nums cursor-pointer transition-colors hover:underline underline-offset-2"
-          style={{ ...monoStyle, color: 'var(--accent)' }}
-        >
-          {formatCurrency(d.basicSalary)}
-        </button>
-      ),
-    },
-    {
-      key: 'productivity',
-      header: 'Lương SL',
-      align: 'right',
-      width: 145,
-      render: (d) => (
-        <span
-          className="tabular-nums text-sm"
-          style={{ color: 'var(--ink-2)', ...monoStyle }}
-        >
-          {formatCurrency(d.bonusSalary)}
-        </span>
-      ),
-    },
-    {
-      key: 'allowance',
-      header: 'Phụ cấp',
-      align: 'right',
-      width: 130,
-      render: (d) => (
-        <InlineEditCell
-          value={d.allowance}
-          onSave={(v) => handleUpsert(d.driverId, { allowance: v })}
-        />
-      ),
-    },
-    {
-      key: 'net',
-      header: 'Thực lĩnh',
-      align: 'right',
-      width: 155,
-      headerClass: 'nepo-col-net',
-      cellClass: 'nepo-col-net',
-      render: (d) => (
-        <span
-          className="tabular-nums font-bold"
-          style={{ color: 'var(--accent-2)', fontFamily: 'var(--theme-font-mono)' }}
-        >
-          {formatCurrency(d.totalEarnings)}
-        </span>
-      ),
-    },
-  ]
+            {d.driverUsername && (
+              <span className="text-xs leading-tight" style={{ color: 'var(--ink-3)' }}>
+                {d.driverUsername}
+              </span>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: 'trips',
+        header: 'Chuyến',
+        align: 'right',
+        width: 80,
+        render: (d) => (
+          <span
+            className="tabular-nums inline-flex items-center justify-center rounded-md px-2 py-0.5 text-xs font-semibold"
+            style={{ background: 'var(--surface-3)', color: 'var(--ink-2)', minWidth: 32 }}
+          >
+            {d.matchedOrderCount}
+          </span>
+        ),
+      },
+      {
+        key: 'base',
+        header: 'Lương CB',
+        align: 'right',
+        width: 145,
+        render: (d) => (
+          <button
+            type="button"
+            onClick={() => setDialogDriver({ id: d.driverId, name: d.driverName ?? null })}
+            className="tabular-nums cursor-pointer transition-colors hover:underline underline-offset-2"
+            style={{ ...monoStyle, color: 'var(--accent)' }}
+          >
+            {formatCurrency(d.basicSalary)}
+          </button>
+        ),
+      },
+      {
+        key: 'productivity',
+        header: 'Lương SL',
+        align: 'right',
+        width: 145,
+        render: (d) => (
+          <span
+            className="tabular-nums text-sm"
+            style={{ color: 'var(--ink-2)', ...monoStyle }}
+          >
+            {formatCurrency(d.bonusSalary)}
+          </span>
+        ),
+      },
+      {
+        key: 'allowance',
+        header: 'Phụ cấp',
+        align: 'right',
+        width: 130,
+        render: (d) => (
+          <InlineEditCell
+            value={d.allowance}
+            onSave={(v) => handleUpsert(d.driverId, { allowance: v })}
+          />
+        ),
+      },
+      {
+        key: 'net',
+        header: 'Thực lĩnh',
+        align: 'right',
+        width: 155,
+        headerClass: 'nepo-col-net',
+        cellClass: 'nepo-col-net',
+        render: (d) => (
+          <span
+            className="tabular-nums font-bold"
+            style={{ color: 'var(--accent-2)', fontFamily: 'var(--theme-font-mono)' }}
+          >
+            {formatCurrency(d.totalEarnings)}
+          </span>
+        ),
+      },
+    ],
+    [handleUpsert],
+  )
 
-  const footerCells: NepoFooterCell[] = [
-    { content: 'Tổng' },
-    { content: <span className="tabular-nums font-bold">{totalTrips}</span>, align: 'right' },
-    { content: <span className="tabular-nums" style={monoStyle}>{formatCurrency(totalBaseSalary)}</span>, align: 'right' },
-    { content: <span className="tabular-nums" style={monoStyle}>{formatCurrency(totalProductivity)}</span>, align: 'right' },
-    { content: <span className="tabular-nums" style={monoStyle}>{formatCurrency(totalAllowance)}</span>, align: 'right' },
-    {
-      content: (
-        <span className="tabular-nums font-bold" style={{ fontFamily: 'var(--theme-font-mono)', color: 'var(--accent-2)' }}>
-          {formatCurrency(totalEarnings)}
-        </span>
-      ),
-      align: 'right',
-      className: 'nepo-col-net',
-    },
-  ]
+  const footerCells = useMemo<NepoFooterCell[]>(
+    () => [
+      { content: 'Tổng' },
+      { content: <span className="tabular-nums font-bold">{totalTrips}</span>, align: 'right' },
+      { content: <span className="tabular-nums" style={monoStyle}>{formatCurrency(totalBaseSalary)}</span>, align: 'right' },
+      { content: <span className="tabular-nums" style={monoStyle}>{formatCurrency(totalProductivity)}</span>, align: 'right' },
+      { content: <span className="tabular-nums" style={monoStyle}>{formatCurrency(totalAllowance)}</span>, align: 'right' },
+      {
+        content: (
+          <span className="tabular-nums font-bold" style={{ fontFamily: 'var(--theme-font-mono)', color: 'var(--accent-2)' }}>
+            {formatCurrency(totalEarnings)}
+          </span>
+        ),
+        align: 'right',
+        className: 'nepo-col-net',
+      },
+    ],
+    [totalTrips, totalBaseSalary, totalProductivity, totalAllowance, totalEarnings],
+  )
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -349,15 +375,81 @@ export function SalaryPage() {
         </LinkButton>
       </div>
 
-      <NepoTable
-        columns={columns}
-        data={rows}
-        rowKey={(d) => d.driverId}
-        isLoading={periodLoading}
-        emptyText={notInitialized ? 'Chưa khởi tạo kỳ lương' : 'Chưa có dữ liệu lương cho kỳ này'}
-        minWidth={700}
-        footerCells={rows.length > 0 ? footerCells : undefined}
-      />
+      {isMobile ? (
+        <div className="flex flex-col gap-3">
+          {periodLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="p-4 rounded-xl border h-32 animate-pulse"
+                  style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
+                />
+              ))}
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="p-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>
+              {notInitialized ? 'Chưa khởi tạo kỳ lương' : 'Chưa có dữ liệu lương cho kỳ này'}
+            </div>
+          ) : (
+            <>
+              {rows.map((d) => (
+                <SalaryMobileCard
+                  key={d.driverId}
+                  row={d as SalaryMobileRow}
+                  onSaveAllowance={(driverId, value) => handleUpsert(driverId, { allowance: value })}
+                  onClickBaseSalary={(driverId, name) => setDialogDriver({ id: driverId, name: name ?? '' })}
+                  saving={upsertMutation.isPending}
+                />
+              ))}
+              {/* Totals summary card */}
+              <div
+                className="p-4 rounded-xl border space-y-1.5"
+                style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
+              >
+                <div className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--ink-2)' }}>
+                  Tổng
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: 'var(--ink-3)' }}>{totalTrips} chuyến</span>
+                  <span style={{ color: 'var(--ink-2)' }}>{driverCount} tài xế</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: 'var(--ink-3)' }}>Lương CB</span>
+                  <span className="tabular-nums" style={{ ...monoStyle, color: 'var(--ink)' }}>{formatCurrency(totalBaseSalary)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: 'var(--ink-3)' }}>Năng suất</span>
+                  <span className="tabular-nums" style={{ ...monoStyle, color: 'var(--ink)' }}>{formatCurrency(totalProductivity)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: 'var(--ink-3)' }}>Phụ cấp</span>
+                  <span className="tabular-nums" style={{ ...monoStyle, color: 'var(--ink)' }}>{formatCurrency(totalAllowance)}</span>
+                </div>
+                <div
+                  className="flex justify-between font-bold pt-2 mt-1"
+                  style={{ borderTop: '1px solid var(--line)' }}
+                >
+                  <span>Thực lĩnh</span>
+                  <span className="tabular-nums" style={{ ...monoStyle, color: 'var(--accent-2)' }}>
+                    {formatCurrency(totalEarnings)}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <NepoTable
+          columns={columns}
+          data={rows}
+          rowKey={(d) => d.driverId}
+          isLoading={periodLoading}
+          emptyText={notInitialized ? 'Chưa khởi tạo kỳ lương' : 'Chưa có dữ liệu lương cho kỳ này'}
+          minWidth={700}
+          footerCells={rows.length > 0 ? footerCells : undefined}
+        />
+      )}
       </div>{/* end controls+table group */}
 
       <DriverBaseSalaryDialog

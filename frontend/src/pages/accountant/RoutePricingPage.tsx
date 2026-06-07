@@ -16,10 +16,12 @@ import type { RoutePricingUpdatePayload } from '@/services/api/routePricings.api
 import { LinkButton, SyncPricingDialog } from '@/components/shared'
 import { useSyncAllPricing } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 export function RoutePricingPage() {
   const { pathname } = useLocation()
   const backTo = pathname.startsWith('/accountant') ? '/accountant/settings' : undefined
+  const isMobile = useIsMobile(768)
   const [importOpen, setImportOpen] = useState(false)
   const [syncOpen, setSyncOpen] = useState(false)
   const [inlineEditId, setInlineEditId] = useState<number | null>(null)
@@ -69,6 +71,7 @@ export function RoutePricingPage() {
     deleteId,
     setDeleteId,
     openCreate,
+    openEdit,
     handleSubmit,
     handleDelete,
     updateItem,
@@ -181,6 +184,12 @@ export function RoutePricingPage() {
   }, [updateItem])
 
   const handleCancelInline = useCallback(() => setInlineEditId(null), [])
+
+  // ─── Mobile edit dialog opener ─────────────────────────────────────────────
+
+  const handleEditOpenDialog = useCallback((rp: RoutePricing) => {
+    openEdit(rp)
+  }, [openEdit])
 
   // ─── Filter options ──────────────────────────────────────────────────────
 

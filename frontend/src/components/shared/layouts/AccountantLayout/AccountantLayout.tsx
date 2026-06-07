@@ -13,7 +13,8 @@ const ALLOWED_ROLES: Role[] = ['accountant', 'superadmin']
 
 const FULLSCREEN_PREFIXES: string[] = []
 
-const SIDEBAR_WIDTH = 240
+const SIDEBAR_DRAWER_WIDTH = '300px'
+const SIDEBAR_DRAWER_MAX = '320px'
 
 /** true when viewport is ≥ 1024px (laptop / desktop) */
 function useIsDesktop() {
@@ -110,11 +111,17 @@ function AccountantMobileShell() {
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetContent
           side="left"
-          className="p-0 border-0 flex flex-col"
+          overlayClassName="bg-black/60"
+          className="p-0 flex flex-col"
           style={{
-            width: SIDEBAR_WIDTH,
-            maxWidth: '85vw',
+            width: SIDEBAR_DRAWER_WIDTH,
+            maxWidth: SIDEBAR_DRAWER_MAX,
             background: 'var(--theme-sidebar, #0a3520)',
+            border: 'none',
+            outline: 'none',
+            borderTopRightRadius: '16px',
+            borderBottomRightRadius: '16px',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
           }}
         >
           {/* Close button */}

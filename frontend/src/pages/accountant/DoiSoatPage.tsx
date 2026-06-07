@@ -14,6 +14,7 @@ import { Panel } from '@/components/shared/overlays/Panel'
 import { DataTable } from '@/components/shared/data-display/DataTable'
 import { ToolbarSearch } from '@/components/shared/navigation/Toolbar'
 import { EmptyState } from '@/components/shared/feedback/EmptyState'
+import { TableSkeleton } from '@/components/shared/data-display/TableSkeleton/TableSkeleton'
 import { Button } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/forms/InlineSelect/InlineSelect'
 import { ExcelImportDrawer } from '@/components/shared/overlays/ExcelImportDrawer'
@@ -25,6 +26,8 @@ import { useInfiniteScroll, LoadMoreSentinel } from '@/components/shared/data-di
 import { getDeliveredTripColumns } from '@/components/shared/data-display/DeliveredTripColumns'
 import { useMonthParams } from './use-month-params'
 import { useDebounce } from '@/hooks/use-debounce'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { DeliveredTripMobileCard } from '@/components/shared/cards/DeliveredTripMobileCard'
 import type { DeliveredTrip } from '@/data/domain'
 import type { DeliveredTripSortBy, SortOrder } from '@/services/api/deliveredTrips.api'
 import {
@@ -51,6 +54,7 @@ const AI_ANIMATION_TIME = 1800 // ms — minimum loading animation duration befo
 
 export function DoiSoatPage() {
   const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
+  const isMobile = useIsMobile(768)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
@@ -218,7 +222,7 @@ export function DoiSoatPage() {
     onDelete: (trip) => setDeleteTarget(trip),
     isDeletePending: deleteTrip.isPending,
     deleteVariables: deleteTrip.variables as number | undefined,
-  }), [unmatch, deleteTrip])
+  }), [unmatch.isPending, unmatch.variables, deleteTrip.isPending, deleteTrip.variables])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -354,8 +358,8 @@ export function DoiSoatPage() {
           </div>
         </Panel>
 
-        {/* Hint text + legend — above the table, outside the Panel */}
-        {!isLoading && filtered.length > 0 && (
+        {/* Hint text + legend — desktop only */}
+        {!isLoading && filtered.length > 0 && !isMobile && (
           <div className="flex items-center justify-between mb-1.5">
             <p className="text-[11.5px]" style={{ color: 'var(--ink-4)' }}>
               Nhấp vào hàng để xem chi tiết · <ArrowLeftRight className="inline h-3 w-3 relative -top-px" /> ← → cuộn ngang
@@ -373,37 +377,83 @@ export function DoiSoatPage() {
           </div>
         )}
         <div ref={tablePanelRef}>
-        <Panel flush>
-          <DataTable
-            columns={columns}
-            rows={filtered}
-            rowKey={(t) => t.id}
-            isLoading={isLoading}
-            minWidth={1000}
-            sortBy={sortBy}
-            sortOrder={sortOrder}
-            onSort={handleSort}
-            onRowClick={(t) => setMatchTarget(t)}
-            rowClassName={(t) => t.bookedTripId ? 'row-matched' : 'row-pending'}
-            maxHeight="calc(100dvh - 330px)"
-            sentinel={<LoadMoreSentinel sentinelRef={sentinelRef} hasMore={hasMore} />}
-            empty={
-              <div className="py-10">
-                <EmptyState
-                  icon={<ClipboardList className="h-5 w-5" />}
-                  title={
-                    search.trim()
-                      ? 'Không tìm thấy chuyến'
-                      : statusFilter !== 'ALL'
-                        ? `Không có chuyến nào "${(statusFilter === 'PENDING' ? 'chờ ghép' : 'đã ghép')}"`
-                        : 'Chưa có chuyến nào trong tháng này'
-                  }
-                  compact
-                />
-              </div>
-            }
-          />
-        </Panel>
+          {isMobile ? (
+            <>
+              {isLoading ? (
+                <TableSkeleton />
+              ) : filtered.length === 0 ? (
+                <div className="py-10">
+                  <EmptyState
+                    icon={<ClipboardList className="h-5 w-5" />}
+                    title={
+                      search.trim()
+                        ? 'Không tìm thấy chuyến'
+                        : statusFilter !== 'ALL'
+                          ? `Không có chuyến nào "${(statusFilter === 'PENDING' ? 'chờ ghép' : 'đã ghép')}"`
+                          : 'Chưa có chuyến nào trong tháng này'
+                    }
+                    compact
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="px-4 py-1.5 mb-3 animate-fade-in" style={{ borderBottom: '1px solid var(--line)' }}>
+                    <span className="text-[11.5px]" style={{ color: 'var(--ink-4)' }}>
+                      Nhấp vào thẻ để xem chi tiết
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {filtered.map((trip) => (
+                      <DeliveredTripMobileCard
+                        key={trip.id}
+                        trip={trip}
+                        onTap={setMatchTarget}
+                        onUnmatch={(t) => setUnmatchTarget(t)}
+                        isUnmatchPending={unmatch.isPending}
+                        unmatchVariables={unmatch.variables as number | undefined}
+                        onDelete={(t) => setDeleteTarget(t)}
+                        isDeletePending={deleteTrip.isPending}
+                        deleteVariables={deleteTrip.variables as number | undefined}
+                      />
+                    ))}
+                  </div>
+                  <LoadMoreSentinel sentinelRef={sentinelRef} hasMore={hasMore} />
+                </>
+              )}
+            </>
+          ) : (
+            <Panel flush>
+              <DataTable
+                columns={columns}
+                rows={filtered}
+                rowKey={(t) => t.id}
+                isLoading={isLoading}
+                minWidth={1000}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onSort={handleSort}
+                onRowClick={(t) => setMatchTarget(t)}
+                rowClassName={(t) => t.bookedTripId ? 'row-matched' : 'row-pending'}
+                maxHeight="calc(100dvh - 330px)"
+                sentinel={<LoadMoreSentinel sentinelRef={sentinelRef} hasMore={hasMore} />}
+                empty={
+                  <div className="py-10">
+                    <EmptyState
+                      icon={<ClipboardList className="h-5 w-5" />}
+                      title={
+                        search.trim()
+                          ? 'Không tìm thấy chuyến'
+                          : statusFilter !== 'ALL'
+                            ? `Không có chuyến nào "${(statusFilter === 'PENDING' ? 'chờ ghép' : 'đã ghép')}"`
+                            : 'Chưa có chuyến nào trong tháng này'
+                      }
+                      compact
+                    />
+                  </div>
+                }
+              />
+            </Panel>
+          )}
         </div>
       </section>
 

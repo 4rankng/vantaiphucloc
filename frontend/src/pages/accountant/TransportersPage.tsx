@@ -11,6 +11,7 @@ import { VendorManagementDrawer } from '@/components/shared/overlays/VendorManag
 import { DriverFormDrawer } from '@/components/shared/overlays/DriverFormDrawer'
 import { LoadMoreSentinel, SearchInput } from '@/components/shared/data-display/ListUtils'
 import { StatPill } from '@/components/shared/data-display/StatPill'
+import { SectionHeader } from '@/components/shared/data-display/SectionHeader'
 import { useIsMobile } from '@/hooks/use-mobile'
 
 import { useFleetManager, type FocusState } from '@/hooks/use-fleet-manager'
@@ -24,6 +25,7 @@ import {
   DriverRow,
   DriverMobileCard,
   DriverMobileEditCard,
+  VehicleGroupCard,
 } from '@/components/shared'
 import { DangerConfirmDialog } from '@/components/shared/overlays/DangerConfirmDialog/DangerConfirmDialog'
 
@@ -211,109 +213,146 @@ function FleetSection() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-6 items-start">
         <section>
-          <div className="flex items-center gap-2 mb-3">
+          {isMobile && (
+            <SectionHeader title="Phương tiện" />
+          )}
+          <div className={isMobile ? 'flex flex-col gap-2 mb-3' : 'flex items-center gap-2 mb-3'}>
             <SearchInput value={fleetSearch} onChange={handleFleetSearch} placeholder="Tìm biển số, lái xe…" />
             <Button size="sm" onClick={() => setShowAddVehicle(true)}>
               <Plus className="h-4 w-4" /> Thêm xe
             </Button>
           </div>
-          <Panel flush>
-            {vdLoading ? (
-              <TableSkeleton />
-            ) : visibleGroups.length === 0 ? (
-              <div className="py-10">
-                <EmptyState icon={<Truck className="h-5 w-5" />} title={fleetSearch ? 'Không tìm thấy xe nào' : 'Chưa có xe nào'} compact />
-              </div>
-            ) : (
-              <>
-                <div className="nepo-table-scroll overflow-x-auto">
-                  <table className="nepo-table w-full" style={{ minWidth: 400, borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr>
-                        <th className="text-left" style={{ width: 120 }}>Biển số</th>
-                        <th className="text-left">Lái xe</th>
-                        <th className="w-10" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visibleGroups.map((g) => (
-                        <tr key={g.vehicleId} className="group">
-                          <td><Plate>{g.plate}</Plate></td>
-                          <td>
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              {g.drivers.length === 0 ? (
-                                <span className="text-[12.5px]" style={{ color: 'var(--ink-3)' }}>—</span>
-                              ) : (
-                                g.drivers.map((d) => (
-                                  <span key={d.id} className="nepo-driver-chip" style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}>
-                                    <User className="h-3 w-3" />
-                                    <span className="truncate max-w-[120px]">{d.driverName}</span>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setRemoveDriverTarget({ vdId: d.id, name: d.driverName })
-                                      }}
-                                      className="nepo-driver-chip__x"
-                                      style={{ color: 'var(--ink-2)' }}
-                                      aria-label="Gỡ lái xe"
-                                    >
-                                      <X className="h-2.5 w-2.5" />
-                                    </button>
-                                  </span>
-                                ))
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => setAddingDriverFor(g.vehicleId)}
-                                className="nepo-driver-chip-add"
-                                aria-label="Thêm lái xe"
-                              >
-                                <Plus className="h-3 w-3" />
-                              </button>
-                            </div>
-                          </td>
-                          <td>
-                            <button
-                              onClick={() => setDeleteVehicleTarget({ id: g.vehicleId, plate: g.plate })}
-                              className="p-1 rounded hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-                              title="Vô hiệu hoá xe"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--theme-status-error, var(--status-error, #e53))' }} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+          {isMobile ? (
+            <div>
+              {vdLoading ? (
+                <TableSkeleton />
+              ) : visibleGroups.length === 0 ? (
+                <div className="py-10">
+                  <EmptyState icon={<Truck className="h-5 w-5" />} title={fleetSearch ? 'Không tìm thấy xe nào' : 'Chưa có xe nào'} compact />
                 </div>
-                <LoadMoreSentinel sentinelRef={fleetSentinel} hasMore={fleetHasMore} />
-              </>
-            )}
-          </Panel>
+              ) : (
+                <>
+                  <div className="flex flex-col">
+                    {visibleGroups.map((g) => (
+                      <VehicleGroupCard
+                        key={g.vehicleId}
+                        plate={g.plate}
+                        drivers={g.drivers}
+                        onAddDriver={() => setAddingDriverFor(g.vehicleId)}
+                        onRemoveDriver={(vdId, name) => setRemoveDriverTarget({ vdId, name })}
+                        onDeleteVehicle={() => setDeleteVehicleTarget({ id: g.vehicleId, plate: g.plate })}
+                      />
+                    ))}
+                  </div>
+                  <LoadMoreSentinel sentinelRef={fleetSentinel} hasMore={fleetHasMore} />
+                </>
+              )}
+            </div>
+          ) : (
+            <Panel flush>
+              {vdLoading ? (
+                <TableSkeleton />
+              ) : visibleGroups.length === 0 ? (
+                <div className="py-10">
+                  <EmptyState icon={<Truck className="h-5 w-5" />} title={fleetSearch ? 'Không tìm thấy xe nào' : 'Chưa có xe nào'} compact />
+                </div>
+              ) : (
+                <>
+                  <div className="nepo-table-scroll overflow-x-auto">
+                    <table className="nepo-table w-full" style={{ minWidth: 400, borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          <th className="text-left" style={{ width: 120 }}>Biển số</th>
+                          <th className="text-left">Lái xe</th>
+                          <th className="w-10" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visibleGroups.map((g) => (
+                          <tr key={g.vehicleId} className="group">
+                            <td><Plate>{g.plate}</Plate></td>
+                            <td>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {g.drivers.length === 0 ? (
+                                  <span className="text-[12.5px]" style={{ color: 'var(--ink-3)' }}>—</span>
+                                ) : (
+                                  g.drivers.map((d) => (
+                                    <span key={d.id} className="nepo-driver-chip" style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}>
+                                      <User className="h-3 w-3" />
+                                      <span className="truncate max-w-[120px]">{d.driverName}</span>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setRemoveDriverTarget({ vdId: d.id, name: d.driverName })
+                                        }}
+                                        className="nepo-driver-chip__x"
+                                        style={{ color: 'var(--ink-2)' }}
+                                        aria-label="Gỡ lái xe"
+                                      >
+                                        <X className="h-2.5 w-2.5" />
+                                      </button>
+                                    </span>
+                                  ))
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setAddingDriverFor(g.vehicleId)}
+                                  className="nepo-driver-chip-add"
+                                  aria-label="Thêm lái xe"
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </td>
+                            <td>
+                              <button
+                                onClick={() => setDeleteVehicleTarget({ id: g.vehicleId, plate: g.plate })}
+                                className="min-h-[44px] min-w-[44px] p-1 rounded hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                                title="Vô hiệu hoá xe"
+                                aria-label={`Vô hiệu hoá xe ${g.plate}`}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--theme-status-error, var(--status-error, #e53e3e))' }} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <LoadMoreSentinel sentinelRef={fleetSentinel} hasMore={fleetHasMore} />
+                </>
+              )}
+            </Panel>
+          )}
         </section>
 
         <section>
-          <div className="flex items-center gap-2 mb-3">
+          {isMobile && (
+            <SectionHeader title="Lái xe" />
+          )}
+          <div className={isMobile ? 'flex flex-col gap-2 mb-3' : 'flex items-center gap-2 mb-3'}>
             <SearchInput value={driverSearch} onChange={handleDriverSearch} placeholder="Tìm tên, SĐT, biển số…" />
-            <Button size="sm" variant="outline" onClick={() => exportDriversXlsx(drivers)} title="Xuất danh sách lái xe ra Excel">
-              <Download className="h-4 w-4" /> Xuất Excel
-            </Button>
+            {!isMobile && (
+              <Button size="sm" variant="outline" onClick={() => exportDriversXlsx(drivers)} title="Xuất danh sách lái xe ra Excel">
+                <Download className="h-4 w-4" /> Xuất Excel
+              </Button>
+            )}
             <Button size="sm" onClick={() => setShowCreateDriver(true)}>
               <Plus className="h-4 w-4" /> Thêm lái xe
             </Button>
           </div>
-          <Panel flush>
-            {driversLoading ? (
-              <TableSkeleton />
-            ) : visibleDrivers.length === 0 ? (
-              <div className="py-10">
-                <EmptyState icon={<Users className="h-5 w-5" />} title={driverSearch.trim() ? 'Không tìm thấy lái xe' : 'Chưa có lái xe nào'} compact />
-              </div>
-            ) : (
-              <>
-                {isMobile ? (
-                  <div className="flex flex-col gap-3 p-4">
+          {isMobile ? (
+            <div>
+              {driversLoading ? (
+                <TableSkeleton />
+              ) : visibleDrivers.length === 0 ? (
+                <div className="py-10">
+                  <EmptyState icon={<Users className="h-5 w-5" />} title={driverSearch.trim() ? 'Không tìm thấy lái xe' : 'Chưa có lái xe nào'} compact />
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col">
                     {visibleDrivers.map((d) => {
                       return editingDriverId === d.id ? (
                         <DriverMobileEditCard
@@ -337,7 +376,20 @@ function FleetSection() {
                       )
                     })}
                   </div>
-                ) : (
+                  <LoadMoreSentinel sentinelRef={driverSentinel} hasMore={driverHasMore} />
+                </>
+              )}
+            </div>
+          ) : (
+            <Panel flush>
+              {driversLoading ? (
+                <TableSkeleton />
+              ) : visibleDrivers.length === 0 ? (
+                <div className="py-10">
+                  <EmptyState icon={<Users className="h-5 w-5" />} title={driverSearch.trim() ? 'Không tìm thấy lái xe' : 'Chưa có lái xe nào'} compact />
+                </div>
+              ) : (
+                <>
                   <div className="nepo-table-scroll overflow-x-auto">
                     <table className="nepo-table w-full" style={{ minWidth: 340, borderCollapse: 'collapse' }}>
                       <thead>
@@ -379,11 +431,11 @@ function FleetSection() {
                       </tbody>
                     </table>
                   </div>
-                )}
-                <LoadMoreSentinel sentinelRef={driverSentinel} hasMore={driverHasMore} />
-              </>
-            )}
-          </Panel>
+                  <LoadMoreSentinel sentinelRef={driverSentinel} hasMore={driverHasMore} />
+                </>
+              )}
+            </Panel>
+          )}
         </section>
       </div>
 

@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/shared/feedback/EmptyState'
 import { TableSkeleton } from '@/components/shared/data-display/TableSkeleton/TableSkeleton'
 import { RoutePricingEditRow } from './RoutePricingEditRow'
 import { RoutePricingRow } from './RoutePricingRow'
+import { RoutePricingMobileGroup } from './RoutePricingMobileGroup'
 import { COL, SALARY_TINT, SALARY_BORDER, GROUPED_LEFT_GROUP_WIDTH, FARE_GROUP_WIDTH, SALARY_GROUP_WIDTH, RIGHT_GROUP_WIDTH } from './RoutePricingTable.constants'
 import type { FocusableField, RoutePricingFormData, RoutePricingTableProps, ClientGroup } from './RoutePricingTable.types'
 
@@ -182,6 +183,8 @@ export function RoutePricingTable({
   onToggleClient,
   onExpandAll,
   onCollapseAll,
+  isMobile = false,
+  onEditOpenDialog,
 }: RoutePricingTableProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
@@ -253,6 +256,44 @@ export function RoutePricingTable({
 
   const allExpanded = groups.every(g => expandedClients.has(g.clientId))
   const totalRoutes = groups.reduce((sum, g) => sum + g.routeCount, 0)
+
+  if (isMobile) {
+    return (
+      <div className="space-y-3 p-3">
+        <div className="px-1 flex items-center justify-between gap-2">
+          <span className="text-[11px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>
+            💡 Nhấp vào thẻ để chỉnh sửa • {groups.length} chủ hàng, {totalRoutes} tuyến
+          </span>
+          <button
+            onClick={allExpanded ? onCollapseAll : onExpandAll}
+            className="inline-flex items-center gap-1 text-[11px] font-medium transition-colors whitespace-nowrap"
+            style={{ color: 'var(--theme-text-muted)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--theme-text-primary)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--theme-text-muted)' }}
+          >
+            <ChevronsUpDown className="h-3 w-3" />
+            {allExpanded ? 'Đóng tất cả' : 'Mở tất cả'}
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {groups.map(group => (
+            <RoutePricingMobileGroup
+              key={group.clientId}
+              group={group}
+              isExpanded={expandedClients.has(group.clientId)}
+              onToggle={() => onToggleClient(group.clientId)}
+              rowOffset={offsets.get(group.clientId) ?? 0}
+              editingId={editingId}
+              onStartEdit={onStartEdit}
+              onDelete={onDelete}
+              onEditOpenDialog={onEditOpenDialog ?? (() => {})}
+            />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-1.5">

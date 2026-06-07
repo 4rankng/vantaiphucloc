@@ -162,7 +162,7 @@ export function AccountantSidebar({
   return (
     <aside
       className={`${forceVisible ? 'flex' : 'hidden lg:flex'} flex-col shrink-0 h-full transition-[width] duration-200 relative ${
-        collapsed ? 'w-[64px]' : 'w-[248px]'
+        collapsed ? 'w-[64px]' : forceVisible ? 'w-full' : 'w-[248px]'
       }`}
       style={{
         background: 'var(--theme-sidebar)',

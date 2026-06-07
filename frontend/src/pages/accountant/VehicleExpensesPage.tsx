@@ -24,6 +24,12 @@ import { fuzzyMatch } from '@/lib/search-utils'
 import { formatDate } from '@/lib/format'
 import { AnimatedNumber, LinkButton } from '@/components/shared'
 import { useToast } from '@/components/atoms/Toast'
+import { useIsMobile } from '@/hooks/use-mobile'
+import {
+  ExpenseByVehicleCard,
+  ExpenseAuditCard,
+  type VehicleSummary,
+} from '@/components/shared/cards/VehicleExpenseMobileCard'
 
 const CATEGORIES: VehicleExpenseCategory[] = ['XANG_DAU', 'SUA_CHUA', 'TIEN_LUAT', 'KHAC']
 
@@ -70,8 +76,53 @@ type VehicleSummary = {
   byCategory: Record<VehicleExpenseCategory, number>
 }
 
-function ExpensesByVehicleTable({ rows, totalAll }: { rows: VehicleSummary[]; totalAll: number }) {
+function ExpensesByVehicleTable({ rows, totalAll, isMobile }: { rows: VehicleSummary[]; totalAll: number; isMobile: boolean }) {
   if (rows.length === 0) return null
+  if (isMobile) {
+    return (
+      <div className="flex flex-col gap-3 p-4">
+        {rows.map(r => <ExpenseByVehicleCard key={r.vehicleId} summary={r} />)}
+        <div
+          className="p-4 rounded-xl border space-y-1.5"
+          style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
+        >
+          <div className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--ink-2)' }}>Tổng cộng</div>
+          {CATEGORIES.map(c => {
+            const sum = rows.reduce((s, r) => s + r.byCategory[c], 0)
+            return (
+              <div key={c} className="flex justify-between text-sm">
+                <span style={{ color: 'var(--ink-3)' }}>{EXPENSE_CATEGORY_LABELS[c]}</span>
+                <span
+                  className="tabular-nums"
+                  style={{
+                    fontFamily: 'var(--theme-font-mono)',
+                    color: sum > 0 ? 'var(--ink)' : 'var(--ink-4)',
+                  }}
+                >
+                  {sum > 0 ? formatCurrency(sum) : '—'}
+                </span>
+              </div>
+            )
+          })}
+          <div
+            className="flex justify-between font-bold pt-2 mt-1"
+            style={{ borderTop: '1px solid var(--line)' }}
+          >
+            <span>Tổng</span>
+            <span
+              className="tabular-nums"
+              style={{
+                fontFamily: 'var(--theme-font-mono)',
+                color: 'var(--theme-brand-primary-dark, var(--accent))',
+              }}
+            >
+              {formatCurrency(totalAll)}
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="nepo-table-scroll overflow-x-auto">
       <table className="nepo-table w-full" style={{ minWidth: 480, borderCollapse: 'collapse' }}>
@@ -166,13 +217,38 @@ function AuditLogTable({
   isFetchingNextPage,
   hasNextPage,
   sentinelRef,
+  isMobile,
 }: {
   entries: AuditEntry[]
   isFetchingNextPage: boolean
   hasNextPage: boolean
   sentinelRef: React.RefObject<HTMLDivElement>
+  isMobile: boolean
 }) {
   if (entries.length === 0) return null
+  if (isMobile) {
+    return (
+      <>
+        <div className="flex flex-col gap-3 p-4">
+          {entries.map(({ expense: e, edited }) => (
+            <ExpenseAuditCard key={e.id} expense={e} edited={edited} />
+          ))}
+        </div>
+        {/* Infinite scroll sentinel */}
+        <div ref={sentinelRef} style={{ height: 1 }} />
+        {isFetchingNextPage && (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--ink-4)' }} />
+          </div>
+        )}
+        {!hasNextPage && entries.length > 0 && (
+          <div className="py-3 text-center" style={{ fontSize: 12, color: 'var(--ink-4)' }}>
+            Đã hiển thị tất cả {entries.length} mục
+          </div>
+        )}
+      </>
+    )
+  }
   return (
     <>
       <div className="nepo-table-scroll overflow-x-auto">
@@ -247,6 +323,7 @@ function AuditLogTable({
 export function VehicleExpensesPage() {
   const toast = useToast()
   const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
+  const isMobile = useIsMobile(768)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [search, setSearch] = useState('')
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -332,16 +409,21 @@ export function VehicleExpensesPage() {
   }, [auditData, search])
 
   // ── Infinite scroll via IntersectionObserver ──────────────────────────────
+  // fetchNextPage is a fresh ref each render (React Query), so we use a ref
+  // to avoid tearing down the observer on every render.
+  const fetchNextPageRef = useRef(fetchNextPage)
+  fetchNextPageRef.current = fetchNextPage
+
   useEffect(() => {
     const el = sentinelRef.current
     if (!el || !hasNextPage) return
     const observer = new IntersectionObserver(
-      entries => { if (entries[0].isIntersecting) fetchNextPage() },
+      entries => { if (entries[0].isIntersecting) fetchNextPageRef.current() },
       { threshold: 0.1 },
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [hasNextPage, fetchNextPage])
+  }, [hasNextPage])
 
   const handleCreate = useCallback((data: CreateExpenseFormData) => {
     const payload = { ...data, description: data.description || null }
@@ -444,7 +526,7 @@ export function VehicleExpensesPage() {
                 />
               </div>
             ) : (
-              <ExpensesByVehicleTable rows={vehicleSummary} totalAll={totalAmount} />
+              <ExpensesByVehicleTable rows={vehicleSummary} totalAll={totalAmount} isMobile={isMobile} />
             )}
           </TabsContent>
 
@@ -466,6 +548,7 @@ export function VehicleExpensesPage() {
                 isFetchingNextPage={isFetchingNextPage}
                 hasNextPage={!!hasNextPage}
                 sentinelRef={sentinelRef}
+                isMobile={isMobile}
               />
             )}
           </TabsContent>

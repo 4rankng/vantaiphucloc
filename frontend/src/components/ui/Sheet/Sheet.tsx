@@ -21,6 +21,8 @@ SheetOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 interface SheetContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   side?: "top" | "bottom" | "left" | "right"
+  /** Class applied to the backdrop overlay (defaults to bg-black/40). */
+  overlayClassName?: string
 }
 
 const sheetVariants: Record<string, string> = {
@@ -33,16 +35,19 @@ const sheetVariants: Record<string, string> = {
 const SheetContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => (
+>(({ side = "right", className, overlayClassName, children, ...props }, ref) => (
   <SheetPortal>
-    <SheetOverlay />
+    <SheetOverlay className={overlayClassName} />
     <DialogPrimitive.Content
       ref={ref}
       aria-describedby={undefined}
+      data-side={side}
       className={cn(
         "fixed z-50 gap-4 bg-[var(--theme-bg-secondary)] p-6 shadow-xl transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
         sheetVariants[side],
         side === "bottom" && "safe-area-bottom rounded-t-2xl",
+        side === "left" && "rounded-r-2xl",
+        side === "right" && "rounded-l-2xl",
         className
       )}
       {...props}
