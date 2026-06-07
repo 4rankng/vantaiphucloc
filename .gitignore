@@ -80,3 +80,15 @@ heartbeat*.json
 .agents
 .mavis
 .omo
+
+# OMC state (sessions, autopilot, etc.)
+.omc/sessions/
+.omc/state/
+.omc/autopilot/
+.omc/project-memory.json
+frontend/.omc/
+frontend/src/.omc/
+
+# Next.js build output
+frontend/.next/
+frontend/next-env.d.ts
