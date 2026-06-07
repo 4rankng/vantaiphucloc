@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { CheckCircle, Fuel, Wrench, FileText, MoreHorizontal } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Input, Label } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/forms/InlineSelect/InlineSelect'
@@ -40,6 +41,7 @@ interface CreateExpenseDialogProps {
 }
 
 export function CreateExpenseDialog({ open, onClose, onConfirm, vehicles, saving }: CreateExpenseDialogProps) {
+  const isMobile = useIsMobile()
   const [form, setForm] = useState<CreateExpenseFormData>(emptyForm)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -79,11 +81,15 @@ export function CreateExpenseDialog({ open, onClose, onConfirm, vehicles, saving
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
-      <DialogContent>
+      <DialogContent
+        className={isMobile ? 'flex flex-col' : ''}
+        {...(isMobile ? { 'data-mobile-fullscreen': '' } : {})}
+      >
         <DialogHeader>
           <DialogTitle>Thêm chi phí xe</DialogTitle>
         </DialogHeader>
 
+        <div className={isMobile ? 'flex-1 overflow-y-auto px-4' : ''}>
         <div className="space-y-4">
           {/* Ngày + Xe */}
           <div className="grid grid-cols-2 gap-3">
@@ -174,6 +180,7 @@ export function CreateExpenseDialog({ open, onClose, onConfirm, vehicles, saving
               className="text-sm"
             />
           </div>
+        </div>
         </div>
 
         <DialogFooter>

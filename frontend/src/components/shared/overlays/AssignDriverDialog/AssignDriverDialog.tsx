@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { User } from 'lucide-react'
 import {
   Dialog,
@@ -26,6 +27,7 @@ export function AssignDriverDialog({
   drivers,
   loading = false,
 }: AssignDriverDialogProps) {
+  const isMobile = useIsMobile()
   const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null)
   const [effectiveFrom, setEffectiveFrom] = useState(() =>
     new Date().toISOString().slice(0, 10)
@@ -45,10 +47,14 @@ export function AssignDriverDialog({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose() }}>
-      <DialogContent>
+      <DialogContent
+        className={isMobile ? 'flex flex-col' : ''}
+        {...(isMobile ? { 'data-mobile-fullscreen': '' } : {})}
+      >
         <DialogHeader>
           <DialogTitle>Gán lái xe</DialogTitle>
         </DialogHeader>
+        <div className={isMobile ? 'flex-1 overflow-y-auto px-4' : ''}>
         <div className="space-y-2 mt-2">
           <label className="nepo-field-label">Chọn lái xe</label>
           <div
@@ -102,6 +108,7 @@ export function AssignDriverDialog({
               className="nepo-input w-full"
             />
           </div>
+        </div>
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose} disabled={loading}>

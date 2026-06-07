@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button, Input, Label } from '@/components/ui'
 import type { VendorFormData, VendorType } from '@/services/api/vendors.api'
@@ -21,6 +22,7 @@ const EMPTY_FORM: VendorFormData = {
 }
 
 export function CreateVendorDialog({ open, onClose, onConfirm }: CreateVendorDialogProps) {
+  const isMobile = useIsMobile()
   const [form, setForm] = useState<VendorFormData>(EMPTY_FORM)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -55,11 +57,15 @@ export function CreateVendorDialog({ open, onClose, onConfirm }: CreateVendorDia
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent>
+      <DialogContent
+        className={isMobile ? 'flex flex-col' : ''}
+        {...(isMobile ? { 'data-mobile-fullscreen': '' } : {})}
+      >
         <DialogHeader>
           <DialogTitle>Thêm nhà thầu</DialogTitle>
         </DialogHeader>
 
+        <div className={isMobile ? 'flex-1 overflow-y-auto px-4' : ''}>
         <div className="space-y-4">
           {/* Tên */}
           <div className="space-y-2">
@@ -141,6 +147,7 @@ export function CreateVendorDialog({ open, onClose, onConfirm }: CreateVendorDia
               className="text-sm"
             />
           </div>
+        </div>
         </div>
 
         <DialogFooter>

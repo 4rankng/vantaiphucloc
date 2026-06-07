@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,7 @@ export function ResetPasswordDialog({
   onConfirm,
   driver,
 }: ResetPasswordDialogProps) {
+  const isMobile = useIsMobile()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [saving, setSaving] = useState(false)
@@ -63,10 +65,14 @@ export function ResetPasswordDialog({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) handleClose() }}>
-      <DialogContent>
+      <DialogContent
+        className={isMobile ? 'flex flex-col' : ''}
+        {...(isMobile ? { 'data-mobile-fullscreen': '' } : {})}
+      >
         <DialogHeader>
           <DialogTitle>Cài đặt tài khoản</DialogTitle>
         </DialogHeader>
+        <div className={isMobile ? 'flex-1 overflow-y-auto px-4' : ''}>
         <div className="space-y-3 mt-2">
           <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
             Cài đặt cho{' '}
@@ -102,6 +108,7 @@ export function ResetPasswordDialog({
               }}
             />
           </div>
+        </div>
         </div>
         <DialogFooter>
           <Button

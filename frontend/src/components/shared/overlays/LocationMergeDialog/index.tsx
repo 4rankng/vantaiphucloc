@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { AlertTriangle, Merge, ArrowUpDown } from 'lucide-react'
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/forms/InlineSelect/InlineSelect'
@@ -17,6 +18,7 @@ export interface LocationMergeDialogProps {
 export function LocationMergeDialog({
   open, onClose, locations, presetSource, presetTarget, onMerge, merging,
 }: LocationMergeDialogProps) {
+  const isMobile = useIsMobile()
   const [source, setSource] = useState<number | ''>('')
   const [target, setTarget] = useState<number | ''>('')
 
@@ -32,9 +34,13 @@ export function LocationMergeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent>
+      <DialogContent
+        className={isMobile ? 'flex flex-col' : ''}
+        {...(isMobile ? { 'data-mobile-fullscreen': '' } : {})}
+      >
         <DialogHeader><DialogTitle>Gộp địa điểm trùng</DialogTitle></DialogHeader>
 
+        <div className={isMobile ? 'flex-1 overflow-y-auto px-4' : ''}>
         <div
           className="flex items-start gap-3 rounded-lg px-3 py-2.5"
           style={{ background: 'var(--warning-soft)', border: '1px solid var(--warning)' }}
@@ -96,6 +102,7 @@ export function LocationMergeDialog({
               onChange={v => setTarget(v ? Number(v) : '')}
             />
           </div>
+        </div>
         </div>
 
         <DialogFooter>

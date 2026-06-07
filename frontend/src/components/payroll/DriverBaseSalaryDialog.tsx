@@ -16,6 +16,7 @@ import {
   DialogTitle,
   Input,
 } from '@/components/ui'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { formatCurrencyFull } from '@/data/domain'
 import { useDriverBaseSalaryForm } from './useDriverBaseSalaryForm'
 
@@ -32,6 +33,7 @@ export function DriverBaseSalaryDialog({
   driverId,
   driverName,
 }: DriverBaseSalaryDialogProps) {
+  const isMobile = useIsMobile()
   const form = useDriverBaseSalaryForm({
     driverId,
     onSaved: () => onOpenChange(false),
@@ -39,7 +41,10 @@ export function DriverBaseSalaryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px]">
+      <DialogContent
+        className={`sm:max-w-[520px] ${isMobile ? 'flex flex-col' : ''}`}
+        {...(isMobile ? { 'data-mobile-fullscreen': '' } : {})}
+      >
         <DialogHeader>
           <DialogTitle>Lương cơ bản · {driverName ?? 'Tài xế'}</DialogTitle>
           <DialogDescription>
@@ -48,6 +53,7 @@ export function DriverBaseSalaryDialog({
           </DialogDescription>
         </DialogHeader>
 
+        <div className={isMobile ? 'flex-1 overflow-y-auto px-4' : ''}>
         {/* Current rate */}
         <div
           className="rounded-md px-3 py-2.5"
@@ -201,6 +207,7 @@ export function DriverBaseSalaryDialog({
             </div>
           </div>
         )}
+        </div>
 
         <DialogFooter>
           <Button

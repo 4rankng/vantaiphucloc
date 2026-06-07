@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { Users, Phone, CreditCard, Pencil, Trash2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -44,6 +45,7 @@ export function UserDetailDialog({
   editableRoles?: { value: Role; label: string }[]
   saving?: boolean
 }) {
+  const isMobile = useIsMobile()
   const { user: currentUser } = useAuth()
   const isEditMode = !!onEdit
   const [editForm, setEditForm] = useState<EditForm>({
@@ -111,10 +113,14 @@ export function UserDetailDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent>
+        <DialogContent
+          className={isMobile ? 'flex flex-col' : ''}
+          {...(isMobile ? { 'data-mobile-fullscreen': '' } : {})}
+        >
           <DialogHeader><DialogTitle>Thông tin tài khoản</DialogTitle></DialogHeader>
 
           {isEditMode ? (
+            <div className={isMobile ? 'flex-1 overflow-y-auto px-4' : ''}>
             <div className="space-y-3">
               {roles.length > 0 && (
                 <div className="space-y-2">
@@ -165,8 +171,10 @@ export function UserDetailDialog({
                 <Input type="password" value={editForm.password} onChange={e => updateField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
               </div>
             </div>
+            </div>
           ) : (
             <>
+              <div className={isMobile ? 'flex-1 overflow-y-auto px-4' : ''}>
               <div className="flex items-center gap-3 py-2">
                 <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
                   style={{ background: 'var(--theme-brand-primary-light)' }}>
@@ -184,6 +192,7 @@ export function UserDetailDialog({
                 {user.fullName && <InfoRow icon={Users} label="Họ và tên" value={user.fullName} noBorder />}
                 {user.phone && <InfoRow icon={Phone} label="Số điện thoại" value={user.phone} noBorder />}
                 {user.cccd && <InfoRow icon={CreditCard} label="CCCD" value={user.cccd} noBorder />}
+              </div>
               </div>
             </>
           )}

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import type React from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { api } from '@/services/api/client'
@@ -184,6 +185,7 @@ export function UserInfoDialog({ open, onClose }: { open: boolean; onClose: () =
 // ─── Change Password Dialog ───────────────────────────────────────────────────
 
 export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const isMobile = useIsMobile()
   const toast = useToast()
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
@@ -220,8 +222,12 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent>
+      <DialogContent
+        className={isMobile ? 'flex flex-col' : ''}
+        {...(isMobile ? { 'data-mobile-fullscreen': '' } : {})}
+      >
         <DialogHeader><DialogTitle>Đổi mật khẩu</DialogTitle></DialogHeader>
+        <div className={isMobile ? 'flex-1 overflow-y-auto px-4' : ''}>
         <div className="space-y-4">
           <div className="space-y-2">
             <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu hiện tại</Label>
@@ -235,6 +241,7 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
             <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Xác nhận mật khẩu mới</Label>
             <Input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="••••••••" className="text-sm" />
           </div>
+        </div>
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={handleClose} className="flex-1">Huỷ</Button>

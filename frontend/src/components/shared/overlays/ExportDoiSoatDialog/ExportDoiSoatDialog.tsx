@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog'
 import { Input } from '@/components/ui/Input'
 import { InlineSelect } from '@/components/shared/forms/InlineSelect'
@@ -78,6 +79,7 @@ function PeriodNav({ year, month, onPrev, onNext }: {
 
 /* ── Main component ─────────────────────────────────────── */
 export function ExportDoiSoatDialog({ open, onClose, defaultDateFrom, defaultDateTo, isPending, onConfirm }: Props) {
+  const isMobile = useIsMobile()
   const { data: salaryConfig } = useSalaryConfig()
   const { data: clients = [] } = useClients()
 
@@ -145,8 +147,9 @@ export function ExportDoiSoatDialog({ open, onClose, defaultDateFrom, defaultDat
   return (
     <Dialog open={open} onOpenChange={isPending ? undefined : handleOpen}>
       <DialogContent
-        className="max-w-sm overflow-hidden p-0 border-0 gap-0"
-        style={{ borderRadius: 20, boxShadow: '0 24px 60px rgba(0,0,0,0.35)' }}
+        className={`max-w-sm overflow-hidden p-0 border-0 gap-0 ${isMobile ? 'flex flex-col' : ''}`}
+        style={!isMobile ? { borderRadius: 20, boxShadow: '0 24px 60px rgba(0,0,0,0.35)' } : undefined}
+        {...(isMobile ? { 'data-mobile-fullscreen': '' } : {})}
       >
         <DialogTitle style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', borderWidth: 0 }}>
           Xuất file đối soát
@@ -166,7 +169,7 @@ export function ExportDoiSoatDialog({ open, onClose, defaultDateFrom, defaultDat
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 space-y-5" style={{ background: 'var(--theme-bg-secondary)' }}>
+        <div className={`space-y-5 py-5 ${isMobile ? 'flex-1 overflow-y-auto px-4' : 'px-6'}`} style={{ background: 'var(--theme-bg-secondary)' }}>
           {/* Client selector */}
           <div className="space-y-1.5">
             <p className="text-[13px] font-medium text-[var(--ink-2)]">Chủ hàng</p>

@@ -1,4 +1,5 @@
 import { memo, useCallback, useMemo } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import {
   Dialog,
   DialogContent,
@@ -62,6 +63,7 @@ export const VendorRoutePricingDialog = memo(function VendorRoutePricingDialog({
   vendors,
   locations,
 }: VendorRoutePricingDialogProps) {
+  const isMobile = useIsMobile()
   const updateField = useCallback(
     <K extends keyof VendorRoutePricingFormData>(key: K, value: VendorRoutePricingFormData[K]) => {
       onFormChange({ ...form, [key]: value })
@@ -87,13 +89,17 @@ export const VendorRoutePricingDialog = memo(function VendorRoutePricingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        className={`sm:max-w-lg ${isMobile ? 'flex flex-col' : ''}`}
+        {...(isMobile ? { 'data-mobile-fullscreen': '' } : {})}
+      >
         <DialogHeader>
           <DialogTitle>
             {editingId ? 'Sửa cước trả' : 'Thêm cước trả'}
           </DialogTitle>
         </DialogHeader>
 
+        <div className={isMobile ? 'flex-1 overflow-y-auto px-4' : ''}>
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
             <Label className="text-xs font-medium" style={{ color: 'var(--ink-2)' }}>
@@ -166,6 +172,7 @@ export const VendorRoutePricingDialog = memo(function VendorRoutePricingDialog({
               onChange={(v) => updateField('e40Price', v)}
             />
           </div>
+        </div>
         </div>
 
         <DialogFooter>

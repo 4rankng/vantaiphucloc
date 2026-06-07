@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button, Input, Label } from '@/components/ui'
 import type { Client } from '@/data/domain'
@@ -28,6 +29,7 @@ const EMPTY_FORM: ClientFormData = {
 }
 
 export function CreateClientDialog({ open, onClose, onConfirm, defaultName, initial, saving: externalSaving }: CreateClientDialogProps) {
+  const isMobile = useIsMobile()
   const isEdit = !!initial
   const [form, setForm] = useState<ClientFormData>(EMPTY_FORM)
   const [internalSaving, setInternalSaving] = useState(false)
@@ -81,11 +83,15 @@ export function CreateClientDialog({ open, onClose, onConfirm, defaultName, init
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
-      <DialogContent>
+      <DialogContent
+        className={isMobile ? 'flex flex-col' : ''}
+        {...(isMobile ? { 'data-mobile-fullscreen': '' } : {})}
+      >
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Sửa khách hàng' : 'Thêm khách hàng'}</DialogTitle>
         </DialogHeader>
 
+        <div className={isMobile ? 'flex-1 overflow-y-auto px-4' : ''}>
         <div className="space-y-4">
           {/* Tên + Mã khách */}
           <div className="grid grid-cols-3 gap-3">
@@ -178,6 +184,7 @@ export function CreateClientDialog({ open, onClose, onConfirm, defaultName, init
               className="text-sm"
             />
           </div>
+        </div>
         </div>
 
         <DialogFooter>

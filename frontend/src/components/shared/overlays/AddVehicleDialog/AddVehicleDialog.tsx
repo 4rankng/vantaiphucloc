@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,7 @@ export function AddVehicleDialog({
   onConfirm,
   loading = false,
 }: AddVehicleDialogProps) {
+  const isMobile = useIsMobile()
   const [plate, setPlate] = useState('')
 
   const handleConfirm = () => {
@@ -38,10 +40,14 @@ export function AddVehicleDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
+      <DialogContent
+        className={isMobile ? 'flex flex-col' : ''}
+        {...(isMobile ? { 'data-mobile-fullscreen': '' } : {})}
+      >
         <DialogHeader>
           <DialogTitle>Thêm xe mới</DialogTitle>
         </DialogHeader>
+        <div className={isMobile ? 'flex-1 overflow-y-auto px-4' : ''}>
         <div className="space-y-3 mt-2">
           <div>
             <label className="nepo-field-label" htmlFor="new-plate">Biển số</label>
@@ -59,6 +65,7 @@ export function AddVehicleDialog({
               }}
             />
           </div>
+        </div>
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={() => { onClose(); setPlate('') }}>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -14,6 +15,7 @@ interface QuickCreateDialogProps {
 }
 
 export function QuickCreateDialog({ open, onClose, title, label, placeholder, onConfirm }: QuickCreateDialogProps) {
+  const isMobile = useIsMobile()
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -35,10 +37,14 @@ export function QuickCreateDialog({ open, onClose, title, label, placeholder, on
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent>
+      <DialogContent
+        className={isMobile ? 'flex flex-col' : ''}
+        {...(isMobile ? { 'data-mobile-fullscreen': '' } : {})}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
+        <div className={isMobile ? 'flex-1 overflow-y-auto px-4' : ''}>
         <div className="space-y-2">
           <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{label}</Label>
           <Input
@@ -49,6 +55,7 @@ export function QuickCreateDialog({ open, onClose, title, label, placeholder, on
             onKeyDown={e => e.key === 'Enter' && handleConfirm()}
             autoFocus
           />
+        </div>
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={handleClose} className="flex-1">Huỷ</Button>

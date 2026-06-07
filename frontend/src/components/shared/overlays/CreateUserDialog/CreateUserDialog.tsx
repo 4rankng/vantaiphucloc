@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -38,6 +39,7 @@ export function CreateUserDialog({
   onCreated: () => void
   roles?: { value: Role; label: string }[]
 }) {
+  const isMobile = useIsMobile()
   const toast = useToast()
   const [saving, setSaving] = useState(false)
   const { data: vendors } = useVendors()
@@ -92,10 +94,14 @@ export function CreateUserDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen && !createVendorOpen) onClose() }}>
-      <DialogContent>
+      <DialogContent
+        className={isMobile ? 'flex flex-col' : ''}
+        {...(isMobile ? { 'data-mobile-fullscreen': '' } : {})}
+      >
         <DialogHeader>
           <DialogTitle>Tạo tài khoản</DialogTitle>
         </DialogHeader>
+        <div className={isMobile ? 'flex-1 overflow-y-auto px-4' : ''}>
         <div className="space-y-4">
           {/* Row 1: Role buttons — full-width when 4+ roles, side-by-side with vendor when ≤3 */}
           {isFourRoles ? (
@@ -171,6 +177,7 @@ export function CreateUserDialog({
             <RequiredLabel>Mật khẩu</RequiredLabel>
             <Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" className="text-sm" />
           </div>
+        </div>
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose} className="flex-1">Huỷ</Button>
