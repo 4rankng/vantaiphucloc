@@ -22,7 +22,8 @@ import type { VehicleExpense, VehicleExpenseCategory } from '@/services/api/vehi
 import { EXPENSE_CATEGORY_LABELS } from '@/services/api/vehicleExpenses.api'
 import { fuzzyMatch } from '@/lib/search-utils'
 import { formatDate } from '@/lib/format'
-import { AnimatedNumber, LinkButton } from '@/components/shared'
+import { AnimatedNumber } from '@/components/shared'
+import { Button } from '@/components/ui'
 import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
 import {
@@ -487,14 +488,14 @@ export function VehicleExpensesPage() {
             width="100%"
           />
         </div>
-        <LinkButton
+        <Button
+          size="sm"
           onClick={() => setCreateDialogOpen(true)}
-          icon={Plus}
-          variant="brand"
-          className="w-full sm:w-auto justify-center"
+          className="w-full sm:w-auto shrink-0"
         >
+          <Plus className="h-3.5 w-3.5" />
           Thêm chi phí
-        </LinkButton>
+        </Button>
       </div>
 
       <Panel flush>
