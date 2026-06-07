@@ -90,7 +90,7 @@ const DIRECTOR_NAV_SECTION: SidebarSection = {
     { label: 'Tổng quan', href: '/superadmin/dashboard', icon: LayoutDashboard },
     { label: 'Đối tác', href: '/superadmin/partners', icon: Building2 },
     { label: 'Bảng giá', href: '/superadmin/pricing', icon: Route },
-    { label: 'Thông báo', href: '/superadmin/notifications', icon: Bell },
+    { label: 'Gửi Thông báo', href: '/superadmin/notifications', icon: Bell },
   ],
 }
 
@@ -358,7 +358,7 @@ export function AccountantSidebar({
                 {notificationsPath && (
                   <DropdownMenuItem onClick={() => navigate(notificationsPath)}>
                     <Bell className="mr-2 h-4 w-4" />
-                    Thông báo
+                    Gửi Thông báo
                   </DropdownMenuItem>
                 )}
                 {profilePath && (

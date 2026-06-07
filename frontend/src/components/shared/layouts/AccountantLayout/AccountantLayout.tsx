@@ -165,7 +165,7 @@ function resolveMobileTitle(pathname: string): string {
     '/superadmin/dashboard': 'Tổng quan (Giám đốc)',
     '/superadmin/partners': 'Đối tác',
     '/superadmin/pricing': 'Bảng giá',
-    '/superadmin/notifications': 'Thông báo',
+    '/superadmin/notifications': 'Gửi Thông báo',
     '/superadmin/profile': 'Thông tin cá nhân',
   }
   if (TITLES[pathname]) return TITLES[pathname]

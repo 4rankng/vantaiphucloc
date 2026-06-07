@@ -205,7 +205,7 @@ const ACCOUNTANT_MENU: MenuItem[] = [
 
 const DIRECTOR_MENU: MenuItem[] = [
   { title: 'Tổng quan', icon: Home, path: '/director', end: true, group: 'top' },
-  { title: 'Thông báo', icon: BellIcon, path: '/director/notifications', group: 'top' },
+  { title: 'Gửi Thông báo', icon: BellIcon, path: '/director/notifications', group: 'top' },
   { title: 'Quản lý tài khoản', icon: UserCog, path: '/director/users', group: 'quan-ly' },
 ]
 
@@ -213,7 +213,7 @@ const DRIVER_MENU: MenuItem[] = [
   { title: 'Trang chủ', icon: Home, path: '/driver', end: true, group: 'top' },
   { title: 'Tạo chuyến', icon: Plus, path: '/driver/delivered-trips/new', group: 'hang-hoa' },
   { title: 'Lịch sử', icon: History, path: '/driver/history', group: 'hang-hoa' },
-  { title: 'Thông báo', icon: BellIcon, path: '/driver/notifications', group: 'top' },
+  { title: 'Gửi Thông báo', icon: BellIcon, path: '/driver/notifications', group: 'top' },
   { title: 'Hồ sơ', icon: Users, path: '/driver/profile', group: 'top' },
 ]
 

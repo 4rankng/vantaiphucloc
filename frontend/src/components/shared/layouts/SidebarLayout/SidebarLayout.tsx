@@ -152,7 +152,7 @@ function resolvePathTitle(role: string, pathname: string): string {
     'salary': 'Tính lương',
     'create-trip': 'Tạo chuyến',
     'salary-setup': 'Thiết lập kỳ lương',
-    'notifications': 'Thông báo',
+    'notifications': 'Gửi Thông báo',
     'profile': 'Thông tin cá nhân',
   }
   if (map[sub]) return map[sub]
