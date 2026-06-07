@@ -1,0 +1,7 @@
+{
+  "tool_name": "Read",
+  "tool_input_preview": "{\"file_path\":\"/Users/dev/.claude/image-cache/473811a8-87ab-47bc-b8f1-57d6625c83e1/1.png\"}",
+  "error": "File does not exist. Note: your current working directory is /Users/dev/Documents/projects/vantaiphucloc/frontend.",
+  "timestamp": "2026-06-07T07:38:40.161Z",
+  "retry_count": 1
+}

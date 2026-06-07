@@ -1,4 +1,4 @@
-import { ArrowRight, Trash2 } from 'lucide-react'
+import { ArrowRight, Pencil, Trash2 } from 'lucide-react'
 import { formatCurrency, WORK_TYPE_LABELS } from '@/data/domain'
 import type { RoutePricing, WorkType } from '@/data/domain'
 
@@ -56,12 +56,12 @@ export function RoutePricingMobileCard({ rp, idx, onEdit, onDelete }: RoutePrici
         type="button"
         onClick={onEdit}
         aria-label={`Chỉnh sửa tuyến ${rp.pickupLocation.name} → ${rp.dropoffLocation.name}`}
-        className="absolute inset-0 z-0 rounded-xl cursor-pointer active:bg-black/[0.03] transition-colors"
+        className="absolute inset-0 z-10 rounded-xl cursor-pointer active:bg-black/[0.03] transition-colors"
         tabIndex={-1}
       />
 
-      {/* Header: route + work type + delete action */}
-      <div className="relative z-10 flex items-start justify-between gap-2 mb-2">
+      {/* Header: route + work type + delete action — pointer-events-none so stretched link receives taps */}
+      <div className="relative z-20 pointer-events-none flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 text-[13px] font-bold leading-tight" style={{ color: 'var(--ink)' }}>
             <span className="truncate">{rp.pickupLocation.name}</span>
@@ -78,19 +78,30 @@ export function RoutePricingMobileCard({ rp, idx, onEdit, onDelete }: RoutePrici
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onDelete() }}
-          aria-label="Xoá tuyến"
-          className="relative min-h-[44px] min-w-[44px] w-8 h-8 flex items-center justify-center rounded-lg border touch-target z-10"
-          style={{ borderColor: 'var(--theme-border-default)', color: 'var(--theme-status-error, var(--status-error, #e53e3e))' }}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onEdit() }}
+            aria-label="Chỉnh sửa"
+            className="pointer-events-auto relative min-h-[44px] min-w-[44px] w-8 h-8 flex items-center justify-center rounded-lg border touch-target"
+            style={{ borderColor: 'var(--theme-border-default)', color: 'var(--ink-3)' }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDelete() }}
+            aria-label="Xoá tuyến"
+            className="pointer-events-auto relative min-h-[44px] min-w-[44px] w-8 h-8 flex items-center justify-center rounded-lg border touch-target"
+            style={{ borderColor: 'var(--theme-border-default)', color: 'var(--theme-status-error, var(--status-error, #e53e3e))' }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Price table — full width rows with Cước | Lương */}
-      <div className="relative z-10" style={{ borderTop: '1px solid var(--line)' }}>
+      <div className="relative z-20 pointer-events-none" style={{ borderTop: '1px solid var(--line)' }}>
         {/* Column headers */}
         <div className="grid grid-cols-[40px_1fr_1fr] gap-x-2 mb-1">
           <span />
