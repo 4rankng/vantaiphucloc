@@ -40,25 +40,25 @@ function SectionHeader({
   hint?: string
 }) {
   return (
-    <div className="flex items-center gap-2 mb-3">
+    <div className="flex items-center gap-1.5 mb-2">
       <div
-        className="flex h-6 w-6 items-center justify-center rounded-md"
+        className="flex h-5 w-5 items-center justify-center rounded"
         style={{
           background: 'var(--surface-3)',
           color: 'var(--accent)',
         }}
       >
-        <Icon className="h-3.5 w-3.5" />
+        <Icon className="h-3 w-3" />
       </div>
       <h3
-        className="text-[12px] font-semibold uppercase tracking-[0.06em]"
+        className="text-[11px] font-semibold uppercase tracking-[0.05em]"
         style={{ color: 'var(--ink-2)' }}
       >
         {title}
       </h3>
       {hint && (
         <span
-          className="text-[11px] font-normal normal-case tracking-normal ml-auto"
+          className="text-[10px] font-normal normal-case tracking-normal ml-auto"
           style={{ color: 'var(--ink-3)' }}
         >
           {hint}
@@ -71,7 +71,7 @@ function SectionHeader({
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
     <Label
-      className="text-[11px] font-medium"
+      className="text-[10px] font-medium"
       style={{ color: 'var(--ink-3)', letterSpacing: '0.01em' }}
     >
       {children}
@@ -100,7 +100,7 @@ function MoneyInput({
         className="pr-7 text-right tabular-nums"
       />
       <span
-        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-medium"
+        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-medium"
         style={{ color: 'var(--ink-3)' }}
       >
         ₫
@@ -119,14 +119,12 @@ function StackedPriceRow({ label, tone, value, onChange, ariaLabel }: {
 }) {
   const dotColor = tone === 'fare' ? 'var(--theme-status-info)' : 'var(--theme-status-warning)'
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-1.5 shrink-0 min-w-[90px]">
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1.5">
         <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: dotColor }} />
-        <span className="text-[12px] font-medium" style={{ color: 'var(--ink-2)' }}>{label}</span>
+        <span className="text-[10px] font-medium" style={{ color: 'var(--ink-2)' }}>{label}</span>
       </div>
-      <div className="flex-1">
-        <MoneyInput value={value} onChange={onChange} ariaLabel={ariaLabel} />
-      </div>
+      <MoneyInput value={value} onChange={onChange} ariaLabel={ariaLabel} />
     </div>
   )
 }
@@ -211,24 +209,24 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
       >
         {/* ── Header ─────────────────────────────────────────── */}
         <DialogHeader
-          className="px-6 pt-6 pb-4"
+          className={`pt-5 pb-3 ${isMobile ? 'px-4' : 'px-6'}`}
           style={{ borderBottom: '1px solid var(--line)' }}
         >
           <DialogTitle>
             {editingId ? 'Sửa cước tuyến' : 'Thêm cước tuyến'}
           </DialogTitle>
-          <p className="text-[12.5px] mt-1" style={{ color: 'var(--ink-3)' }}>
+          <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>
             Cấu hình giá cước và lương sản lượng theo từng tuyến vận chuyển.
           </p>
         </DialogHeader>
 
         {/* ── Body ───────────────────────────────────────────── */}
-        <div className={`px-6 py-5 space-y-6 overflow-y-auto ${isMobile ? 'flex-1' : ''}`}>
+        <div className={`py-4 space-y-5 overflow-y-auto ${isMobile ? 'px-4 flex-1' : 'px-6'}`}>
           {/* Section 1: Route info */}
           <section>
             <SectionHeader icon={Route} title="Thông tin tuyến" />
-            <div className={`grid gap-x-4 gap-y-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
-              <div className="space-y-1.5">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+              <div className="space-y-1">
                 <FieldLabel>Chủ hàng</FieldLabel>
                 <InlineSelect
                   placeholder="Chọn chủ hàng"
@@ -238,7 +236,7 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <FieldLabel>Loại tác nghiệp</FieldLabel>
                 <InlineSelect
                   placeholder="Chọn loại tác nghiệp"
@@ -248,7 +246,7 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <FieldLabel>
                   <span className="inline-flex items-center gap-1">
                     Điểm đi
@@ -263,7 +261,7 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <FieldLabel>Điểm đến</FieldLabel>
                 <InlineSelect
                   placeholder="Chọn điểm đến"
@@ -277,7 +275,7 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
 
           {/* Section 2: Pricing matrix */}
           <section
-            className="rounded-xl p-4"
+            className="rounded-lg p-3"
             style={{
               background: 'var(--surface-2)',
               border: '1px solid var(--line)',
@@ -286,18 +284,18 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
             <SectionHeader icon={Banknote} title="Cước vận chuyển" hint={isMobile ? undefined : 'Đơn giá theo loại cont'} />
 
             {isMobile ? (
-              /* ── Mobile: stacked full-width rows ── */
-              <div className="space-y-4">
+              /* ── Mobile: 2-column compact grid ── */
+              <div className="space-y-3">
                 {/* Fares */}
                 <div>
-                  <div className="text-[10.5px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--theme-status-info)' }}>
+                  <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--theme-status-info)' }}>
                     Cước
                   </div>
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                     {CONTAINER_TYPES.map((c) => (
                       <StackedPriceRow
                         key={c.key}
-                        label={`Cước ${c.label}`}
+                        label={c.label}
                         tone="fare"
                         value={fareValueOf(c.key)}
                         onChange={(v) => setFareValue(c.key, v)}
@@ -311,17 +309,17 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
 
                 {/* Salaries */}
                 <div>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Wallet className="h-3 w-3" style={{ color: 'var(--accent)' }} />
-                    <span className="text-[10.5px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-status-warning)' }}>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Wallet className="h-2.5 w-2.5" style={{ color: 'var(--accent)' }} />
+                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-status-warning)' }}>
                       Lương sản lượng
                     </span>
                   </div>
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                     {CONTAINER_TYPES.map((c) => (
                       <StackedPriceRow
                         key={c.key}
-                        label={`Lương ${c.label}`}
+                        label={c.label}
                         tone="salary"
                         value={salaryValueOf(c.key)}
                         onChange={(v) => setSalaryValue(c.key, v)}
@@ -395,7 +393,7 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
             )}
 
             <p
-              className="text-[11px] mt-3"
+              className="text-[10px] mt-2"
               style={{ color: 'var(--ink-3)' }}
             >
               Lương sản lượng là khoản chi trả cho tài xế tính trên mỗi container vận chuyển.
@@ -405,7 +403,7 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
 
         {/* ── Footer ─────────────────────────────────────────── */}
         <DialogFooter
-          className="px-6 py-4 mt-0"
+          className={`py-3 mt-0 ${isMobile ? 'px-4' : 'px-6'}`}
           style={{ borderTop: '1px solid var(--line)', background: 'var(--theme-bg-primary)' }}
         >
           <Button
