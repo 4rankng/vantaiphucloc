@@ -31,33 +31,18 @@ function getSalary(rp: RoutePricing, field: PriceField): number | null {
   }
 }
 
-/** Single price row: label on left, value on right. */
-function PriceRow({ label, value, tone }: { label: string; value: number | null; tone: 'fare' | 'salary' }) {
-  const hasValue = value != null
-  const color = tone === 'fare' ? 'var(--theme-status-info)' : 'var(--theme-status-warning)'
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <span
-        className="text-[11px] font-semibold shrink-0"
-        style={{ color: hasValue ? color : 'var(--ink-4, #a1a1aa)' }}
-      >
-        {label}
-      </span>
-      <span
-        className="text-[12.5px] font-bold tabular-nums truncate"
-        style={{
-          ...monoStyle,
-          color: hasValue ? 'var(--ink)' : 'var(--ink-4, #a1a1aa)',
-        }}
-      >
-        {hasValue ? formatCurrency(value!) : '—'}
-      </span>
-    </div>
-  )
-}
+const FIELDS: { key: PriceField; label: string }[] = [
+  { key: 'f20', label: 'F20' },
+  { key: 'f40', label: 'F40' },
+  { key: 'e20', label: 'E20' },
+  { key: 'e40', label: 'E40' },
+]
 
 export function RoutePricingMobileCard({ rp, idx, onEdit, onDelete }: RoutePricingMobileCardProps) {
   const workTypeLabel = WORK_TYPE_LABELS[rp.workType as WorkType] ?? rp.workType
+
+  const hasAnyFare = FIELDS.some(f => getFare(rp, f.key) != null)
+  const hasAnySalary = FIELDS.some(f => getSalary(rp, f.key) != null)
 
   return (
     <div
@@ -114,37 +99,43 @@ export function RoutePricingMobileCard({ rp, idx, onEdit, onDelete }: RoutePrici
         </div>
       </div>
 
-      {/* Fare + Salary in 2-column layout */}
-      <div
-        className="grid grid-cols-2 gap-x-3 gap-y-2 pt-2"
-        style={{ borderTop: '1px solid var(--line)' }}
-      >
-        {/* Cước chủ hàng */}
-        <div>
-          <div className="text-[9.5px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--theme-status-info)' }}>
-            Cước
+      {/* Price table — full width rows with Cước | Lương */}
+      {(hasAnyFare || hasAnySalary) && (
+        <div style={{ borderTop: '1px solid var(--line)' }} className="pt-2">
+          {/* Column headers */}
+          <div className="grid grid-cols-[40px_1fr_1fr] gap-x-2 mb-1">
+            <span />
+            <span className="text-[9.5px] font-bold uppercase tracking-wider text-center" style={{ color: 'var(--theme-status-info)' }}>Cước</span>
+            <span className="text-[9.5px] font-bold uppercase tracking-wider text-center" style={{ color: 'var(--theme-status-warning)' }}>Lương</span>
           </div>
-          <div className="space-y-1">
-            <PriceRow label="F20" value={getFare(rp, 'f20')} tone="fare" />
-            <PriceRow label="F40" value={getFare(rp, 'f40')} tone="fare" />
-            <PriceRow label="E20" value={getFare(rp, 'e20')} tone="fare" />
-            <PriceRow label="E40" value={getFare(rp, 'e40')} tone="fare" />
-          </div>
+          {FIELDS.map(({ key, label }) => {
+            const fare = getFare(rp, key)
+            const salary = getSalary(rp, key)
+            const hasData = fare != null || salary != null
+            if (!hasData) return null
+            return (
+              <div
+                key={key}
+                className="grid grid-cols-[40px_1fr_1fr] gap-x-2 items-center py-1"
+              >
+                <span className="text-[11px] font-semibold" style={{ color: 'var(--ink-3)' }}>{label}</span>
+                <span
+                  className="text-[12px] font-bold tabular-nums text-center"
+                  style={{ ...monoStyle, color: fare != null ? 'var(--ink)' : 'var(--ink-4, #a1a1aa)' }}
+                >
+                  {fare != null ? formatCurrency(fare) : '—'}
+                </span>
+                <span
+                  className="text-[12px] font-bold tabular-nums text-center"
+                  style={{ ...monoStyle, color: salary != null ? 'var(--ink)' : 'var(--ink-4, #a1a1aa)' }}
+                >
+                  {salary != null ? formatCurrency(salary) : '—'}
+                </span>
+              </div>
+            )
+          })}
         </div>
-
-        {/* Lương tài xế */}
-        <div>
-          <div className="text-[9.5px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--theme-status-warning)' }}>
-            Lương
-          </div>
-          <div className="space-y-1">
-            <PriceRow label="F20" value={getSalary(rp, 'f20')} tone="salary" />
-            <PriceRow label="F40" value={getSalary(rp, 'f40')} tone="salary" />
-            <PriceRow label="E20" value={getSalary(rp, 'e20')} tone="salary" />
-            <PriceRow label="E40" value={getSalary(rp, 'e40')} tone="salary" />
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   )
 }

@@ -13,6 +13,7 @@ import { InlineSelect } from '@/components/shared/forms/InlineSelect/InlineSelec
 import { WORK_TYPE_LABELS } from '@/data/domain'
 import type { WorkType } from '@/data/domain'
 import { Route, Banknote, Wallet, ArrowRight } from 'lucide-react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import type { RoutePricingFormData } from './useRoutePricing'
 
 interface RoutePricingDialogProps {
@@ -108,6 +109,28 @@ function MoneyInput({
   )
 }
 
+/** Full-width price row: "Cước F20" label + input — used on mobile */
+function StackedPriceRow({ label, tone, value, onChange, ariaLabel }: {
+  label: string
+  tone: 'fare' | 'salary'
+  value: string
+  onChange: (v: string) => void
+  ariaLabel: string
+}) {
+  const dotColor = tone === 'fare' ? 'var(--theme-status-info)' : 'var(--theme-status-warning)'
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 shrink-0 min-w-[90px]">
+        <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: dotColor }} />
+        <span className="text-[12px] font-medium" style={{ color: 'var(--ink-2)' }}>{label}</span>
+      </div>
+      <div className="flex-1">
+        <MoneyInput value={value} onChange={onChange} ariaLabel={ariaLabel} />
+      </div>
+    </div>
+  )
+}
+
 /* ───────────────────────── Dialog ───────────────────────── */
 
 const CONTAINER_TYPES: { key: 'f20' | 'f40' | 'e20' | 'e40'; label: string }[] = [
@@ -128,6 +151,8 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
   clients,
   locations,
 }: RoutePricingDialogProps) {
+  const isMobile = useIsMobile(768)
+
   const updateField = useCallback(
     <K extends keyof RoutePricingFormData>(key: K, value: RoutePricingFormData[K]) => {
       onFormChange({ ...form, [key]: value })
@@ -196,10 +221,10 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
 
         {/* ── Body ───────────────────────────────────────────── */}
         <div className="px-6 py-5 space-y-6 overflow-y-auto">
-          {/* Section 1: Route info — 2 columns */}
+          {/* Section 1: Route info */}
           <section>
             <SectionHeader icon={Route} title="Thông tin tuyến" />
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <div className={`grid gap-x-4 gap-y-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <div className="space-y-1.5">
                 <FieldLabel>Chủ hàng</FieldLabel>
                 <InlineSelect
@@ -224,10 +249,7 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
                 <FieldLabel>
                   <span className="inline-flex items-center gap-1">
                     Điểm đi
-                    <ArrowRight
-                      className="h-3 w-3"
-                      style={{ color: 'var(--ink-3)' }}
-                    />
+                    <ArrowRight className="h-3 w-3" style={{ color: 'var(--ink-3)' }} />
                   </span>
                 </FieldLabel>
                 <InlineSelect
@@ -258,65 +280,116 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
               border: '1px solid var(--line)',
             }}
           >
-            <SectionHeader icon={Banknote} title="Cước vận chuyển" hint="Đơn giá theo loại cont" />
+            <SectionHeader icon={Banknote} title="Cước vận chuyển" hint={isMobile ? undefined : 'Đơn giá theo loại cont'} />
 
-            {/* Column headers */}
-            <div className="grid grid-cols-[80px_repeat(4,minmax(0,1fr))] gap-2 mb-2">
-              <div />
-              {CONTAINER_TYPES.map((c) => (
-                <div
-                  key={c.key}
-                  className="text-center text-[11px] font-semibold tracking-wider"
-                  style={{ color: 'var(--ink-3)' }}
-                >
-                  {c.label}
+            {isMobile ? (
+              /* ── Mobile: stacked full-width rows ── */
+              <div className="space-y-4">
+                {/* Fares */}
+                <div>
+                  <div className="text-[10.5px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--theme-status-info)' }}>
+                    Cước
+                  </div>
+                  <div className="space-y-2">
+                    {CONTAINER_TYPES.map((c) => (
+                      <StackedPriceRow
+                        key={c.key}
+                        label={`Cước ${c.label}`}
+                        tone="fare"
+                        value={fareValueOf(c.key)}
+                        onChange={(v) => setFareValue(c.key, v)}
+                        ariaLabel={`Cước ${c.label}`}
+                      />
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
 
-            {/* Row: Cước */}
-            <div className="grid grid-cols-[80px_repeat(4,minmax(0,1fr))] gap-2 items-center">
-              <div
-                className="text-[12px] font-medium flex items-center gap-1.5"
-                style={{ color: 'var(--ink-2)' }}
-              >
-                <span
-                  className="inline-block h-1.5 w-1.5 rounded-full"
-                  style={{ background: 'var(--accent)' }}
-                />
-                Cước
+                <div style={{ borderTop: '1px dashed var(--line-2)' }} />
+
+                {/* Salaries */}
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Wallet className="h-3 w-3" style={{ color: 'var(--accent)' }} />
+                    <span className="text-[10.5px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-status-warning)' }}>
+                      Lương sản lượng
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {CONTAINER_TYPES.map((c) => (
+                      <StackedPriceRow
+                        key={c.key}
+                        label={`Lương ${c.label}`}
+                        tone="salary"
+                        value={salaryValueOf(c.key)}
+                        onChange={(v) => setSalaryValue(c.key, v)}
+                        ariaLabel={`Lương sản lượng ${c.label}`}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
-              {CONTAINER_TYPES.map((c) => (
-                <MoneyInput
-                  key={c.key}
-                  value={fareValueOf(c.key)}
-                  onChange={(v) => setFareValue(c.key, v)}
-                  ariaLabel={`Cước ${c.label}`}
-                />
-              ))}
-            </div>
+            ) : (
+              /* ── Desktop: 4-column grid ── */
+              <>
+                {/* Column headers */}
+                <div className="grid grid-cols-[80px_repeat(4,minmax(0,1fr))] gap-2 mb-2">
+                  <div />
+                  {CONTAINER_TYPES.map((c) => (
+                    <div
+                      key={c.key}
+                      className="text-center text-[11px] font-semibold tracking-wider"
+                      style={{ color: 'var(--ink-3)' }}
+                    >
+                      {c.label}
+                    </div>
+                  ))}
+                </div>
 
-            {/* Divider */}
-            <div className="my-3" style={{ borderTop: '1px dashed var(--line-2)' }} />
+                {/* Row: Cước */}
+                <div className="grid grid-cols-[80px_repeat(4,minmax(0,1fr))] gap-2 items-center">
+                  <div
+                    className="text-[12px] font-medium flex items-center gap-1.5"
+                    style={{ color: 'var(--ink-2)' }}
+                  >
+                    <span
+                      className="inline-block h-1.5 w-1.5 rounded-full"
+                      style={{ background: 'var(--accent)' }}
+                    />
+                    Cước
+                  </div>
+                  {CONTAINER_TYPES.map((c) => (
+                    <MoneyInput
+                      key={c.key}
+                      value={fareValueOf(c.key)}
+                      onChange={(v) => setFareValue(c.key, v)}
+                      ariaLabel={`Cước ${c.label}`}
+                    />
+                  ))}
+                </div>
 
-            {/* Row: Lương sản lượng */}
-            <div className="grid grid-cols-[80px_repeat(4,minmax(0,1fr))] gap-2 items-center">
-              <div
-                className="text-[12px] font-medium flex items-center gap-1.5"
-                style={{ color: 'var(--ink-2)' }}
-              >
-                <Wallet className="h-3 w-3" style={{ color: 'var(--accent)' }} />
-                Lương SL
-              </div>
-              {CONTAINER_TYPES.map((c) => (
-                <MoneyInput
-                  key={c.key}
-                  value={salaryValueOf(c.key)}
-                  onChange={(v) => setSalaryValue(c.key, v)}
-                  ariaLabel={`Lương sản lượng ${c.label}`}
-                />
-              ))}
-            </div>
+                {/* Divider */}
+                <div className="my-3" style={{ borderTop: '1px dashed var(--line-2)' }} />
+
+                {/* Row: Lương sản lượng */}
+                <div className="grid grid-cols-[80px_repeat(4,minmax(0,1fr))] gap-2 items-center">
+                  <div
+                    className="text-[12px] font-medium flex items-center gap-1.5"
+                    style={{ color: 'var(--ink-2)' }}
+                  >
+                    <Wallet className="h-3 w-3" style={{ color: 'var(--accent)' }} />
+                    Lương SL
+                  </div>
+                  {CONTAINER_TYPES.map((c) => (
+                    <MoneyInput
+                      key={c.key}
+                      value={salaryValueOf(c.key)}
+                      onChange={(v) => setSalaryValue(c.key, v)}
+                      ariaLabel={`Lương sản lượng ${c.label}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
 
             <p
               className="text-[11px] mt-3"
