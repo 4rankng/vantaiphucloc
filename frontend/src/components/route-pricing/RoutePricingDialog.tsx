@@ -302,8 +302,6 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
                   </div>
                 </div>
 
-                <div style={{ borderTop: '1px dashed var(--line-2)' }} />
-
                 {/* Salaries */}
                 <div>
                   <div className="flex items-center gap-1.5 mb-1.5">
