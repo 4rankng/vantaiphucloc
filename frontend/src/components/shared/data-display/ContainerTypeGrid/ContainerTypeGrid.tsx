@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { CheckCircle, Plus } from 'lucide-react'
 import {
   CONT_TYPES, WORK_TYPE_LABELS,
-  type ContType, type WorkType, type OperationType,
+  type ContType, type WorkType, type OperationTypeEntity,
 } from '@/data/domain'
 import { hapticTap } from '@/lib/haptic'
 import { playTick } from '@/lib/sound'
@@ -31,7 +31,7 @@ interface ContainerTypeGridProps {
   /** Show warning border on the workType group. */
   workTypeError?: boolean
   /** Dynamic operation types from API. Falls back to hardcoded WORK_TYPES. */
-  operationTypes?: OperationType[]
+  operationTypes?: OperationTypeEntity[]
 }
 
 const CONT_TYPE_SET: ReadonlySet<string> = new Set(CONT_TYPES)

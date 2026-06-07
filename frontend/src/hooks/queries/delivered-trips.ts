@@ -1,7 +1,7 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { queryKeys, invalidateDeliveredTripDeps } from '../query-keys'
-import type { ApiResponse, DeliveredTrip, PaginatedResult } from '@/data/domain'
+import type { ApiResponse, DeliveredTrip, PaginatedResult, ContTypeStats } from '@/data/domain'
 import type { DeliveredTripSortBy, SortOrder } from '@/services/api/deliveredTrips.api'
 
 function unwrap<T>(res: ApiResponse<T>): T {
@@ -113,6 +113,20 @@ export function useExportDeliveredTripsExcel() {
   return useMutation({
     mutationFn: (filters?: { dateFrom?: string; dateTo?: string; status?: string }) =>
       apiClient.exportDeliveredTripsExcel(filters),
+  })
+}
+
+
+const EMPTY_STATS: ContTypeStats = { E20: 0, F20: 0, E40: 0, F40: 0 }
+
+export function useContTypeStats(filters?: { driverId?: number; dateFrom?: string; dateTo?: string }) {
+  return useQuery<ContTypeStats>({
+    queryKey: ['cont-type-stats', filters?.driverId ?? null, filters?.dateFrom ?? null, filters?.dateTo ?? null],
+    queryFn: async () => {
+      const res = await apiClient.getContTypeStats(filters)
+      return res.success ? res.data : EMPTY_STATS
+    },
+    enabled: filters?.driverId != null,
   })
 }
 

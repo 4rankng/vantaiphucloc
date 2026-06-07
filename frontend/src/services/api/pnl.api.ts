@@ -102,6 +102,8 @@ export async function getTripDailyStats(
   dateFrom: string,
   dateTo: string,
   clientId?: number,
+  driverId?: number,
+  matched?: boolean,
 ): Promise<ApiResponse<TripDailyStats>> {
   try {
     const res = await api.get('/dashboard/trip-daily-stats', {
@@ -109,6 +111,8 @@ export async function getTripDailyStats(
         date_from: dateFrom,
         date_to: dateTo,
         ...(clientId ? { client_id: clientId } : {}),
+        ...(driverId ? { driver_id: driverId } : {}),
+        ...(matched !== undefined ? { matched } : {}),
       },
     })
     return ok(toCamel<TripDailyStats>(res.data))

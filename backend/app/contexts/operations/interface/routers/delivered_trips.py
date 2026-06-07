@@ -10,6 +10,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.operations.application import (
     CreateDeliveredTrip,
@@ -34,6 +35,7 @@ from app.contexts.operations.interface.dependencies import (
 )
 from app.contexts.operations.interface.error_translation import translate
 from app.core.deps import get_current_user, require_permission
+from app.database import get_db
 from app.models.base import User
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import (
@@ -205,6 +207,46 @@ async def create_delivered_trip_endpoint(
 
     await _enqueue_notification(w)
     return await _load_one(use_case.session, w)
+
+
+@router.get("/delivered-trips/cont-type-stats")
+async def cont_type_stats(
+    driver_id: int | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy import text as sa_text
+
+    if current_user.role == "driver":
+        driver_id = current_user.id
+
+    conditions: list[str] = []
+    params: dict = {}
+    if driver_id is not None:
+        conditions.append("driver_id = :driver_id")
+        params["driver_id"] = driver_id
+    if date_from is not None:
+        conditions.append("(trip_date >= :date_from OR (trip_date IS NULL AND created_at >= :date_from))")
+        params["date_from"] = date_from
+    if date_to is not None:
+        conditions.append("(trip_date <= :date_to OR (trip_date IS NULL AND created_at <= :date_to))")
+        params["date_to"] = date_to
+
+    where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
+    rows = (await db.execute(
+        sa_text(f"SELECT cont_type, COUNT(*) AS cnt FROM delivered_trips{where} GROUP BY cont_type"),
+        params,
+    )).all()
+
+    counts = {r[0]: r[1] for r in rows}
+    return {
+        "E20": counts.get("E20", 0),
+        "F20": counts.get("F20", 0),
+        "E40": counts.get("E40", 0),
+        "F40": counts.get("F40", 0),
+    }
 
 
 _VALID_SORT_COLS = {

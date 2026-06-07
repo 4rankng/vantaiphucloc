@@ -10,10 +10,22 @@ export const CONT_TYPE_LABELS: Record<ContType, string> = {
   F40: 'F40',
 }
 
-// Work types — container types + operation types (Tác nghiệp)
-export type WorkType = ContType | 'CHẠY SÀ LAN' | 'CHUYỂN BÃI' | 'ĐÓNG KHO' | 'LẤY VỎ HẠ HÀNG' | 'XUẤT/NHẬP TÀU'
+// Operation types (Tác nghiệp) — only the non-container work types
+export type OperationType = 'CHẠY SÀ LAN' | 'CHUYỂN BÃI' | 'ĐÓNG KHO' | 'LẤY VỎ HẠ HÀNG' | 'XUẤT/NHẬP TÀU'
 
-export const WORK_TYPES: WorkType[] = [...CONT_TYPES, 'CHẠY SÀ LAN', 'CHUYỂN BÃI', 'ĐÓNG KHO', 'LẤY VỎ HẠ HÀNG', 'XUẤT/NHẬP TÀU']
+export const OPERATION_TYPES: OperationType[] = ['CHẠY SÀ LAN', 'CHUYỂN BÃI', 'ĐÓNG KHO', 'LẤY VỎ HẠ HÀNG', 'XUẤT/NHẬP TÀU']
+
+export interface ContTypeStats {
+  E20: number
+  F20: number
+  E40: number
+  F40: number
+}
+
+// Work types — container types + operation types (Tác nghiệp)
+export type WorkType = ContType | OperationType
+
+export const WORK_TYPES: WorkType[] = [...CONT_TYPES, ...OPERATION_TYPES]
 
 export const WORK_TYPE_LABELS: Record<WorkType, string> = {
   ...CONT_TYPE_LABELS,
@@ -125,7 +137,7 @@ export interface VendorSummaryStats {
 // BizLogic.md §4 for the rationale.
 
 // ─── Operation Type (dynamic, from API) ────────────────────────────────────────
-export interface OperationType {
+export interface OperationTypeEntity {
   id: number
   name: string
   label: string

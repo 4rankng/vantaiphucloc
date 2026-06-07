@@ -73,6 +73,7 @@ export const apiClient = {
   bulkImportAndMatch: deliveredTripsApi.bulkImportAndMatch,
   parsePreview: deliveredTripsApi.parsePreview,
   uploadDeliveredTripPhoto: deliveredTripsApi.uploadDeliveredTripPhoto,
+  getContTypeStats: deliveredTripsApi.getContTypeStats,
 
   // Trip Orders
   getBookedTrip: bookedTripsApi.getBookedTrip,

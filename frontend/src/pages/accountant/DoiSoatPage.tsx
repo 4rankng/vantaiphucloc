@@ -195,11 +195,13 @@ export function DoiSoatPage() {
   }, [hasMore, isFetchingNextPage, fetchNextPage])
   const sentinelRef = useInfiniteScroll(loadMore)
 
-  // Global stats from trip daily stats endpoint
+  // Global stats from trip daily stats endpoint — respects all active filters
   const { data: dailyStats } = useTripDailyStats(
     dateFrom,
     dateTo,
-    doiSoatClientId !== 'ALL' && doiSoatClientId !== '' ? Number(doiSoatClientId) : undefined
+    doiSoatClientId !== 'ALL' && doiSoatClientId !== '' ? Number(doiSoatClientId) : undefined,
+    driverIdFilter !== 'ALL' && driverIdFilter !== '' ? Number(driverIdFilter) : undefined,
+    statusFilter !== 'ALL' ? (statusFilter === 'MATCHED') : undefined,
   )
   const globalTotal = dailyStats?.total ?? 0
   const globalMatched = dailyStats?.matched ?? 0

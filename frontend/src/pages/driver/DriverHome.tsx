@@ -5,7 +5,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
 import { DeliveredTripCard } from '@/components/shared/cards/DeliveredTripCard'
 import { FloatingActionButton } from '@/components/shared/feedback/FloatingActionButton'
-import { useMyEarnings, useSalaryConfig, useDeliveredTrips, useDeliveredTripsInfinite } from '@/hooks/use-queries'
+import { useMyEarnings, useSalaryConfig, useDeliveredTrips, useDeliveredTripsInfinite, useContTypeStats } from '@/hooks/use-queries'
+import { CONT_TYPES } from '@/data/domain'
 import { useDebounce } from '@/hooks/use-debounce'
 import { getSalaryPeriodDates, dayBefore, dayAfter, toISODate } from '@/lib/salaryPeriod'
 import { AnimatedNumber } from '@/components/shared/data-display/AnimatedNumber'
@@ -102,6 +103,11 @@ function MobileDriverHome() {
   const totalCount = allTripsPage?.total ?? 0
   const matchedCount = matchedTripsPage?.total ?? 0
   const pendingCount = totalCount - matchedCount
+
+  // ── Cont type stats ──
+  const { data: contTypeStats } = useContTypeStats({
+    driverId, dateFrom: startISO, dateTo: endISO,
+  })
 
   // ── List: server-side infinite query with search + matched filter ──
   const matchedFilter = filter === 'pending' ? false : undefined
@@ -229,6 +235,27 @@ function MobileDriverHome() {
           </div>
         </div>
       </div>
+
+      {/* Container type stats — one card, 4 sections */}
+      {contTypeStats && (
+        <div
+          className="flex items-stretch rounded-xl overflow-hidden"
+          style={{ background: 'var(--theme-bg-secondary)' }}
+        >
+          {CONT_TYPES.map((ct, i) => (
+            <div
+              key={ct}
+              className="flex-1 flex flex-col items-center justify-center py-2.5"
+              style={i > 0 ? { borderLeft: '1px solid var(--theme-border-default)' } : undefined}
+            >
+              <span className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>{ct}</span>
+              <span className="text-lg font-bold tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>
+                {contTypeStats[ct] ?? 0}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Search input */}
       <div className="relative">

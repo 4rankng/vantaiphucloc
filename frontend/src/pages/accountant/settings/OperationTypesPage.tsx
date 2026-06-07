@@ -10,7 +10,7 @@ import {
   useUpdateOperationType,
   useDeleteOperationType,
 } from '@/hooks/queries/operation-types'
-import type { OperationType } from '@/data/domain'
+import type { OperationTypeEntity } from '@/data/domain'
 
 export function OperationTypesPage() {
   const toast = useToast()
@@ -20,10 +20,10 @@ export function OperationTypesPage() {
   const deleteType = useDeleteOperationType()
 
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editing, setEditing] = useState<OperationType | null>(null)
+  const [editing, setEditing] = useState<OperationTypeEntity | null>(null)
   const [formName, setFormName] = useState('')
   const [formLabel, setFormLabel] = useState('')
-  const [deleteTarget, setDeleteTarget] = useState<OperationType | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<OperationTypeEntity | null>(null)
 
   const openCreate = useCallback(() => {
     setEditing(null)
@@ -32,7 +32,7 @@ export function OperationTypesPage() {
     setDialogOpen(true)
   }, [])
 
-  const openEdit = useCallback((t: OperationType) => {
+  const openEdit = useCallback((t: OperationTypeEntity) => {
     setEditing(t)
     setFormName(t.name)
     setFormLabel(t.label)
@@ -65,7 +65,7 @@ export function OperationTypesPage() {
     }
   }, [editing, formName, formLabel, createType, updateType, toast])
 
-  const handleToggle = useCallback((t: OperationType) => {
+  const handleToggle = useCallback((t: OperationTypeEntity) => {
     updateType.mutate(
       { id: t.id, data: { isActive: !t.isActive } },
       {

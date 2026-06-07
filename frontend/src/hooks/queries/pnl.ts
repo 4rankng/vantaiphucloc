@@ -27,11 +27,17 @@ export function useVehiclePnL(dateFrom: string, dateTo: string, vehicleId?: numb
 }
 
 
-export function useTripDailyStats(dateFrom: string, dateTo: string, clientId?: number) {
+export function useTripDailyStats(
+  dateFrom: string,
+  dateTo: string,
+  clientId?: number,
+  driverId?: number,
+  matched?: boolean,
+) {
   return useQuery({
-    queryKey: ['trip-daily-stats', dateFrom, dateTo, clientId],
+    queryKey: ['trip-daily-stats', dateFrom, dateTo, clientId ?? null, driverId ?? null, matched ?? null],
     queryFn: async () => {
-      const res = await apiClient.getTripDailyStats(dateFrom, dateTo, clientId)
+      const res = await apiClient.getTripDailyStats(dateFrom, dateTo, clientId, driverId, matched)
       return res.success ? res.data : null
     },
     enabled: !!dateFrom && !!dateTo,

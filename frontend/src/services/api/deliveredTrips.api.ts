@@ -230,6 +230,26 @@ export async function bulkImportAndMatch(file: File, clientId?: number): Promise
 }
 
 
+type ContTypeStats = import('@/data/domain').ContTypeStats
+
+export async function getContTypeStats(filters?: {
+  driverId?: number
+  dateFrom?: string
+  dateTo?: string
+}): Promise<ApiResponse<ContTypeStats>> {
+  try {
+    const params: Record<string, string> = {}
+    if (filters?.driverId != null) params.driver_id = String(filters.driverId)
+    if (filters?.dateFrom) params.date_from = filters.dateFrom
+    if (filters?.dateTo) params.date_to = filters.dateTo
+    const res = await api.get('/delivered-trips/cont-type-stats', { params })
+    return ok(res.data as ContTypeStats)
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+
 // ---------------------------------------------------------------------------
 // Template Excel Parse
 // ---------------------------------------------------------------------------

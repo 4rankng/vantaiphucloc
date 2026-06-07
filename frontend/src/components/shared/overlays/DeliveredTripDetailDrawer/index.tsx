@@ -10,6 +10,7 @@ import {
   useClients,
   useLocations,
 } from '@/hooks/use-queries'
+import { useOperationTypes } from '@/hooks/queries/operation-types'
 import type { DeliveredTrip, ContType } from '@/data/domain'
 import { CONT_TYPES } from '@/data/domain'
 import { CriteriaEditRow } from './CriteriaEditRow'
@@ -36,6 +37,7 @@ export function DeliveredTripDetailDrawer({
   const _updateTrip = useUpdateDeliveredTrip()
   const { data: clients = [] } = useClients()
   const { data: locations = [] } = useLocations()
+  const { data: operationTypes = [] } = useOperationTypes()
 
   const updateTrip = {
     ...(_updateTrip),
@@ -153,6 +155,15 @@ export function DeliveredTripDetailDrawer({
                   displayValue={trip.client?.code || trip.client?.name}
                   options={clients.map((c) => ({ value: c.id, label: c.name }))}
                   onChange={(id) => updateTrip.mutate({ id: trip.id, data: { clientId: id } })}
+                />
+              </CriteriaEditRow>
+
+              <CriteriaEditRow label="Tác nghiệp" className="col-span-2 border-t border-[var(--line)]">
+                <InlineSelect
+                  value={trip.workType ?? null}
+                  displayValue={operationTypes.find(o => o.name === trip.workType)?.label ?? trip.workType}
+                  options={operationTypes.filter(o => o.isActive).map((o) => ({ value: o.name, label: o.label }))}
+                  onChange={(v) => updateTrip.mutate({ id: trip.id, data: { workType: v as string || null } })}
                 />
               </CriteriaEditRow>
 

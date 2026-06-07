@@ -815,6 +815,8 @@ async def get_trip_daily_stats(
     date_from: str = Query(..., description="YYYY-MM-DD"),
     date_to: str = Query(..., description="YYYY-MM-DD"),
     client_id: int | None = None,
+    driver_id: int | None = None,
+    matched: bool | None = None,
     _current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -842,6 +844,10 @@ async def get_trip_daily_stats(
 
     if client_id is not None:
         stmt = stmt.where(DeliveredTrip.client_id == client_id)
+    if driver_id is not None:
+        stmt = stmt.where(DeliveredTrip.driver_id == driver_id)
+    if matched is not None:
+        stmt = stmt.where(DeliveredTrip.booked_trip_id.isnot(None) if matched else DeliveredTrip.booked_trip_id.is_(None))
 
     rows = (await db.execute(
         stmt.group_by(DeliveredTrip.trip_date, DeliveredTrip.booked_trip_id)
@@ -891,6 +897,10 @@ async def get_trip_daily_stats(
     ]
     if client_id is not None:
         base_where.append(DeliveredTrip.client_id == client_id)
+    if driver_id is not None:
+        base_where.append(DeliveredTrip.driver_id == driver_id)
+    if matched is not None:
+        base_where.append(DeliveredTrip.booked_trip_id.isnot(None) if matched else DeliveredTrip.booked_trip_id.is_(None))
 
     internal_count = (await db.execute(
         select(func.count(func.distinct(DeliveredTrip.driver_id)))
