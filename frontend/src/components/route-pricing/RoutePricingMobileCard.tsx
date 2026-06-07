@@ -72,9 +72,6 @@ export function RoutePricingMobileCard({ rp, idx, onEdit, onDelete }: RoutePrici
             <span className="text-[10.5px] font-semibold uppercase px-1.5 py-0.5 rounded" style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}>
               {workTypeLabel}
             </span>
-            <span className="font-mono text-[10.5px] tabular-nums" style={{ color: 'var(--ink-4)' }}>
-              #{idx + 1}
-            </span>
           </div>
         </div>
 
@@ -101,7 +98,7 @@ export function RoutePricingMobileCard({ rp, idx, onEdit, onDelete }: RoutePrici
       </div>
 
       {/* Price table — full width rows with Cước | Lương */}
-      <div className="relative z-20 pointer-events-none" style={{ borderTop: '1px solid var(--line)' }}>
+      <div className="relative z-20 pointer-events-none">
         {/* Column headers */}
         <div className="grid grid-cols-[40px_1fr_1fr] gap-x-2 mb-1">
           <span />

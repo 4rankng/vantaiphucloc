@@ -275,10 +275,10 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
 
           {/* Section 2: Pricing matrix */}
           <section
-            className="rounded-lg p-3"
+            className={`rounded-lg p-3 ${isMobile ? '' : ''}`}
             style={{
               background: 'var(--surface-2)',
-              border: '1px solid var(--line)',
+              ...(isMobile ? {} : { border: '1px solid var(--line)' }),
             }}
           >
             <SectionHeader icon={Banknote} title="Cước vận chuyển" hint={isMobile ? undefined : 'Đơn giá theo loại cont'} />
