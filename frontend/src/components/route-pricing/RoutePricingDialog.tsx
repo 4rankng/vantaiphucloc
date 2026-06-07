@@ -288,9 +288,6 @@ export const RoutePricingDialog = memo(function RoutePricingDialog({
               <div className="space-y-3">
                 {/* Fares */}
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--theme-status-info)' }}>
-                    Cước
-                  </div>
                   <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                     {CONTAINER_TYPES.map((c) => (
                       <StackedPriceRow
