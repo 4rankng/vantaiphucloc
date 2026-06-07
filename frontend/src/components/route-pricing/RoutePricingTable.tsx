@@ -284,8 +284,6 @@ export function RoutePricingTable({
               isExpanded={expandedClients.has(group.clientId)}
               onToggle={() => onToggleClient(group.clientId)}
               rowOffset={offsets.get(group.clientId) ?? 0}
-              editingId={editingId}
-              onStartEdit={onStartEdit}
               onDelete={onDelete}
               onEditOpenDialog={onEditOpenDialog ?? (() => {})}
             />

@@ -1,6 +1,6 @@
 import { ChevronRight } from 'lucide-react'
 import { RoutePricingMobileCard } from './RoutePricingMobileCard'
-import type { ClientGroup, RoutePricingFormData, FocusableField } from './RoutePricingTable.types'
+import type { ClientGroup } from './RoutePricingTable.types'
 import type { RoutePricing } from '@/data/domain'
 
 export interface RoutePricingMobileGroupProps {
@@ -8,8 +8,6 @@ export interface RoutePricingMobileGroupProps {
   isExpanded: boolean
   onToggle: () => void
   rowOffset: number
-  editingId: number | null
-  onStartEdit: (rp: RoutePricing, field?: FocusableField) => void
   onDelete: (id: number) => void
   onEditOpenDialog: (rp: RoutePricing) => void
 }
@@ -32,8 +30,6 @@ export function RoutePricingMobileGroup({
   isExpanded,
   onToggle,
   rowOffset,
-  editingId,
-  onStartEdit,
   onDelete,
   onEditOpenDialog,
 }: RoutePricingMobileGroupProps) {

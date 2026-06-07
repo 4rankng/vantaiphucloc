@@ -77,6 +77,20 @@ function NoiBoTable({ rows, isLoading, isMobile }: { rows: VehiclePnLRow[]; isLo
     [],
   )
 
+  const footerCells = useMemo<NepoFooterCell[]>(
+    () => [
+      { content: 'Tổng', sticky: true },
+      { content: <MoneyCell value={totalRevenue} />, align: 'right' },
+      { content: <MoneyCell value={totalCost} />, align: 'right' },
+      {
+        content: <MoneyCell value={totalProfit} bold />,
+        align: 'right',
+        className: 'nepo-col-net',
+      },
+    ],
+    [totalRevenue, totalCost, totalProfit],
+  )
+
   if (isMobile) {
     return (
       <div className="flex flex-col gap-3">
@@ -115,20 +129,6 @@ function NoiBoTable({ rows, isLoading, isMobile }: { rows: VehiclePnLRow[]; isLo
     )
   }
 
-  const footerCells = useMemo<NepoFooterCell[]>(
-    () => [
-      { content: 'Tổng', sticky: true },
-      { content: <MoneyCell value={totalRevenue} />, align: 'right' },
-      { content: <MoneyCell value={totalCost} />, align: 'right' },
-      {
-        content: <MoneyCell value={totalProfit} bold />,
-        align: 'right',
-        className: 'nepo-col-net',
-      },
-    ],
-    [totalRevenue, totalCost, totalProfit],
-  )
-
   return (
     <NepoTable
       columns={columns}
@@ -148,44 +148,6 @@ function NgoaiTable({ rows, isLoading, isMobile }: { rows: VehiclePnLRow[]; isLo
   const totalRevenue  = rows.reduce((s, r) => s + r.revenue, 0)
   const totalCost     = rows.reduce((s, r) => s + r.cpVendor, 0)
   const totalProfit   = rows.reduce((s, r) => s + r.loiNhuan, 0)
-
-  if (isMobile) {
-    return (
-      <div className="flex flex-col gap-3">
-        {rows.length === 0 && !isLoading && (
-          <div className="p-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>
-            Không có xe ngoài trong kỳ này
-          </div>
-        )}
-        {rows.map((row) => <PnLMobileCard key={row.vehicleId} row={row} />)}
-        {rows.length > 0 && (
-          <div
-            className="p-4 rounded-xl border space-y-1.5"
-            style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
-          >
-            <div className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--ink-2)' }}>Tổng</div>
-            <div className="flex justify-between text-sm">
-              <span style={{ color: 'var(--ink-3)' }}>Doanh thu</span>
-              <span className="tabular-nums" style={{ ...monoStyle, color: 'var(--ink)' }}>{formatCurrency(totalRevenue)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span style={{ color: 'var(--ink-3)' }}>Chi phí</span>
-              <span className="tabular-nums" style={{ ...monoStyle, color: 'var(--ink-2)' }}>{formatCurrency(totalCost)}</span>
-            </div>
-            <div
-              className="flex justify-between font-bold pt-2 mt-1"
-              style={{ borderTop: '1px solid var(--line)' }}
-            >
-              <span>Lợi nhuận</span>
-              <span className="tabular-nums" style={{ ...monoStyle, color: profitColor(totalProfit) }}>
-                {formatCurrency(totalProfit)}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
 
   const columns = useMemo<NepoColumn<VehiclePnLRow>[]>(
     () => [
@@ -244,6 +206,44 @@ function NgoaiTable({ rows, isLoading, isMobile }: { rows: VehiclePnLRow[]; isLo
     ],
     [totalRevenue, totalCost, totalProfit],
   )
+
+  if (isMobile) {
+    return (
+      <div className="flex flex-col gap-3">
+        {rows.length === 0 && !isLoading && (
+          <div className="p-8 text-center text-sm" style={{ color: 'var(--ink-3)' }}>
+            Không có xe ngoài trong kỳ này
+          </div>
+        )}
+        {rows.map((row) => <PnLMobileCard key={row.vehicleId} row={row} />)}
+        {rows.length > 0 && (
+          <div
+            className="p-4 rounded-xl border space-y-1.5"
+            style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
+          >
+            <div className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--ink-2)' }}>Tổng</div>
+            <div className="flex justify-between text-sm">
+              <span style={{ color: 'var(--ink-3)' }}>Doanh thu</span>
+              <span className="tabular-nums" style={{ ...monoStyle, color: 'var(--ink)' }}>{formatCurrency(totalRevenue)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span style={{ color: 'var(--ink-3)' }}>Chi phí</span>
+              <span className="tabular-nums" style={{ ...monoStyle, color: 'var(--ink-2)' }}>{formatCurrency(totalCost)}</span>
+            </div>
+            <div
+              className="flex justify-between font-bold pt-2 mt-1"
+              style={{ borderTop: '1px solid var(--line)' }}
+            >
+              <span>Lợi nhuận</span>
+              <span className="tabular-nums" style={{ ...monoStyle, color: profitColor(totalProfit) }}>
+                {formatCurrency(totalProfit)}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <NepoTable

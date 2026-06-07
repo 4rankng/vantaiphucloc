@@ -4,7 +4,6 @@ import type { RoutePricing, WorkType } from '@/data/domain'
 
 export interface RoutePricingMobileCardProps {
   rp: RoutePricing
-  idx: number
   onEdit: () => void
   onDelete: () => void
 }
@@ -38,7 +37,7 @@ const FIELDS: { key: PriceField; label: string }[] = [
   { key: 'e40', label: 'E40' },
 ]
 
-export function RoutePricingMobileCard({ rp, idx, onEdit, onDelete }: RoutePricingMobileCardProps) {
+export function RoutePricingMobileCard({ rp, onEdit, onDelete }: RoutePricingMobileCardProps) {
   const workTypeLabel = WORK_TYPE_LABELS[rp.workType as WorkType] ?? rp.workType
 
   return (
