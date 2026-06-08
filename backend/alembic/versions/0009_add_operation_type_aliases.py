@@ -1,7 +1,7 @@
 """add operation_type_aliases table
 
 Revision ID: 0009_add_op_type_aliases
-Revises: 9c81f08d14c0
+Revises: 0008_drop_pricing_tables
 Create Date: 2026-06-08
 
 """
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '0009_add_op_type_aliases'
-down_revision: Union[str, None] = '9c81f08d14c0'
+down_revision: Union[str, None] = '0008_drop_pricing_tables'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
