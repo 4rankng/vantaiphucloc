@@ -785,12 +785,15 @@ def extract_settlement_list(sheets: list[SheetView], filename: str = "") -> tupl
         # Determine container type from pivoted columns
         work_type = _detect_work_type_from_pivot(row, col_map)
 
-        # Read work type (Tác nghiệp) from dedicated column
+        # Read work type (Tác nghiệp) from dedicated column — preserve
+        # the original value exactly as in the Excel (no uppercasing, no
+        # diacritic stripping).  Normalization is only for DB matching,
+        # done during the commit step.
         work_type_val = "CHUYỂN BÃI"
         if col_map.get("operation") is not None and col_map["operation"] < len(row):
-            op_val = _cell_text(row[col_map["operation"]]).strip().upper()
+            op_val = _cell_text(row[col_map["operation"]]).strip()
             if op_val:
-                work_type_val = _normalize_work_type(op_val)
+                work_type_val = op_val
 
         if col_map.get("date") is not None and col_map["date"] < len(row):
             parse_date(row[col_map["date"]])
