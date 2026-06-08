@@ -17,7 +17,7 @@ function hexToRgb(hexColor: string) {
 
       return color;
     }
-  } catch (error) {
+  } catch {
     console.error(
       `Invalid hex color '${hexColor}'.\nFalling back to default color '${DEFAULT_COLOR}'.`,
     );
@@ -331,6 +331,7 @@ function AuraShader({
 
 AuraShader.displayName = 'AuraShader';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const AgentAudioVisualizerAuraVariants = cva(['aspect-square'], {
   variants: {
     size: {

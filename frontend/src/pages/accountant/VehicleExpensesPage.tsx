@@ -413,7 +413,7 @@ export function VehicleExpensesPage() {
   // fetchNextPage is a fresh ref each render (React Query), so we use a ref
   // to avoid tearing down the observer on every render.
   const fetchNextPageRef = useRef(fetchNextPage)
-  fetchNextPageRef.current = fetchNextPage
+  useEffect(() => { fetchNextPageRef.current = fetchNextPage })
 
   useEffect(() => {
     const el = sentinelRef.current

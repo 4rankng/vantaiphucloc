@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import select
 
-from app.models.domain import Client, Pricing, PricingLine
+from app.models.domain import Client, RoutePricing
 from app.contexts.customer_pricing.infrastructure.pricing_import import (
     PricingPreview,
     SUPPORTED_FORMATS,
@@ -169,14 +169,10 @@ class TestCommitTariffRows:
         assert result.pricings_created == 1
         assert result.lines_created == 1
 
-        pricing = (await db_session.execute(select(Pricing))).scalar_one()
+        pricing = (await db_session.execute(select(RoutePricing))).scalar_one()
         assert pricing.client_id == partner.id
         assert pricing.work_type == "F20"
-
-        line = (await db_session.execute(select(PricingLine))).scalar_one()
-        assert line.pricing_id == pricing.id
-        assert line.unit_price == 1_500_000
-        assert line.quantity == 1
+        assert pricing.f20_price == 1_500_000
 
     async def test_idempotent_second_run_no_new_rows(self, db_session):
         partner = await self._seed_partner(db_session)
@@ -220,8 +216,8 @@ class TestCommitTariffRows:
             update_existing_lines=True,
         )
         assert result.lines_updated == 1
-        line = (await db_session.execute(select(PricingLine))).scalar_one()
-        assert line.unit_price == 1_200_000
+        pricing = (await db_session.execute(select(RoutePricing))).scalar_one()
+        assert pricing.f20_price == 1_200_000
 
     async def test_skips_rows_with_blank_pickup_or_dropoff(self, db_session):
         partner = await self._seed_partner(db_session)
