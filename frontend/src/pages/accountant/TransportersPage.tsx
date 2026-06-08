@@ -5,6 +5,7 @@ import { Button } from '@/components/ui'
 import { Panel } from '@/components/shared/overlays/Panel'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
 import { Plate } from '@/components/shared/data-display/Plate'
+import { InlineEditable } from '@/components/shared/forms/InlineEditable/InlineEditable'
 import { EmptyState } from '@/components/shared/feedback/EmptyState'
 import { TableSkeleton } from '@/components/shared/data-display/TableSkeleton/TableSkeleton'
 import { VendorManagementDrawer } from '@/components/shared/overlays/VendorManagementDrawer'
@@ -125,6 +126,7 @@ function FleetSection() {
     },
     actions: {
       addVehicle,
+      updateVehiclePlate,
       createDriver,
       updateDriver,
       addDriverToVehicle,
@@ -237,7 +239,9 @@ function FleetSection() {
                       <VehicleGroupCard
                         key={g.vehicleId}
                         plate={g.plate}
+                        vehicleId={g.vehicleId}
                         drivers={g.drivers}
+                        onEditPlate={(plate) => updateVehiclePlate(g.vehicleId, plate.toUpperCase())}
                         onAddDriver={() => setAddingDriverFor(g.vehicleId)}
                         onRemoveDriver={(vdId, name) => setRemoveDriverTarget({ vdId, name })}
                         onDeleteVehicle={() => setDeleteVehicleTarget({ id: g.vehicleId, plate: g.plate })}
@@ -270,7 +274,15 @@ function FleetSection() {
                       <tbody>
                         {visibleGroups.map((g) => (
                           <tr key={g.vehicleId} className="group">
-                            <td><Plate>{g.plate}</Plate></td>
+                            <td>
+                              <InlineEditable
+                                display={<Plate>{g.plate}</Plate>}
+                                value={g.plate}
+                                onSave={(plate) => updateVehiclePlate(g.vehicleId, plate.toUpperCase())}
+                                editLabel="Sửa biển số"
+                                className="min-w-0"
+                              />
+                            </td>
                             <td>
                               <div className="flex flex-wrap items-center gap-1.5">
                                 {g.drivers.length === 0 ? (

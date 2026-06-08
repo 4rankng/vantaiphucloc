@@ -11,7 +11,7 @@ export { useDeliveredTrips, useDeliveredTripsInfinite, useDeliveredTrip, useCrea
 export { useBookedTrips, useBookedTrip, useCreateBookedTrip, useUpdateBookedTrip } from './queries/booked-trips'
 export { useDriverEarnings, useMyEarnings, useSalaryDashboard, useExportSalaryExcel, useCalculateSalary, useSalaryConfig, useUpdateSalaryConfig, useDriverBaseSalaryHistory, useSetDriverBaseSalary, useSalaryPeriod, useUpsertDriverSalary, useInitializeSalaryPeriod } from './queries/salary'
 export { useDrivers, useDriversPaged, useCreateDriver, useUpdateDriver, useDeleteDriver } from './queries/drivers'
-export { useVehicles, useCreateVehicle, useVehicleDrivers, useAddVehicleDriver, useRemoveVehicleDriver, useDeleteVehicle } from './queries/vehicles'
+export { useVehicles, useCreateVehicle, useUpdateVehicle, useVehicleDrivers, useAddVehicleDriver, useRemoveVehicleDriver, useDeleteVehicle } from './queries/vehicles'
 export { useVehicleExpenses, useVehicleExpensesInfinite, useCreateVehicleExpense, useUpdateVehicleExpense, useDeleteVehicleExpense } from './queries/vehicle-expenses'
 export { useMonthlyPnL, useVehiclePnL, useTripDailyStats } from './queries/pnl'
 export { useDashboardSummary, useKpiTrends } from './queries/dashboard'

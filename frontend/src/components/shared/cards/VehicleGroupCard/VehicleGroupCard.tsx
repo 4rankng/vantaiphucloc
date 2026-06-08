@@ -1,9 +1,12 @@
 import { Truck, Plus, X, Trash2 } from 'lucide-react'
 import { Plate } from '@/components/shared/data-display/Plate'
+import { InlineEditable } from '@/components/shared/forms/InlineEditable/InlineEditable'
 
 export interface VehicleGroupCardProps {
   plate: string
+  vehicleId?: number
   drivers: { id: number; driverId: number; driverName: string }[]
+  onEditPlate?: (plate: string) => void
   onAddDriver: () => void
   onRemoveDriver: (vdId: number, name: string) => void
   onDeleteVehicle: () => void
@@ -11,6 +14,7 @@ export interface VehicleGroupCardProps {
 
 export function VehicleGroupCard({
   plate,
+  onEditPlate,
   drivers,
   onAddDriver,
   onRemoveDriver,
@@ -25,12 +29,21 @@ export function VehicleGroupCard({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
             style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
           >
             <Truck className="h-4 w-4" />
           </div>
-          <Plate>{plate}</Plate>
+          {onEditPlate ? (
+            <InlineEditable
+              display={<Plate>{plate}</Plate>}
+              value={plate}
+              onSave={onEditPlate}
+              editLabel="Sửa biển số"
+            />
+          ) : (
+            <Plate>{plate}</Plate>
+          )}
           {drivers.length > 0 && (
             <span
               className="text-[10.5px] font-semibold px-1.5 py-0.5 rounded-md"

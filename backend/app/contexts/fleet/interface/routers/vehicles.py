@@ -21,6 +21,10 @@ class VehicleCreateIn(BaseModel):
     vendor_id: int | None = None
 
 
+class VehicleUpdateIn(BaseModel):
+    plate: str = Field(..., min_length=4, max_length=20)
+
+
 @router.get("/vehicles", response_model=list[VehicleOut])
 async def list_vehicles(
     active_only: bool = Query(True),
@@ -49,6 +53,33 @@ async def create_vehicle(
         return existing
     vehicle = Vehicle(plate=plate, is_active=True, vendor_id=body.vendor_id)
     db.add(vehicle)
+    await db.flush()
+    await db.refresh(vehicle)
+    return vehicle
+
+
+@router.put("/vehicles/{vehicle_id}", response_model=VehicleOut)
+async def update_vehicle(
+    vehicle_id: int,
+    body: VehicleUpdateIn,
+    _current_user: User = Depends(require_permission("update", "Vehicle")),
+    db: AsyncSession = Depends(get_db),
+):
+    vehicle = (await db.execute(
+        select(Vehicle).where(Vehicle.id == vehicle_id)
+    )).scalar_one_or_none()
+    if vehicle is None:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+
+    plate = body.plate.strip().upper()
+    if plate != vehicle.plate:
+        duplicate = (await db.execute(
+            select(Vehicle).where(Vehicle.plate == plate)
+        )).scalar_one_or_none()
+        if duplicate:
+            raise HTTPException(status_code=409, detail="Biển số đã tồn tại")
+
+    vehicle.plate = plate
     await db.flush()
     await db.refresh(vehicle)
     return vehicle

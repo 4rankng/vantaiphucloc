@@ -6,6 +6,7 @@ import {
   useAddVehicleDriver,
   useRemoveVehicleDriver,
   useCreateVehicle,
+  useUpdateVehicle,
   useCreateDriver,
   useUpdateDriver,
   useDeleteVehicle,
@@ -42,6 +43,7 @@ export function useFleetManager() {
   const { data: vehicles = [] } = useVehicles()
 
   const createVehicle = useCreateVehicle()
+  const updateVehicle = useUpdateVehicle()
   const createDriver = useCreateDriver()
   const updateDriver = useUpdateDriver()
   const addVehicleDriver = useAddVehicleDriver()
@@ -119,6 +121,19 @@ export function useFleetManager() {
       }
     },
     [createVehicle, toast]
+  )
+
+  const updateVehiclePlate = useCallback(
+    async (vehicleId: number, plate: string) => {
+      try {
+        await updateVehicle.mutateAsync({ id: vehicleId, plate })
+        toast.success('Đã cập nhật biển số')
+      } catch {
+        toast.error('Không thể cập nhật biển số')
+        throw new Error('Update plate failed')
+      }
+    },
+    [updateVehicle, toast]
   )
 
   const handleCreateDriver = useCallback(
@@ -290,6 +305,7 @@ export function useFleetManager() {
     },
     actions: {
       addVehicle,
+      updateVehiclePlate,
       createDriver: handleCreateDriver,
       updateDriver: handleUpdateDriver,
       addDriverToVehicle: handleAddDriverToVehicle,
@@ -302,6 +318,7 @@ export function useFleetManager() {
       vdLoading,
       driversLoading,
       addVehiclePending: createVehicle.isPending,
+      updateVehiclePending: updateVehicle.isPending,
       createDriverPending: createDriver.isPending,
       savingDriver,
       deleteVehiclePending: deleteVehicle.isPending,

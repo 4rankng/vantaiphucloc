@@ -113,6 +113,7 @@ export const apiClient = {
 
   // Vehicles
   getVehicles: vehiclesApi.getVehicles,
+  updateVehicle: vehiclesApi.updateVehicle,
   deleteVehicle: vehiclesApi.deleteVehicle,
 
   // Vehicle Drivers

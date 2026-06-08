@@ -34,6 +34,23 @@ export function useCreateVehicle() {
 }
 
 
+export function useUpdateVehicle() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, plate }: { id: number; plate: string }) => {
+      const res = await apiClient.updateVehicle(id, plate)
+      return unwrap(res)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vehicles'] })
+      qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers })
+      qc.invalidateQueries({ queryKey: ['drivers'] })
+      qc.invalidateQueries({ queryKey: ['drivers-paged'] })
+    },
+  })
+}
+
+
 export function useVehicleDrivers() {
   return useQuery({
     queryKey: queryKeys.vehicleDrivers,

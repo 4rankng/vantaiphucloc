@@ -21,6 +21,15 @@ export async function getVehicles(activeOnly = true): Promise<ApiResponse<Vehicl
   }
 }
 
+export async function updateVehicle(id: number, plate: string): Promise<ApiResponse<Vehicle>> {
+  try {
+    const res = await api.put(`/vehicles/${id}`, { plate })
+    return ok(toCamel<Vehicle>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
 export async function deleteVehicle(id: number): Promise<ApiResponse<void>> {
   try {
     await api.delete(`/vehicles/${id}`)
