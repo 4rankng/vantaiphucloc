@@ -46,6 +46,7 @@ CANONICAL_FIELDS: tuple[CanonicalField, ...] = (
     CanonicalField("vehicle_plate",       "Biển số xe",            False, ""),
     CanonicalField("vessel",              "Số tàu",                False, ""),
     CanonicalField("freight_charge",      "Cước",                  False, "Cước chuyến / freight rate."),
+    CanonicalField("work_type",           "Tác nghiệp",            False, "Loại tác nghiệp / operation type."),
     CanonicalField("remarks",             "Ghi chú",               False, ""),
 )
 
@@ -212,6 +213,11 @@ SYNONYMS: dict[str, list[str]] = {
     "remarks": [
         "remark", "remarks", "note", "notes",
         "ghi chu", "ghi chú", "ghi chu nhap canh", "ghi chú nhập cảnh",
+    ],
+    "work_type": [
+        "tac nghiep", "tác nghiệp", "loai tac nghiep", "loại tác nghiệp",
+        "nghiep vu", "nghiệp vụ", "operation", "operation type",
+        "work type",
     ],
 }
 

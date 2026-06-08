@@ -951,24 +951,14 @@ def _detect_work_type_from_pivot(row: list, col_map: dict[str, int | None]) -> s
 # ---------------------------------------------------------------------------
 
 def _normalize_work_type(value: str) -> str:
-    """Normalize operation type value to canonical form."""
-    import unicodedata
-    norm = value.strip().upper()
-    # Strip diacritics for matching
-    folded = unicodedata.normalize("NFD", norm)
-    folded = "".join(c for c in folded if not unicodedata.combining(c))
-    folded = folded.replace("Đ", "D").replace("đ", "d")
-    if "CHUYEN BAI" in folded or "CHUYỂN BÃI" in norm:
-        return "CHUYỂN BÃI"
-    if "XUAT" in folded or "NHAP" in folded or "TAU" in folded:
-        return "XUẤT/NHẬP TÀU"
-    if "LAY VO" in folded or "HA HANG" in folded:
-        return "LẤY VỎ HẠ HÀNG"
-    if "DONG KHO" in folded or "ĐÓNG KHO" in norm:
-        return "ĐÓNG KHO"
-    if "SA LAN" in folded or "SÀ LAN" in norm:
-        return "CHẠY SÀ LAN"
-    return norm or "CHUYỂN BÃI"
+    """Normalize operation type value — dynamic, no hardcoded mappings.
+
+    Simply strips and uppercases.  Whatever value the user's Excel contains
+    is preserved as-is.  New values are auto-created as OperationType records
+    during the commit step.
+    """
+    val = value.strip().upper()
+    return val or "CHUYỂN BÃI"
 
 
 def _cell_text(cell) -> str:

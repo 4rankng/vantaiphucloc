@@ -7,8 +7,10 @@ The interface layer wires concrete repos via FastAPI `Depends`.
 
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime, timezone
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession  # transaction control only
 
 from app.contexts.operations.application.dto import (
@@ -206,6 +208,22 @@ class CreateBookedTripFromImport:
 
         locations_seen_before = await count_locations(self.session)
 
+        # Auto-create missing OperationType records for any new work_type values
+        from app.models.operation_type import OperationType
+        work_type_values = {r.work_type for r in data.rows if r.work_type}
+        for wt_name in work_type_values:
+            exists = await self.session.execute(
+                select(OperationType).where(OperationType.name == wt_name)
+            )
+            if exists.scalar_one_or_none() is None:
+                self.session.add(OperationType(
+                    name=wt_name,
+                    label=wt_name,
+                    is_active=True,
+                ))
+                logging.getLogger(__name__).info("Auto-created OperationType: %s", wt_name)
+        await self.session.flush()
+
         for idx, r in enumerate(data.rows, start=1):
             try:
                 cn = r.container_no
@@ -270,6 +288,10 @@ class CreateBookedTripFromImport:
             0, await count_locations(self.session) - locations_seen_before
         )
         await self.session.commit()
+
+        # Refresh in-memory work_type validation cache with any new OperationTypes
+        from app.contexts.route_pricing.domain.value_objects import refresh_work_types_from_async
+        await refresh_work_types_from_async(self.session)
 
         return ImportCommitResult(
             created=created,
