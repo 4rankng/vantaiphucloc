@@ -208,21 +208,20 @@ class CreateBookedTripFromImport:
 
         locations_seen_before = await count_locations(self.session)
 
-        # Resolve work_type values through alias system — auto-creates missing types.
+        # Ensure OperationType records exist for all work_type values, but
+        # keep the ORIGINAL value from the Excel — do NOT replace with canonical.
         from app.contexts.operations.infrastructure.operation_type_resolver import (
             OperationTypeResolverService,
         )
 
         wt_resolver = OperationTypeResolverService(self.session)
-
-        # Pre-resolve all unique work_type values (batch, not N+1)
         work_type_values = {r.work_type for r in data.rows if r.work_type}
-        resolved_map: dict[str, str] = {}
         for wt_name in work_type_values:
-            canonical = await wt_resolver.resolve_or_create(
+            await wt_resolver.resolve_or_create(
                 wt_name, source="import", user_id=data.user_id,
             )
-            resolved_map[wt_name] = canonical
+
+        updated = 0
 
         for idx, r in enumerate(data.rows, start=1):
             try:
@@ -243,7 +242,7 @@ class CreateBookedTripFromImport:
                 pickup = r.pickup_location or ""
                 dropoff = r.dropoff_location or ""
                 cont_type = r.cont_type or f"{r.freight_kind}{r.container_size}" or "E20"
-                work_type_val = resolved_map.get(r.work_type, "CHUYỂN BÃI") if r.work_type else "CHUYỂN BÃI"
+                work_type_val = r.work_type if r.work_type else "CHUYỂN BÃI"
 
                 pickup_loc = None
                 dropoff_loc = None
@@ -265,22 +264,36 @@ class CreateBookedTripFromImport:
                     if d.review_needed:
                         review_needed = True
 
-                trip = BookedTripORM(
-                    trip_date=td,
-                    client_id=partner.id,
-                    pickup_location_id=pickup_loc.id if pickup_loc else None,
-                    dropoff_location_id=dropoff_loc.id if dropoff_loc else None,
-                    work_type=work_type_val,
-                    cont_number=cn,
-                    cont_type=cont_type,
-                    vessel=r.vessel,
-                )
+                if existing:
+                    # Update existing trip with new values from Excel
+                    existing.work_type = work_type_val
+                    existing.cont_type = cont_type
+                    existing.vessel = r.vessel or existing.vessel
+                    if pickup_loc:
+                        existing.pickup_location_id = pickup_loc.id
+                    if dropoff_loc:
+                        existing.dropoff_location_id = dropoff_loc.id
+                    await self.session.flush()
+                    created_trip_ids.append(existing.id)
+                    updated += 1
+                else:
+                    trip = BookedTripORM(
+                        trip_date=td,
+                        client_id=partner.id,
+                        pickup_location_id=pickup_loc.id if pickup_loc else None,
+                        dropoff_location_id=dropoff_loc.id if dropoff_loc else None,
+                        work_type=work_type_val,
+                        cont_number=cn,
+                        cont_type=cont_type,
+                        vessel=r.vessel,
+                    )
+                    self.session.add(trip)
+                    await self.session.flush()
+                    created_trip_ids.append(trip.id)
+                    created += 1
+
                 if review_needed:
                     locations_review_flagged += 1
-                self.session.add(trip)
-                await self.session.flush()
-                created_trip_ids.append(trip.id)
-                created += 1
             except Exception as exc:
                 errors.append(f"Dòng {idx}: Lỗi xử lý — {exc}")
 
@@ -291,6 +304,7 @@ class CreateBookedTripFromImport:
 
         return ImportCommitResult(
             created=created,
+            updated=updated,
             grouped_trips=grouped_trips,
             skipped_duplicates=skipped,
             locations_created=locations_created,

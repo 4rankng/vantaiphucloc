@@ -3,21 +3,22 @@
 Adapted from the legacy match_suggester to work with the flat schema
 (single cont_number per trip instead of junction tables).
 
-Seven weighted matching criteria:
+Eight weighted matching criteria:
 
-  1. Container number (0.30) — strongest identifier, graduated scoring
-  2. Pickup location (0.15) — key route discriminator
-  3. Dropoff location (0.15) — key route discriminator
-  4. Container type / work_type (0.12) — E20/E40/F20/F40 narrows matches
-  5. Vessel number (0.12) — strong for XUẤT/NHẬP TÀU operations
-  6. Vehicle plate (0.10) — links to specific truck/driver
-  7. Customer / client (0.06) — coarse filter only
+  1. Container number (0.28) — strongest identifier, graduated scoring
+  2. Pickup location (0.14) — key route discriminator
+  3. Dropoff location (0.14) — key route discriminator
+  4. Trip date (0.12) — same date is a strong signal
+  5. Container type / work_type (0.10) — E20/E40/F20/F40 narrows matches
+  6. Vessel number (0.10) — strong for XUẤT/NHẬP TÀU operations
+  7. Vehicle plate (0.07) — links to specific truck/driver
+  8. Customer / client (0.05) — coarse filter only
 
-Date is NOT a scoring criterion — used only for SQL pre-filter (±30 days)
-to narrow the candidate pool. Drivers often forget to update trip_date,
-so the buffer is intentionally wide to avoid missing valid matches.
+Date is also used for SQL pre-filter (±30 days) to narrow the candidate
+pool. Drivers often forget to update trip_date, so the buffer is
+intentionally wide to avoid missing valid matches.
 
-Weight redistribution: when vessel is NULL on both sides, its 0.12
+Weight redistribution: when vessel/plate is NULL on both sides, its
 weight is redistributed proportionally to the other criteria.
 
 Confidence buckets:
@@ -40,18 +41,20 @@ from app.models.domain import (
     BookedTrip as BookedTripORM,
     LocationAlias,
 )
+from app.models.operation_type import OperationType, OperationTypeAlias
 from app.utils.iso6346 import normalize_container_number
 from app.utils.fuzzy import container_edit_distance
 
 
 WEIGHTS = {
-    "container_number": 0.30,
-    "pickup_location": 0.15,
-    "dropoff_location": 0.15,
-    "work_type": 0.12,
-    "vessel": 0.12,
-    "vehicle_plate": 0.10,
-    "client": 0.06,
+    "container_number": 0.28,
+    "pickup_location": 0.14,
+    "dropoff_location": 0.14,
+    "trip_date": 0.12,
+    "work_type": 0.10,
+    "vessel": 0.10,
+    "vehicle_plate": 0.07,
+    "client": 0.05,
 }
 
 def _normalize_work_type(wt: str | None) -> str | None:
@@ -114,6 +117,30 @@ async def _load_alias_groups(db: AsyncSession) -> dict[int, set[int]]:
     return groups
 
 
+async def _load_operation_type_aliases(db: AsyncSession) -> dict[str, str]:
+    """Map any normalized work_type (alias or canonical) → normalized canonical name."""
+    from app.contexts.operations.infrastructure.operation_type_resolver import normalize_operation_type
+    types = (await db.execute(select(OperationType))).scalars().all()
+    alias_rows = (await db.execute(
+        select(OperationTypeAlias.alias_normalized, OperationTypeAlias.operation_type_id)
+    )).all()
+
+    # type_id → normalized canonical name
+    type_names = {t.id: normalize_operation_type(t.name) for t in types}
+
+    # everything → normalized canonical name
+    alias_map: dict[str, str] = {}
+    for t in types:
+        norm = normalize_operation_type(t.name)
+        if norm:
+            alias_map[norm] = norm  # canonical maps to itself
+    for alias_norm, type_id in alias_rows:
+        canonical_norm = type_names.get(type_id)
+        if canonical_norm:
+            alias_map[alias_norm] = canonical_norm
+    return alias_map
+
+
 def _locations_match(
     id_a: int | None,
     id_b: int | None,
@@ -139,7 +166,11 @@ def _score_pair(
     wo: DeliveredTripORM,
     to: BookedTripORM,
     alias_groups: dict[int, set[int]],
+    wt_alias_map: dict[str, str],
 ) -> tuple[list[str], float]:
+    # Work type: no hard gate — just affects scoring weight.
+    # Different work_type lowers the score but doesn't reject the match.
+
     matched_fields: list[str] = []
     score = 0.0
 
@@ -187,15 +218,33 @@ def _score_pair(
         matched_fields.append("dropoff_location")
         score += w.get("dropoff_location", 0)
 
-    # 4. Container type (work_type) — normalized comparison
+    # 4. Trip date — same date is a strong signal
+    if wo.trip_date and to.trip_date:
+        delta = abs((wo.trip_date - to.trip_date).days)
+        if delta == 0:
+            matched_fields.append("trip_date")
+            score += w.get("trip_date", 0)
+        elif delta <= 1:
+            matched_fields.append("trip_date_offby1")
+            score += w.get("trip_date", 0) * 0.5
+
+    # 5. Container type (work_type) — normalized comparison with alias resolution
     if not work_type_missing:
         to_wt = _normalize_work_type(to.work_type)
         wo_wt = _normalize_work_type(wo.work_type)
-        if to_wt and wo_wt and to_wt == wo_wt:
-            matched_fields.append("work_type")
-            score += w.get("work_type", 0)
+        if to_wt and wo_wt:
+            if to_wt == wo_wt:
+                matched_fields.append("work_type")
+                score += w.get("work_type", 0)
+            else:
+                # Check alias resolution — partial credit if same canonical type
+                to_canonical = wt_alias_map.get(to_wt)
+                wo_canonical = wt_alias_map.get(wo_wt)
+                if to_canonical and wo_canonical and to_canonical == wo_canonical:
+                    matched_fields.append("work_type_alias")
+                    score += w.get("work_type", 0) * 0.7
 
-    # 5. Vessel
+    # 6. Vessel
     if not vessel_missing:
         to_vessel = (to.vessel or "").upper().strip()
         wo_vessel = (wo.vessel or "").upper().strip()
@@ -207,7 +256,7 @@ def _score_pair(
                 matched_fields.append("vessel")
                 score += w.get("vessel", 0) * 0.67
 
-    # 6. Vehicle plate
+    # 7. Vehicle plate
     if not vehicle_missing:
         to_plate = (to.vehicle_plate or "").upper().replace(" ", "").replace("-", "")
         wo_plate = (wo.vehicle_plate or "").upper().replace(" ", "").replace("-", "")
@@ -219,7 +268,7 @@ def _score_pair(
                 matched_fields.append("vehicle_plate")
                 score += w.get("vehicle_plate", 0) * 0.6
 
-    # 7. Client
+    # 8. Client
     if to.client_id == wo.client_id:
         matched_fields.append("client")
         score += w.get("client", 0)
@@ -270,6 +319,7 @@ async def auto_match_preview(
     booked_trips = list((await db.execute(to_query)).scalars().all())
 
     alias_groups = await _load_alias_groups(db)
+    wt_alias_map = await _load_operation_type_aliases(db)
 
     # Pre-filter by container number gate
     wo_by_container: dict[str, list[DeliveredTripORM]] = defaultdict(list)
@@ -306,7 +356,7 @@ async def auto_match_preview(
         for wo in candidate_wos:
             if wo.id in matched_wo_ids:
                 continue
-            matched_fields, score = _score_pair(wo, to, alias_groups)
+            matched_fields, score = _score_pair(wo, to, alias_groups, wt_alias_map)
             if score < MIN_MATCH_THRESHOLD:
                 continue
 

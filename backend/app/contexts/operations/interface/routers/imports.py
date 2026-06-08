@@ -98,6 +98,7 @@ class CommitRequest(BaseModel):
 
 class CommitResponse(BaseModel):
     created: int
+    updated: int = 0
     grouped_trips: int = 0
     skipped_duplicates: int = 0
     locations_created: int = 0
@@ -415,6 +416,7 @@ async def commit_customer_excel(
 
     return CommitResponse(
         created=result.created,
+        updated=result.updated,
         grouped_trips=result.grouped_trips,
         skipped_duplicates=result.skipped_duplicates,
         locations_created=result.locations_created,

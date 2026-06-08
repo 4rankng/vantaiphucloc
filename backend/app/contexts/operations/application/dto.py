@@ -78,10 +78,11 @@ class ImportCommitInput:
 @dataclass
 class ImportCommitResult:
     created: int
-    grouped_trips: int
-    skipped_duplicates: int
-    locations_created: int
-    locations_review_flagged: int
+    updated: int = 0
+    grouped_trips: int = 0
+    skipped_duplicates: int = 0
+    locations_created: int = 0
+    locations_review_flagged: int = 0
     errors: list[str] = field(default_factory=list)
     created_trip_ids: list[int] = field(default_factory=list)
 

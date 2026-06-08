@@ -344,9 +344,9 @@ def _parse_row(
 def _read_work_type(raw_dict: dict[str, Any]) -> str:
     """Read work_type from the mapped Excel column, fallback to default.
 
-    No hardcoded normalization — whatever the user's Excel contains is
-    uppercased and passed through.  New OperationType records are created
-    during the commit step.
+    Keeps the original value exactly as in the Excel — no uppercasing,
+    no normalization.  New OperationType records are created during the
+    commit step.
     """
     raw = raw_dict.get("work_type")
     if raw is None:
@@ -354,7 +354,7 @@ def _read_work_type(raw_dict: dict[str, Any]) -> str:
     val = str(raw).strip()
     if not val:
         return "CHUYỂN BÃI"
-    return val.upper()
+    return val
 
 
 def _row_has_any_content(row: list[Any]) -> bool:
