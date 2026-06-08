@@ -60,6 +60,8 @@ export const queryKeys = {
   vendorRoutePricingsFiltered: (filters?: { vendorId?: number; workType?: string }) =>
     ['vendor-route-pricings', filters] as const,
   operationTypes: ['operation-types'] as const,
+  operationTypeAliases: (operationTypeId?: number) =>
+    ['operation-type-aliases', operationTypeId ?? 'all'] as const,
 }
 
 /**
@@ -133,6 +135,7 @@ export function invalidateVehicleExpenseDeps(qc: QueryClient) {
 
 export function invalidateOperationTypeDeps(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: queryKeys.operationTypes })
+  qc.invalidateQueries({ queryKey: ['operation-type-aliases'] })
   qc.invalidateQueries({ queryKey: queryKeys.routePricings })
   qc.invalidateQueries({ queryKey: queryKeys.vendorRoutePricings })
 }

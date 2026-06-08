@@ -144,6 +144,17 @@ export interface OperationTypeEntity {
   isActive: boolean
 }
 
+export interface OperationTypeAlias {
+  id: number
+  operationTypeId: number
+  operationTypeName?: string | null
+  alias: string
+  aliasNormalized: string
+  source: string
+  createdAt: string
+  createdById?: number | null
+}
+
 export interface ClientSummary {
   id: number
   code?: string | null

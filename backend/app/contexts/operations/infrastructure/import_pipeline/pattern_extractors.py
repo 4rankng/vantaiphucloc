@@ -951,14 +951,9 @@ def _detect_work_type_from_pivot(row: list, col_map: dict[str, int | None]) -> s
 # ---------------------------------------------------------------------------
 
 def _normalize_work_type(value: str) -> str:
-    """Normalize operation type value — dynamic, no hardcoded mappings.
-
-    Simply strips and uppercases.  Whatever value the user's Excel contains
-    is preserved as-is.  New values are auto-created as OperationType records
-    during the commit step.
-    """
-    val = value.strip().upper()
-    return val or "CHUYỂN BÃI"
+    """Normalize operation type value via centralized normalize function."""
+    from app.contexts.operations.infrastructure.operation_type_resolver import normalize_operation_type
+    return normalize_operation_type(value) or "CHUYỂN BÃI"
 
 
 def _cell_text(cell) -> str:

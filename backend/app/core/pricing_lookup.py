@@ -53,22 +53,23 @@ def _salary_for_cont_type(row, cont_type: str | None) -> int:
 
 
 def _normalize_work_type(wt: str | None) -> str:
+    """Normalize work_type for pricing lookup — uses centralized normalization."""
     if not wt:
         return "CHUYỂN BÃI"
-    import unicodedata
-    norm = wt.strip().upper()
-    folded = unicodedata.normalize("NFD", norm)
-    folded = "".join(c for c in folded if not unicodedata.combining(c))
-    folded = folded.replace("Đ", "D").replace("đ", "d")
-    if "CHUYEN BAI" in folded or "CHUYỂN BÃI" in norm:
+    from app.contexts.operations.infrastructure.operation_type_resolver import normalize_operation_type
+    folded = normalize_operation_type(wt)
+    if not folded:
+        return "CHUYỂN BÃI"
+    # Keyword-based canonical mapping for pricing lookup
+    if "CHUYEN BAI" in folded:
         return "CHUYỂN BÃI"
     if "XUAT" in folded or "NHAP" in folded or "TAU" in folded:
         return "XUẤT/NHẬP TÀU"
     if "LAY VO" in folded or "HA HANG" in folded:
         return "LẤY VỎ HẠ HÀNG"
-    if "DONG KHO" in folded or "ĐÓNG KHO" in norm:
+    if "DONG KHO" in folded:
         return "ĐÓNG KHO"
-    if "SA LAN" in folded or "SÀ LAN" in norm:
+    if "SA LAN" in folded:
         return "CHẠY SÀ LAN"
     return wt
 

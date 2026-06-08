@@ -45,3 +45,44 @@ export function useDeleteOperationType() {
     onSuccess: () => { invalidateOperationTypeDeps(qc) },
   })
 }
+
+// ── Alias hooks ─────────────────────────────────────────────────────────────
+
+export function useOperationTypeAliases(operationTypeId?: number) {
+  return useQuery({
+    queryKey: queryKeys.operationTypeAliases(operationTypeId),
+    queryFn: async () => {
+      const params = operationTypeId ? { operationTypeId } : undefined
+      const res = await apiClient.listOperationTypeAliases(params)
+      return res.success ? res.data : []
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+export function useCreateOperationTypeAlias() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ operationTypeId, alias }: { operationTypeId: number; alias: string }) =>
+      apiClient.createOperationTypeAlias(operationTypeId, alias).then(unwrap),
+    onSuccess: () => { invalidateOperationTypeDeps(qc) },
+  })
+}
+
+export function usePromoteOperationTypeAlias() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (aliasId: number) =>
+      apiClient.promoteOperationTypeAlias(aliasId).then(unwrap),
+    onSuccess: () => { invalidateOperationTypeDeps(qc) },
+  })
+}
+
+export function useDeleteOperationTypeAlias() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (aliasId: number) =>
+      apiClient.deleteOperationTypeAlias(aliasId).then(unwrap),
+    onSuccess: () => { invalidateOperationTypeDeps(qc) },
+  })
+}

@@ -54,16 +54,12 @@ WEIGHTS = {
     "client": 0.06,
 }
 
-_WORK_TYPE_ALIASES = {
-    "CHUYỂN BÃI": "CHUYEN_BAI",
-    "CHUYỂN BÃI ".strip(): "CHUYEN_BAI",
-}
-
-
 def _normalize_work_type(wt: str | None) -> str | None:
+    """Normalize work_type for matching comparison — diacritics-insensitive."""
     if not wt:
         return wt
-    return _WORK_TYPE_ALIASES.get(wt, wt)
+    from app.contexts.operations.infrastructure.operation_type_resolver import normalize_operation_type
+    return normalize_operation_type(wt) or None
 
 
 _CONTAINER_EXACT = 1.0

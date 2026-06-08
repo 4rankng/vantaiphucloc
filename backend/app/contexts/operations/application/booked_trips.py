@@ -208,46 +208,21 @@ class CreateBookedTripFromImport:
 
         locations_seen_before = await count_locations(self.session)
 
-        # Auto-create missing OperationType records for any new work_type values.
-        # Uses diacritics-insensitive matching so "xuat tau" matches "XUẤT TÀU".
-        from app.models.operation_type import OperationType
-        import unicodedata
+        # Resolve work_type values through alias system — auto-creates missing types.
+        from app.contexts.operations.infrastructure.operation_type_resolver import (
+            OperationTypeResolverService,
+        )
 
-        def _fold(s: str) -> str:
-            """Strip diacritics + uppercase for comparison."""
-            n = unicodedata.normalize("NFD", s.upper())
-            return "".join(c for c in n if not unicodedata.combining(c)).replace("Đ", "D").replace("đ", "d")
+        wt_resolver = OperationTypeResolverService(self.session)
 
-        # Load all existing operation types once (batch, not N+1)
-        all_types = (await self.session.execute(
-            select(OperationType)
-        )).scalars().all()
-        existing_by_fold = {_fold(t.name): t for t in all_types}
-
+        # Pre-resolve all unique work_type values (batch, not N+1)
         work_type_values = {r.work_type for r in data.rows if r.work_type}
+        resolved_map: dict[str, str] = {}
         for wt_name in work_type_values:
-            # Check diacritics-insensitive match first
-            folded = _fold(wt_name)
-            matched = existing_by_fold.get(folded)
-            if matched is not None:
-                # Already exists (possibly with different diacritics/casing) — skip
-                continue
-            # Use savepoint so IntegrityError doesn't kill the outer transaction
-            async with self.session.begin_nested():
-                self.session.add(OperationType(
-                    name=wt_name,
-                    label=wt_name,
-                    is_active=True,
-                ))
-                await self.session.flush()
-            logging.getLogger(__name__).info("Auto-created OperationType: %s", wt_name)
-
-        # Refresh in-memory work_type validation cache
-        rows = (await self.session.execute(
-            select(OperationType.name).where(OperationType.is_active == True)  # noqa: E712
-        )).scalars().all()
-        from app.contexts.route_pricing.domain.value_objects import refresh_work_types_from_async
-        refresh_work_types_from_async(frozenset(rows))
+            canonical = await wt_resolver.resolve_or_create(
+                wt_name, source="import", user_id=data.user_id,
+            )
+            resolved_map[wt_name] = canonical
 
         for idx, r in enumerate(data.rows, start=1):
             try:
@@ -268,7 +243,7 @@ class CreateBookedTripFromImport:
                 pickup = r.pickup_location or ""
                 dropoff = r.dropoff_location or ""
                 cont_type = r.cont_type or f"{r.freight_kind}{r.container_size}" or "E20"
-                work_type_val = r.work_type or "CHUYỂN BÃI"
+                work_type_val = resolved_map.get(r.work_type, "CHUYỂN BÃI") if r.work_type else "CHUYỂN BÃI"
 
                 pickup_loc = None
                 dropoff_loc = None

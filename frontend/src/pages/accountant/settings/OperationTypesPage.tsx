@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react'
-import { Wrench, Plus, Pencil, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Wrench, Plus, Pencil, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronRight } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button } from '@/components/ui'
 import { Panel } from '@/components/shared/overlays/Panel'
+import { AliasManager } from '@/components/shared/cards/AliasManager'
 import { useToast } from '@/components/atoms/Toast'
 import { SettingsPageLayout } from '@/components/shared/layouts/SettingsPageLayout/SettingsPageLayout'
 import {
@@ -9,8 +10,119 @@ import {
   useCreateOperationType,
   useUpdateOperationType,
   useDeleteOperationType,
+  useOperationTypeAliases,
+  useCreateOperationTypeAlias,
+  usePromoteOperationTypeAlias,
+  useDeleteOperationTypeAlias,
 } from '@/hooks/queries/operation-types'
 import type { OperationTypeEntity } from '@/data/domain'
+
+function OperationTypeRow({ t, onToggle, onEdit, onDelete }: {
+  t: OperationTypeEntity
+  onToggle: (t: OperationTypeEntity) => void
+  onEdit: (t: OperationTypeEntity) => void
+  onDelete: (t: OperationTypeEntity) => void
+}) {
+  const toast = useToast()
+  const [expanded, setExpanded] = useState(false)
+  const { data: aliases } = useOperationTypeAliases(expanded ? t.id : undefined)
+  const createAlias = useCreateOperationTypeAlias()
+  const promoteAlias = usePromoteOperationTypeAlias()
+  const deleteAlias = useDeleteOperationTypeAlias()
+
+  const aliasItems = (aliases ?? []).map(a => ({ id: a.id, alias: a.alias }))
+
+  const handleAddAlias = useCallback(async (alias: string) => {
+    await createAlias.mutateAsync({ operationTypeId: t.id, alias })
+  }, [createAlias, t.id])
+
+  const handlePromoteAlias = useCallback(async (aliasId: number) => {
+    await promoteAlias.mutateAsync(aliasId)
+    toast.success('Đã đặt làm tên chính')
+  }, [promoteAlias, toast])
+
+  const handleDeleteAlias = useCallback(async (aliasId: number) => {
+    await deleteAlias.mutateAsync(aliasId)
+    toast.success('Đã xóa tên phụ')
+  }, [deleteAlias, toast])
+
+  return (
+    <div
+      className="rounded-lg transition-colors"
+      style={{
+        background: t.isActive ? 'var(--theme-bg-secondary)' : 'var(--theme-bg-tertiary)',
+        opacity: t.isActive ? 1 : 0.6,
+      }}
+    >
+      <div className="flex items-center gap-3 px-3 py-2.5">
+        <button
+          type="button"
+          onClick={() => onToggle(t)}
+          className="shrink-0"
+          title={t.isActive ? 'Ẩn' : 'Kích hoạt'}
+        >
+          {t.isActive
+            ? <ToggleRight className="w-6 h-6" style={{ color: 'var(--theme-status-success)' }} />
+            : <ToggleLeft className="w-6 h-6" style={{ color: 'var(--theme-text-muted)' }} />
+          }
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setExpanded(e => !e)}
+          className="shrink-0 p-0.5 rounded transition-colors"
+          style={{ color: 'var(--theme-text-muted)' }}
+          title="Tên phụ"
+        >
+          {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
+            {t.label}
+          </p>
+          <p className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
+            {t.name}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onEdit(t)}
+            className="p-1.5 rounded-md transition-colors hover:opacity-80"
+            style={{ color: 'var(--theme-text-muted)' }}
+            title="Sửa"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(t)}
+            className="p-1.5 rounded-md transition-colors hover:opacity-80"
+            style={{ color: 'var(--theme-status-danger)' }}
+            title="Xóa"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="px-3 pb-3 pt-0 ml-9" style={{ borderTop: '1px solid var(--theme-border-default)' }}>
+          <div className="pt-3">
+            <AliasManager
+              aliases={aliasItems}
+              onAddAlias={handleAddAlias}
+              onPromoteAlias={handlePromoteAlias}
+              onDeleteAlias={handleDeleteAlias}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function OperationTypesPage() {
   const toast = useToast()
@@ -120,56 +232,13 @@ export function OperationTypesPage() {
             {/* List */}
             <div className="space-y-2">
               {types?.map(t => (
-                <div
+                <OperationTypeRow
                   key={t.id}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
-                  style={{
-                    background: t.isActive ? 'var(--theme-bg-secondary)' : 'var(--theme-bg-tertiary)',
-                    opacity: t.isActive ? 1 : 0.6,
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => handleToggle(t)}
-                    className="shrink-0"
-                    title={t.isActive ? 'Ẩn' : 'Kích hoạt'}
-                  >
-                    {t.isActive
-                      ? <ToggleRight className="w-6 h-6" style={{ color: 'var(--theme-status-success)' }} />
-                      : <ToggleLeft className="w-6 h-6" style={{ color: 'var(--theme-text-muted)' }} />
-                    }
-                  </button>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-                      {t.label}
-                    </p>
-                    <p className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
-                      {t.name}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(t)}
-                      className="p-1.5 rounded-md transition-colors hover:opacity-80"
-                      style={{ color: 'var(--theme-text-muted)' }}
-                      title="Sửa"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleteTarget(t)}
-                      className="p-1.5 rounded-md transition-colors hover:opacity-80"
-                      style={{ color: 'var(--theme-status-danger)' }}
-                      title="Xóa"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
+                  t={t}
+                  onToggle={handleToggle}
+                  onEdit={openEdit}
+                  onDelete={setDeleteTarget}
+                />
               ))}
             </div>
           </div>

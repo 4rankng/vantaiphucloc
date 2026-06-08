@@ -187,6 +187,12 @@ export const apiClient = {
   createOperationType: operationTypesApi.createOperationType,
   updateOperationType: operationTypesApi.updateOperationType,
   deleteOperationType: operationTypesApi.deleteOperationType,
+
+  // Operation Type Aliases
+  listOperationTypeAliases: operationTypesApi.listOperationTypeAliases,
+  createOperationTypeAlias: operationTypesApi.createOperationTypeAlias,
+  promoteOperationTypeAlias: operationTypesApi.promoteOperationTypeAlias,
+  deleteOperationTypeAlias: operationTypesApi.deleteOperationTypeAlias,
 }
 
 // Re-export types from salary.api

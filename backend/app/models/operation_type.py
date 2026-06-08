@@ -1,6 +1,12 @@
-from sqlalchemy import Boolean, Column, Integer, String
+from datetime import datetime, timezone
+
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 
 from app.database import Base
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class OperationType(Base):
@@ -12,3 +18,22 @@ class OperationType(Base):
     name = Column(String(50), unique=True, nullable=False)  # e.g. "ĐÓNG KHO"
     label = Column(String(50), nullable=False)  # e.g. "Đóng kho"
     is_active = Column(Boolean, nullable=False, default=True)
+
+
+class OperationTypeAlias(Base):
+    """Alternative name for an OperationType. Primary name is operation_types.name."""
+
+    __tablename__ = "operation_type_aliases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    operation_type_id = Column(
+        Integer,
+        ForeignKey("operation_types.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    alias = Column(String(255), nullable=False)
+    alias_normalized = Column(String(255), nullable=False, unique=True)
+    source = Column(String(30), nullable=False, index=True)  # "manual" | "import_auto" | "promote" | "migration_seed"
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
