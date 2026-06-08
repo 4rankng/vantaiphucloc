@@ -183,19 +183,6 @@ class UpdateDeliveredTrip:
             data.revenue = None
             data.driver_salary = None
 
-        criteria_changed = any([
-            data.client_id is not None and data.client_id != w.client_id,
-            data.pickup_location_id is not None and data.pickup_location_id != w.pickup_location_id,
-            data.dropoff_location_id is not None and data.dropoff_location_id != w.dropoff_location_id,
-            data.driver_id is not None and data.driver_id != w.driver_id,
-            data.vehicle_plate is not None and data.vehicle_plate != w.vehicle_plate,
-            data.vessel is not None and data.vessel != w.vessel,
-            data.vendor_id is not None and data.vendor_id != w.vendor_id,
-            data.work_type is not None and data.work_type != w.work_type,
-            data.cont_number is not None and data.cont_number != w.cont_number,
-            data.cont_type is not None and data.cont_type != w.cont_type,
-        ])
-
         if data.client_id is not None:
             w.client_id = data.client_id
         if data.pickup_location_id is not None:
@@ -226,9 +213,6 @@ class UpdateDeliveredTrip:
             w.driver_salary = int(data.driver_salary)
         if data.note is not None:
             w.note = data.note or None
-
-        if criteria_changed and w.booked_trip_id is not None:
-            w.booked_trip_id = None
 
         w.updated_at = _utcnow()
 
