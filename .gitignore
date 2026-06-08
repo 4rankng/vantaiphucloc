@@ -82,12 +82,7 @@ heartbeat*.json
 .omo
 
 # OMC state (sessions, autopilot, etc.)
-.omc/sessions/
-.omc/state/
-.omc/autopilot/
-.omc/project-memory.json
-frontend/.omc/
-frontend/src/.omc/
+.omc/
 
 # Next.js build output
 frontend/.next/
