@@ -30,6 +30,7 @@ class DriverEarningsOut(BaseModel):
     matched_order_count: int
     base_salary: int = 0
     total_salary: int
+    unmatched_salary: int = 0
     total_allowance: int
     total_earnings: int
 

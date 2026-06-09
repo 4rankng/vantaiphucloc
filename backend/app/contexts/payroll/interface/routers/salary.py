@@ -66,6 +66,7 @@ def _dto_to_out(dto) -> DriverEarningsOut:
         matched_order_count=dto.matched_order_count,
         base_salary=dto.base_salary,
         total_salary=dto.total_salary,
+        unmatched_salary=dto.unmatched_salary,
         total_allowance=dto.total_allowance,
         total_earnings=dto.total_earnings,
     )

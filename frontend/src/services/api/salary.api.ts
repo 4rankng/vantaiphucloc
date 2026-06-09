@@ -15,6 +15,7 @@ export interface DriverEarnings {
   matchedOrderCount: number
   baseSalary: number
   totalSalary: number
+  unmatchedSalary: number
   totalAllowance: number
   totalEarnings: number
 }

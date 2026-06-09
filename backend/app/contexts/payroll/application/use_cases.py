@@ -78,6 +78,21 @@ class GetDriverEarnings:
         matched_order_count = row[0] or 0
         total_salary = row[1] or 0
 
+        # Unmatched trip salary
+        unmatched_row = (
+            await self.session.execute(
+                select(
+                    func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
+                ).where(
+                    DeliveredTrip.driver_id == driver_id,
+                    DeliveredTrip.booked_trip_id.is_(None),
+                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= start_date,
+                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= end_date,
+                )
+            )
+        ).one()
+        unmatched_salary = unmatched_row[0] or 0
+
         # Look up driver name and phone
         user_row = (
             await self.session.execute(
@@ -118,6 +133,7 @@ class GetDriverEarnings:
             matched_order_count=matched_order_count,
             base_salary=base_salary,
             total_salary=total_salary,
+            unmatched_salary=unmatched_salary,
             total_allowance=total_allowance,
             total_earnings=base_salary + total_salary + total_allowance,
         )

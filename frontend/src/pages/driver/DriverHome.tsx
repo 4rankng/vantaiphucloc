@@ -1,17 +1,17 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import { Plus, Search, X } from 'lucide-react'
+import { Plus, Search, X, CircleCheck } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
 import { DeliveredTripCard } from '@/components/shared/cards/DeliveredTripCard'
 import { FloatingActionButton } from '@/components/shared/feedback/FloatingActionButton'
-import { useMyEarnings, useSalaryConfig, useDeliveredTrips, useDeliveredTripsInfinite, useContTypeStats } from '@/hooks/use-queries'
+import { useMyEarnings, useSalaryConfig, useDeliveredTripsInfinite, useContTypeStats } from '@/hooks/use-queries'
 import { CONT_TYPES } from '@/data/domain'
 import { useDebounce } from '@/hooks/use-debounce'
 import { getSalaryPeriodDates, dayBefore, dayAfter, toISODate } from '@/lib/salaryPeriod'
 import { AnimatedNumber } from '@/components/shared/data-display/AnimatedNumber'
 
-type FilterTab = 'all' | 'pending'
+type FilterTab = 'matched' | 'pending'
 
 export function DriverHome() {
   return <MobileDriverHome />
@@ -27,10 +27,10 @@ function MobileDriverHome() {
   const debouncedSearch = useDebounce(searchRaw, 300)
 
   // Filter persisted in URL (?filter=pending). Survives navigate(-1) back from trip detail.
-  const filter = (searchParams.get('filter') as FilterTab | null) ?? 'all'
+  const filter = (searchParams.get('filter') as FilterTab | null) ?? 'matched'
   const setFilter = useCallback((tab: FilterTab) => {
     setSearchParams(
-      prev => { const n = new URLSearchParams(prev); if (tab === 'all') n.delete('filter'); else n.set('filter', tab); return n },
+      prev => { const n = new URLSearchParams(prev); if (tab === 'matched') n.delete('filter'); else n.set('filter', tab); return n },
       { replace: true },
     )
   }, [setSearchParams])
@@ -93,24 +93,13 @@ function MobileDriverHome() {
   const endISO = toISODate(currentPeriod.endDate)
   const driverId = Number(user!.id)
 
-  // ── Stats: lightweight queries (pageSize=1) to get accurate totals from pagination ──
-  const { data: allTripsPage } = useDeliveredTrips({
-    driverId, dateFrom: startISO, dateTo: endISO, pageSize: 1,
-  })
-  const { data: matchedTripsPage } = useDeliveredTrips({
-    driverId, dateFrom: startISO, dateTo: endISO, matched: true, pageSize: 1,
-  })
-  const totalCount = allTripsPage?.total ?? 0
-  const matchedCount = matchedTripsPage?.total ?? 0
-  const pendingCount = totalCount - matchedCount
-
   // ── Cont type stats ──
   const { data: contTypeStats } = useContTypeStats({
     driverId, dateFrom: startISO, dateTo: endISO,
   })
 
   // ── List: server-side infinite query with search + matched filter ──
-  const matchedFilter = filter === 'pending' ? false : undefined
+  const matchedFilter = filter === 'pending' ? false : true
   const {
     data: infiniteData,
     fetchNextPage,
@@ -142,8 +131,8 @@ function MobileDriverHome() {
     setPeriodStart(getSalaryPeriodDates(dayAfter(currentPeriod.endDate), { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }).startDate)
   }, [currentPeriod.endDate, config?.fromDay, config?.toDay, setPeriodStart])
 
-  // Use on-the-fly earnings from backend if available, otherwise fallback to local calc
-  const earningsValue = myEarnings?.totalEarnings ?? 0
+  const matchedSalary = myEarnings?.totalSalary ?? 0
+  const unmatchedSalary = myEarnings?.unmatchedSalary ?? 0
   const displayMonth = currentPeriod.endDate.getMonth() + 1
   const displayYear = currentPeriod.endDate.getFullYear()
 
@@ -174,7 +163,7 @@ function MobileDriverHome() {
         />
       </div>
 
-      {/* Stat card: trips breakdown + salary */}
+      {/* Stat card: matched salary + total earnings */}
       <div
         className="flex overflow-hidden relative rounded-2xl"
         style={{
@@ -201,36 +190,28 @@ function MobileDriverHome() {
           <circle cx="82"  cy="48" r="8" fill="#059669"/>
         </svg>
 
-        {/* Left: trip breakdown — label + two sub-columns */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center px-4 py-3.5 gap-2">
-          <p className="type-overline" style={{ color: 'var(--theme-text-muted)' }}>
-            Số chuyến
-          </p>
-          <div className="flex items-start">
-            {/* Đã ghép */}
-            <div className="flex-1 flex flex-col gap-0.5">
-              <p className="text-[11px] font-medium" style={{ color: 'var(--theme-success, #16a34a)' }}>Đã ghép</p>
-              <p className="type-display tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{matchedCount}</p>
-            </div>
-            {/* Inner divider */}
-            <div className="w-px self-stretch mx-3" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 14%, var(--theme-border-default))' }} />
-            {/* Chưa ghép */}
-            <div className="flex-1 flex flex-col gap-0.5">
-              <p className="text-[11px] font-medium" style={{ color: 'var(--theme-warning, #d97706)' }}>Chưa ghép</p>
-              <p className="type-display tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{pendingCount}</p>
-            </div>
+        {/* Left: salary from matched trips */}
+        <div className="flex-1 min-w-0 flex items-center gap-2.5 px-4 py-3.5">
+          <CircleCheck size={28} className="shrink-0" style={{ color: 'var(--theme-success, #16a34a)' }} />
+          <div className="flex-1 min-w-0">
+            <p className="type-overline" style={{ color: 'var(--theme-text-muted)' }}>
+              Lương đã ghép
+            </p>
+            <p className="type-display tabular-nums leading-tight whitespace-nowrap" style={{ color: 'var(--theme-success, #16a34a)' }}>
+              <AnimatedNumber value={matchedSalary} format="currency" duration={700} />
+            </p>
           </div>
         </div>
 
-        {/* Right: salary */}
+        {/* Right: salary from unmatched trips */}
         <div className="flex-1 min-w-0 flex items-center gap-2.5 px-4 py-3.5">
-          <img src="/icons/money.png" alt="" aria-hidden className="shrink-0 w-9 h-9 object-contain" />
+          <CircleCheck size={28} className="shrink-0" style={{ color: 'var(--theme-warning, #d97706)' }} />
           <div className="flex-1 min-w-0">
             <p className="type-overline" style={{ color: 'var(--theme-text-muted)' }}>
-              Lương
+              Lương chưa ghép
             </p>
-            <p className="type-display tabular-nums leading-tight whitespace-nowrap" style={{ color: 'var(--theme-brand-primary)' }}>
-              <AnimatedNumber value={earningsValue} format="currency" duration={700} />
+            <p className="type-display tabular-nums leading-tight whitespace-nowrap" style={{ color: 'var(--theme-warning, #d97706)' }}>
+              <AnimatedNumber value={unmatchedSalary} format="currency" duration={700} />
             </p>
           </div>
         </div>
@@ -296,7 +277,7 @@ function MobileDriverHome() {
             className="flex rounded-full p-0.5 gap-0.5 shrink-0"
             style={{ background: 'var(--theme-bg-tertiary)' }}
           >
-            {(['all', 'pending'] as FilterTab[]).map(tab => (
+            {(['matched', 'pending'] as FilterTab[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
@@ -307,7 +288,7 @@ function MobileDriverHome() {
                     : { background: 'transparent', color: 'var(--theme-text-muted)' }
                 }
               >
-                {tab === 'all' ? 'Tất cả' : 'Chờ ghép'}
+                {tab === 'matched' ? 'Đã ghép' : 'Chưa ghép'}
               </button>
             ))}
           </div>
