@@ -7,10 +7,8 @@ The interface layer wires concrete repos via FastAPI `Depends`.
 
 from __future__ import annotations
 
-import logging
 from datetime import date, datetime, timezone
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession  # transaction control only
 
 from app.contexts.operations.application.dto import (
