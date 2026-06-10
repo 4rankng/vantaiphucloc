@@ -88,5 +88,58 @@ def test_falls_back_to_two_edit_when_single_edit_insufficient():
     assert suggestions[0] == "HLXU2352975"
 
 
+# ── Golden-path tests: independently verified against ISO 6346 ───────────
+#
+# These hard-code expected check digits so a silent LETTER_MAP regression
+# would be caught.  Values verified by hand (sum % 11).
+#
+# MSKU123456: 24+60+84+256+16+64+192+512+1280+3072 = 5560 → 5560%11 = 5
+# HLXU235297: 18+46+144+256+32+96+320+256+2304+3584 = 7056 → 7056%11 = 5
+# OBLU332381: 26+24+92+256+48+96+128+384+2048+512  = 3614 → 3614%11 = 6
+# TRLU123456: 31+58+92+256+16+64+192+512+1280+3072  = 5573 → 5573%11 = 7
+
+GOLDEN_PATHS = [
+    ("MSKU123456", 5),
+    ("HLXU235297", 5),
+    ("OBLU332381", 6),
+    ("TRLU123456", 7),
+]
+
+
+@pytest.mark.parametrize("prefix,expected", GOLDEN_PATHS, ids=[p for p, _ in GOLDEN_PATHS])
+def test_calculate_check_digit_known_values(prefix: str, expected: int):
+    """Check digit must match independently calculated ISO 6346 reference."""
+    assert calculate_check_digit(prefix) == expected
+
+
+@pytest.mark.parametrize("prefix,check", GOLDEN_PATHS, ids=[p for p, _ in GOLDEN_PATHS])
+def test_validate_check_digit_known_valid(prefix: str, check: int):
+    """Full 11-char number with correct check digit must validate."""
+    full = prefix + str(check)
+    assert validate_format(full)
+    assert validate_check_digit(full)
+
+
+@pytest.mark.parametrize("prefix,check", GOLDEN_PATHS, ids=[p for p, _ in GOLDEN_PATHS])
+def test_validate_check_digit_wrong_digit(prefix: str, check: int):
+    """A wrong check digit must fail validation."""
+    wrong = (check + 1) % 10
+    if wrong == check:  # skip if wraparound collides
+        wrong = (check + 2) % 10
+    full = prefix + str(wrong)
+    assert not validate_check_digit(full)
+
+
+@pytest.mark.parametrize("prefix,check", GOLDEN_PATHS, ids=[p for p, _ in GOLDEN_PATHS])
+def test_validate_container_number_golden(prefix: str, check: int):
+    """Full validate_container_number must accept valid and reject invalid."""
+    valid, err = validate_container_number(prefix + str(check))
+    assert valid and err == ""
+
+    wrong = (check + 1) % 10 or 1
+    valid2, err2 = validate_container_number(prefix + str(wrong))
+    assert not valid2 and err2 != ""
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
