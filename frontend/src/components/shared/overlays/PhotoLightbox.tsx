@@ -40,7 +40,7 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
       aria-modal="true"
       aria-label="Xem ảnh toàn màn hình"
       className="fixed inset-0 z-[200] flex items-center justify-center animate-in fade-in duration-200"
-      style={{ background: 'rgba(0,0,0,0.92)' }}
+      style={{ background: '#000' }}
       onClick={onClose}
     >
       {/* Top toolbar */}
