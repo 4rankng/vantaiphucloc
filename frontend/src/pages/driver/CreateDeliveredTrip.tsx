@@ -191,17 +191,15 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                       }}
                     >
                       {cont.containerNumber}
-                      {containers.length > 1 && (
-                        <button
-                          onClick={() => removeContainer(idx)}
-                          type="button"
-                          className="w-6 h-6 flex items-center justify-center rounded-md touch-manipulation active:scale-90 transition-transform"
-                          style={{ color: 'var(--theme-text-muted)' }}
-                          aria-label={`Xoá ${cont.containerNumber}`}
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => removeContainer(idx)}
+                        type="button"
+                        className="w-6 h-6 flex items-center justify-center rounded-md touch-manipulation active:scale-90 transition-transform"
+                        style={{ color: 'var(--theme-text-muted)' }}
+                        aria-label={`Xoá ${cont.containerNumber}`}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
                     </span>
                   )
                 })}
