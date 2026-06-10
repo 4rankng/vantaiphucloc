@@ -20,7 +20,7 @@ import logging
 _logger = logging.getLogger(__name__)
 
 # Letter to number mapping (A=10, B=12, ..., Z=38)
-# Note: C=11 is skipped in ISO 6346
+# Values skip multiples of 11 (11, 22, 33) to avoid zero remainders in mod 11
 LETTER_MAP = {
     "A": 10, "B": 12, "C": 13, "D": 14, "E": 15, "F": 16, "G": 17, "H": 18, "I": 19,
     "J": 20, "K": 21, "L": 23, "M": 24, "N": 25, "O": 26, "P": 27, "Q": 28, "R": 29,

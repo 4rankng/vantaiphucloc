@@ -1,4 +1,4 @@
-"""Tests for suggest_corrections() in app/utils/iso6346.py."""
+"""Tests for ISO 6346 container validation in app/utils/iso6346.py."""
 
 import pytest
 
@@ -6,6 +6,8 @@ from app.utils.iso6346 import (
     calculate_check_digit,
     suggest_corrections,
     validate_check_digit,
+    validate_format,
+    validate_container_number,
 )
 
 

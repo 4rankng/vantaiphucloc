@@ -163,6 +163,29 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   // Shared photo from last scan — stored once, uploaded for first trip, URL shared to rest
   const lastScanPhotoRef = useRef<{ dataUrl: string; lat: number | null; lng: number | null; timestamp: string } | null>(null)
 
+  // Container validation helpers (defined early — used by scanner & container management)
+  const validateTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
+
+  /** Apply the validate-container response to error + suggestion state for one row. */
+  const applyValidationResult = useCallback((
+    idx: number,
+    res: Awaited<ReturnType<typeof apiClient.validateContainer>>,
+  ) => {
+    const invalid = !res.success || !res.data?.valid
+    setContainerErrors(prev => {
+      if (invalid) return { ...prev, [idx]: res.data?.error ?? 'Số container không hợp lệ' }
+      const next = { ...prev }; delete next[idx]; return next
+    })
+    setContainerSuggestions(prev => {
+      const list = invalid ? (res.data?.suggestions ?? []) : []
+      if (list.length === 0) {
+        if (!(idx in prev)) return prev
+        const next = { ...prev }; delete next[idx]; return next
+      }
+      return { ...prev, [idx]: list }
+    })
+  }, [])
+
   // Scanner handlers
   const openScanner = useCallback((idx: number) => () => {
     setActiveContIdx(idx)
@@ -221,15 +244,31 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
               ? prev.filter((_, i) => i !== idx)
               : prev
 
-            // Validate each new container number (check digit) — async, fires after render
-            const baseIdx = filtered.length
-            newNumbers.forEach((n, ni) => {
-              apiClient.validateContainer(n).then(res => {
-                applyValidationResult(baseIdx + ni, res)
-              }).catch(() => {})
-            })
-
             return [...filtered, ...newContainers]
+          })
+
+          // Validate each OCR-detected number (full ISO 6346 incl. check digit).
+          // The OCR endpoint only validates format ([A-Z]{4}\d{7}), so check-digit
+          // mismatches are common.  Auto-correct via backend suggestions when
+          // available; otherwise surface the error on the badge.
+          numbers.forEach(num => {
+            apiClient.validateContainer(num).then(vRes => {
+              if (vRes.success && vRes.data?.valid) return
+              if (vRes.data?.suggestions?.length) {
+                // Auto-correct with the top suggestion
+                const corrected = vRes.data.suggestions[0]
+                setContainers(prev => prev.map(c =>
+                  c.containerNumber === num ? { ...c, containerNumber: corrected } : c
+                ))
+              } else {
+                // No suggestion — mark badge as invalid (find by number, not index)
+                setContainers(prev => {
+                  const i = prev.findIndex(c => c.containerNumber === num)
+                  if (i >= 0) applyValidationResult(i, vRes)
+                  return prev
+                })
+              }
+            }).catch(() => { /* network error — ignore */ })
           })
         } else {
           // No containers detected — show error on the active slot
@@ -246,30 +285,9 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
           i === idx ? { ...c, ocrLoading: false, ocrError: 'Lỗi kết nối AI' } : c
         ))
       })
-  }, [activeContIdx])
+  }, [activeContIdx, applyValidationResult])
 
   // Container management
-  const validateTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
-
-  /** Apply the validate-container response to error + suggestion state for one row. */
-  const applyValidationResult = useCallback((
-    idx: number,
-    res: Awaited<ReturnType<typeof apiClient.validateContainer>>,
-  ) => {
-    const invalid = !res.success || !res.data?.valid
-    setContainerErrors(prev => {
-      if (invalid) return { ...prev, [idx]: res.data?.error ?? 'Số container không hợp lệ' }
-      const next = { ...prev }; delete next[idx]; return next
-    })
-    setContainerSuggestions(prev => {
-      const list = invalid ? (res.data?.suggestions ?? []) : []
-      if (list.length === 0) {
-        if (!(idx in prev)) return prev
-        const next = { ...prev }; delete next[idx]; return next
-      }
-      return { ...prev, [idx]: list }
-    })
-  }, [])
 
   const updateContainer = useCallback(<K extends keyof ContainerForm>(
     idx: number,
