@@ -346,15 +346,22 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
               {containers.some(c => c.ocrError) && !scanningContainer && (
                 <Hint tone="warning" text={`${containers.find(c => c.ocrError)?.ocrError} — nhập tay hoặc quét lại`} />
               )}
-              {/* Edit-mode: show per-container errors */}
-              {isEdit && containerErrors[0] && <Hint tone="error" text={containerErrors[0]} />}
-              {isEdit && (containerSuggestions[0]?.length ?? 0) > 0 && (
-                <SuggestionChips
-                  original={containers[0]?.containerNumber ?? ''}
-                  suggestions={containerSuggestions[0]!}
-                  onPick={(s) => applyContainerSuggestion(0, s)}
-                />
-              )}
+              {/* Per-container validation errors + suggestions (all modes) */}
+              {containers.map((c, idx) => {
+                if (!c.containerNumber.trim()) return null
+                return (
+                  <div key={`val-${idx}`} className="space-y-1.5">
+                    {containerErrors[idx] && <Hint tone="error" text={containerErrors[idx]} />}
+                    {(containerSuggestions[idx]?.length ?? 0) > 0 && (
+                      <SuggestionChips
+                        original={c.containerNumber}
+                        suggestions={containerSuggestions[idx]!}
+                        onPick={(s) => applyContainerSuggestion(idx, s)}
+                      />
+                    )}
+                  </div>
+                )
+              })}
               {isEdit && original && (
                 <OriginalHint current={containers[0]?.containerNumber ?? ''} original={original.contNumber} />
               )}

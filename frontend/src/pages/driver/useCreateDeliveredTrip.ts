@@ -221,6 +221,14 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
               ? prev.filter((_, i) => i !== idx)
               : prev
 
+            // Validate each new container number (check digit) — async, fires after render
+            const baseIdx = filtered.length
+            newNumbers.forEach((n, ni) => {
+              apiClient.validateContainer(n).then(res => {
+                applyValidationResult(baseIdx + ni, res)
+              }).catch(() => {})
+            })
+
             return [...filtered, ...newContainers]
           })
         } else {
