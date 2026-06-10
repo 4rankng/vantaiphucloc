@@ -1,52 +1,38 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ScanLine, Sparkles } from 'lucide-react'
-import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-visualizer-aura'
+import { ScanLine, Sparkles, Cpu, Zap } from 'lucide-react'
+import { animate, stagger, createScope } from 'animejs'
 
 interface AIScanningOverlayProps {
-  /** When true, the overlay is shown. */
   visible: boolean
-  /** Captured photo (data URL or http URL) to display while scanning. */
   imageSrc?: string | null
-  /** Headline text. Defaults to a Vietnamese 'AI đang nhận diện…' string. */
   title?: string
-  /** Secondary helper line below the headline. */
   subtitle?: string
 }
 
-/**
- * AIScanningOverlay — fullscreen "AI is scanning" effect.
- *
- * Shown while the backend OCR request is in flight. Renders the captured
- * container photo with a moving scan line, animated corner brackets,
- * sparkle particles and a status caption — communicating "AI is looking
- * at your photo right now" to the driver.
- *
- * Mount/unmount is controlled by the `visible` prop; the component
- * portals into <body> so it sits above the page layout, sticky bars,
- * dialogs, etc. (z-index 150, below the 200-tier SuccessOverlay).
- */
 export function AIScanningOverlay({
   visible,
   imageSrc,
   title = 'AI đang nhận diện số container…',
   subtitle = 'Vui lòng đợi trong giây lát',
 }: AIScanningOverlayProps) {
-  // Tick a counter so the rotating status messages cycle while scanning.
   const [tick, setTick] = useState(0)
+  const [scanProgress, setScanProgress] = useState(0)
+  const scopeRef = useRef<HTMLDivElement>(null)
+  const scanLineRef = useRef<HTMLDivElement>(null)
+  const imageRef = useRef<HTMLImageElement>(null)
+  const bracketRefs = useRef<(HTMLSpanElement | null)[]>([])
+  const progressRef = useRef({ val: 0 })
+
   useEffect(() => {
     if (!visible) return
     const id = setInterval(() => setTick(t => t + 1), 1500)
     return () => clearInterval(id)
   }, [visible])
 
-  // Natural aspect ratio of the captured photo. The scan frame resizes to
-  // match this so the full image is visible (no center-crop) and the
-  // brackets / scan line wrap the photo tightly. Default 1:1 until we know.
   const [aspectRatio, setAspectRatio] = useState(1)
   useEffect(() => {
     if (!visible || !imageSrc) {
-       
       setAspectRatio(1)
       return
     }
@@ -59,25 +45,110 @@ export function AIScanningOverlay({
     img.src = imageSrc
   }, [visible, imageSrc])
 
-  // Deterministic pseudo-random sparkle positions — stable, lint-safe (no
-  // Math.random in render), and visually indistinguishable from true random
-  // at this small count. Seeded by index.
-  const sparkles = useMemo(
+  useEffect(() => {
+    if (!visible || !scopeRef.current) return
+
+    const scope = createScope({ root: scopeRef.current }).add(() => {
+      animate('[data-scan-line]', {
+        translateY: ['0%', '100%'],
+        duration: 2200,
+        loop: true,
+        alternate: true,
+        ease: 'inOutSine',
+        onUpdate: (anim) => {
+          setScanProgress(Math.round(anim.progress))
+        },
+      })
+
+      animate('[data-bracket]', {
+        opacity: [0.5, 1],
+        scale: [0.95, 1.05],
+        duration: 1400,
+        loop: true,
+        alternate: true,
+        delay: stagger(100),
+        ease: 'inOutSine',
+      })
+
+      animate('[data-particle]', {
+        translateY: [-20, 20],
+        opacity: [0, 0.8, 0],
+        scale: [0.5, 1, 0.5],
+        duration: 2000,
+        loop: true,
+        delay: stagger(120, { from: 'center' }),
+        ease: 'inOutSine',
+      })
+
+      animate('[data-holo-bar]', {
+        translateX: ['-100%', '200%'],
+        duration: 1800,
+        loop: true,
+        delay: stagger(200),
+        ease: 'inOutQuad',
+      })
+
+      animate('[data-glow-ring]', {
+        scale: [1, 1.08],
+        opacity: [0.4, 0.8],
+        duration: 2000,
+        loop: true,
+        alternate: true,
+        ease: 'inOutSine',
+      })
+
+      animate('[data-float-icon]', {
+        translateY: [-6, 6],
+        rotate: [-5, 5],
+        duration: 3000,
+        loop: true,
+        alternate: true,
+        ease: 'inOutSine',
+      })
+
+      animate(progressRef.current, {
+        val: 100,
+        duration: 8000,
+        ease: 'linear',
+        onUpdate: () => {
+          setScanProgress(Math.round(progressRef.current.val))
+        },
+      })
+    })
+
+    return () => scope.revert()
+  }, [visible])
+
+  useEffect(() => {
+    if (!visible) {
+      progressRef.current.val = 0
+      setScanProgress(0)
+    }
+  }, [visible])
+
+  const particles = useMemo(
     () =>
-      Array.from({ length: 14 }, (_, i) => {
+      Array.from({ length: 20 }, (_, i) => {
         const r = (n: number) => {
           const x = Math.sin((i + 1) * 9.137 + n * 4.71) * 10000
-          return x - Math.floor(x) // 0..1
+          return x - Math.floor(x)
         }
         return {
           id: i,
           top: r(1) * 100,
           left: r(2) * 100,
-          delay: r(3) * 2,
-          duration: 1.4 + r(4) * 1.4,
-          size: 6 + r(5) * 10,
+          size: 2 + r(5) * 4,
+          isIcon: i % 3 === 0,
         }
       }),
+    [],
+  )
+
+  const holoBars = useMemo(
+    () => Array.from({ length: 5 }, (_, i) => ({
+      id: i,
+      top: 15 + i * 17,
+    })),
     [],
   )
 
@@ -93,9 +164,10 @@ export function AIScanningOverlay({
 
   return createPortal(
     <div
+      ref={scopeRef}
       className="fixed inset-0 z-[150] flex flex-col items-center justify-center px-6"
       style={{
-        background: 'radial-gradient(ellipse at center, rgba(8,12,24,0.92) 0%, rgba(2,4,10,0.98) 70%)',
+        background: 'radial-gradient(ellipse at center, rgba(8,12,24,0.95) 0%, rgba(2,4,10,0.99) 70%)',
         backdropFilter: 'blur(20px) saturate(140%)',
         WebkitBackdropFilter: 'blur(20px) saturate(140%)',
       }}
@@ -103,25 +175,34 @@ export function AIScanningOverlay({
       aria-live="polite"
       aria-label={title}
     >
-      {/* ── Aura visualizer above the image ────────────────────────────────── */}
-      <div className="w-20 h-20 mb-4 animate-[ai-fade-in_0.4s_ease-out]">
-        <AgentAudioVisualizerAura
-          size="sm"
-          state="thinking"
-          color="#1FD5F9"
-          colorShift={0.15}
-          themeMode="dark"
-          className="w-full h-full"
-        />
+      <div
+        data-float-icon
+        className="mb-3 flex items-center gap-2"
+        style={{ willChange: 'transform' }}
+      >
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center"
+          style={{
+            background: 'color-mix(in srgb, var(--theme-brand-primary) 20%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--theme-brand-primary) 40%, transparent)',
+            boxShadow: '0 0 20px color-mix(in srgb, var(--theme-brand-primary) 30%, transparent)',
+          }}
+        >
+          <Cpu className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
+        </div>
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center"
+          style={{
+            background: 'color-mix(in srgb, var(--theme-brand-primary) 15%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--theme-brand-primary) 35%, transparent)',
+          }}
+        >
+          <Zap className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
+        </div>
       </div>
 
-      {/* ── Scan stage: image + scan line + brackets + sparkles ──────────
-          Sized to the photo's natural aspect ratio so the *whole* image is
-          visible — no center-crop. We constrain both width and height so
-          tall portrait shots don't overflow the viewport, and the browser
-          picks whichever bound is hit first. */}
       <div
-        className="relative animate-[ai-scale-in_0.35s_cubic-bezier(0.16,1,0.3,1)]"
+        className="relative"
         style={{
           aspectRatio: `${aspectRatio}`,
           width: aspectRatio >= 1 ? 'min(86vw, 420px)' : 'auto',
@@ -130,25 +211,34 @@ export function AIScanningOverlay({
           maxHeight: '62vh',
         }}
       >
-        {/* Outer glow halo */}
         <div
-          className="absolute -inset-4 rounded-2xl pointer-events-none animate-[ai-halo_2.4s_ease-in-out_infinite]"
+          data-glow-ring
+          className="absolute -inset-6 rounded-3xl pointer-events-none"
           style={{
-            background: 'radial-gradient(circle, color-mix(in srgb, var(--theme-brand-primary) 35%, transparent) 0%, transparent 70%)',
+            border: '1px solid color-mix(in srgb, var(--theme-brand-primary) 25%, transparent)',
+            boxShadow: '0 0 60px color-mix(in srgb, var(--theme-brand-primary) 20%, transparent), inset 0 0 60px color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)',
+            willChange: 'transform, opacity',
           }}
         />
 
-        {/* The captured image (or a placeholder if absent) */}
+        <div
+          className="absolute -inset-3 rounded-2xl pointer-events-none"
+          style={{
+            border: '1px solid color-mix(in srgb, var(--theme-brand-primary) 15%, transparent)',
+          }}
+        />
+
         <div
           className="absolute inset-0 rounded-2xl overflow-hidden"
           style={{
-            border: '1.5px solid color-mix(in srgb, var(--theme-brand-primary) 70%, transparent)',
-            boxShadow: '0 0 40px color-mix(in srgb, var(--theme-brand-primary) 35%, transparent), inset 0 0 0 1px rgba(255,255,255,0.05)',
-            background: '#0a0f1e',
+            border: '2px solid color-mix(in srgb, var(--theme-brand-primary) 60%, transparent)',
+            boxShadow: '0 0 40px color-mix(in srgb, var(--theme-brand-primary) 30%, transparent), inset 0 0 0 1px rgba(255,255,255,0.05)',
+            background: '#080c18',
           }}
         >
           {imageSrc ? (
             <img
+              ref={imageRef}
               src={imageSrc}
               alt="Đang nhận diện"
               className="absolute inset-0 w-full h-full object-contain"
@@ -160,9 +250,8 @@ export function AIScanningOverlay({
             </div>
           )}
 
-          {/* Faint scan grid overlay (CSS lines) */}
           <div
-            className="absolute inset-0 pointer-events-none opacity-25 mix-blend-screen"
+            className="absolute inset-0 pointer-events-none opacity-20"
             style={{
               backgroundImage:
                 'linear-gradient(color-mix(in srgb, var(--theme-brand-primary) 40%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--theme-brand-primary) 40%, transparent) 1px, transparent 1px)',
@@ -170,91 +259,143 @@ export function AIScanningOverlay({
             }}
           />
 
-          {/* Color tint sweep over the image */}
+          {holoBars.map(bar => (
+            <div
+              key={bar.id}
+              data-holo-bar
+              className="absolute left-0 right-0 pointer-events-none"
+              style={{
+                top: `${bar.top}%`,
+                height: '1px',
+                background: 'linear-gradient(90deg, transparent 0%, var(--theme-brand-primary) 50%, transparent 100%)',
+                opacity: 0.15,
+                willChange: 'transform',
+              }}
+            />
+          ))}
+
           <div
             className="absolute inset-0 pointer-events-none mix-blend-overlay"
             style={{
               background:
-                'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--theme-brand-primary) 18%, transparent) 50%, transparent 100%)',
+                'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--theme-brand-primary) 12%, transparent) 50%, transparent 100%)',
             }}
           />
 
-          {/* Sparkle particles */}
-          {sparkles.map(s => (
+          {particles.map(p => (
             <span
-              key={s.id}
-              className="absolute pointer-events-none animate-[ai-twinkle_var(--dur)_ease-in-out_infinite]"
+              key={p.id}
+              data-particle
+              className="absolute pointer-events-none"
               style={{
-                top: `${s.top}%`,
-                left: `${s.left}%`,
-                width: `${s.size}px`,
-                height: `${s.size}px`,
-                ['--dur' as string]: `${s.duration}s`,
-                animationDelay: `${s.delay}s`,
+                top: `${p.top}%`,
+                left: `${p.left}%`,
+                willChange: 'transform, opacity',
               }}
             >
-              <Sparkles
-                className="w-full h-full"
-                style={{
-                  color: 'var(--theme-brand-primary)',
-                  filter: 'drop-shadow(0 0 4px color-mix(in srgb, var(--theme-brand-primary) 80%, transparent))',
-                }}
-              />
+              {p.isIcon ? (
+                <Sparkles
+                  className="w-3 h-3"
+                  style={{
+                    color: 'var(--theme-brand-primary)',
+                    filter: 'drop-shadow(0 0 4px color-mix(in srgb, var(--theme-brand-primary) 80%, transparent))',
+                  }}
+                />
+              ) : (
+                <span
+                  className="block rounded-full"
+                  style={{
+                    width: `${p.size}px`,
+                    height: `${p.size}px`,
+                    background: 'var(--theme-brand-primary)',
+                    boxShadow: '0 0 6px var(--theme-brand-primary)',
+                  }}
+                />
+              )}
             </span>
           ))}
 
-          {/* Moving scan line (vertical bounce) */}
           <div
-            className="absolute left-0 right-0 pointer-events-none animate-[ai-scan-line_2.2s_ease-in-out_infinite]"
-            style={{ height: '3px', top: 0 }}
+            ref={scanLineRef}
+            data-scan-line
+            className="absolute left-0 right-0 pointer-events-none"
+            style={{ height: '3px', top: 0, willChange: 'transform' }}
           >
             <div
               className="w-full h-full"
               style={{
                 background:
-                  'linear-gradient(90deg, transparent 0%, var(--theme-brand-primary) 50%, transparent 100%)',
+                  'linear-gradient(90deg, transparent 5%, var(--theme-brand-primary) 30%, rgba(255,255,255,0.9) 50%, var(--theme-brand-primary) 70%, transparent 95%)',
                 boxShadow:
-                  '0 0 12px var(--theme-brand-primary), 0 0 28px color-mix(in srgb, var(--theme-brand-primary) 70%, transparent)',
+                  '0 0 16px var(--theme-brand-primary), 0 0 40px color-mix(in srgb, var(--theme-brand-primary) 50%, transparent)',
               }}
             />
-            {/* Soft trailing glow under the line */}
             <div
               className="w-full"
               style={{
-                height: '60px',
+                height: '80px',
                 marginTop: '-1px',
                 background:
-                  'linear-gradient(180deg, color-mix(in srgb, var(--theme-brand-primary) 30%, transparent) 0%, transparent 100%)',
-                opacity: 0.6,
+                  'linear-gradient(180deg, color-mix(in srgb, var(--theme-brand-primary) 25%, transparent) 0%, transparent 100%)',
+                opacity: 0.7,
               }}
             />
           </div>
 
-          {/* Corner brackets — 4 corners, animated subtle pulse */}
-          {(['tl', 'tr', 'bl', 'br'] as const).map(pos => (
-            <Bracket key={pos} corner={pos} />
+          {(['tl', 'tr', 'bl', 'br'] as const).map((pos, i) => (
+            <span
+              key={pos}
+              data-bracket
+              ref={el => { bracketRefs.current[i] = el }}
+              className="absolute pointer-events-none"
+              style={{
+                width: 30,
+                height: 30,
+                ...getBracketPosition(pos),
+                borderColor: 'var(--theme-brand-primary)',
+                filter: 'drop-shadow(0 0 8px color-mix(in srgb, var(--theme-brand-primary) 70%, transparent))',
+                willChange: 'transform, opacity',
+                ...getBracketBorders(pos),
+              }}
+            />
           ))}
+
+          <div
+            className="absolute top-3 right-3 px-2 py-1 rounded-lg pointer-events-none"
+            style={{
+              background: 'rgba(0,0,0,0.6)',
+              border: '1px solid color-mix(in srgb, var(--theme-brand-primary) 40%, transparent)',
+            }}
+          >
+            <span
+              className="text-[11px] font-bold tabular-nums"
+              style={{ color: 'var(--theme-brand-primary)' }}
+            >
+              {scanProgress}%
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* ── Caption block ───────────────────────────────────────────────── */}
-      <div className="mt-7 text-center max-w-[320px] animate-[ai-fade-in_0.5s_0.1s_ease-out_both]">
+      <div className="mt-6 text-center max-w-[320px]">
         <p
           className="text-[15px] font-bold leading-snug"
-          style={{ color: 'var(--theme-text-on-brand)', textShadow: '0 1px 12px rgba(0,0,0,0.4)' }}
+          style={{ color: '#fff', textShadow: '0 1px 12px rgba(0,0,0,0.4)' }}
         >
           {title}
         </p>
-        <p className="text-[12px] mt-1.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
+        <p className="text-[12px] mt-1.5" style={{ color: 'rgba(255,255,255,0.55)' }}>
           {subtitle}
         </p>
 
-        {/* Rotating status line + animated dots */}
         <div className="mt-4 flex items-center justify-center gap-2 h-5">
           <span
-            key={currentStatus /* re-key forces fade-in on change */}
-            className="text-[11px] font-semibold uppercase tracking-wider animate-[ai-status-in_0.3s_ease-out]"
-            style={{ color: 'var(--theme-brand-primary)' }}
+            key={currentStatus}
+            className="text-[11px] font-semibold uppercase tracking-wider"
+            style={{
+              color: 'var(--theme-brand-primary)',
+              textShadow: '0 0 8px color-mix(in srgb, var(--theme-brand-primary) 50%, transparent)',
+            }}
           >
             {currentStatus}
           </span>
@@ -264,82 +405,51 @@ export function AIScanningOverlay({
             <Dot delay={0.3} />
           </span>
         </div>
-      </div>
 
-      {/* ── Keyframes (scoped) ──────────────────────────────────────────── */}
-      <style>{`
-        @keyframes ai-scan-line {
-          0%   { top: 0%;   opacity: 0.2; }
-          10%  { opacity: 1; }
-          50%  { top: calc(100% - 3px); opacity: 1; }
-          60%  { opacity: 1; }
-          100% { top: 0%;   opacity: 0.2; }
-        }
-        @keyframes ai-halo {
-          0%, 100% { opacity: 0.45; transform: scale(1); }
-          50%      { opacity: 0.85; transform: scale(1.04); }
-        }
-        @keyframes ai-pulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50%      { transform: scale(1.15); opacity: 0.85; }
-        }
-        @keyframes ai-twinkle {
-          0%, 100% { opacity: 0; transform: scale(0.6) rotate(0deg); }
-          50%      { opacity: 1; transform: scale(1) rotate(20deg); }
-        }
-        @keyframes ai-bracket-pulse {
-          0%, 100% { opacity: 0.7; }
-          50%      { opacity: 1; }
-        }
-        @keyframes ai-fade-in {
-          from { opacity: 0; transform: translateY(6px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes ai-scale-in {
-          from { opacity: 0; transform: scale(0.94); }
-          to   { opacity: 1; transform: scale(1); }
-        }
-        @keyframes ai-status-in {
-          from { opacity: 0; transform: translateY(4px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes ai-dot-bounce {
-          0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-          40%           { transform: scale(1);   opacity: 1; }
-        }
-      `}</style>
+        <div
+          className="mt-4 h-1 rounded-full overflow-hidden"
+          style={{
+            background: 'color-mix(in srgb, var(--theme-brand-primary) 15%, transparent)',
+            width: 200,
+            marginLeft: 'auto',
+            marginRight: 'auto',
+          }}
+        >
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: `${scanProgress}%`,
+              background: 'linear-gradient(90deg, var(--theme-brand-primary), color-mix(in srgb, var(--theme-brand-primary) 70%, #fff))',
+              boxShadow: '0 0 8px var(--theme-brand-primary)',
+              transition: 'width 0.3s ease-out',
+            }}
+          />
+        </div>
+      </div>
     </div>,
     document.body,
   )
 }
 
-/* ────────────────────────────────────────────────────────────────────────── */
-/*  Local helpers                                                             */
-/* ────────────────────────────────────────────────────────────────────────── */
-
-/** One animated corner bracket (L-shape) of the scan frame. */
-function Bracket({ corner }: { corner: 'tl' | 'tr' | 'bl' | 'br' }) {
-  const positions: Record<typeof corner, React.CSSProperties> = {
-    tl: { top: 8, left: 8, borderTop: '3px solid', borderLeft: '3px solid', borderTopLeftRadius: 12 },
-    tr: { top: 8, right: 8, borderTop: '3px solid', borderRight: '3px solid', borderTopRightRadius: 12 },
-    bl: { bottom: 8, left: 8, borderBottom: '3px solid', borderLeft: '3px solid', borderBottomLeftRadius: 12 },
-    br: { bottom: 8, right: 8, borderBottom: '3px solid', borderRight: '3px solid', borderBottomRightRadius: 12 },
+function getBracketPosition(corner: 'tl' | 'tr' | 'bl' | 'br'): React.CSSProperties {
+  switch (corner) {
+    case 'tl': return { top: 8, left: 8 }
+    case 'tr': return { top: 8, right: 8 }
+    case 'bl': return { bottom: 8, left: 8 }
+    case 'br': return { bottom: 8, right: 8 }
   }
-  return (
-    <span
-      className="absolute pointer-events-none animate-[ai-bracket-pulse_1.8s_ease-in-out_infinite]"
-      style={{
-        width: 26,
-        height: 26,
-        borderColor: 'var(--theme-brand-primary)',
-        filter: 'drop-shadow(0 0 6px color-mix(in srgb, var(--theme-brand-primary) 70%, transparent))',
-        ...positions[corner],
-      }}
-    />
-  )
 }
 
-/** One bouncing dot in the status row. */
+function getBracketBorders(corner: 'tl' | 'tr' | 'bl' | 'br'): React.CSSProperties {
+  const base: React.CSSProperties = { borderRadius: 0 }
+  switch (corner) {
+    case 'tl': return { ...base, borderTop: '3px solid', borderLeft: '3px solid', borderTopLeftRadius: 12 }
+    case 'tr': return { ...base, borderTop: '3px solid', borderRight: '3px solid', borderTopRightRadius: 12 }
+    case 'bl': return { ...base, borderBottom: '3px solid', borderLeft: '3px solid', borderBottomLeftRadius: 12 }
+    case 'br': return { ...base, borderBottom: '3px solid', borderRight: '3px solid', borderBottomRightRadius: 12 }
+  }
+}
+
 function Dot({ delay }: { delay: number }) {
   return (
     <span
@@ -349,6 +459,7 @@ function Dot({ delay }: { delay: number }) {
         height: 4,
         background: 'var(--theme-brand-primary)',
         animationDelay: `${delay}s`,
+        boxShadow: '0 0 4px var(--theme-brand-primary)',
       }}
     />
   )

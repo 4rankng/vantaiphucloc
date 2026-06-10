@@ -7,16 +7,19 @@ until one succeeds. This avoids single-model outages (503 overload).
 import base64
 import io
 import logging
+from pathlib import Path
 
 import httpx
-from PIL import Image, ImageEnhance
+from dotenv import dotenv_values
+from PIL import Image
 
 from app.config import settings
 
 _logger = logging.getLogger(__name__)
 
-# Configuration
-GEMINI_API_KEY = settings.GEMINI_API_KEY
+# Configuration — read API key from project .env to avoid stale shell env-var overrides
+_PROJECT_ENV = dotenv_values(Path(__file__).resolve().parents[4] / ".env")
+GEMINI_API_KEY = _PROJECT_ENV.get("GEMINI_API_KEY") or settings.GEMINI_API_KEY
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta"
 
 # Hard-coded fallback chain — fastest/cheapest first, then more capable
@@ -35,7 +38,12 @@ async def _get_http_client() -> httpx.AsyncClient:
 
 
 def preprocess_image(image_bytes: bytes) -> tuple[bytes, str]:
-    """Sharpen and enhance contrast for better OCR accuracy.
+    """Lightweight preprocessing — downsize only, preserve natural pixels.
+
+    Modern VLMs (Vision Transformers) are trained on unmanipulated photos.
+    Aggressive sharpening/contrast blows out metallic surfaces and degrades
+    semantic context.  We keep only the resolution gate to stay within API
+    payload limits.
 
     Returns (processed_bytes, mime_type).
     """
@@ -49,11 +57,8 @@ def preprocess_image(image_bytes: bytes) -> tuple[bytes, str]:
     if max(img.size) > MAX_DIMENSION:
         img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.LANCZOS)
 
-    img = ImageEnhance.Sharpness(img).enhance(2.0)
-    img = ImageEnhance.Contrast(img).enhance(1.4)
-
     buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=90)
+    img.save(buf, format="JPEG", quality=95)
     return buf.getvalue(), "image/jpeg"
 
 
@@ -62,6 +67,7 @@ async def call_gemini_vision(
     image_bytes: bytes,
     mime_type: str = "image/jpeg",
     model: str | None = None,
+    response_schema: dict | None = None,
 ) -> dict:
     """Call Gemini API with image input.
 
@@ -70,6 +76,8 @@ async def call_gemini_vision(
         image_bytes: Raw image data
         mime_type: MIME type of the image
         model: Specific model to use (None = try fallback chain)
+        response_schema: Optional JSON schema dict for structured output.
+            When provided, forces JSON response via responseMimeType.
 
     Returns:
         Dict with keys:
@@ -101,6 +109,14 @@ async def call_gemini_vision(
         }
 
     # Build request payload (Gemini format)
+    generation_config: dict = {
+        "temperature": 0.0,
+        "maxOutputTokens": 4096,
+    }
+    if response_schema:
+        generation_config["responseMimeType"] = "application/json"
+        generation_config["responseSchema"] = response_schema
+
     payload = {
         "contents": [
             {
@@ -115,10 +131,7 @@ async def call_gemini_vision(
                 ]
             }
         ],
-        "generationConfig": {
-            "temperature": 0.1,
-            "maxOutputTokens": 4096,
-        },
+        "generationConfig": generation_config,
     }
 
     models_to_try = [model] if model else _GEMINI_MODELS
@@ -186,6 +199,7 @@ async def analyze_image_with_fallback(
     prompt: str,
     image_bytes: bytes,
     mime_type: str = "image/jpeg",
+    response_schema: dict | None = None,
 ) -> dict:
     """Analyze image using Gemini AI with automatic model fallback.
 
@@ -193,6 +207,7 @@ async def analyze_image_with_fallback(
         prompt: The text prompt to send
         image_bytes: Raw image data
         mime_type: MIME type of the image
+        response_schema: Optional JSON schema for structured output
 
     Returns:
         Dict with keys:
@@ -214,7 +229,7 @@ async def analyze_image_with_fallback(
             "fallback_used": False,
         }
 
-    result = await call_gemini_vision(prompt, image_bytes, mime_type)
+    result = await call_gemini_vision(prompt, image_bytes, mime_type, response_schema=response_schema)
 
     if result["success"]:
         used_model = result.get("model", _GEMINI_MODELS[0])
@@ -277,7 +292,7 @@ async def analyze_text_with_fallback(
             }
         ],
         "generationConfig": {
-            "temperature": 0.1,
+            "temperature": 0.0,
             "maxOutputTokens": 4096,
         },
     }

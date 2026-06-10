@@ -119,6 +119,17 @@ function DriverCard({ wo, onClick }: { wo: DeliveredTrip; onClick: () => void })
       style={{
         background: 'var(--surface-bg)',
         borderColor: 'var(--surface-border)',
+        transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-2px)'
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)'
+        e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--theme-brand-primary) 30%, var(--surface-border))'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)'
+        e.currentTarget.style.boxShadow = 'none'
+        e.currentTarget.style.borderColor = 'var(--surface-border)'
       }}
     >
       {/* Row 1 — cont number + type (left) + earning (right, hero) */}

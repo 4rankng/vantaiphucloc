@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
+import { useState, useMemo, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
 import { Plus, Search, X, CircleCheck } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
@@ -10,6 +10,7 @@ import { CONT_TYPES } from '@/data/domain'
 import { useDebounce } from '@/hooks/use-debounce'
 import { getSalaryPeriodDates, dayBefore, dayAfter, toISODate } from '@/lib/salaryPeriod'
 import { AnimatedNumber } from '@/components/shared/data-display/AnimatedNumber'
+import { animate, stagger, createScope, createTimeline, spring } from 'animejs'
 
 type FilterTab = 'matched' | 'pending'
 
@@ -149,10 +150,76 @@ function MobileDriverHome() {
     return () => observer.disconnect()
   }, [hasNextPage, fetchNextPage])
 
+  // ── Anime.js entrance animations ──
+  const scopeRef = useRef<HTMLDivElement>(null)
+  const animatedTripsCount = useRef(0)
+
+  // Reset trip animation tracking when filters change (cards get remounted)
+  useEffect(() => { animatedTripsCount.current = 0 }, [filter, debouncedSearch])
+
+  // Page entrance: orchestrated timeline with spring physics
+  useLayoutEffect(() => {
+    if (!scopeRef.current) return
+    const scope = createScope({
+      root: scopeRef.current,
+      mediaQueries: { reduceMotion: '(prefers-reduced-motion)' },
+    }).add((self) => {
+      const { reduceMotion } = self.matches
+      if (reduceMotion) return
+
+      const tl = createTimeline({ defaults: { ease: 'out(3)' } })
+
+      // Sections cascade in
+      tl.add('[data-section]', {
+        opacity: [0, 1],
+        translateY: [20, 0],
+        delay: stagger(60),
+        duration: 500,
+      }, 80)
+
+      // Salary icons spring bounce (overlaps with sections)
+      tl.add('[data-salary-icon]', {
+        scale: [0, 1],
+        duration: 600,
+        ease: spring({ stiffness: 300, damping: 12 }),
+      }, 180)
+
+      // FAB spring entrance (after sections settle)
+      tl.add('[data-fab]', {
+        scale: [0, 1],
+        opacity: [0, 1],
+        duration: 800,
+        ease: spring({ stiffness: 200, damping: 15 }),
+      }, 500)
+    })
+    return () => scope.revert()
+  }, [])
+
+  // Trip cards: stagger entrance for newly loaded cards
+  useEffect(() => {
+    const root = scopeRef.current
+    if (!root || deliveredTrips.length === 0) return
+
+    const cards = root.querySelectorAll('[data-trip-card]')
+    const prev = animatedTripsCount.current
+    const newCards = prev > 0 ? Array.from(cards).slice(prev) : cards
+    animatedTripsCount.current = deliveredTrips.length
+
+    if (newCards.length === 0) return
+
+    animate(newCards, {
+      opacity: [0, 1],
+      translateY: [14, 0],
+      delay: stagger(35),
+      duration: 400,
+      ease: 'out(3)',
+    })
+  }, [deliveredTrips.length])
+
   return (
-    <div className="space-y-4">
+    <div ref={scopeRef} className="space-y-4">
       {/* Month navigator — standalone row, NOT part of the stat card */}
-      <div className="flex items-center justify-center gap-2">
+      <div data-section="month" className="flex items-center justify-center gap-2">
         <MonthNavigator
           year={displayYear}
           month={displayMonth}
@@ -165,10 +232,21 @@ function MobileDriverHome() {
 
       {/* Stat card: matched salary + total earnings */}
       <div
-        className="flex overflow-hidden relative rounded-2xl"
+        data-section="salary"
+        className="flex overflow-hidden relative rounded-2xl stat-card-hover"
         style={{
           background: 'linear-gradient(135deg, color-mix(in srgb, var(--theme-brand-primary) 5%, var(--theme-bg-secondary)) 0%, var(--theme-bg-secondary) 55%)',
           padding: 0,
+          transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          cursor: 'default',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-2px)'
+          e.currentTarget.style.boxShadow = '0 4px 16px -4px rgba(9,9,11,0.08), 0 0 0 1px rgba(9,9,11,0.03)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)'
+          e.currentTarget.style.boxShadow = 'none'
         }}
       >
         {/* Watermark truck silhouette */}
@@ -192,7 +270,7 @@ function MobileDriverHome() {
 
         {/* Left: salary from matched trips */}
         <div className="flex-1 min-w-0 flex items-center gap-2.5 px-4 py-3.5">
-          <CircleCheck size={28} className="shrink-0" style={{ color: 'var(--theme-success, #16a34a)' }} />
+          <CircleCheck data-salary-icon size={28} className="shrink-0" style={{ color: 'var(--theme-success, #16a34a)' }} />
           <div className="flex-1 min-w-0">
             <p className="type-overline" style={{ color: 'var(--theme-text-muted)' }}>
               Lương đã ghép
@@ -205,7 +283,7 @@ function MobileDriverHome() {
 
         {/* Right: salary from unmatched trips */}
         <div className="flex-1 min-w-0 flex items-center gap-2.5 px-4 py-3.5">
-          <CircleCheck size={28} className="shrink-0" style={{ color: 'var(--theme-warning, #d97706)' }} />
+          <CircleCheck data-salary-icon size={28} className="shrink-0" style={{ color: 'var(--theme-warning, #d97706)' }} />
           <div className="flex-1 min-w-0">
             <p className="type-overline" style={{ color: 'var(--theme-text-muted)' }}>
               Lương chưa ghép
@@ -220,39 +298,47 @@ function MobileDriverHome() {
       {/* Container type stats — one card, 4 sections */}
       {contTypeStats && (
         <div
+          data-section="cont-stats"
           className="flex items-stretch rounded-xl overflow-hidden"
           style={{ background: 'var(--theme-bg-secondary)' }}
         >
           {CONT_TYPES.map((ct, i) => (
             <div
               key={ct}
-              className="flex-1 flex flex-col items-center justify-center py-2.5"
+              className="flex-1 flex flex-col items-center justify-center py-2.5 cont-stat-hover"
               style={i > 0 ? { borderLeft: '1px solid var(--theme-border-default)' } : undefined}
             >
               <span className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>{ct}</span>
-              <span className="type-display tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>
-                {contTypeStats[ct] ?? 0}
-              </span>
+              <ContStatNumber value={contTypeStats[ct] ?? 0} />
             </div>
           ))}
         </div>
       )}
 
       {/* Search input */}
-      <div className="relative">
+      <div data-section="search" className="relative">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--theme-text-muted)' }} />
         <input
           type="text"
           placeholder="Tìm số cont, mã KH, địa điểm, tác nghiệp..."
           value={searchRaw}
           onChange={e => setSearchRaw(e.target.value)}
-          className="w-full h-10 pl-9 pr-8 rounded-lg border text-sm outline-none focus:ring-2"
+          className="w-full h-10 pl-9 pr-8 rounded-lg border text-sm outline-none focus:ring-2 search-input"
           style={{
             background: 'var(--theme-bg-secondary)',
             borderColor: 'var(--theme-border-default)',
             color: 'var(--theme-text-primary)',
+            transition: 'border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease',
             // @ts-expect-error CSS variable
             '--tw-ring-color': 'var(--theme-brand-secondary)',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(5,150,105,0.12)'
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = 'none'
           }}
         />
         {searchRaw && (
@@ -267,24 +353,24 @@ function MobileDriverHome() {
       </div>
 
       {/* Trip list */}
-      <div className="space-y-2.5">
+      <div data-section="trips" className="space-y-2.5">
         <div className="flex items-center justify-between">
           <p className="type-h3" style={{ color: 'var(--theme-text-primary)' }}>
             Chuyến đã đi
           </p>
 
           <div
-            className="flex rounded-full p-0.5 gap-0.5 shrink-0"
+            className="flex rounded-full p-0.5 gap-0.5 shrink-0 relative"
             style={{ background: 'var(--theme-bg-tertiary)' }}
           >
             {(['matched', 'pending'] as FilterTab[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
-                className="text-xs px-3 py-2 rounded-full font-medium transition-all touch-manipulation h-9 flex items-center shrink-0"
+                className="text-xs px-3 py-2 rounded-full font-medium transition-all touch-manipulation h-9 flex items-center shrink-0 relative z-10"
                 style={
                   filter === tab
-                    ? { background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }
+                    ? { background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', transform: 'scale(1.02)' }
                     : { background: 'transparent', color: 'var(--theme-text-muted)' }
                 }
               >
@@ -301,30 +387,20 @@ function MobileDriverHome() {
             ))}
           </div>
         ) : deliveredTrips.length === 0 ? (
-          <div
-            className="rounded-lg p-10 flex flex-col items-center justify-center text-center gap-3"
-            style={{ background: 'var(--theme-bg-secondary)' }}
-          >
-            <img src="/icons/calkey.png" alt="" aria-hidden className="w-32 h-32 object-contain" />
-            <div>
-              <p className="type-h3" style={{ color: 'var(--theme-text-primary)' }}>
-                {debouncedSearch ? 'Không tìm thấy chuyến nào' : 'Chưa có chuyến nào'}
-              </p>
-              <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
-                {debouncedSearch ? 'Thử tìm kiếm với từ khóa khác' : 'Nhấn + để tạo chuyến mới'}
-              </p>
-            </div>
-          </div>
+          <EmptyState
+            searchActive={!!debouncedSearch}
+          />
         ) : (
           <>
             <div className="space-y-2.5">
               {deliveredTrips.map(job => (
-                <DeliveredTripCard
-                  key={job.id}
-                  variant="driver"
-                  data={job}
-                  onClick={() => navigate(`/driver/job/${job.id}`)}
-                />
+                <div data-trip-card key={job.id}>
+                  <DeliveredTripCard
+                    variant="driver"
+                    data={job}
+                    onClick={() => navigate(`/driver/job/${job.id}`)}
+                  />
+                </div>
               ))}
             </div>
 
@@ -339,9 +415,83 @@ function MobileDriverHome() {
         )}
       </div>
 
-      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate('/driver/delivered-trips/new')} label="Tạo chuyến" />
+      <div data-fab>
+        <FloatingActionButton
+          icon={<Plus className="w-6 h-6" />}
+          onClick={() => navigate('/driver/delivered-trips/new')}
+          label="Tạo chuyến"
+          pulse={deliveredTrips.length === 0 && !loadingTrips}
+        />
+      </div>
 
       <div className="h-20" />
+    </div>
+  )
+}
+
+function ContStatNumber({ value }: { value: number }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const prevValue = useRef(value)
+
+  useEffect(() => {
+    if (!ref.current || value === prevValue.current) return
+    const obj = { val: prevValue.current }
+    const anim = animate(obj, {
+      val: value,
+      round: 1,
+      duration: 600,
+      ease: 'outExpo',
+      onUpdate: () => {
+        if (ref.current) ref.current.textContent = String(obj.val)
+      },
+    })
+    prevValue.current = value
+    return () => anim.cancel()
+  }, [value])
+
+  return (
+    <span ref={ref} className="type-display tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>
+      {value}
+    </span>
+  )
+}
+
+function EmptyState({ searchActive }: { searchActive: boolean }) {
+  const imgRef = useRef<HTMLImageElement>(null)
+
+  useEffect(() => {
+    if (!imgRef.current) return
+    const anim = animate(imgRef.current, {
+      translateY: [-8, 8],
+      duration: 2500,
+      loop: true,
+      alternate: true,
+      ease: 'inOutSine',
+    })
+    return () => anim.cancel()
+  }, [])
+
+  return (
+    <div
+      className="rounded-lg p-10 flex flex-col items-center justify-center text-center gap-3"
+      style={{ background: 'var(--theme-bg-secondary)' }}
+    >
+      <img
+        ref={imgRef}
+        src="/icons/calkey.png"
+        alt=""
+        aria-hidden
+        className="w-32 h-32 object-contain"
+        style={{ willChange: 'transform' }}
+      />
+      <div>
+        <p className="type-h3" style={{ color: 'var(--theme-text-primary)' }}>
+          {searchActive ? 'Không tìm thấy chuyến nào' : 'Chưa có chuyến nào'}
+        </p>
+        <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+          {searchActive ? 'Thử tìm kiếm với từ khóa khác' : 'Nhấn + để tạo chuyến mới'}
+        </p>
+      </div>
     </div>
   )
 }

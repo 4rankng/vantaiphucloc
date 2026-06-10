@@ -1,8 +1,9 @@
+import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ScanLine, RotateCcw, Trash2, AlertCircle, Loader2, Plus,
+  AlertCircle, Loader2, Plus,
   ChevronLeft, CheckCircle2, Container as ContainerIcon, Ship, MapPin,
-  Sparkles, Camera, StickyNote,
+  Sparkles, Camera, StickyNote, X,
 } from 'lucide-react'
 import { getWorkTypeLabel } from '@/data/domain'
 import { ContainerScanner } from '@/components/shared/overlays/ContainerScanner'
@@ -47,6 +48,8 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
     openScanner, handleScanComplete, setScannerOpen,
     updateContainer, addContainer, removeContainer, validateContainerOnBlur,
     applyContainerSuggestion,
+    updateAllContType, updateAllWorkType, scanNewContainer,
+    addContainerWithNumber,
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit, setSummaryOpen,
   } = useCreateDeliveredTrip(existingDeliveredTrip)
@@ -54,6 +57,23 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
 
   const navigate = useNavigate()
   const toast = useToast()
+
+  // Staging input for manual container number entry — committed to container
+  // array on + or Enter, not bound to any specific container until then.
+  const [stagingNumber, setStagingNumber] = useState('')
+  const [stagingError, setStagingError] = useState<string | null>(null)
+
+  const commitStagingNumber = useCallback(() => {
+    const num = stagingNumber.trim().toUpperCase().replace(/-/g, '')
+    if (!num) return
+    if (num.length !== 11 || !/^[A-Z]{4}\d{7}$/.test(num)) {
+      setStagingError('Sai định dạng. Đúng: 4 chữ cái + 7 số')
+      return
+    }
+    setStagingError(null)
+    addContainerWithNumber(num)
+    setStagingNumber('')
+  }, [stagingNumber, addContainerWithNumber])
 
   // The first container with an in-flight OCR request — feeds the AI scanning
   // overlay so the driver sees their captured photo being "scanned" while the
@@ -123,192 +143,202 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
         <Section
           icon={<ContainerIcon className="w-3.5 h-3.5" />}
           label="Container"
-          hint={containers.length > 1 ? `${containers.length} cont` : 'Quét hoặc nhập số'}
+          hint={containerCount > 1 ? `${containerCount} cont` : 'Quét hoặc nhập số'}
         >
           <div className="space-y-3">
-            {containers.map((cont, idx) => {
-              const scanState =
-                cont.ocrLoading ? 'loading'
-                : cont.photoTaken && !cont.ocrError ? 'done'
-                : cont.photoTaken && cont.ocrError ? 'retry'
-                : 'idle'
-
-              return (
-                <div
-                  key={idx}
-                  className="rounded-2xl p-3.5 space-y-3 transition-all"
-                  style={{
-                    background: 'var(--theme-bg-secondary)',
-                    border: `1px solid ${
-                      containerErrors[idx]
-                        ? 'var(--theme-status-error)'
-                        : cont.containerNumber
-                          ? 'color-mix(in srgb, var(--theme-brand-primary) 30%, transparent)'
-                          : 'var(--theme-border-default)'
-                    }`,
-                    boxShadow: 'var(--theme-shadow-card)',
-                  }}
-                >
-                  {/* ① Choose cont type + tác nghiệp FIRST — all scanned containers inherit these */}
-                  <ContainerTypeGrid
-                    contType={cont.contType}
-                    workType={cont.workType}
-                    onContTypeChange={(ct) => updateContainer(idx, 'contType', ct)}
-                    onWorkTypeChange={(wt) => updateContainer(idx, 'workType', wt)}
-                    operationTypes={operationTypes}
-                  />
-
-                  {/* Edit-mode hint: show prior contType / workType if changed */}
-                  {isEdit && idx === 0 && original && (
-                    <div className="space-y-0.5">
-                      <OriginalHint
-                        current={cont.contType ?? ''}
-                        original={original.contType ?? ''}
-                      />
-                      <OriginalHint
-                        current={getWorkTypeLabel(cont.workType) ?? cont.workType ?? ''}
-                        original={getWorkTypeLabel(original.workType) ?? original.workType ?? ''}
-                      />
-                    </div>
-                  )}
-
-                  {/* ② Then scan or type the container number */}
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1 min-w-0 max-w-[260px]">
-                      <input
-                        value={cont.containerNumber}
-                        onChange={e => updateContainer(idx, 'containerNumber', e.target.value)}
-                        onBlur={() => validateContainerOnBlur(idx)}
-                        className="w-full h-12 rounded-xl pl-4 text-base font-mono font-semibold tracking-wider uppercase [&::placeholder]:opacity-40 [&::placeholder]:font-normal [&::placeholder]:tracking-normal [&::placeholder]:normal-case"
-                        style={{
-                          background: 'var(--theme-bg-tertiary)',
-                          border: `1.5px solid ${
-                            containerErrors[idx]
-                              ? 'var(--theme-status-error)'
-                              : cont.containerNumber
-                                ? 'var(--theme-brand-primary)'
-                                : 'transparent'
-                          }`,
-                          color: 'var(--theme-text-primary)',
-                          paddingRight: cont.ocrLoading ? '44px' : '14px',
-                        }}
-                        placeholder={cont.ocrLoading ? 'Đang nhận diện...' : 'MSKU1234567'}
-                        readOnly={cont.ocrLoading}
-                        autoCapitalize="characters"
-                        autoCorrect="off"
-                        spellCheck={false}
-                        inputMode="text"
-                        maxLength={12}
-                      />
-                      {cont.ocrLoading && (
-                        <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin" style={{ color: 'var(--theme-brand-primary)' }} />
-                      )}
-                    </div>
-
-                    {/* Scan CTA */}
-                    <button
-                      onClick={openScanner(idx)}
-                      aria-label="Quét số container bằng camera"
-                      type="button"
-                      className="flex items-center gap-1 h-12 px-3 rounded-xl text-xs font-bold touch-manipulation transition-all active:scale-[0.96] shrink-0"
-                      style={
-                        scanState === 'done'
-                          ? {
-                              background: 'var(--theme-status-success-light, #d1fae5)',
-                              color: 'var(--theme-status-success, #047857)',
-                              border: '1px solid color-mix(in srgb, var(--theme-status-success, #047857) 25%, transparent)',
-                            }
-                          : scanState === 'retry'
-                          ? {
-                              background: 'var(--theme-status-warning-light, #fef3c7)',
-                              color: 'var(--theme-status-warning, #b45309)',
-                              border: '1px solid color-mix(in srgb, var(--theme-status-warning, #b45309) 25%, transparent)',
-                            }
-                          : {
-                              background: 'var(--theme-brand-primary)',
-                              color: 'var(--theme-text-on-brand, #fff)',
-                              border: '1px solid var(--theme-brand-primary)',
-                            }
-                      }
-                    >
-                      {scanState === 'loading' ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : scanState === 'done' ? (
-                        <><CheckCircle2 className="w-4 h-4" /> Đã quét</>
-                      ) : scanState === 'retry' ? (
-                        <><RotateCcw className="w-4 h-4" /> Quét lại</>
-                      ) : (
-                        <><ScanLine className="w-4 h-4" /> Quét</>
-                      )}
-                    </button>
-
-                    {containers.length > 1 && (
-                      <button
-                        onClick={() => removeContainer(idx)}
-                        aria-label="Xoá container"
-                        type="button"
-                        className="w-12 h-12 flex items-center justify-center rounded-xl touch-manipulation active:scale-95 transition-transform shrink-0 ml-auto"
-                        style={{
-                          background: 'var(--theme-status-error-light, #fee2e2)',
-                          border: '1px solid color-mix(in srgb, var(--theme-status-error) 20%, transparent)',
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" style={{ color: 'var(--theme-status-error)' }} />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Edit-mode hint: show prior cont number if changed (only on the first row,
-                      which is the one that maps to the existing trip — additional rows are
-                      always new and don't have a prior value). */}
-                  {isEdit && idx === 0 && original && (
-                    <OriginalHint current={cont.containerNumber} original={original.contNumber} />
-                  )}
-
-                  {/* Status messages */}
-                  {(forceManualEntry || containerErrors[idx] || cont.ocrError || (containerSuggestions[idx]?.length ?? 0) > 0) && !cont.ocrLoading && (
-                    <div className="space-y-1.5 pt-0.5">
-                      {forceManualEntry && (
-                        <Hint tone="warning" text="Vui lòng nhập tay số cont" />
-                      )}
-                      {containerErrors[idx] && (
-                        <Hint tone="error" text={containerErrors[idx]} />
-                      )}
-                      {cont.ocrError && !containerErrors[idx] && (
-                        <Hint tone="warning" text={`${cont.ocrError} — nhập tay hoặc quét lại`} />
-                      )}
-
-                      {/* Server-suggested corrections — tap one to auto-fill */}
-                      {(containerSuggestions[idx]?.length ?? 0) > 0 && (
-                        <SuggestionChips
-                          original={cont.containerNumber}
-                          suggestions={containerSuggestions[idx]!}
-                          onPick={(s) => applyContainerSuggestion(idx, s)}
-                        />
-                      )}
-                    </div>
-                  )}
+            {/* ① Shared cont type + tác nghiệp — all containers inherit these */}
+            <div
+              className="rounded-2xl p-3.5"
+              style={{
+                background: 'var(--theme-bg-secondary)',
+                border: '1px solid var(--theme-border-default)',
+                boxShadow: 'var(--theme-shadow-card)',
+              }}
+            >
+              <ContainerTypeGrid
+                contType={containers[0]?.contType ?? null}
+                workType={containers[0]?.workType ?? null}
+                onContTypeChange={updateAllContType}
+                onWorkTypeChange={updateAllWorkType}
+                operationTypes={operationTypes}
+              />
+              {isEdit && original && (
+                <div className="space-y-0.5 mt-2">
+                  <OriginalHint current={containers[0]?.contType ?? ''} original={original.contType ?? ''} />
+                  <OriginalHint current={getWorkTypeLabel(containers[0]?.workType) ?? containers[0]?.workType ?? ''} original={getWorkTypeLabel(original.workType) ?? original.workType ?? ''} />
                 </div>
-              )
-            })}
+              )}
+            </div>
 
-            {/* Add cont — hidden in edit mode. The edit flow only persists a single
-                container (the one that belongs to the existing trip); offering "Thêm
-                container" here would create rows that get silently dropped on submit. */}
-            {!isEdit && (
+            {/* ② Detected container badges — each AI-detected number shown as a removable chip */}
+            {containerCount > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {containers.map((cont, idx) => {
+                  if (!cont.containerNumber.trim()) return null
+                  const hasError = !!containerErrors[idx]
+                  return (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1 h-9 pl-3 pr-1.5 rounded-lg text-[13px] font-mono font-semibold tracking-wide transition-all"
+                      style={{
+                        background: hasError
+                          ? 'var(--theme-status-error-light, #fee2e2)'
+                          : 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)',
+                        color: hasError ? 'var(--theme-status-error)' : 'var(--theme-text-primary)',
+                        border: `1px solid ${hasError
+                          ? 'color-mix(in srgb, var(--theme-status-error) 30%, transparent)'
+                          : 'color-mix(in srgb, var(--theme-brand-primary) 30%, transparent)'}`,
+                      }}
+                    >
+                      {cont.containerNumber}
+                      {containers.length > 1 && (
+                        <button
+                          onClick={() => removeContainer(idx)}
+                          type="button"
+                          className="w-6 h-6 flex items-center justify-center rounded-md touch-manipulation active:scale-90 transition-transform"
+                          style={{ color: 'var(--theme-text-muted)' }}
+                          aria-label={`Xoá ${cont.containerNumber}`}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </span>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* ③ Input row — + on left, textbox in middle, scan on right */}
+            <div className="flex items-center gap-2">
+              {/* + Add button — left side */}
+              {!isEdit && (
+                <button
+                  onClick={commitStagingNumber}
+                  type="button"
+                  className="w-12 h-12 flex items-center justify-center rounded-xl touch-manipulation transition-all active:scale-90 shrink-0"
+                  style={{
+                    background: 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)',
+                    border: '1.5px solid color-mix(in srgb, var(--theme-brand-primary) 30%, transparent)',
+                    color: 'var(--theme-brand-primary)',
+                  }}
+                  aria-label="Thêm container"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              )}
+
+              {/* Textbox */}
+              <div className="relative flex-1 min-w-0 max-w-[200px]">
+                <input
+                  value={isEdit ? (containers[0]?.containerNumber ?? '') : stagingNumber}
+                  onChange={e => {
+                    const val = e.target.value.toUpperCase().replace(/-/g, '')
+                    if (isEdit) {
+                      updateContainer(0, 'containerNumber', val)
+                    } else {
+                      setStagingNumber(val)
+                      setStagingError(null)
+                    }
+                  }}
+                  onKeyDown={e => {
+                    if (!isEdit && e.key === 'Enter') commitStagingNumber()
+                  }}
+                  onBlur={() => {
+                    if (isEdit) validateContainerOnBlur(0)
+                  }}
+                  className="w-full h-12 rounded-xl pl-4 text-base font-mono font-semibold tracking-wider uppercase [&::placeholder]:opacity-40 [&::placeholder]:font-normal [&::placeholder]:tracking-normal [&::placeholder]:normal-case"
+                  style={{
+                    background: 'var(--theme-bg-tertiary)',
+                    border: `1.5px solid ${
+                      isEdit && containerErrors[0]
+                        ? 'var(--theme-status-error)'
+                        : isEdit && containers[0]?.containerNumber
+                          ? 'var(--theme-brand-primary)'
+                          : stagingError
+                            ? 'var(--theme-status-error)'
+                            : 'transparent'
+                    }`,
+                    color: 'var(--theme-text-primary)',
+                    paddingRight: scanningContainer ? '44px' : '14px',
+                  }}
+                  placeholder={scanningContainer ? 'Đang nhận diện...' : 'MSKU1234567'}
+                  readOnly={!!scanningContainer}
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  inputMode="text"
+                  maxLength={12}
+                />
+                {scanningContainer && (
+                  <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin" style={{ color: 'var(--theme-brand-primary)' }} />
+                )}
+              </div>
+
+              {/* Scan button — icon only, prominent */}
               <button
-                onClick={addContainer}
+                onClick={scanNewContainer}
+                disabled={!!scanningContainer}
+                aria-label="Quét số container bằng camera"
                 type="button"
-                className="w-full h-12 rounded-xl text-sm font-bold flex items-center justify-center gap-2 touch-manipulation transition-all active:scale-[0.98]"
+                className="w-14 h-12 flex items-center justify-center rounded-xl text-sm font-bold touch-manipulation transition-all active:scale-[0.96] shrink-0 disabled:opacity-50"
                 style={{
-                  background: 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)',
-                  color: 'var(--theme-brand-primary)',
-                  border: '1.5px solid color-mix(in srgb, var(--theme-brand-primary) 25%, transparent)',
+                  background: 'var(--theme-brand-primary)',
+                  color: 'var(--theme-text-on-brand, #fff)',
+                  border: '1px solid var(--theme-brand-primary)',
                 }}
               >
-                <Plus className="w-4 h-4" /> Thêm container
+                {scanningContainer ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Camera className="w-5 h-5" />
+                )}
               </button>
+            </div>
+
+            {hasAnyPhoto && (
+              <div className="flex items-center gap-2 mt-1">
+                {containers.filter(c => c.photoDataUrl).map((c, i) => (
+                  <div
+                    key={i}
+                    className="w-12 h-12 rounded-lg overflow-hidden shrink-0"
+                    style={{
+                      border: '1.5px solid color-mix(in srgb, var(--theme-brand-primary) 40%, transparent)',
+                      boxShadow: '0 0 8px color-mix(in srgb, var(--theme-brand-primary) 15%, transparent)',
+                    }}
+                  >
+                    <img
+                      src={c.photoDataUrl}
+                      alt="Ảnh đã chụp"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+                <span className="text-[11px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>
+                  Đã chụp ảnh
+                </span>
+              </div>
             )}
+
+            {/* Status messages */}
+            <div className="space-y-1.5">
+              {stagingError && <Hint tone="error" text={stagingError} />}
+              {forceManualEntry && <Hint tone="warning" text="Vui lòng nhập tay số cont" />}
+              {containers.some(c => c.ocrError) && !scanningContainer && (
+                <Hint tone="warning" text={`${containers.find(c => c.ocrError)?.ocrError} — nhập tay hoặc quét lại`} />
+              )}
+              {/* Edit-mode: show per-container errors */}
+              {isEdit && containerErrors[0] && <Hint tone="error" text={containerErrors[0]} />}
+              {isEdit && (containerSuggestions[0]?.length ?? 0) > 0 && (
+                <SuggestionChips
+                  original={containers[0]?.containerNumber ?? ''}
+                  suggestions={containerSuggestions[0]!}
+                  onPick={(s) => applyContainerSuggestion(0, s)}
+                />
+              )}
+              {isEdit && original && (
+                <OriginalHint current={containers[0]?.containerNumber ?? ''} original={original.contNumber} />
+              )}
+            </div>
           </div>
         </Section>
 

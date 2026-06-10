@@ -182,6 +182,11 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       timestamp: meta.timestamp,
     }
 
+    // Set loading state on active container
+    setContainers(prev => prev.map((c, i) =>
+      i === idx ? { ...c, ocrLoading: true, ocrError: undefined, photoTaken: true, photoDataUrl: imageSrc } : c
+    ))
+
     apiClient.ocrContainer(imageSrc, idx)
       .then((result) => {
         if (result.success && result.containerNumbers.length > 0) {
@@ -358,6 +363,42 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     }).catch(() => {})
   }, [applyValidationResult])
 
+  // Shared cont type / work type — updates ALL containers at once
+  const updateAllContType = useCallback((ct: ContType | null) => {
+    setContainers(prev => prev.map(c => ({ ...c, contType: ct })))
+  }, [])
+
+  const updateAllWorkType = useCallback((wt: WorkType | null) => {
+    setContainers(prev => prev.map(c => ({ ...c, workType: wt })))
+  }, [])
+
+  /** Open scanner targeting first empty container (or append a new one). */
+  const scanNewContainer = useCallback(() => {
+    const emptyIdx = containers.findIndex(c => !c.containerNumber.trim())
+    if (emptyIdx >= 0) {
+      setActiveContIdx(emptyIdx)
+    } else {
+      setContainers(prev => [...prev, { ...EMPTY_CONT }])
+      setActiveContIdx(containers.length)
+    }
+    setScannerOpen(true)
+  }, [containers])
+
+  /** Commit a number as a new container badge (fills empty slot or appends). */
+  const addContainerWithNumber = useCallback((number: string) => {
+    setContainers(prev => {
+      const contType = prev[0]?.contType ?? null
+      const workType = prev[0]?.workType ?? null
+      const emptyIdx = prev.findIndex(c => !c.containerNumber.trim())
+      if (emptyIdx >= 0) {
+        return prev.map((c, i) =>
+          i === emptyIdx ? { ...c, containerNumber: number, contType, workType } : c
+        )
+      }
+      return [...prev, { ...EMPTY_CONT, containerNumber: number, contType, workType }]
+    })
+  }, [])
+
   // Suggestion selection (toggle: click again to deselect)
   const handleRecentTripSelect = useCallback((trip: {
     tripId?: number | string
@@ -381,14 +422,14 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
 
   // Validation — photo is optional (scan-to-fill only, not stored)
   const canSubmit = useMemo(() => {
-    const hasContainerInfo = containers.every(c => c.containerNumber.trim())
-    return hasContainerInfo && !!clientId && !!pickupLocation && !!dropoffLocation
+    const hasAtLeastOneContainer = containers.some(c => c.containerNumber.trim())
+    return hasAtLeastOneContainer && !!clientId && !!pickupLocation && !!dropoffLocation
       && Object.keys(containerErrors).length === 0
   }, [containers, clientId, pickupLocation, dropoffLocation, containerErrors])
 
   const missingFields = useMemo(() => {
     const fields: string[] = []
-    if (containers.some(c => !c.containerNumber.trim())) fields.push('số cont')
+    if (!containers.some(c => c.containerNumber.trim())) fields.push('số cont')
     if (!clientId) fields.push('khách hàng')
     if (!pickupLocation) fields.push('điểm đi')
     if (!dropoffLocation) fields.push('điểm đến')
@@ -639,6 +680,8 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     openScanner, handleScanComplete, setScannerOpen,
     updateContainer, addContainer, removeContainer, validateContainerOnBlur,
     applyContainerSuggestion,
+    updateAllContType, updateAllWorkType, scanNewContainer,
+    addContainerWithNumber,
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit,
     setSummaryOpen,
