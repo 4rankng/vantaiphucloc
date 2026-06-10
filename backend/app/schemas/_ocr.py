@@ -14,5 +14,6 @@ class ContainerOCRRequest(BaseModel):
 class ContainerOCRResponse(BaseModel):
     success: bool
     container_number: str | None = None
+    container_numbers: list[str] = []
     error: str | None = None
     attempts_remaining: int = 0

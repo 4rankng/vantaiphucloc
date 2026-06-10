@@ -119,3 +119,120 @@ async def extract_container_number(
         "provider": result["provider"],
         "fallback_used": result["fallback_used"],
     }
+
+
+# ---------------------------------------------------------------------------
+# Multi-container OCR
+# ---------------------------------------------------------------------------
+
+MAX_DETECT = 10
+
+MULTI_CONTAINER_PROMPT = """Look at the photo and find ALL container numbers painted on the shipping containers.
+
+The container number follows ISO 6346 format: 4 uppercase letters followed by 7 digits (e.g., MSKU1234567).
+
+Guidelines:
+- There may be MULTIPLE containers visible in the photo
+- Each container number is usually the LARGEST text on that container's side
+- Ignore smaller text like weight capacity codes, customs marks, or owner logos
+- Numbers may be white on colored background, or black on white background
+- Hyphens may appear between groups (e.g., MSKU-123456-7) — ignore them
+- If weathered or partially obscured, include only if highly confident
+
+CRITICAL: Your entire response must be EXACTLY a comma-separated list of container numbers and NOTHING else:
+- Each number: 11 characters, uppercase, no spaces or hyphens (e.g. MSKU1234567)
+- Multiple numbers separated by commas: MSKU1234567,TCLU9876543,OOLU1122334
+- If no containers found: NONE
+
+Do NOT include explanations, calculations, reasoning, or any other text.
+
+Examples:
+MSKU1234567,TCLU9876543
+TRUL1234567
+NONE"""
+
+
+async def extract_container_numbers(
+    image_bytes: bytes,
+    mime_type: str = "image/jpeg",
+) -> dict:
+    """Extract ALL container numbers from image using Gemini AI.
+
+    Returns:
+        Dict with keys:
+        - success: bool
+        - container_numbers: list[str] — all valid ISO 6346 numbers found
+        - error: str | None
+        - provider: str | None
+    """
+    try:
+        image_bytes, mime_type = preprocess_image(image_bytes)
+    except Exception as e:
+        _logger.warning("[OCR] preprocess failed, using raw image: %s", e)
+
+    result = await analyze_image_with_fallback(MULTI_CONTAINER_PROMPT, image_bytes, mime_type)
+
+    if not result["success"]:
+        _logger.error("[OCR] AI provider failed: %s", result["error"])
+        return {
+            "success": False,
+            "container_numbers": [],
+            "error": "Không nhận dạng được số cont",
+            "provider": result.get("provider"),
+        }
+
+    text = result["text"]
+    text = re.sub(r"[`\"'\n\r]", "", text).strip().upper()
+
+    if text == "NONE":
+        _logger.info("[OCR] AI (%s) could not find container numbers", result["provider"])
+        return {
+            "success": False,
+            "container_numbers": [],
+            "error": "Không nhận dạng được số cont",
+            "provider": result["provider"],
+        }
+
+    # Find ALL matches, deduplicate preserving order
+    raw_matches = list(dict.fromkeys(re.findall(r"[A-Z]{4}\d{7}", text)))
+    if not raw_matches:
+        return {
+            "success": False,
+            "container_numbers": [],
+            "error": "Không nhận dạng được số cont",
+            "provider": result["provider"],
+        }
+
+    # Safety cap
+    if len(raw_matches) > MAX_DETECT:
+        _logger.warning("[OCR] truncating %d matches to %d", len(raw_matches), MAX_DETECT)
+        raw_matches = raw_matches[:MAX_DETECT]
+
+    # Validate each via ISO 6346, keep only valid
+    valid = []
+    for num in raw_matches:
+        is_valid, error_msg = validate_container_number(num)
+        if is_valid:
+            valid.append(num)
+        else:
+            _logger.warning("[OCR] skipping invalid: %s (%s)", num, error_msg)
+
+    if not valid:
+        return {
+            "success": False,
+            "container_numbers": [],
+            "error": "Không nhận dạng được số cont",
+            "provider": result["provider"],
+        }
+
+    _logger.info(
+        "[OCR] multi-cont success: %d numbers (%s) [provider: %s, fallback: %s]",
+        len(valid), ", ".join(valid), result["provider"], result["fallback_used"],
+    )
+    return {
+        "success": True,
+        "container_numbers": valid,
+        "error": None,
+        "provider": result["provider"],
+        "fallback_used": result["fallback_used"],
+    }

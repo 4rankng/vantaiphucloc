@@ -55,7 +55,7 @@ from app.core.summaries import (
     get_vendor_summary,
 )
 from app.schemas._ocr import ContainerOCRRequest
-from app.contexts.operations.infrastructure.ocr import extract_container_number
+from app.contexts.operations.infrastructure.ocr import extract_container_numbers
 from app.contexts.operations.infrastructure.photo_storage import save_base64_photo
 from app.utils.iso6346 import normalize_container_number as _norm
 
@@ -168,10 +168,12 @@ async def ocr_container(
     current_user: User = Depends(get_current_user),
 ):
     image_bytes = base64.b64decode(body.image_data)
-    result = await extract_container_number(image_bytes, body.mime_type)
+    result = await extract_container_numbers(image_bytes, body.mime_type)
+    nums = result.get("container_numbers", [])
     return {
         "success": result["success"],
-        "container_number": result.get("container_number"),
+        "container_number": nums[0] if nums else None,
+        "container_numbers": nums,
         "error": result.get("error"),
         "attempts_remaining": 3,
     }

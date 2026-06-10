@@ -160,6 +160,9 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     return () => { cancelled = true }
   }, [user])
 
+  // Shared photo from last scan — stored once, uploaded for first trip, URL shared to rest
+  const lastScanPhotoRef = useRef<{ dataUrl: string; lat: number | null; lng: number | null; timestamp: string } | null>(null)
+
   // Scanner handlers
   const openScanner = useCallback((idx: number) => () => {
     setActiveContIdx(idx)
@@ -167,29 +170,65 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   }, [])
 
   const handleScanComplete = useCallback((imageSrc: string, meta: PhotoMeta) => {
+    // Capture index immediately — activeContIdx may change by the time .then() fires
     const idx = activeContIdx
-    setContainers(prev => prev.map((c, i) =>
-      i === idx
-        ? { ...c, photoTaken: true, photoDataUrl: imageSrc, photoLat: meta.lat, photoLng: meta.lng, photoTimestamp: meta.timestamp, ocrLoading: true, ocrError: undefined }
-        : c,
-    ))
     setScannerOpen(false)
+
+    // Store photo in ref (not per-container) for upload-once sharing
+    lastScanPhotoRef.current = {
+      dataUrl: imageSrc,
+      lat: meta.lat,
+      lng: meta.lng,
+      timestamp: meta.timestamp,
+    }
 
     apiClient.ocrContainer(imageSrc, idx)
       .then((result) => {
-        setContainers(prev => prev.map((c, i) => {
-          if (i !== idx) return c
-          if (result.success && result.containerNumber) {
-            setConsecutiveOCRFailures(0)
-            return { ...c, containerNumber: result.containerNumber, ocrLoading: false }
-          }
+        if (result.success && result.containerNumbers.length > 0) {
+          setConsecutiveOCRFailures(0)
+          const numbers = result.containerNumbers
+
+          setContainers(prev => {
+            // Inherit cont type + work type from the first container (or form defaults)
+            const currentContType = prev[0]?.contType ?? null
+            const currentWorkType = prev[0]?.workType ?? null
+
+            // Deduplicate against existing container numbers
+            const existingNumbers = new Set(
+              prev.map(c => c.containerNumber.trim()).filter(Boolean)
+            )
+            const newNumbers = numbers.filter(n => !existingNumbers.has(n))
+
+            // Map to ContainerForm — photo stored in ref, not per-container
+            const newContainers: ContainerForm[] = newNumbers.map(n => ({
+              containerNumber: n,
+              contType: currentContType,
+              workType: currentWorkType,
+              photoTaken: false,
+              ocrLoading: false,
+            }))
+
+            // Remove the placeholder container at [idx] if it was empty
+            const activeEmpty = prev[idx]?.containerNumber.trim() === ''
+            const filtered = activeEmpty
+              ? prev.filter((_, i) => i !== idx)
+              : prev
+
+            return [...filtered, ...newContainers]
+          })
+        } else {
+          // No containers detected — show error on the active slot
           setConsecutiveOCRFailures(prev => prev + 1)
-          return { ...c, ocrLoading: false, ocrError: result.error ?? 'Không nhận diện được' }
-        }))
+          setContainers(prev => prev.map((c, i) =>
+            i === idx
+              ? { ...c, ocrLoading: false, ocrError: result.error ?? 'Không nhận diện được' }
+              : c
+          ))
+        }
       })
       .catch(() => {
         setContainers(prev => prev.map((c, i) =>
-          i === idx ? { ...c, ocrLoading: false, ocrError: 'Lỗi kết nối AI' } : c,
+          i === idx ? { ...c, ocrLoading: false, ocrError: 'Lỗi kết nối AI' } : c
         ))
       })
   }, [activeContIdx])
@@ -416,12 +455,50 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       const activeContainers = containers.filter(c => c.containerNumber.trim())
       let anyFailed = false
 
-      for (const cont of activeContainers) {
+      // Photo sharing: upload once for first trip, share URL to rest
+      let sharedPhotoUrl: string | null = null
+      const scanPhoto = lastScanPhotoRef.current
+
+      for (let i = 0; i < activeContainers.length; i++) {
+        const cont = activeContainers[i]
         try {
+          // First trip + scan photo available: create trip, upload photo, capture URL
+          if (i === 0 && scanPhoto) {
+            const res = await apiClient.createDeliveredTrip({
+              contNumber: cont.containerNumber.trim() || null,
+              contType: cont.contType ?? null,
+              workType: cont.workType ?? null,
+              clientId: Number(clientId),
+              pickupLocationId: pickupId,
+              dropoffLocationId: dropoffId,
+              driverId: Number(user!.id),
+              vessel: vessel || null,
+              vehiclePlate: null,
+              tripDate,
+              note: note.trim() || null,
+            })
+
+            if (!res.success) {
+              anyFailed = true
+              continue
+            }
+
+            // Upload photo for first trip → capture URL to share
+            if (res.data?.id) {
+              const uploadRes = await apiClient.uploadDeliveredTripPhoto(res.data.id, scanPhoto.dataUrl)
+              if (uploadRes.success && uploadRes.data?.contPhotoUrl) {
+                sharedPhotoUrl = uploadRes.data.contPhotoUrl
+              }
+            }
+            continue
+          }
+
+          // Subsequent trips (or no scan photo): create with shared photo URL if available
           const res = await apiClient.createDeliveredTrip({
             contNumber: cont.containerNumber.trim() || null,
             contType: cont.contType ?? null,
             workType: cont.workType ?? null,
+            contPhotoUrl: sharedPhotoUrl,
             clientId: Number(clientId),
             pickupLocationId: pickupId,
             dropoffLocationId: dropoffId,
@@ -434,13 +511,6 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
 
           if (!res.success) {
             anyFailed = true
-            continue
-          }
-
-          // Photo upload is optional — failures are silently ignored
-          if (cont.photoTaken && cont.photoDataUrl && res.data?.id) {
-            apiClient.uploadDeliveredTripPhoto(res.data.id, cont.photoDataUrl)
-              .catch(() => {})
           }
         } catch {
           anyFailed = true

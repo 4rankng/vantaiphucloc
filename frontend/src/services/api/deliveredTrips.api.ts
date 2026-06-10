@@ -108,6 +108,7 @@ export async function createDeliveredTrip(
 export interface OCRContainerResponse {
   success: boolean
   containerNumber: string | null
+  containerNumbers: string[]
   error: string | null
   attemptsRemaining: number
 }
@@ -123,6 +124,7 @@ export async function ocrContainer(imageDataUrl: string, containerIndex: number)
   return {
     success: res.data.success,
     containerNumber: res.data.container_number,
+    containerNumbers: res.data.container_numbers ?? [],
     error: res.data.error,
     attemptsRemaining: res.data.attempts_remaining,
   }
