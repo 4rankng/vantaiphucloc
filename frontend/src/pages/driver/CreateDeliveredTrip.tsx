@@ -149,9 +149,30 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                     boxShadow: 'var(--theme-shadow-card)',
                   }}
                 >
-                  {/* Number input + Scan CTA + delete — single row.
-                      Input is capped at ~260px (enough for MSKU1234567 + slack);
-                      anything wider just leaves clean breathing room on desktop. */}
+                  {/* ① Choose cont type + tác nghiệp FIRST — all scanned containers inherit these */}
+                  <ContainerTypeGrid
+                    contType={cont.contType}
+                    workType={cont.workType}
+                    onContTypeChange={(ct) => updateContainer(idx, 'contType', ct)}
+                    onWorkTypeChange={(wt) => updateContainer(idx, 'workType', wt)}
+                    operationTypes={operationTypes}
+                  />
+
+                  {/* Edit-mode hint: show prior contType / workType if changed */}
+                  {isEdit && idx === 0 && original && (
+                    <div className="space-y-0.5">
+                      <OriginalHint
+                        current={cont.contType ?? ''}
+                        original={original.contType ?? ''}
+                      />
+                      <OriginalHint
+                        current={getWorkTypeLabel(cont.workType) ?? cont.workType ?? ''}
+                        original={getWorkTypeLabel(original.workType) ?? original.workType ?? ''}
+                      />
+                    </div>
+                  )}
+
+                  {/* ② Then scan or type the container number */}
                   <div className="flex items-center gap-2">
                     <div className="relative flex-1 min-w-0 max-w-[260px]">
                       <input
@@ -242,29 +263,6 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                       always new and don't have a prior value). */}
                   {isEdit && idx === 0 && original && (
                     <OriginalHint current={cont.containerNumber} original={original.contNumber} />
-                  )}
-
-                  {/* Two independent groups: Loại cont (E20/E40/F20/F40) + Tác nghiệp */}
-                  <ContainerTypeGrid
-                    contType={cont.contType}
-                    workType={cont.workType}
-                    onContTypeChange={(ct) => updateContainer(idx, 'contType', ct)}
-                    onWorkTypeChange={(wt) => updateContainer(idx, 'workType', wt)}
-                    operationTypes={operationTypes}
-                  />
-
-                  {/* Edit-mode hint: show prior contType / workType if changed */}
-                  {isEdit && idx === 0 && original && (
-                    <div className="space-y-0.5">
-                      <OriginalHint
-                        current={cont.contType ?? ''}
-                        original={original.contType ?? ''}
-                      />
-                      <OriginalHint
-                        current={getWorkTypeLabel(cont.workType) ?? cont.workType ?? ''}
-                        original={getWorkTypeLabel(original.workType) ?? original.workType ?? ''}
-                      />
-                    </div>
                   )}
 
                   {/* Status messages */}

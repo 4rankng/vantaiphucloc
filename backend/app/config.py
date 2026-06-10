@@ -45,7 +45,6 @@ class Settings(BaseSettings):
 
     # AI provider
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-3.5-flash"
     GEMINI_ENABLE: bool = False
     CHATBOT_ENABLE: int = 0
 

@@ -175,7 +175,7 @@ async def ocr_container(
         "container_number": nums[0] if nums else None,
         "container_numbers": nums,
         "error": result.get("error"),
-        "attempts_remaining": 3,
+        "attempts_remaining": 10,
     }
 
 

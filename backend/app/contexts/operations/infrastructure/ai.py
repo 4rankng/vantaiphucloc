@@ -1,4 +1,8 @@
-"""Unified AI service using Google Gemini for text/image analysis."""
+"""Unified AI service using Google Gemini for text/image analysis.
+
+Uses a hard-coded model fallback chain: tries each model in order
+until one succeeds. This avoids single-model outages (503 overload).
+"""
 
 import base64
 import io
@@ -13,8 +17,10 @@ _logger = logging.getLogger(__name__)
 
 # Configuration
 GEMINI_API_KEY = settings.GEMINI_API_KEY
-GEMINI_MODEL = settings.GEMINI_MODEL
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta"
+
+# Hard-coded fallback chain — fastest/cheapest first, then more capable
+_GEMINI_MODELS = ["gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-flash-latest"]
 
 # Shared HTTP client (lazy singleton)
 _http_client: httpx.AsyncClient | None = None
@@ -55,6 +61,7 @@ async def call_gemini_vision(
     prompt: str,
     image_bytes: bytes,
     mime_type: str = "image/jpeg",
+    model: str | None = None,
 ) -> dict:
     """Call Gemini API with image input.
 
@@ -62,6 +69,7 @@ async def call_gemini_vision(
         prompt: The text prompt to send
         image_bytes: Raw image data
         mime_type: MIME type of the image
+        model: Specific model to use (None = try fallback chain)
 
     Returns:
         Dict with keys:
@@ -69,6 +77,7 @@ async def call_gemini_vision(
         - text: str | None
         - error: str | None
         - provider: str ("gemini")
+        - model: str — which model was used
     """
     if not GEMINI_API_KEY:
         return {
@@ -76,6 +85,7 @@ async def call_gemini_vision(
             "text": None,
             "error": "Gemini API key not configured",
             "provider": "gemini",
+            "model": None,
         }
 
     try:
@@ -87,6 +97,7 @@ async def call_gemini_vision(
             "text": None,
             "error": "Image encoding failed",
             "provider": "gemini",
+            "model": None,
         }
 
     # Build request payload (Gemini format)
@@ -106,76 +117,69 @@ async def call_gemini_vision(
         ],
         "generationConfig": {
             "temperature": 0.1,
-            "maxOutputTokens": 1000,
+            "maxOutputTokens": 4096,
         },
     }
 
-    url = f"{GEMINI_ENDPOINT}/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
+    models_to_try = [model] if model else _GEMINI_MODELS
+    last_error = None
 
-    try:
-        client = await _get_http_client()
-        response = await client.post(
-            url,
-            json=payload,
-            headers={"Content-Type": "application/json"},
-        )
-        response.raise_for_status()
-        result = response.json()
+    for m in models_to_try:
+        url = f"{GEMINI_ENDPOINT}/models/{m}:generateContent?key={GEMINI_API_KEY}"
 
-    except httpx.HTTPStatusError as e:
-        _logger.error("[Gemini] HTTP %s", e.response.status_code)
-        return {
-            "success": False,
-            "text": None,
-            "error": f"HTTP {e.response.status_code}",
-            "provider": "gemini",
-        }
-    except httpx.RequestError as e:
-        _logger.error("[Gemini] request failed: %s", e)
-        return {
-            "success": False,
-            "text": None,
-            "error": "Request failed",
-            "provider": "gemini",
-        }
-    except Exception as e:
-        _logger.error("[Gemini] unexpected error: %s", e)
-        return {
-            "success": False,
-            "text": None,
-            "error": str(e),
-            "provider": "gemini",
-        }
+        try:
+            client = await _get_http_client()
+            response = await client.post(
+                url,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+            )
+            response.raise_for_status()
+            result = response.json()
 
-    # Parse response
-    try:
-        candidates = result.get("candidates", [])
-        if not candidates:
-            _logger.warning("[Gemini] no candidates in response")
+        except httpx.HTTPStatusError as e:
+            last_error = f"HTTP {e.response.status_code}"
+            _logger.warning("[Gemini] %s failed: %s", m, last_error)
+            continue  # try next model
+        except httpx.RequestError as e:
+            last_error = "Request failed"
+            _logger.warning("[Gemini] %s request failed: %s", m, e)
+            continue
+        except Exception as e:
+            last_error = str(e)
+            _logger.warning("[Gemini] %s unexpected: %s", m, e)
+            continue
+
+        # Parse response
+        try:
+            candidates = result.get("candidates", [])
+            if not candidates:
+                last_error = "No response generated"
+                _logger.warning("[Gemini] %s: no candidates", m)
+                continue
+
+            text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+
             return {
-                "success": False,
-                "text": None,
-                "error": "No response generated",
+                "success": True,
+                "text": text,
+                "error": None,
                 "provider": "gemini",
+                "model": m,
             }
 
-        text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+        except Exception as e:
+            last_error = "Response parse failed"
+            _logger.error("[Gemini] %s parse error: %s", m, e)
+            continue
 
-        return {
-            "success": True,
-            "text": text,
-            "error": None,
-            "provider": "gemini",
-        }
-
-    except Exception as e:
-        _logger.error("[Gemini] parse error: %s", e)
-        return {
-            "success": False,
-            "text": None,
-            "error": "Response parse failed",
-            "provider": "gemini",
-        }
+    return {
+        "success": False,
+        "text": None,
+        "error": last_error or "All models failed",
+        "provider": "gemini",
+        "model": None,
+    }
 
 
 async def analyze_image_with_fallback(
@@ -183,7 +187,7 @@ async def analyze_image_with_fallback(
     image_bytes: bytes,
     mime_type: str = "image/jpeg",
 ) -> dict:
-    """Analyze image using Gemini AI.
+    """Analyze image using Gemini AI with automatic model fallback.
 
     Args:
         prompt: The text prompt to send
@@ -196,7 +200,8 @@ async def analyze_image_with_fallback(
         - text: str | None
         - error: str | None
         - provider: str ("gemini")
-        - fallback_used: bool (always False, kept for compatibility)
+        - model: str — which model succeeded
+        - fallback_used: bool
     """
     if not GEMINI_API_KEY:
         _logger.error("[AI] Gemini API key not configured")
@@ -205,27 +210,32 @@ async def analyze_image_with_fallback(
             "text": None,
             "error": "Gemini API key not configured",
             "provider": None,
+            "model": None,
             "fallback_used": False,
         }
 
     result = await call_gemini_vision(prompt, image_bytes, mime_type)
 
     if result["success"]:
-        _logger.info("[AI] Gemini success: %s", result.get("text", "")[:50])
+        used_model = result.get("model", _GEMINI_MODELS[0])
+        fallback_used = used_model != _GEMINI_MODELS[0]
+        _logger.info("[AI] Gemini %s success: %s", used_model, result.get("text", "")[:50])
         return {
             "success": True,
             "text": result["text"],
             "error": None,
             "provider": "gemini",
-            "fallback_used": False,
+            "model": used_model,
+            "fallback_used": fallback_used,
         }
     else:
-        _logger.error("[AI] Gemini failed: %s", result["error"])
+        _logger.error("[AI] All Gemini models failed: %s", result["error"])
         return {
             "success": False,
             "text": None,
             "error": result["error"],
             "provider": "gemini",
+            "model": None,
             "fallback_used": False,
         }
 
@@ -234,7 +244,7 @@ async def analyze_text_with_fallback(
     prompt: str,
     messages: list[dict] | None = None,
 ) -> dict:
-    """Analyze text using Gemini AI.
+    """Analyze text using Gemini AI with automatic model fallback.
 
     Args:
         prompt: System prompt
@@ -246,6 +256,7 @@ async def analyze_text_with_fallback(
         - text: str | None
         - error: str | None
         - provider: str ("gemini")
+        - model: str
         - fallback_used: bool
     """
     if not GEMINI_API_KEY:
@@ -255,6 +266,7 @@ async def analyze_text_with_fallback(
             "text": None,
             "error": "Gemini API key not configured",
             "provider": None,
+            "model": None,
             "fallback_used": False,
         }
 
@@ -266,40 +278,47 @@ async def analyze_text_with_fallback(
         ],
         "generationConfig": {
             "temperature": 0.1,
-            "maxOutputTokens": 1000,
+            "maxOutputTokens": 4096,
         },
     }
 
-    try:
-        url = f"{GEMINI_ENDPOINT}/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
-        client = await _get_http_client()
-        response = await client.post(
-            url,
-            json=payload,
-            headers={"Content-Type": "application/json"},
-        )
-        response.raise_for_status()
-        result = response.json()
+    last_error = None
 
-        candidates = result.get("candidates", [])
-        if candidates:
-            text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
-            _logger.info("[AI] Gemini text success")
-            return {
-                "success": True,
-                "text": text,
-                "error": None,
-                "provider": "gemini",
-                "fallback_used": False,
-            }
+    for m in _GEMINI_MODELS:
+        try:
+            url = f"{GEMINI_ENDPOINT}/models/{m}:generateContent?key={GEMINI_API_KEY}"
+            client = await _get_http_client()
+            response = await client.post(
+                url,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+            )
+            response.raise_for_status()
+            result = response.json()
 
-    except Exception as e:
-        _logger.error("[AI] Gemini text failed: %s", e)
+            candidates = result.get("candidates", [])
+            if candidates:
+                text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+                _logger.info("[AI] Gemini %s text success", m)
+                return {
+                    "success": True,
+                    "text": text,
+                    "error": None,
+                    "provider": "gemini",
+                    "model": m,
+                    "fallback_used": m != _GEMINI_MODELS[0],
+                }
+
+        except Exception as e:
+            last_error = str(e)
+            _logger.warning("[AI] Gemini %s text failed: %s", m, e)
+            continue
 
     return {
         "success": False,
         "text": None,
-        "error": "No AI provider available",
+        "error": last_error or "No AI provider available",
         "provider": None,
+        "model": None,
         "fallback_used": False,
     }
