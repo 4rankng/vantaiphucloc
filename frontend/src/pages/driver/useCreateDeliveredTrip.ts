@@ -204,12 +204,14 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
             )
             const newNumbers = numbers.filter(n => !existingNumbers.has(n))
 
-            // Map to ContainerForm — photo stored in ref, not per-container
-            const newContainers: ContainerForm[] = newNumbers.map(n => ({
+            // Map to ContainerForm — first new container inherits photo from scan
+            const scanPhoto = prev[idx]?.photoDataUrl
+            const newContainers: ContainerForm[] = newNumbers.map((n, ni) => ({
               containerNumber: n,
               contType: currentContType,
               workType: currentWorkType,
-              photoTaken: false,
+              photoTaken: ni === 0 && !!scanPhoto,
+              photoDataUrl: ni === 0 ? scanPhoto : undefined,
               ocrLoading: false,
             }))
 

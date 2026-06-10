@@ -208,27 +208,10 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
               </div>
             )}
 
-            {/* ③ Input row — + on left, textbox in middle, scan on right */}
+            {/* ③ Input row — textbox + plus + scan */}
             <div className="flex items-center gap-2">
-              {/* + Add button — left side */}
-              {!isEdit && (
-                <button
-                  onClick={commitStagingNumber}
-                  type="button"
-                  className="w-12 h-12 flex items-center justify-center rounded-xl touch-manipulation transition-all active:scale-90 shrink-0"
-                  style={{
-                    background: 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)',
-                    border: '1.5px solid color-mix(in srgb, var(--theme-brand-primary) 30%, transparent)',
-                    color: 'var(--theme-brand-primary)',
-                  }}
-                  aria-label="Thêm container"
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
-              )}
-
               {/* Textbox */}
-              <div className="relative flex-1 min-w-0 max-w-[200px]">
+              <div className="relative min-w-0 max-w-[200px]">
                 <input
                   value={isEdit ? (containers[0]?.containerNumber ?? '') : stagingNumber}
                   onChange={e => {
@@ -274,13 +257,30 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                 )}
               </div>
 
+              {/* + Add button — right of textbox */}
+              {!isEdit && (
+                <button
+                  onClick={commitStagingNumber}
+                  type="button"
+                  className="flex-1 h-12 flex items-center justify-center rounded-xl touch-manipulation transition-all active:scale-90 shrink-0"
+                  style={{
+                    background: 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)',
+                    border: '1.5px solid color-mix(in srgb, var(--theme-brand-primary) 30%, transparent)',
+                    color: 'var(--theme-brand-primary)',
+                  }}
+                  aria-label="Thêm container"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              )}
+
               {/* Scan button — icon only, prominent */}
               <button
                 onClick={scanNewContainer}
                 disabled={!!scanningContainer}
                 aria-label="Quét số container bằng camera"
                 type="button"
-                className="w-14 h-12 flex items-center justify-center rounded-xl text-sm font-bold touch-manipulation transition-all active:scale-[0.96] shrink-0 disabled:opacity-50"
+                className="flex-1 h-12 flex items-center justify-center rounded-xl text-sm font-bold touch-manipulation transition-all active:scale-[0.96] shrink-0 disabled:opacity-50"
                 style={{
                   background: 'var(--theme-brand-primary)',
                   color: 'var(--theme-text-on-brand, #fff)',
@@ -297,22 +297,44 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
 
             {hasAnyPhoto && (
               <div className="flex items-center gap-2 mt-1">
-                {containers.filter(c => c.photoDataUrl).map((c, i) => (
-                  <div
-                    key={i}
-                    className="w-12 h-12 rounded-lg overflow-hidden shrink-0"
-                    style={{
-                      border: '1.5px solid color-mix(in srgb, var(--theme-brand-primary) 40%, transparent)',
-                      boxShadow: '0 0 8px color-mix(in srgb, var(--theme-brand-primary) 15%, transparent)',
-                    }}
-                  >
-                    <img
-                      src={c.photoDataUrl}
-                      alt="Ảnh đã chụp"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ))}
+                {containers.map((c, i) => {
+                  if (!c.photoDataUrl) return null
+                  return (
+                    <div
+                      key={i}
+                      className="relative w-20 h-20 rounded-lg overflow-hidden shrink-0"
+                      style={{
+                        border: '1.5px solid color-mix(in srgb, var(--theme-brand-primary) 40%, transparent)',
+                        boxShadow: '0 0 8px color-mix(in srgb, var(--theme-brand-primary) 15%, transparent)',
+                      }}
+                    >
+                      <img
+                        src={c.photoDataUrl}
+                        alt="Ảnh đã chụp"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={() => {
+                          updateContainer(i, 'photoDataUrl', undefined)
+                          updateContainer(i, 'photoTaken', false)
+                        }}
+                        type="button"
+                        className="absolute flex items-center justify-center rounded-full touch-manipulation"
+                        style={{
+                          width: 18,
+                          height: 18,
+                          background: 'rgba(0,0,0,0.65)',
+                          color: '#fff',
+                          top: 2,
+                          right: 2,
+                        }}
+                        aria-label="Xoá ảnh"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  )
+                })}
                 <span className="text-[11px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>
                   Đã chụp ảnh
                 </span>
@@ -562,6 +584,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
       <AIScanningOverlay
         visible={!!scanningContainer}
         imageSrc={scanningContainer?.photoDataUrl ?? null}
+        detectedNumbers={containers.filter(c => c.containerNumber.trim() && !c.ocrLoading).map(c => c.containerNumber)}
       />
 
       {/* Success overlay */}
