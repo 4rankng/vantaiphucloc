@@ -1,80 +1,15 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiClient } from '@/services/api'
 import { useLocations } from '@/hooks/use-queries'
 import { useRecentValues } from '@/hooks/use-recent-values'
-import type { PhotoMeta } from '@/components/shared/overlays/ContainerScanner'
-import type { Client, ContType, WorkType, DeliveredTrip } from '@/data/domain'
-import { CONT_TYPES } from '@/data/domain'
+import type { Client, DeliveredTrip } from '@/data/domain'
 import { toISODate, shiftISODate, formatISODate } from '@/lib/salaryPeriod'
 import { invalidateDeliveredTripDeps } from '@/hooks/query-keys'
-
-/**
- * ContainerForm — per-container row of the create-trip form.
- *
- * `contType` and `workType` are independent:
- *   - contType: ContType ('E20' | 'E40' | 'F20' | 'F40') — the physical container.
- *   - workType: operation performed (e.g. 'CHẠY SÀ LAN', 'ĐÓNG KHO', or a free-text custom value).
- *
- * Either may be empty (null). Both are written to the API as separate columns.
- */
-export interface ContainerForm {
-  containerNumber: string
-  contType: ContType | null
-  workType: WorkType | null
-  photoTaken: boolean
-  photoDataUrl?: string
-  photoLat?: number | null
-  photoLng?: number | null
-  photoTimestamp?: string | null
-  ocrLoading: boolean
-  ocrError?: string
-}
-
-const EMPTY_CONT: ContainerForm = {
-  containerNumber: '',
-  contType: null,
-  workType: null,
-  photoTaken: false,
-  ocrLoading: false,
-}
-
-const CONT_TYPE_SET: ReadonlySet<string> = new Set(CONT_TYPES)
-
-/** Backward-compat: if workType historically held a ContType, treat it as contType instead. */
-function migrateWorkType(contType: ContType | null, workType: WorkType | null): [ContType | null, WorkType | null] {
-  if (!contType && workType && CONT_TYPE_SET.has(workType)) return [workType as ContType, null]
-  return [contType, workType]
-}
-
-/** Omit a key from a record without mutating. */
-function omitKey<V>(obj: Record<number, V>, k: number): Record<number, V> {
-  const { [k]: _, ...rest } = obj
-  return rest
-}
-
-/** Client-side ISO 6346 container number validation. Returns error message or null. */
-function validateContainerFormat(num: string): string | null {
-  const raw = num.replace(/-/g, '').toUpperCase().trim()
-  if (!raw) return null
-  if (raw.length < 11) return 'Cần 4 chữ cái + 7 số (vd: MSKU1234567)'
-  if (raw.length > 11) return 'Quá dài — đúng 11 ký tự (4 chữ cái + 7 số)'
-  if (!/^[A-Z]{4}\d{7}$/.test(raw)) return 'Sai định dạng. Đúng: 4 chữ cái + 7 số (vd: MSKU1234567)'
-  return null
-}
-
-function woToContainers(wo: DeliveredTrip): ContainerForm[] {
-  const [contType, workType] = migrateWorkType(wo.contType ?? null, wo.workType ?? null)
-  return [{
-    containerNumber: wo.contNumber ?? '',
-    contType,
-    workType,
-    photoTaken: false,
-    ocrLoading: false,
-  }]
-}
+import { useContainerManager } from './useContainerManager'
+import { migrateWorkType } from './useContainerManager'
 
 export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | null) {
   const navigate = useNavigate()
@@ -82,7 +17,24 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   const { user } = useAuth()
   const isEdit = !!existingDeliveredTrip
 
-  // Reference data
+  // ─── Container manager (OCR, validation, CRUD) ────────────────────────────
+  const {
+    containers,
+    scannerOpen, setScannerOpen,
+    forceManualEntry,
+    handleScanComplete, scanNewContainer,
+    containerErrors, containerSuggestions,
+    validateContainerOnBlur, applyContainerSuggestion,
+    validateContainerFormat,
+    updateContainer, removeContainer,
+    addContainerWithNumber,
+    updateAllContType, updateAllWorkType,
+    lastScanPhotoRef,
+    hasAnyPhoto, containerCount,
+    setContainerErrors,
+  } = useContainerManager(existingDeliveredTrip)
+
+  // ─── Reference data ───────────────────────────────────────────────────────
   const [clients, setClients] = useState<Client[]>([])
   const [recentOrders, setRecentOrders] = useState<DeliveredTrip[]>([])
   const { data: locations = [] } = useLocations()
@@ -97,10 +49,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     `ttransport_recent_notes_${user?.id ?? 'anon'}`
   )
 
-  // Form state — pre-populate from existing WO when editing
-  const [containers, setContainers] = useState<ContainerForm[]>(
-    existingDeliveredTrip ? woToContainers(existingDeliveredTrip) : [{ ...EMPTY_CONT }],
-  )
+  // ─── Form state ───────────────────────────────────────────────────────────
   const [clientId, setClientId] = useState(existingDeliveredTrip ? String(existingDeliveredTrip.client.id) : '')
   const [vessel, setVessel] = useState(existingDeliveredTrip?.vessel ?? '')
   const [pickupLocation, setPickupLocation] = useState(existingDeliveredTrip?.pickupLocation.name ?? '')
@@ -115,22 +64,13 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
 
   // UI state
   const [submitting, setSubmitting] = useState(false)
-  const [scannerOpen, setScannerOpen] = useState(false)
-  const [activeContIdx, setActiveContIdx] = useState(0)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
-  const [containerErrors, setContainerErrors] = useState<Record<number, string>>({})
-  // Per-container check-digit correction suggestions returned by the backend.
-  // Only populated when format is right but check digit is wrong.
-  const [containerSuggestions, setContainerSuggestions] = useState<Record<number, string[]>>({})
 
-  // Consecutive OCR failure tracking
-  const [consecutiveOCRFailures, setConsecutiveOCRFailures] = useState(0)
-  const forceManualEntry = consecutiveOCRFailures >= 2
-
-  // Load reference data
+  // Suggestion loading
   const [suggestionLoading, setSuggestionLoading] = useState(true)
 
+  // ─── Reference data loading ───────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false
     Promise.all([apiClient.getClients()])
@@ -146,7 +86,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   useEffect(() => {
     if (!user || user.role !== 'driver') return
     let cancelled = false
-     
+
     setSuggestionLoading(true)
 
     const fetchSuggestions = async () => {
@@ -164,276 +104,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     return () => { cancelled = true }
   }, [user])
 
-  // Shared photo from last scan — stored once, uploaded for first trip, URL shared to rest
-  const lastScanPhotoRef = useRef<{ dataUrl: string; lat: number | null; lng: number | null; timestamp: string } | null>(null)
-
-  // Container validation helpers (defined early — used by scanner & container management)
-  const validateTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
-
-  /** Apply the validate-container response to error + suggestion state for one row. */
-  const applyValidationResult = useCallback((
-    idx: number,
-    res: Awaited<ReturnType<typeof apiClient.validateContainer>>,
-  ) => {
-    const invalid = !res.success || !res.data?.valid
-    setContainerErrors(prev => {
-      if (invalid) return { ...prev, [idx]: res.data?.error ?? 'Số container không hợp lệ' }
-      return omitKey(prev, idx)
-    })
-    setContainerSuggestions(prev => {
-      const list = invalid ? (res.data?.suggestions ?? []) : []
-      if (list.length === 0) {
-        if (!(idx in prev)) return prev
-        return omitKey(prev, idx)
-      }
-      return { ...prev, [idx]: list }
-    })
-  }, [])
-
-  // Scanner handlers
-  const handleScanComplete = useCallback((imageSrc: string, meta: PhotoMeta) => {
-    // Capture index immediately — activeContIdx may change by the time .then() fires
-    const idx = activeContIdx
-    setScannerOpen(false)
-
-    // Store photo in ref (not per-container) for upload-once sharing
-    lastScanPhotoRef.current = {
-      dataUrl: imageSrc,
-      lat: meta.lat,
-      lng: meta.lng,
-      timestamp: meta.timestamp,
-    }
-
-    // Set loading state on active container
-    setContainers(prev => prev.map((c, i) =>
-      i === idx ? { ...c, ocrLoading: true, ocrError: undefined, photoTaken: true, photoDataUrl: imageSrc } : c
-    ))
-
-    apiClient.ocrContainer(imageSrc)
-      .then((result) => {
-        if (result.success && result.containerNumbers.length > 0) {
-          setConsecutiveOCRFailures(0)
-          const numbers = result.containerNumbers
-
-          setContainers(prev => {
-            // Inherit cont type + work type from the first container (or form defaults)
-            const currentContType = prev[0]?.contType ?? null
-            const currentWorkType = prev[0]?.workType ?? null
-
-            // Deduplicate against existing container numbers
-            const existingNumbers = new Set(
-              prev.map(c => c.containerNumber.trim()).filter(Boolean)
-            )
-            const newNumbers = numbers.filter(n => !existingNumbers.has(n))
-
-            // Map to ContainerForm — first new container inherits photo from scan
-            const scanPhoto = prev[idx]?.photoDataUrl
-            const newContainers: ContainerForm[] = newNumbers.map((n, ni) => ({
-              containerNumber: n,
-              contType: currentContType,
-              workType: currentWorkType,
-              photoTaken: ni === 0 && !!scanPhoto,
-              photoDataUrl: ni === 0 ? scanPhoto : undefined,
-              ocrLoading: false,
-            }))
-
-            // Remove the placeholder container at [idx] if it was empty
-            const activeEmpty = prev[idx]?.containerNumber.trim() === ''
-            const filtered = activeEmpty
-              ? prev.filter((_, i) => i !== idx)
-              : prev
-
-            return [...filtered, ...newContainers]
-          })
-
-          // Validate each OCR-detected number (full ISO 6346 incl. check digit).
-          // The OCR endpoint only validates format ([A-Z]{4}\d{7}), so check-digit
-          // mismatches are common.  Auto-correct via backend suggestions when
-          // available; otherwise surface the error on the badge.
-          numbers.forEach(num => {
-            apiClient.validateContainer(num).then(vRes => {
-              if (vRes.success && vRes.data?.valid) return
-              if (vRes.data?.suggestions?.length) {
-                const corrected = vRes.data.suggestions[0]
-                setContainers(prev => {
-                  const alreadyExists = prev.some(c => c.containerNumber === corrected && c.containerNumber !== num)
-                  if (alreadyExists) {
-                    return prev.filter(c => c.containerNumber !== num)
-                  }
-                  return prev.map(c =>
-                    c.containerNumber === num ? { ...c, containerNumber: corrected } : c
-                  )
-                })
-              } else {
-                // No suggestion — mark badge as invalid (find by number, not index)
-                setContainers(prev => {
-                  const i = prev.findIndex(c => c.containerNumber === num)
-                  if (i >= 0) applyValidationResult(i, vRes)
-                  return prev
-                })
-              }
-            }).catch(() => { /* network error — ignore */ })
-          })
-        } else {
-          // No containers detected — show error on the active slot
-          setConsecutiveOCRFailures(prev => prev + 1)
-          setContainers(prev => prev.map((c, i) =>
-            i === idx
-              ? { ...c, ocrLoading: false, ocrError: result.error ?? 'Không nhận diện được' }
-              : c
-          ))
-        }
-      })
-      .catch(() => {
-        setContainers(prev => prev.map((c, i) =>
-          i === idx ? { ...c, ocrLoading: false, ocrError: 'Lỗi kết nối AI' } : c
-        ))
-      })
-  }, [activeContIdx, applyValidationResult])
-
-  // Container management
-
-  const updateContainer = useCallback(<K extends keyof ContainerForm>(
-    idx: number,
-    field: K,
-    value: ContainerForm[K],
-  ) => {
-    // Normalize container numbers on input — strip hyphens, uppercase
-    const normalizedValue: ContainerForm[K] = field === 'containerNumber' && typeof value === 'string'
-      ? (value.replace(/-/g, '').toUpperCase() as ContainerForm[K])
-      : value
-    setContainers(prev => prev.map((c, i) =>
-      i === idx ? { ...c, [field]: normalizedValue } : c,
-    ))
-    if (field === 'containerNumber') {
-      const numStr = normalizedValue as string
-      // Any edit invalidates the previous suggestions — they were for the old value.
-      setContainerSuggestions(prev => {
-        if (!(idx in prev)) return prev
-        return omitKey(prev, idx)
-      })
-      // Frontend format check — immediate
-      const fmtErr = validateContainerFormat(numStr)
-      if (fmtErr) {
-        setContainerErrors(prev => ({ ...prev, [idx]: fmtErr }))
-        clearTimeout(validateTimers.current[idx])
-        return
-      }
-      // Format OK — debounce backend ISO 6346 check (check digit)
-      clearTimeout(validateTimers.current[idx])
-      const raw = numStr.trim()
-      if (!raw || raw.length !== 11) {
-        setContainerErrors(prev => { return omitKey(prev, idx) })
-        return
-      }
-      validateTimers.current[idx] = setTimeout(() => {
-        apiClient.validateContainer(raw).then(res => {
-          applyValidationResult(idx, res)
-        }).catch(() => { /* ignore network errors here */ })
-      }, 400)
-    }
-  }, [applyValidationResult])
-
-  const validateContainerOnBlur = useCallback((idx: number) => {
-    const cont = containers[idx]
-    if (!cont) return
-    const raw = cont.containerNumber.trim()
-    const fmtErr = validateContainerFormat(raw)
-    if (fmtErr) {
-      setContainerErrors(prev => ({ ...prev, [idx]: fmtErr }))
-      clearTimeout(validateTimers.current[idx])
-      return
-    }
-    if (!raw || raw.length !== 11) {
-      setContainerErrors(prev => { return omitKey(prev, idx) })
-      clearTimeout(validateTimers.current[idx])
-      return
-    }
-    clearTimeout(validateTimers.current[idx])
-    apiClient.validateContainer(raw).then(res => {
-      applyValidationResult(idx, res)
-    }).catch(() => {})
-  }, [containers, applyValidationResult])
-
-  const removeContainer = useCallback((idx: number) => {
-    setContainers(prev => prev.filter((_, i) => i !== idx))
-    // Re-key the error + suggestion maps to match the new indices.
-    const reindex = <V,>(map: Record<number, V>): Record<number, V> => {
-      const next: Record<number, V> = {}
-      Object.entries(map).forEach(([k, v]) => {
-        const oldIdx = Number(k)
-        if (oldIdx === idx) return
-        next[oldIdx > idx ? oldIdx - 1 : oldIdx] = v
-      })
-      return next
-    }
-    setContainerErrors(prev => reindex(prev))
-    setContainerSuggestions(prev => reindex(prev))
-  }, [])
-
-  /**
-   * Apply a server-suggested correction to a container number. Auto-runs
-   * validation so the error message + suggestion chips clear on success.
-   */
-  const applyContainerSuggestion = useCallback((idx: number, suggestion: string) => {
-    const alreadyExists = containers.some((c, i) => i !== idx && c.containerNumber === suggestion)
-    if (alreadyExists) {
-      removeContainer(idx)
-      return
-    }
-
-    setContainers(prev => prev.map((c, i) =>
-      i === idx ? { ...c, containerNumber: suggestion } : c,
-    ))
-    // Clear the stale suggestions immediately; the validate call will repopulate
-    // them only if (somehow) the suggested value is also invalid.
-    setContainerSuggestions(prev => {
-      if (!(idx in prev)) return prev
-      return omitKey(prev, idx)
-    })
-    clearTimeout(validateTimers.current[idx])
-    apiClient.validateContainer(suggestion).then(res => {
-      applyValidationResult(idx, res)
-    }).catch(() => {})
-  }, [containers, removeContainer, applyValidationResult])
-
-  // Shared cont type / work type — updates ALL containers at once
-  const updateAllContType = useCallback((ct: ContType | null) => {
-    setContainers(prev => prev.map(c => ({ ...c, contType: ct })))
-  }, [])
-
-  const updateAllWorkType = useCallback((wt: WorkType | null) => {
-    setContainers(prev => prev.map(c => ({ ...c, workType: wt })))
-  }, [])
-
-  /** Open scanner targeting first empty container (or append a new one). */
-  const scanNewContainer = useCallback(() => {
-    const emptyIdx = containers.findIndex(c => !c.containerNumber.trim())
-    if (emptyIdx >= 0) {
-      setActiveContIdx(emptyIdx)
-    } else {
-      setContainers(prev => [...prev, { ...EMPTY_CONT }])
-      setActiveContIdx(containers.length)
-    }
-    setScannerOpen(true)
-  }, [containers])
-
-  /** Commit a number as a new container badge (fills empty slot or appends). */
-  const addContainerWithNumber = useCallback((number: string) => {
-    setContainers(prev => {
-      const contType = prev[0]?.contType ?? null
-      const workType = prev[0]?.workType ?? null
-      const emptyIdx = prev.findIndex(c => !c.containerNumber.trim())
-      if (emptyIdx >= 0) {
-        return prev.map((c, i) =>
-          i === emptyIdx ? { ...c, containerNumber: number, contType, workType } : c
-        )
-      }
-      return [...prev, { ...EMPTY_CONT, containerNumber: number, contType, workType }]
-    })
-  }, [])
-
-  // Suggestion selection (toggle: click again to deselect)
+  // ─── Suggestion selection ─────────────────────────────────────────────────
   const handleRecentTripSelect = useCallback((trip: {
     tripId?: number | string
     clientId: string
@@ -454,7 +125,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     }
   }, [selectedTripId])
 
-  // Validation — photo is optional (scan-to-fill only, not stored)
+  // ─── Validation ───────────────────────────────────────────────────────────
   const canSubmit = useMemo(() => {
     const hasAtLeastOneContainer = containers.some(c => c.containerNumber.trim())
     return hasAtLeastOneContainer && !!clientId && !!pickupLocation && !!dropoffLocation
@@ -470,19 +141,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     return fields
   }, [containers, clientId, pickupLocation, dropoffLocation])
 
-  // Whether any container has a photo taken (for nudge UI)
-  const hasAnyPhoto = useMemo(() =>
-    containers.some(c => c.photoTaken),
-    [containers],
-  )
-
-  // Number of non-empty containers (for summary / multi-trip display)
-  const containerCount = useMemo(() =>
-    containers.filter(c => c.containerNumber.trim()).length,
-    [containers],
-  )
-
-  // Submit flow — confirmSubmit defined first so onRequestSubmit can call it directly in edit mode
+  // ─── Submit flow ──────────────────────────────────────────────────────────
   const confirmSubmit = useCallback(async () => {
     setSummaryOpen(false)
     setSubmitting(true)
@@ -626,9 +285,9 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     } else {
       setSummaryOpen(true)
     }
-  }, [canSubmit, containers, isEdit, confirmSubmit])
+  }, [canSubmit, containers, isEdit, confirmSubmit, setContainerErrors])
 
-  // Summary data for dialog — show all container numbers (comma separated)
+  // ─── Summary data for dialog ──────────────────────────────────────────────
   const summaryContNumber = useMemo(() => {
     const numbers = containers
       .map(c => c.containerNumber.trim())
@@ -636,10 +295,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     return numbers.length > 0 ? numbers.join(', ') : null
   }, [containers])
 
-  // Summary chip shows only the cont type (E20/E40/F20/F40).
   const summaryContType = useMemo(() => containers[0]?.contType ?? null, [containers])
-
-  // Summary operation shown separately from contType.
   const summaryWorkType = useMemo(() => containers[0]?.workType ?? null, [containers])
 
   const summaryClientName = useMemo(() => {
@@ -648,9 +304,6 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   }, [clients, clientId])
 
   // ─── Original values for edit-mode "Trước:" hints ────────────────────────
-  // Surface the saved trip's values so the form can show the driver what
-  // they're changing. We resolve client name + date here so the view layer
-  // doesn't have to repeat that lookup.
   const original = useMemo(() => {
     if (!existingDeliveredTrip) return null
     const [contType, workType] = migrateWorkType(existingDeliveredTrip.contType ?? null, existingDeliveredTrip.workType ?? null)
