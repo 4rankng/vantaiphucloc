@@ -1,6 +1,7 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Camera } from 'react-camera-pro'
+import { StyleSheetManager } from 'styled-components'
 import { X, Image, Zap } from 'lucide-react'
 
 export interface PhotoMeta {
@@ -166,16 +167,18 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
 
       {/* ── Live camera preview ──────────────────────────────────────────── */}
       <div className="absolute inset-0 scanner-video">
-        <Camera
-          ref={cameraRef}
-          facingMode="environment"
-          errorMessages={{
-            noCameraAccessible: 'Không tìm thấy camera. Vui lòng kết nối camera hoặc thử trình duyệt khác.',
-            permissionDenied: 'Quyền truy cập camera bị từ chối. Vui lòng tải lại trang và cấp quyền.',
-            switchCamera: 'Không thể chuyển camera.',
-            canvas: 'Trình duyệt không hỗ trợ canvas.',
-          }}
-        />
+        <StyleSheetManager shouldForwardProp={(prop) => prop !== 'aspectRatio' && prop !== 'mirrored'}>
+          <Camera
+            ref={cameraRef}
+            facingMode="environment"
+            errorMessages={{
+              noCameraAccessible: 'Không tìm thấy camera. Vui lòng kết nối camera hoặc thử trình duyệt khác.',
+              permissionDenied: 'Quyền truy cập camera bị từ chối. Vui lòng tải lại trang và cấp quyền.',
+              switchCamera: 'Không thể chuyển camera.',
+              canvas: 'Trình duyệt không hỗ trợ canvas.',
+            }}
+          />
+        </StyleSheetManager>
       </div>
 
       {/* ── Bottom bar — gallery (left) + shutter (center) ──────────────── */}
