@@ -18,7 +18,7 @@ export function useDeliveredTripsInfinite(filters?: {
 }) {
   return useInfiniteQuery<PaginatedResult<DeliveredTrip>, Error>({
     queryKey: [
-      'delivered-trips-infinite',
+      queryKeys.deliveredTripsInfinite[0],
       filters?.clientId ?? '', filters?.driverId ?? '', filters?.vendorId ?? '',
       filters?.dateFrom ?? '', filters?.dateTo ?? '',
       String(filters?.matched ?? ''), filters?.search ?? '',
@@ -93,8 +93,8 @@ export function useUpdateDeliveredTrip() {
     mutationFn: ({ id, data }: { id: number; data: DeliveredTripUpdatePayload }) => apiClient.updateDeliveredTrip(id, data).then(unwrap),
     onSuccess: () => {
       invalidateDeliveredTripDeps(qc)
-      qc.invalidateQueries({ queryKey: ['suggest-matches'] })
-      qc.invalidateQueries({ queryKey: ['suggest-wos'] })
+      qc.invalidateQueries({ queryKey: queryKeys.suggestMatches })
+      qc.invalidateQueries({ queryKey: queryKeys.suggestWos })
     },
   })
 }
@@ -121,7 +121,7 @@ const EMPTY_STATS: ContTypeStats = { E20: 0, F20: 0, E40: 0, F40: 0 }
 
 export function useContTypeStats(filters?: { driverId?: number; dateFrom?: string; dateTo?: string }) {
   return useQuery<ContTypeStats>({
-    queryKey: ['cont-type-stats', filters?.driverId ?? null, filters?.dateFrom ?? null, filters?.dateTo ?? null],
+    queryKey: queryKeys.contTypeStats(filters?.driverId, filters?.dateFrom, filters?.dateTo),
     queryFn: async () => {
       const res = await apiClient.getContTypeStats(filters)
       return res.success ? res.data : EMPTY_STATS

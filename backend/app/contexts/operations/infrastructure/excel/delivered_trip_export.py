@@ -1,11 +1,15 @@
 import logging
-from io import BytesIO
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
     DeliveredTrip,
+)
+from app.utils.excel_utils import (
+    apply_header_style,
+    auto_fit_columns,
+    workbook_to_bytes,
 )
 
 _logger = logging.getLogger(__name__)
@@ -19,7 +23,6 @@ async def generate_delivered_trips_excel(
 ) -> bytes:
     """Export work orders to Excel."""
     import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment
 
     query = select(DeliveredTrip).order_by(DeliveredTrip.id.desc())
     if date_from:
@@ -54,13 +57,7 @@ async def generate_delivered_trips_excel(
     headers = ["Mã WO", "Khách hàng", "Điểm lấy", "Điểm trả", "Tài xế", "Biển số", "Số tàu", "Số cont", "Loại", "Lương TX", "Trạng thái", "Ngày tạo"]
     ws.append(headers)
 
-    header_font = Font(bold=True, color="FFFFFF")
-    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-    for col_num in range(1, len(headers) + 1):
-        cell = ws.cell(row=1, column=col_num)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="center")
+    apply_header_style(ws, 1, len(headers))
 
     for wo in delivered_trips:
         plate = wo.vehicle_plate or ""
@@ -76,12 +73,6 @@ async def generate_delivered_trips_excel(
             wo.created_at.date() if wo.created_at else "",
         ])
 
-    for col in ws.columns:
-        max_len = max(len(str(c.value or "")) for c in col)
-        ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 40)
+    auto_fit_columns(ws)
 
-    buf = BytesIO()
-    wb.save(buf)
-    wb.close()
-    buf.seek(0)
-    return buf.getvalue()
+    return workbook_to_bytes(wb)

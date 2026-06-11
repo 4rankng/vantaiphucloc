@@ -1,15 +1,5 @@
-/**
- * Vehicle Expense (CP Xe) API.
- *
- * Categories:
- *   XANG_DAU  — Fuel
- *   SUA_CHUA  — Repairs / maintenance
- *   TIEN_LUAT — Law / Permits
- *   KHAC      — Other
- */
-
 import { api } from './client'
-import { toCamel, ok, fail } from './utils'
+import { safeRequest, toCamel } from '@/lib/safe-request'
 import type { ApiResponse } from '@/data/domain'
 
 export type VehicleExpenseCategory = 'XANG_DAU' | 'SUA_CHUA' | 'TIEN_LUAT' | 'KHAC'
@@ -52,7 +42,7 @@ export interface VehicleExpensePage {
   totalPages: number
 }
 
-export async function listVehicleExpenses(params?: {
+export function listVehicleExpenses(params?: {
   vehicleId?: number
   category?: VehicleExpenseCategory
   dateFrom?: string
@@ -60,65 +50,45 @@ export async function listVehicleExpenses(params?: {
   page?: number
   pageSize?: number
 }): Promise<ApiResponse<VehicleExpensePage>> {
-  try {
-    const res = await api.get('/vehicle-expenses', {
-      params: {
-        vehicle_id: params?.vehicleId,
-        category: params?.category,
-        date_from: params?.dateFrom,
-        date_to: params?.dateTo,
-        page: params?.page ?? 1,
-        page_size: params?.pageSize ?? 50,
-      },
-    })
-    return ok(toCamel<VehicleExpensePage>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.get('/vehicle-expenses', {
+    params: {
+      vehicle_id: params?.vehicleId,
+      category: params?.category,
+      date_from: params?.dateFrom,
+      date_to: params?.dateTo,
+      page: params?.page ?? 1,
+      page_size: params?.pageSize ?? 50,
+    },
+  }))
 }
 
-export async function createVehicleExpense(
+export function createVehicleExpense(
   body: VehicleExpenseCreate,
 ): Promise<ApiResponse<VehicleExpense>> {
-  try {
-    const res = await api.post('/vehicle-expenses', {
-      vehicle_id: body.vehicleId ?? null,
-      category: body.category,
-      amount: body.amount,
-      expense_date: body.expenseDate,
-      description: body.description ?? null,
-      receipt_url: body.receiptUrl ?? null,
-    })
-    return ok(toCamel<VehicleExpense>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.post('/vehicle-expenses', {
+    vehicle_id: body.vehicleId ?? null,
+    category: body.category,
+    amount: body.amount,
+    expense_date: body.expenseDate,
+    description: body.description ?? null,
+    receipt_url: body.receiptUrl ?? null,
+  }))
 }
 
-export async function updateVehicleExpense(
+export function updateVehicleExpense(
   id: number,
   body: Partial<VehicleExpenseCreate>,
 ): Promise<ApiResponse<VehicleExpense>> {
-  try {
-    const res = await api.put(`/vehicle-expenses/${id}`, {
-      vehicle_id: body.vehicleId,
-      category: body.category,
-      amount: body.amount,
-      expense_date: body.expenseDate,
-      description: body.description,
-      receipt_url: body.receiptUrl,
-    })
-    return ok(toCamel<VehicleExpense>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.put(`/vehicle-expenses/${id}`, {
+    vehicle_id: body.vehicleId,
+    category: body.category,
+    amount: body.amount,
+    expense_date: body.expenseDate,
+    description: body.description,
+    receipt_url: body.receiptUrl,
+  }))
 }
 
-export async function deleteVehicleExpense(id: number): Promise<ApiResponse<void>> {
-  try {
-    await api.delete(`/vehicle-expenses/${id}`)
-    return ok(undefined)
-  } catch (err) {
-    return fail(err)
-  }
+export function deleteVehicleExpense(id: number): Promise<ApiResponse<void>> {
+  return safeRequest(() => api.delete(`/vehicle-expenses/${id}`), () => undefined)
 }

@@ -1,5 +1,6 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, unwrapPaginated } from './utils'
+import { safeRequest, toCamel, toSnake } from '@/lib/safe-request'
+import { unwrapPaginated } from './utils'
 import type {
   BookedTrip,
   ApiResponse,
@@ -46,17 +47,12 @@ export interface BookedTripUpdatePayload {
   matchedDeliveredTripIds?: number[]
 }
 
-export async function getBookedTrip(id: number): Promise<ApiResponse<BookedTrip>> {
-  try {
-    const res = await api.get(`/booked-trips/${id}`)
-    return ok(toCamel<BookedTrip>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function getBookedTrip(id: number): Promise<ApiResponse<BookedTrip>> {
+  return safeRequest(() => api.get(`/booked-trips/${id}`))
 }
 
-export async function getBookedTrips(filters?: BookedTripFilters): Promise<ApiResponse<PaginatedResult<BookedTrip>>> {
-  try {
+export function getBookedTrips(filters?: BookedTripFilters): Promise<ApiResponse<PaginatedResult<BookedTrip>>> {
+  return safeRequest(() => {
     const params: Record<string, string> = {}
     if (filters?.clientId) params.client_id = String(filters.clientId)
     if (filters?.matched !== undefined) params.matched = String(filters.matched)
@@ -65,42 +61,20 @@ export async function getBookedTrips(filters?: BookedTripFilters): Promise<ApiRe
     if (filters?.unpriced !== undefined) params.unpriced = String(filters.unpriced)
     params.page = String(filters?.page ?? 1)
     params.page_size = String(filters?.pageSize ?? 50)
-    const res = await api.get('/booked-trips', { params })
-    return ok(unwrapPaginated<BookedTrip>(res.data, (raw) => toCamel<BookedTrip>(raw)))
-  } catch (err) {
-    return fail(err)
-  }
+    return api.get('/booked-trips', { params })
+  }, (res) => unwrapPaginated<BookedTrip>(res.data, (raw) => toCamel<BookedTrip>(raw)))
 }
 
-export async function createBookedTrip(
-  data: BookedTripCreatePayload,
-): Promise<ApiResponse<BookedTrip>> {
-  try {
-    const res = await api.post('/booked-trips', toSnake(data))
-    return ok(toCamel<BookedTrip>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function createBookedTrip(data: BookedTripCreatePayload): Promise<ApiResponse<BookedTrip>> {
+  return safeRequest(() => api.post('/booked-trips', toSnake(data)))
 }
 
-export async function updateBookedTrip(id: number, data: BookedTripUpdatePayload): Promise<ApiResponse<BookedTrip>> {
-  try {
-    const res = await api.put(`/booked-trips/${id}`, toSnake(data))
-    return ok(toCamel<BookedTrip>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function updateBookedTrip(id: number, data: BookedTripUpdatePayload): Promise<ApiResponse<BookedTrip>> {
+  return safeRequest(() => api.put(`/booked-trips/${id}`, toSnake(data)))
 }
 
-export async function toggleTripConfirmation(
-  bookedTripId: number,
-): Promise<ApiResponse<BookedTrip>> {
-  try {
-    const res = await api.put(`/booked-trips/${bookedTripId}/confirm`)
-    return ok(toCamel<BookedTrip>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function toggleTripConfirmation(bookedTripId: number): Promise<ApiResponse<BookedTrip>> {
+  return safeRequest(() => api.put(`/booked-trips/${bookedTripId}/confirm`))
 }
 
 export interface ImportResult {
@@ -108,17 +82,14 @@ export interface ImportResult {
   errors: string[]
 }
 
-export async function importBookedTrips(file: File): Promise<ApiResponse<ImportResult>> {
-  try {
+export function importBookedTrips(file: File): Promise<ApiResponse<ImportResult>> {
+  return safeRequest(() => {
     const formData = new FormData()
     formData.append('file', file)
-    const res = await api.post('/booked-trips/import', formData, {
+    return api.post('/booked-trips/import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    return ok(toCamel<ImportResult>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  })
 }
 
 export async function exportBookedTripsExcel(filters?: {
@@ -137,8 +108,6 @@ export async function downloadBookedTripTemplate(): Promise<Blob> {
   const res = await api.get('/booked-trips/template', { responseType: 'blob' })
   return res.data
 }
-
-// ── Đối soát export ─────────────────────────────────────────────────
 
 export async function exportDoiSoatExcel(
   clientId: number,

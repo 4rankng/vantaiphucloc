@@ -1,15 +1,16 @@
 """Google Gemini API client for AI parsing.
 
-Uses Gemini API key from environment variable GEMINI_API_KEY.
+Uses Gemini API key from pydantic-settings (app.config.settings).
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import os
 
 import httpx
+
+from app.config import settings
 
 _logger = logging.getLogger(__name__)
 
@@ -41,10 +42,11 @@ async def call_gemini(
     Raises:
         RuntimeError: If API key not set or API call fails
     """
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = settings.GEMINI_API_KEY
     if not api_key:
         raise RuntimeError(
-            "GEMINI_API_KEY environment variable not set. "
+            "GEMINI_API_KEY not configured. "
+            "Set it in .env or environment. "
             "Get one from https://aistudio.google.com/apikey"
         )
 

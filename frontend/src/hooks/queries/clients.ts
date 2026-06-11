@@ -27,7 +27,7 @@ export function useClientsInfinite(filters?: {
   sortOrder?: SortOrder
 }) {
   return useInfiniteQuery<PaginatedResult<Client>, Error>({
-    queryKey: ['clients-infinite', filters?.search ?? '', filters?.sortBy ?? '', filters?.sortOrder ?? 'asc'],
+    queryKey: queryKeys.clientsInfinite(filters?.search, filters?.sortBy, filters?.sortOrder),
     queryFn: async ({ pageParam }) => {
       const res = await apiClient.getClientsPaged({
         search: filters?.search || undefined,

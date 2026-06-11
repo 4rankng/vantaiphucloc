@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import {
   useVendorRoutePricings,
   useCreateVendorRoutePricing,
@@ -7,7 +7,8 @@ import {
   useVendors,
   useLocations,
 } from '@/hooks/use-queries'
-import { useToast } from '@/components/atoms/Toast'
+import { parsePrice } from '@/lib/parse-price'
+import { usePricingManager } from '@/lib/pricing-manager'
 import type { WorkType } from '@/data/domain'
 import type {
   VendorRoutePricingCreatePayload,
@@ -36,58 +37,51 @@ export const EMPTY_FORM: VendorRoutePricingFormData = {
   e40Price: '',
 }
 
-function parsePrice(v: string): number | null {
-  if (!v.trim()) return null
-  const n = parseInt(v.replace(/[,.]/g, ''), 10)
-  return isNaN(n) ? null : n
+type VendorRoutePricingEntity = {
+  id: number
+  vendor: { id: number }
+  pickupLocation: { id: number }
+  dropoffLocation: { id: number }
+  workType: WorkType
+  f20Price: number | null
+  f40Price: number | null
+  e20Price: number | null
+  e40Price: number | null
 }
 
 export function useVendorRoutePricing() {
-  const toast = useToast()
-  const [vendorId, setVendorIdState] = useState<number | undefined>()
-  const [workType, setWorkTypeState] = useState<string | undefined>()
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(100)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [form, setForm] = useState<VendorRoutePricingFormData>(EMPTY_FORM)
-  const [deleteId, setDeleteId] = useState<number | null>(null)
-
-  const { data: vendorRoutePricingsData, isLoading } = useVendorRoutePricings({
-    vendorId,
-    workType,
-    page,
-    pageSize,
-  })
-
-  const setVendorId = useCallback((id?: number) => {
-    setVendorIdState(id)
-    setPage(1)
-  }, [])
-
-  const setWorkType = useCallback((wt?: string) => {
-    setWorkTypeState(wt)
-    setPage(1)
-  }, [])
-  const { data: vendorsData } = useVendors()
-  const { data: locationsData } = useLocations()
-  const createMutation = useCreateVendorRoutePricing()
-  const updateMutation = useUpdateVendorRoutePricing()
-  const deleteMutation = useDeleteVendorRoutePricing()
-
-  const vendors = vendorsData ?? []
-  const locations = locationsData ?? []
-
-  const openCreate = useCallback(() => {
-    setEditingId(null)
-    setForm(EMPTY_FORM)
-    setDialogOpen(true)
-  }, [])
-
-  const openEdit = useCallback(
-    (rp: { id: number; vendor: { id: number }; pickupLocation: { id: number }; dropoffLocation: { id: number }; workType: WorkType; f20Price: number | null; f40Price: number | null; e20Price: number | null; e40Price: number | null }) => {
-      setEditingId(rp.id)
-      setForm({
+  const mgr = usePricingManager({
+    useQuery: useVendorRoutePricings as unknown as (params: Record<string, unknown>) => {
+      data?: { items?: unknown[]; total?: number; totalPages?: number } | null
+      isLoading: boolean
+    },
+    useCreateMutation: useCreateVendorRoutePricing as () => { mutate: (arg: unknown, opts?: { onSuccess?: () => void; onError?: (err: Error) => void }) => void; isPending: boolean },
+    useUpdateMutation: useUpdateVendorRoutePricing as () => { mutate: (arg: unknown, opts?: { onSuccess?: () => void; onError?: (err: Error) => void }) => void; isPending: boolean },
+    useDeleteMutation: useDeleteVendorRoutePricing as () => { mutate: (id: number, opts?: { onSuccess?: () => void; onError?: (err: Error) => void }) => void },
+    labels: {
+      createSuccess: 'Đã thêm cước trả',
+      updateSuccess: 'Đã cập nhật cước trả',
+      deleteSuccess: 'Đã xoá cước trả',
+      createError: 'Không thể thêm',
+      updateError: 'Không thể cập nhật',
+      deleteError: 'Không thể xoá',
+    },
+    formDefaults: EMPTY_FORM as unknown as Record<string, unknown>,
+    priceFields: ['f20Price', 'f40Price', 'e20Price', 'e40Price'],
+    requiredPayloadFields: ['vendorId', 'pickupLocationId', 'dropoffLocationId'],
+    formToPayload: (form) => ({
+      vendorId: form.vendorId,
+      pickupLocationId: form.pickupLocationId,
+      dropoffLocationId: form.dropoffLocationId,
+      workType: form.workType,
+      f20Price: parsePrice(form.f20Price as string),
+      f40Price: parsePrice(form.f40Price as string),
+      e20Price: parsePrice(form.e20Price as string),
+      e40Price: parsePrice(form.e40Price as string),
+    }),
+    entityToForm: (entity) => {
+      const rp = entity as unknown as VendorRoutePricingEntity
+      return {
         vendorId: rp.vendor.id,
         pickupLocationId: rp.pickupLocation.id,
         dropoffLocationId: rp.dropoffLocation.id,
@@ -96,118 +90,60 @@ export function useVendorRoutePricing() {
         f40Price: rp.f40Price?.toString() ?? '',
         e20Price: rp.e20Price?.toString() ?? '',
         e40Price: rp.e40Price?.toString() ?? '',
-      })
-      setDialogOpen(true)
+      }
     },
-    [],
-  )
+    buildQueryParams: (vendorId, workType, pagination) => ({
+      vendorId,
+      workType,
+      ...pagination,
+    }),
+    paginationEnabled: true,
+    defaultPageSize: 100,
+  })
 
-  const handleSubmit = useCallback(() => {
-    const payload = {
-      vendorId: form.vendorId,
-      pickupLocationId: form.pickupLocationId,
-      dropoffLocationId: form.dropoffLocationId,
-      workType: form.workType,
-      f20Price: parsePrice(form.f20Price),
-      f40Price: parsePrice(form.f40Price),
-      e20Price: parsePrice(form.e20Price),
-      e40Price: parsePrice(form.e40Price),
-    }
-
-    if (!payload.vendorId || !payload.pickupLocationId || !payload.dropoffLocationId) {
-      toast.error('Vui lòng điền đầy đủ thông tin')
-      return
-    }
-    if (
-      payload.f20Price === null &&
-      payload.f40Price === null &&
-      payload.e20Price === null &&
-      payload.e40Price === null
-    ) {
-      toast.error('Phải có ít nhất một giá cước')
-      return
-    }
-
-    if (editingId) {
-      updateMutation.mutate(
-        { id: editingId, data: payload as VendorRoutePricingUpdatePayload },
-        {
-          onSuccess: () => {
-            toast.success('Đã cập nhật cước trả')
-            setDialogOpen(false)
-          },
-          onError: (err) => toast.error('Không thể cập nhật', err.message),
-        },
-      )
-    } else {
-      createMutation.mutate(payload as VendorRoutePricingCreatePayload, {
-        onSuccess: () => {
-          toast.success('Đã thêm cước trả')
-          setDialogOpen(false)
-        },
-        onError: (err) => toast.error('Không thể thêm', err.message),
-      })
-    }
-  }, [form, editingId, createMutation, updateMutation, toast])
-
-  const handleDelete = useCallback(() => {
-    if (!deleteId) return
-    deleteMutation.mutate(deleteId, {
-      onSuccess: () => {
-        toast.success('Đã xoá cước trả')
-        setDeleteId(null)
-      },
-      onError: (err) => toast.error('Không thể xoá', err.message),
-    })
-  }, [deleteId, deleteMutation, toast])
+  const { data: vendorsData } = useVendors()
+  const { data: locationsData } = useLocations()
 
   const updateItem = useCallback(
     (id: number, data: VendorRoutePricingUpdatePayload, callbacks?: { onSuccess?: () => void; onError?: () => void }) => {
-      updateMutation.mutate(
-        { id, data },
-        {
-          onSuccess: () => {
-            toast.success('Đã cập nhật cước trả')
-            callbacks?.onSuccess?.()
-          },
-          onError: (err) => {
-            toast.error('Không thể cập nhật', err.message)
-            callbacks?.onError?.()
-          },
-        },
-      )
+      mgr.updateItem(id, data, callbacks)
     },
-    [updateMutation, toast],
+    [mgr],
+  )
+
+  const setForm = useCallback(
+    (form: VendorRoutePricingFormData) => mgr.setForm(form as unknown as Record<string, unknown>),
+    [mgr],
   )
 
   return {
-    vendorRoutePricings: vendorRoutePricingsData?.items ?? [],
-    total: vendorRoutePricingsData?.total ?? 0,
-    page,
-    setPage,
-    pageSize,
-    setPageSize,
-    totalPages: vendorRoutePricingsData?.totalPages ?? 0,
-    isLoading,
-    vendors,
-    locations,
-    vendorId,
-    setVendorId,
-    workType,
-    setWorkType,
-    dialogOpen,
-    setDialogOpen,
-    editingId,
-    form,
+    vendorRoutePricings: mgr.items as VendorRoutePricingEntity[],
+    total: mgr.total,
+    page: mgr.page,
+    setPage: mgr.setPage,
+    pageSize: mgr.pageSize,
+    setPageSize: mgr.setPageSize,
+    totalPages: mgr.totalPages,
+    isLoading: mgr.isLoading,
+    vendors: vendorsData ?? [],
+    locations: locationsData ?? [],
+    vendorId: mgr.filterValue,
+    setVendorId: mgr.setFilterValue,
+    workType: mgr.workType,
+    setWorkType: mgr.setWorkType,
+    dialogOpen: mgr.dialogOpen,
+    setDialogOpen: mgr.setDialogOpen,
+    editingId: mgr.editingId,
+    form: mgr.form as unknown as VendorRoutePricingFormData,
     setForm,
-    deleteId,
-    setDeleteId,
-    openCreate,
-    openEdit,
-    handleSubmit,
-    handleDelete,
+    deleteId: mgr.deleteId,
+    setDeleteId: mgr.setDeleteId,
+    openCreate: mgr.openCreate,
+    openEdit: mgr.openEdit as (entity: VendorRoutePricingEntity) => void,
+    handleSubmit: mgr.handleSubmit,
+    handleDelete: mgr.handleDelete,
     updateItem,
-    isSubmitting: createMutation.isPending || updateMutation.isPending,
-    isUpdating: updateMutation.isPending,
+    isSubmitting: mgr.isSubmitting,
+    isUpdating: mgr.isUpdating,
   }
 }

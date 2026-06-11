@@ -1,15 +1,17 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
-import { Fuel, Plus, Coins, Wrench, History, Truck, Search, Loader2 } from 'lucide-react'
+import { Fuel, Plus, Coins, Wrench, History, Truck } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
 import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
 import { Panel } from '@/components/shared/overlays/Panel'
 import { KpiHeroCard } from '@/components/shared/data-display/KpiHeroCard'
-import { Pill } from '@/components/shared/data-display/Pill'
-import { Plate } from '@/components/shared/data-display/Plate'
 import { EmptyState } from '@/components/shared/feedback/EmptyState'
 import { TableSkeleton } from '@/components/shared/data-display/TableSkeleton/TableSkeleton'
 import { CreateExpenseDialog, type CreateExpenseFormData } from '@/components/shared/overlays/CreateExpenseDialog/CreateExpenseDialog'
+import { InlineSearchInput } from '@/components/shared/forms/InlineSearchInput'
+import { ExpensesByVehicleTable, AuditLogTable } from '@/components/shared/data-display/ExpenseTables'
+import { EXPENSE_CATEGORIES, toLocalISODate } from '@/components/shared/data-display/ExpenseTables'
+import type { AuditEntry } from '@/components/shared/data-display/ExpenseTables'
 import {
   useVehicleExpenses,
   useVehicleExpensesInfinite,
@@ -18,306 +20,14 @@ import {
 } from '@/hooks/use-queries'
 import { useMonthParams } from './use-month-params'
 import { formatCurrency } from '@/data/domain'
-import type { VehicleExpense, VehicleExpenseCategory } from '@/services/api/vehicleExpenses.api'
+import type { VehicleExpenseCategory } from '@/services/api/vehicleExpenses.api'
 import { EXPENSE_CATEGORY_LABELS } from '@/services/api/vehicleExpenses.api'
 import { fuzzyMatch } from '@/lib/search-utils'
-import { formatDate } from '@/lib/format'
 import { AnimatedNumber } from '@/components/shared'
 import { Button } from '@/components/ui'
 import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
-import {
-  ExpenseByVehicleCard,
-  ExpenseAuditCard,
-  type VehicleSummary,
-} from '@/components/shared/cards/VehicleExpenseMobileCard'
-
-const CATEGORIES: VehicleExpenseCategory[] = ['XANG_DAU', 'SUA_CHUA', 'TIEN_LUAT', 'KHAC']
-
-const CATEGORY_VARIANT: Record<VehicleExpenseCategory, 'accent' | 'warn' | 'info' | 'neutral'> = {
-  XANG_DAU: 'accent',
-  SUA_CHUA: 'warn',
-  TIEN_LUAT: 'info',
-  KHAC: 'neutral',
-}
-
-// ─── Small inline search input ──────────────────────────────────────────────
-
-function InlineSearchInput({ value, onChange, placeholder, width = 220 }: {
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-  width?: number | string
-}) {
-  return (
-    <div className="relative" style={{ width }}>
-      <Search
-        className="absolute h-3.5 w-3.5"
-        style={{ left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-4)' }}
-      />
-      <input
-        type="text"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="nepo-input text-[12px]"
-        style={{ width: '100%', paddingLeft: 28, height: 30 }}
-      />
-    </div>
-  )
-}
-
-// ─── "Chi phí theo xe" summary table ───────────────────────────────────────
-
-type VehicleSummary = {
-  vehicleId: number
-  vehiclePlate: string
-  count: number
-  total: number
-  byCategory: Record<VehicleExpenseCategory, number>
-}
-
-function ExpensesByVehicleTable({ rows, totalAll, isMobile }: { rows: VehicleSummary[]; totalAll: number; isMobile: boolean }) {
-  if (rows.length === 0) return null
-  if (isMobile) {
-    return (
-      <div className="flex flex-col gap-3 p-4">
-        {rows.map(r => <ExpenseByVehicleCard key={r.vehicleId} summary={r} />)}
-        <div
-          className="p-4 rounded-xl border space-y-1.5"
-          style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
-        >
-          <div className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--ink-2)' }}>Tổng cộng</div>
-          {CATEGORIES.map(c => {
-            const sum = rows.reduce((s, r) => s + r.byCategory[c], 0)
-            return (
-              <div key={c} className="flex justify-between text-sm">
-                <span style={{ color: 'var(--ink-3)' }}>{EXPENSE_CATEGORY_LABELS[c]}</span>
-                <span
-                  className="tabular-nums"
-                  style={{
-                    fontFamily: 'var(--theme-font-mono)',
-                    color: sum > 0 ? 'var(--ink)' : 'var(--ink-4)',
-                  }}
-                >
-                  {sum > 0 ? formatCurrency(sum) : '—'}
-                </span>
-              </div>
-            )
-          })}
-          <div
-            className="flex justify-between font-bold pt-2 mt-1"
-            style={{ borderTop: '1px solid var(--line)' }}
-          >
-            <span>Tổng</span>
-            <span
-              className="tabular-nums"
-              style={{
-                fontFamily: 'var(--theme-font-mono)',
-                color: 'var(--theme-brand-primary-dark, var(--accent))',
-              }}
-            >
-              {formatCurrency(totalAll)}
-            </span>
-          </div>
-        </div>
-      </div>
-    )
-  }
-  return (
-    <div className="nepo-table-scroll overflow-x-auto">
-      <table className="nepo-table w-full" style={{ minWidth: 480, borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            <th className="text-left" style={{ width: 100 }}>Biển số</th>
-            <th className="text-right" style={{ width: 36 }}>SL</th>
-            {CATEGORIES.map(c => (
-              <th key={c} className="text-right" style={{ whiteSpace: 'nowrap' }}>
-                {EXPENSE_CATEGORY_LABELS[c]}
-              </th>
-            ))}
-            <th className="text-right" style={{ width: 110, whiteSpace: 'nowrap' }}>Tổng</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(r => (
-            <tr key={r.vehicleId}>
-              <td><Plate>{r.vehiclePlate}</Plate></td>
-              <td style={{ textAlign: 'right' }}>
-                <span className="tabular-nums" style={{ color: 'var(--ink-2)', fontSize: 12.5 }}>{r.count}</span>
-              </td>
-              {CATEGORIES.map(c => (
-                <td key={c} style={{ textAlign: 'right' }}>
-                  <span
-                    className="tabular-nums"
-                    style={{
-                      color: r.byCategory[c] > 0 ? 'var(--ink)' : 'var(--ink-4)',
-                      fontFamily: 'var(--theme-font-mono)',
-                      fontSize: 12.5,
-                    }}
-                  >
-                    {r.byCategory[c] > 0 ? formatCurrency(r.byCategory[c]) : '—'}
-                  </span>
-                </td>
-              ))}
-              <td style={{ textAlign: 'right' }}>
-                <span className="tabular-nums font-bold" style={{ color: 'var(--ink)', fontSize: 12.5 }}>
-                  {formatCurrency(r.total)}
-                </span>
-              </td>
-            </tr>
-          ))}
-          <tr style={{ background: 'var(--surface-2, var(--surface))', borderTop: '2px solid var(--line-2)' }}>
-            <td style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 12.5 }}>Tổng cộng</td>
-            <td style={{ textAlign: 'right' }}>
-              <span className="tabular-nums" style={{ color: 'var(--ink-2)', fontSize: 12.5 }}>
-                {rows.reduce((s, r) => s + r.count, 0)}
-              </span>
-            </td>
-            {CATEGORIES.map(c => {
-              const sum = rows.reduce((s, r) => s + r.byCategory[c], 0)
-              return (
-                <td key={c} style={{ textAlign: 'right' }}>
-                  <span className="tabular-nums font-bold" style={{ color: sum > 0 ? 'var(--ink)' : 'var(--ink-4)', fontFamily: 'var(--theme-font-mono)', fontSize: 12.5 }}>
-                    {sum > 0 ? formatCurrency(sum) : '—'}
-                  </span>
-                </td>
-              )
-            })}
-            <td style={{ textAlign: 'right' }}>
-              <span className="tabular-nums font-bold" style={{ color: 'var(--theme-brand-primary-dark)', fontSize: 13, fontFamily: 'var(--theme-font-mono)' }}>
-                {formatCurrency(totalAll)}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-// ─── Audit log table ─────────────────────────────────────────────────────────
-
-type AuditEntry = {
-  expense: VehicleExpense
-  addedDate: string
-  edited: boolean
-}
-
-function toLocalISODate(iso: string): string {
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return iso.slice(0, 10)
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
-}
-
-function AuditLogTable({
-  entries,
-  isFetchingNextPage,
-  hasNextPage,
-  sentinelRef,
-  isMobile,
-}: {
-  entries: AuditEntry[]
-  isFetchingNextPage: boolean
-  hasNextPage: boolean
-  sentinelRef: React.RefObject<HTMLDivElement>
-  isMobile: boolean
-}) {
-  if (entries.length === 0) return null
-  if (isMobile) {
-    return (
-      <>
-        <div className="flex flex-col gap-3 p-4">
-          {entries.map(({ expense: e, edited }) => (
-            <ExpenseAuditCard key={e.id} expense={e} edited={edited} />
-          ))}
-        </div>
-        {/* Infinite scroll sentinel */}
-        <div ref={sentinelRef} style={{ height: 1 }} />
-        {isFetchingNextPage && (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--ink-4)' }} />
-          </div>
-        )}
-        {!hasNextPage && entries.length > 0 && (
-          <div className="py-3 text-center" style={{ fontSize: 12, color: 'var(--ink-4)' }}>
-            Đã hiển thị tất cả {entries.length} mục
-          </div>
-        )}
-      </>
-    )
-  }
-  return (
-    <>
-      <div className="nepo-table-scroll overflow-x-auto">
-        <table className="nepo-table w-full" style={{ minWidth: 520, borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th className="text-left" style={{ width: 90, whiteSpace: 'nowrap' }}>Ngày CP</th>
-              <th className="text-left" style={{ width: 90 }}>Biển số</th>
-              <th className="text-left" style={{ width: 1, whiteSpace: 'nowrap' }}>Loại</th>
-              <th className="text-right" style={{ width: 110, whiteSpace: 'nowrap' }}>Số tiền</th>
-              <th className="text-left" style={{ width: 90, whiteSpace: 'nowrap' }}>Ngày tạo</th>
-              <th className="text-left" style={{ whiteSpace: 'nowrap' }}>Mô tả</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map(({ expense: e, edited }) => (
-              <tr key={e.id}>
-                <td>
-                  <span className="tabular-nums" style={{ fontSize: 12, color: 'var(--ink-2)', fontFamily: 'var(--theme-font-mono)' }}>
-                    {formatDate(e.expenseDate, 'full')}
-                  </span>
-                </td>
-                <td><Plate>{e.vehiclePlate ?? '—'}</Plate></td>
-                <td>
-                  <Pill variant={CATEGORY_VARIANT[e.category]} dot={false}>
-                    {EXPENSE_CATEGORY_LABELS[e.category]}
-                  </Pill>
-                </td>
-                <td style={{ textAlign: 'right' }}>
-                  <span className="tabular-nums font-bold" style={{ fontSize: 12.5, color: 'var(--ink)', fontFamily: 'var(--theme-font-mono)' }}>
-                    {formatCurrency(e.amount)}
-                  </span>
-                </td>
-                <td>
-                  <span className="tabular-nums" style={{ fontSize: 12, color: 'var(--ink-3)', fontFamily: 'var(--theme-font-mono)' }}>
-                    {formatDate(toLocalISODate(edited ? e.updatedAt : e.createdAt), 'full')}
-                  </span>
-                </td>
-                <td>
-                  <span
-                    className="truncate block"
-                    style={{ fontSize: 12, color: 'var(--ink-2)', maxWidth: 200 }}
-                    title={e.description ?? ''}
-                  >
-                    {e.description || <span style={{ color: 'var(--ink-4)' }}>—</span>}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Infinite scroll sentinel */}
-      <div ref={sentinelRef} style={{ height: 1 }} />
-      {isFetchingNextPage && (
-        <div className="flex justify-center py-4">
-          <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--ink-4)' }} />
-        </div>
-      )}
-      {!hasNextPage && entries.length > 0 && (
-        <div className="py-3 text-center" style={{ fontSize: 12, color: 'var(--ink-4)' }}>
-          Đã hiển thị tất cả {entries.length} mục
-        </div>
-      )}
-    </>
-  )
-}
+import type { VehicleSummary } from '@/components/shared/cards/VehicleExpenseMobileCard'
 
 // ─── Main page ──────────────────────────────────────────────────────────────
 
@@ -355,14 +65,14 @@ export function VehicleExpensesPage() {
   const totalByCategory = useMemo(
     () =>
       Object.fromEntries(
-        CATEGORIES.map(c => [c, expenses.filter(e => e.category === c).reduce((s, e) => s + e.amount, 0)]),
+        EXPENSE_CATEGORIES.map(c => [c, expenses.filter(e => e.category === c).reduce((s, e) => s + e.amount, 0)]),
       ) as Record<VehicleExpenseCategory, number>,
     [expenses],
   )
   const totalAmount = expenses.reduce((s, e) => s + e.amount, 0)
-  const topCategory = CATEGORIES.reduce(
+  const topCategory = EXPENSE_CATEGORIES.reduce(
     (top, c) => (totalByCategory[c] > totalByCategory[top] ? c : top),
-    CATEGORIES[0],
+    EXPENSE_CATEGORIES[0],
   )
 
   // ── Chi phí theo xe aggregation ──────────────────────────────────────────
@@ -410,8 +120,6 @@ export function VehicleExpensesPage() {
   }, [auditData, search])
 
   // ── Infinite scroll via IntersectionObserver ──────────────────────────────
-  // fetchNextPage is a fresh ref each render (React Query), so we use a ref
-  // to avoid tearing down the observer on every render.
   const fetchNextPageRef = useRef(fetchNextPage)
   useEffect(() => { fetchNextPageRef.current = fetchNextPage })
 

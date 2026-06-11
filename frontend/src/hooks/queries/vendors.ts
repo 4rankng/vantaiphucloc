@@ -21,7 +21,7 @@ export function useVendors() {
 
 export function useVendorsPaged(filters?: VendorFilters) {
   return useQuery({
-    queryKey: ['vendors-paged', filters?.search ?? '', filters?.sortBy ?? '', filters?.sortOrder ?? 'asc', filters?.page ?? 1, filters?.pageSize ?? 100],
+    queryKey: queryKeys.vendorsPaged(filters?.search, filters?.sortBy, filters?.sortOrder, filters?.page, filters?.pageSize),
     queryFn: async () => {
       const res = await apiClient.getVendorsPaged(filters)
       if (!res.success) throw new Error(res.message ?? 'Lỗi hệ thống')

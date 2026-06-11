@@ -27,7 +27,7 @@ export function useCreateVehicle() {
       return unwrap(res)
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vehicles'] })
+      qc.invalidateQueries({ queryKey: ['vehicles'] }) // prefix match for all vehicle queries
       qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers })
     },
   })
@@ -42,10 +42,10 @@ export function useUpdateVehicle() {
       return unwrap(res)
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vehicles'] })
+      qc.invalidateQueries({ queryKey: ['vehicles'] }) // prefix match for all vehicle queries
       qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers })
-      qc.invalidateQueries({ queryKey: ['drivers'] })
-      qc.invalidateQueries({ queryKey: ['drivers-paged'] })
+      qc.invalidateQueries({ queryKey: queryKeys.drivers })
+      qc.invalidateQueries({ queryKey: queryKeys.driversPaged })
     },
   })
 }
@@ -71,7 +71,7 @@ export function useAddVehicleDriver() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers })
-      qc.invalidateQueries({ queryKey: ['vehicles'] })
+      qc.invalidateQueries({ queryKey: ['vehicles'] }) // prefix match for all vehicle queries
     },
   })
 }
@@ -86,9 +86,9 @@ export function useRemoveVehicleDriver() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers })
-      qc.invalidateQueries({ queryKey: ['vehicles'] })
-      qc.invalidateQueries({ queryKey: ['drivers'] })
-      qc.invalidateQueries({ queryKey: ['drivers-paged'] })
+      qc.invalidateQueries({ queryKey: ['vehicles'] }) // prefix match for all vehicle queries
+      qc.invalidateQueries({ queryKey: queryKeys.drivers })
+      qc.invalidateQueries({ queryKey: queryKeys.driversPaged })
     },
   })
 }
@@ -99,7 +99,7 @@ export function useDeleteVehicle() {
   return useMutation({
     mutationFn: (id: number) => apiClient.deleteVehicle(id).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vehicles'] })
+      qc.invalidateQueries({ queryKey: ['vehicles'] }) // prefix match for all vehicle queries
       qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers })
     },
   })

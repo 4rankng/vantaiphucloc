@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { invalidateDeliveredTripDeps } from '@/hooks/query-keys'
+import { queryKeys, invalidateDeliveredTripDeps } from '../query-keys'
 import type { ApiResponse } from '@/data/domain'
 import type { PreviewResultDto } from '@/services/api/imports.api'
 
@@ -61,7 +61,7 @@ export function useCustomerExcelPreviewStatus(
   }, [jobId])
 
   const query = useQuery({
-    queryKey: ['import-excel-preview', jobId],
+    queryKey: queryKeys.importExcelPreview(jobId!),
     queryFn: () => apiClient.getCustomerExcelPreviewStatus(jobId!),
     enabled: !!jobId,
     refetchInterval: (q) => {
@@ -174,7 +174,7 @@ export function useToggleTripConfirmation() {
   return useMutation({
     mutationFn: (bookedTripId: number) => apiClient.toggleTripConfirmation(bookedTripId).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
       invalidateDeliveredTripDeps(qc)
     },
   })

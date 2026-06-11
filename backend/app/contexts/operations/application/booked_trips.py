@@ -8,6 +8,7 @@ The interface layer wires concrete repos via FastAPI `Depends`.
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
+from app.utils.dates import utcnow
 
 from sqlalchemy.ext.asyncio import AsyncSession  # transaction control only
 
@@ -31,8 +32,6 @@ from app.contexts.operations.domain.value_objects import (
 )
 
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 # ── Reads ────────────────────────────────────────────────────────
@@ -135,7 +134,7 @@ class UpdateBookedTrip:
             t.cont_number = data.cont_number
         if data.cont_type is not None:
             t.cont_type = data.cont_type
-        t.updated_at = _utcnow()
+        t.updated_at = utcnow()
 
         await self.repo.save(t)
         await self.session.commit()

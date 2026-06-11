@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from app.utils.dates import utcnow
 
 from app.contexts.route_pricing.domain.exceptions import NoPriceSet
 from app.contexts.route_pricing.domain.value_objects import (
@@ -14,8 +15,6 @@ from app.contexts.route_pricing.domain.value_objects import (
 )
 
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 @dataclass
@@ -34,8 +33,8 @@ class RoutePricing:
     e20_driver_salary: int | None = None
     e40_driver_salary: int | None = None
     is_active: bool = True
-    created_at: datetime = field(default_factory=_utcnow)
-    updated_at: datetime = field(default_factory=_utcnow)
+    created_at: datetime = field(default_factory=utcnow)
+    updated_at: datetime = field(default_factory=utcnow)
 
     def __post_init__(self) -> None:
         self.work_type = validate_work_type(self.work_type)
@@ -49,4 +48,4 @@ class RoutePricing:
 
     def deactivate(self) -> None:
         self.is_active = False
-        self.updated_at = _utcnow()
+        self.updated_at = utcnow()

@@ -1,11 +1,15 @@
 import logging
-from io import BytesIO
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
     DeliveredTrip,
+)
+from app.utils.excel_utils import (
+    apply_header_style,
+    auto_fit_columns,
+    workbook_to_bytes,
 )
 
 _logger = logging.getLogger(__name__)
@@ -19,7 +23,6 @@ async def generate_salary_excel(
 ) -> bytes:
     """Export driver earnings breakdown to Excel, computed on-the-fly from matched work orders."""
     import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment
     from datetime import date as _date
 
     from app.models.base import User as _User
@@ -70,13 +73,7 @@ async def generate_salary_excel(
     headers = ["Tài xế", "Kỳ lương", "Số chuyến", "Tổng lương", "Phụ cấp", "Tổng thu nhập"]
     ws.append(headers)
 
-    header_font = Font(bold=True, color="FFFFFF")
-    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-    for col_num in range(1, len(headers) + 1):
-        cell = ws.cell(row=1, column=col_num)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="center")
+    apply_header_style(ws, 1, len(headers))
 
     for driver_id, data in sorted(driver_earnings.items()):
         total_allowance = driver_allowance.get(driver_id, 0)
@@ -89,12 +86,6 @@ async def generate_salary_excel(
             data["total_salary"] + total_allowance,
         ])
 
-    for col in ws.columns:
-        max_len = max(len(str(c.value or "")) for c in col)
-        ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 40)
+    auto_fit_columns(ws)
 
-    buf = BytesIO()
-    wb.save(buf)
-    wb.close()
-    buf.seek(0)
-    return buf.getvalue()
+    return workbook_to_bytes(wb)

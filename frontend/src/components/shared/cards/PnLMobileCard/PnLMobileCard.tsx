@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Plate } from '@/components/shared/data-display/Plate'
 import { formatCurrency } from '@/data/domain'
 import type { VehiclePnLRow } from '@/services/api/pnl.api'
@@ -8,7 +9,7 @@ export interface PnLMobileCardProps {
 
 const monoStyle: React.CSSProperties = { fontFamily: 'var(--theme-font-mono)' }
 
-export function PnLMobileCard({ row }: PnLMobileCardProps) {
+export const PnLMobileCard = memo(function PnLMobileCard({ row }: PnLMobileCardProps) {
   const totalCost = row.isVendor
     ? row.cpVendor
     : row.cpXe.total + row.cpLuongSanLuong + row.cpLuongCoBan
@@ -63,4 +64,4 @@ export function PnLMobileCard({ row }: PnLMobileCardProps) {
       </div>
     </div>
   )
-}
+})

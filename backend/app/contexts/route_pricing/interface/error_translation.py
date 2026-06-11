@@ -1,4 +1,4 @@
-"""Translate domain exceptions into HTTPException."""
+"""Translate Route Pricing domain exceptions into HTTPException."""
 
 from __future__ import annotations
 
@@ -9,13 +9,14 @@ from app.contexts.route_pricing.domain.exceptions import (
     NoPriceSet,
     NotFound,
 )
+from app.core.error_translation import translate as _translate
+
+_MAPPINGS = {
+    NotFound: 404,
+    AlreadyExists: (409, "Cước tuyến này đã tồn tại"),
+    NoPriceSet: 422,
+}
 
 
 def translate(exc: Exception) -> HTTPException:
-    if isinstance(exc, NotFound):
-        return HTTPException(status_code=404, detail=str(exc))
-    if isinstance(exc, AlreadyExists):
-        return HTTPException(status_code=409, detail="Cước tuyến này đã tồn tại")
-    if isinstance(exc, NoPriceSet):
-        return HTTPException(status_code=422, detail=str(exc))
-    return HTTPException(status_code=500, detail=str(exc))
+    return _translate(exc, extra_mappings=_MAPPINGS)

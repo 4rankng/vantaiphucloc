@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { User, X, Plus } from 'lucide-react'
 
 interface VehicleDriver {
@@ -12,7 +13,7 @@ interface VehicleDriverCardProps {
   onAddDriver?: () => void
 }
 
-export function VehicleDriverCard({
+export const VehicleDriverCard = memo(function VehicleDriverCard({
   plate,
   drivers,
   onRemoveDriver,
@@ -93,4 +94,4 @@ export function VehicleDriverCard({
       )}
     </div>
   )
-}
+})

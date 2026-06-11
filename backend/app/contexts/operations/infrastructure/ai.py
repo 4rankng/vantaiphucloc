@@ -7,19 +7,16 @@ until one succeeds. This avoids single-model outages (503 overload).
 import base64
 import io
 import logging
-from pathlib import Path
 
 import httpx
-from dotenv import dotenv_values
 from PIL import Image, ImageOps
 
 from app.config import settings
 
 _logger = logging.getLogger(__name__)
 
-# Configuration — read API key from project .env to avoid stale shell env-var overrides
-_PROJECT_ENV = dotenv_values(Path(__file__).resolve().parents[4] / ".env")
-GEMINI_API_KEY = _PROJECT_ENV.get("GEMINI_API_KEY") or settings.GEMINI_API_KEY
+# Configuration — single source of truth via pydantic-settings
+GEMINI_API_KEY = settings.GEMINI_API_KEY
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta"
 
 # Hard-coded fallback chain — using capable multimodal models to avoid 2-pass fallback

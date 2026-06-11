@@ -44,6 +44,7 @@ from app.models.domain import (
 from app.models.operation_type import OperationType, OperationTypeAlias
 from app.utils.iso6346 import normalize_container_number
 from app.utils.fuzzy import container_edit_distance
+from app.contexts.operations.infrastructure.operation_type_resolver import normalize_operation_type
 
 
 WEIGHTS = {
@@ -56,13 +57,6 @@ WEIGHTS = {
     "vehicle_plate": 0.07,
     "client": 0.05,
 }
-
-def _normalize_work_type(wt: str | None) -> str | None:
-    """Normalize work_type for matching comparison — diacritics-insensitive."""
-    if not wt:
-        return wt
-    from app.contexts.operations.infrastructure.operation_type_resolver import normalize_operation_type
-    return normalize_operation_type(wt) or None
 
 
 _CONTAINER_EXACT = 1.0

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Unlink, Trash2, Loader2, ArrowRight } from 'lucide-react'
 import { Plate } from '@/components/shared/data-display/Plate'
 import { getWorkTypeLabel, formatCurrency, type DeliveredTrip } from '@/data/domain'
@@ -14,7 +15,7 @@ export interface DeliveredTripMobileCardProps {
   deleteVariables?: number
 }
 
-export function DeliveredTripMobileCard({
+export const DeliveredTripMobileCard = memo(function DeliveredTripMobileCard({
   trip,
   onTap,
   onUnmatch,
@@ -225,4 +226,4 @@ export function DeliveredTripMobileCard({
       )}
     </div>
   )
-}
+})

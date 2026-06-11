@@ -58,7 +58,7 @@ export function useDeleteDriver() {
     mutationFn: (id: number) => apiClient.deleteDriver(id).then(unwrap),
     onSuccess: () => {
       invalidateDriverDeps(qc)
-      qc.invalidateQueries({ queryKey: ['vehicles'] })
+      qc.invalidateQueries({ queryKey: ['vehicles'] }) // prefix match for all vehicle queries
     },
   })
 }

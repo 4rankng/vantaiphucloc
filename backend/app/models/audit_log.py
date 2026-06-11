@@ -1,14 +1,13 @@
 """AuditLog model — auto-records all data changes."""
 
 from datetime import datetime, timezone
+from app.utils.dates import utcnow
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 
 from app.database import Base
 
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 class AuditLog(Base):
@@ -22,4 +21,4 @@ class AuditLog(Base):
     old_value = Column(Text, nullable=True)   # JSON string
     new_value = Column(Text, nullable=True)   # JSON string
     reason = Column(Text, nullable=True)      # Required for CANCEL / UNMATCH
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False, index=True)

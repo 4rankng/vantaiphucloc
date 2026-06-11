@@ -7,6 +7,7 @@ from typing import Sequence
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.contexts.operations.domain.entities import BookedTrip, DeliveredTrip
 from app.contexts.operations.domain.repositories import (
@@ -144,7 +145,13 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         search: str | None = None,
     ) -> tuple[Sequence[DeliveredTrip], int]:
         from app.models.domain import Client as ClientORM
-        q = select(DeliveredTripORM)
+        q = select(DeliveredTripORM).options(
+            selectinload(DeliveredTripORM.client),
+            selectinload(DeliveredTripORM.pickup_location),
+            selectinload(DeliveredTripORM.dropoff_location),
+            selectinload(DeliveredTripORM.driver),
+            selectinload(DeliveredTripORM.vendor),
+        )
         if client_id is not None:
             q = q.where(DeliveredTripORM.client_id == client_id)
         if driver_id is not None:
@@ -239,7 +246,15 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         if not ids:
             return []
         rows = list((await self.session.execute(
-            select(DeliveredTripORM).where(DeliveredTripORM.id.in_([int(i) for i in ids]))
+            select(DeliveredTripORM)
+            .options(
+                selectinload(DeliveredTripORM.client),
+                selectinload(DeliveredTripORM.pickup_location),
+                selectinload(DeliveredTripORM.dropoff_location),
+                selectinload(DeliveredTripORM.driver),
+                selectinload(DeliveredTripORM.vendor),
+            )
+            .where(DeliveredTripORM.id.in_([int(i) for i in ids]))
         )).scalars().all())
         return [await self._hydrate(r) for r in rows]
 

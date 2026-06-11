@@ -35,7 +35,7 @@ export function useMyEarnings(startDate: string, endDate: string) {
 
 export function useSalaryDashboard(periodStart: string, periodEnd: string) {
   return useQuery({
-    queryKey: ['salary-dashboard', periodStart, periodEnd],
+    queryKey: queryKeys.salaryDashboard(periodStart, periodEnd),
     queryFn: async () => {
       const res = await apiClient.getSalaryDashboard(periodStart, periodEnd)
       return res.success ? res.data : []
@@ -116,9 +116,9 @@ export function useSetDriverBaseSalary() {
         .setDriverBaseSalary(driverId, { baseSalary, effectiveFrom, note })
         .then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['driver-base-salary'] })
+      qc.invalidateQueries({ queryKey: ['driver-base-salary'] }) // prefix match for all drivers
       invalidateSalaryDeps(qc)
-      qc.invalidateQueries({ queryKey: ['salary-period'] })
+      qc.invalidateQueries({ queryKey: ['salary-period'] }) // prefix match for all periods
     },
   })
 }

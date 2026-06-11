@@ -10,6 +10,7 @@ identity package.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from app.utils.dates import utcnow
 
 from sqlalchemy import (
     Boolean,
@@ -23,8 +24,6 @@ from sqlalchemy import (
 from app.database import Base
 
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 class UserORM(Base):
@@ -40,12 +39,12 @@ class UserORM(Base):
     role = Column(String(20), default="driver", nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(
-        DateTime(timezone=True), default=_utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, nullable=False
     )
     updated_at = Column(
         DateTime(timezone=True),
-        default=_utcnow,
-        onupdate=_utcnow,
+        default=utcnow,
+        onupdate=utcnow,
         nullable=False,
     )
 
@@ -62,11 +61,11 @@ class PushSubscriptionORM(Base):
     auth = Column(String(100), nullable=False)
     user_agent = Column(String(500), nullable=True)
     created_at = Column(
-        DateTime(timezone=True), default=_utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, nullable=False
     )
     updated_at = Column(
         DateTime(timezone=True),
-        default=_utcnow,
-        onupdate=_utcnow,
+        default=utcnow,
+        onupdate=utcnow,
         nullable=False,
     )

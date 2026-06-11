@@ -1,9 +1,10 @@
+import { memo } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Package } from 'lucide-react'
 import { formatCurrencyShort } from '@/data/domain'
 import { tripStatusVariant } from '@/lib/statusMaps'
 
-export function TripCard({ job, onClick }: { job: { status: string; route: string; containerNumber: string; distanceKm: number; jobDate: string; driverFee: number }; onClick: () => void }) {
+export const TripCard = memo(function TripCard({ job, onClick }: { job: { status: string; route: string; containerNumber: string; distanceKm: number; jobDate: string; driverFee: number }; onClick: () => void }) {
   return (
     <button onClick={onClick} className="w-full text-left rounded-lg p-4 card-lift"
       style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
@@ -26,4 +27,4 @@ export function TripCard({ job, onClick }: { job: { status: string; route: strin
       </div>
     </button>
   )
-}
+})

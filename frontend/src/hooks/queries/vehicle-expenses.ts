@@ -35,7 +35,7 @@ export function useVehicleExpensesInfinite(params?: {
   pageSize?: number
 }) {
   return useInfiniteQuery<VehicleExpensePage, Error>({
-    queryKey: ['vehicle-expenses-infinite', params?.vehicleId ?? '', params?.category ?? '', params?.dateFrom ?? '', params?.dateTo ?? ''],
+    queryKey: queryKeys.vehicleExpensesInfinite(String(params?.vehicleId ?? ''), String(params?.category ?? ''), params?.dateFrom ?? '', params?.dateTo ?? ''),
     queryFn: async ({ pageParam }) => {
       const res = await apiClient.listVehicleExpenses({
         ...params,

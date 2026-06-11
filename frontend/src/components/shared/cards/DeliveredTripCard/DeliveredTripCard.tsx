@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Clock, CheckCircle, Lock } from 'lucide-react'
 import { formatCurrencyFull, type DeliveredTrip } from '@/data/domain'
 import { formatDate } from '@/lib/format'
@@ -22,13 +23,13 @@ interface AccountantVariantProps extends DeliveredTripCardBaseProps {
 
 type DeliveredTripCardProps = DriverVariantProps | AccountantVariantProps
 
-export function DeliveredTripCard(props: DeliveredTripCardProps) {
+export const DeliveredTripCard = memo(function DeliveredTripCard(props: DeliveredTripCardProps) {
   const { data: wo, variant = 'accountant' } = props
   if (variant === 'driver') {
     return <DriverCard wo={wo} onClick={(props as DriverVariantProps).onClick} />
   }
   return <AccountantCard wo={wo} />
-}
+})
 
 function fmtDate(iso: string): string {
   const d = new Date(iso)

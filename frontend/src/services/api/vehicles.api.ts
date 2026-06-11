@@ -1,5 +1,5 @@
 import { api } from './client'
-import { toCamel, ok, fail } from './utils'
+import { safeRequest, toCamel } from '@/lib/safe-request'
 import type { ApiResponse } from '@/data/domain'
 
 export interface Vehicle {
@@ -12,29 +12,14 @@ export interface Vehicle {
   updatedAt: string
 }
 
-export async function getVehicles(activeOnly = true): Promise<ApiResponse<Vehicle[]>> {
-  try {
-    const res = await api.get('/vehicles', { params: { active_only: activeOnly } })
-    return ok(toCamel<Vehicle[]>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function getVehicles(activeOnly = true): Promise<ApiResponse<Vehicle[]>> {
+  return safeRequest(() => api.get('/vehicles', { params: { active_only: activeOnly } }))
 }
 
-export async function updateVehicle(id: number, plate: string): Promise<ApiResponse<Vehicle>> {
-  try {
-    const res = await api.put(`/vehicles/${id}`, { plate })
-    return ok(toCamel<Vehicle>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function updateVehicle(id: number, plate: string): Promise<ApiResponse<Vehicle>> {
+  return safeRequest(() => api.put(`/vehicles/${id}`, { plate }))
 }
 
-export async function deleteVehicle(id: number): Promise<ApiResponse<void>> {
-  try {
-    await api.delete(`/vehicles/${id}`)
-    return ok(undefined)
-  } catch (err) {
-    return fail(err)
-  }
+export function deleteVehicle(id: number): Promise<ApiResponse<void>> {
+  return safeRequest(() => api.delete(`/vehicles/${id}`), () => undefined as unknown as void)
 }

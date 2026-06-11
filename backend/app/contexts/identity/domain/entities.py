@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from app.utils.dates import utcnow
 
 from app.contexts.identity.domain.exceptions import (
     InactiveUser,
@@ -24,8 +25,6 @@ from app.contexts.identity.domain.value_objects import (
 )
 
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 @dataclass
@@ -45,8 +44,8 @@ class User:
     email: str | None = None
     full_name: str | None = None
     cccd: str | None = None
-    created_at: datetime = field(default_factory=_utcnow)
-    updated_at: datetime = field(default_factory=_utcnow)
+    created_at: datetime = field(default_factory=utcnow)
+    updated_at: datetime = field(default_factory=utcnow)
 
     def __post_init__(self) -> None:
         self.cccd = validate_cccd(self.cccd)
@@ -66,12 +65,12 @@ class User:
         if not hasher.verify(current, self.hashed_password):
             raise WrongCurrentPassword("Current password is incorrect")
         self.hashed_password = hasher.hash(new)
-        self.updated_at = _utcnow()
+        self.updated_at = utcnow()
 
     def reset_password(self, new: str, hasher: "PasswordHasher") -> None:  # type: ignore[name-defined]
         """Privileged reset — no current-password check. Used by admin-only flows."""
         self.hashed_password = hasher.hash(new)
-        self.updated_at = _utcnow()
+        self.updated_at = utcnow()
 
     # ── Profile ─────────────────────────────────────────────────────
 
@@ -94,22 +93,22 @@ class User:
             self.email = email
         if cccd is not None:
             self.cccd = validate_cccd(cccd)
-        self.updated_at = _utcnow()
+        self.updated_at = utcnow()
 
     def deactivate(self) -> None:
         self.is_active = False
-        self.updated_at = _utcnow()
+        self.updated_at = utcnow()
 
     def activate(self) -> None:
         self.is_active = True
-        self.updated_at = _utcnow()
+        self.updated_at = utcnow()
 
     def assign_role(self, new_role: UserRole, *, actor_role: UserRole) -> None:
         """Director cannot promote anyone to superadmin."""
         if actor_role is UserRole.DIRECTOR and new_role is UserRole.SUPERADMIN:
             raise PermissionDenied("Directors cannot promote users to superadmin")
         self.role = new_role
-        self.updated_at = _utcnow()
+        self.updated_at = utcnow()
 
     # ── Authorization helpers ───────────────────────────────────────
 
@@ -140,11 +139,11 @@ class PushSubscription:
     p256dh: str
     auth: str
     user_agent: str | None = None
-    created_at: datetime = field(default_factory=_utcnow)
-    updated_at: datetime = field(default_factory=_utcnow)
+    created_at: datetime = field(default_factory=utcnow)
+    updated_at: datetime = field(default_factory=utcnow)
 
     def update_keys(self, *, p256dh: str, auth: str, user_agent: str | None) -> None:
         self.p256dh = p256dh
         self.auth = auth
         self.user_agent = user_agent
-        self.updated_at = _utcnow()
+        self.updated_at = utcnow()

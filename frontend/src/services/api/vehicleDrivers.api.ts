@@ -1,5 +1,6 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
+import { safeRequest, toCamel, toSnake } from '@/lib/safe-request'
+import { unwrapList } from './utils'
 import type { ApiResponse } from '@/data/domain'
 
 export interface VehicleDriverRow {
@@ -10,42 +11,24 @@ export interface VehicleDriverRow {
   driverName: string
 }
 
-export async function getVehicleDrivers(params?: { activeOnly?: boolean; vehicleId?: number; driverId?: number }): Promise<ApiResponse<VehicleDriverRow[]>> {
-  try {
-    const res = await api.get('/vehicle-drivers', { params: toSnake(params) })
-    return ok(toCamel<VehicleDriverRow[]>(unwrapList(res.data)))
-  } catch (err) {
-    return fail(err)
-  }
+export function getVehicleDrivers(params?: { activeOnly?: boolean; vehicleId?: number; driverId?: number }): Promise<ApiResponse<VehicleDriverRow[]>> {
+  return safeRequest(() => api.get('/vehicle-drivers', { params: toSnake(params) }),
+    (res) => toCamel<VehicleDriverRow[]>(unwrapList(res.data)),
+  )
 }
 
-export async function addVehicleDriver(vehicleId: number, driverId: number, effectiveFrom?: string): Promise<ApiResponse<VehicleDriverRow>> {
-  try {
-    const res = await api.post('/vehicle-drivers', {
-      vehicle_id: vehicleId,
-      driver_id: driverId,
-      effective_from: effectiveFrom ?? new Date().toISOString().slice(0, 10),
-    })
-    return ok(toCamel<VehicleDriverRow>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function addVehicleDriver(vehicleId: number, driverId: number, effectiveFrom?: string): Promise<ApiResponse<VehicleDriverRow>> {
+  return safeRequest(() => api.post('/vehicle-drivers', {
+    vehicle_id: vehicleId,
+    driver_id: driverId,
+    effective_from: effectiveFrom ?? new Date().toISOString().slice(0, 10),
+  }))
 }
 
-export async function removeVehicleDriver(id: number): Promise<ApiResponse<void>> {
-  try {
-    await api.delete(`/vehicle-drivers/${id}`)
-    return ok(undefined as unknown as void)
-  } catch (err) {
-    return fail(err)
-  }
+export function removeVehicleDriver(id: number): Promise<ApiResponse<void>> {
+  return safeRequest(() => api.delete(`/vehicle-drivers/${id}`), () => undefined as unknown as void)
 }
 
-export async function createVehicle(plate: string): Promise<ApiResponse<{ id: number; plate: string }>> {
-  try {
-    const res = await api.post('/vehicles', { plate })
-    return ok(toCamel<{ id: number; plate: string }>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function createVehicle(plate: string): Promise<ApiResponse<{ id: number; plate: string }>> {
+  return safeRequest(() => api.post('/vehicles', { plate }))
 }

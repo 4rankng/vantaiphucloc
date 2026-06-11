@@ -38,7 +38,7 @@ export function useCreateVendorRoutePricing() {
     mutationFn: (data: VendorRoutePricingCreatePayload) =>
       apiClient.createVendorRoutePricing(data).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vendor-route-pricings'] })
+      qc.invalidateQueries({ queryKey: queryKeys.vendorRoutePricings })
     },
   })
 }
@@ -54,7 +54,7 @@ export function useUpdateVendorRoutePricing() {
       data: VendorRoutePricingUpdatePayload
     }) => apiClient.updateVendorRoutePricing(id, data).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vendor-route-pricings'] })
+      qc.invalidateQueries({ queryKey: queryKeys.vendorRoutePricings })
     },
   })
 }
@@ -64,7 +64,7 @@ export function useDeleteVendorRoutePricing() {
   return useMutation({
     mutationFn: (id: number) => apiClient.deleteVendorRoutePricing(id).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vendor-route-pricings'] })
+      qc.invalidateQueries({ queryKey: queryKeys.vendorRoutePricings })
     },
   })
 }

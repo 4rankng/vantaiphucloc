@@ -6,7 +6,7 @@
  */
 
 import { api, getAccessToken } from './client'
-import { toCamel, ok, fail } from './utils'
+import { safeRequest, toCamel } from '@/lib/safe-request'
 import type { ApiResponse } from '@/data/domain'
 
 export interface ClientRevenueBreakdown {
@@ -59,23 +59,18 @@ export interface VehiclePnLResponse {
   totalProfit: number
 }
 
-export async function getVehiclePnL(
+export function getVehiclePnL(
   dateFrom: string,
   dateTo: string,
   vehicleId?: number,
 ): Promise<ApiResponse<VehiclePnLResponse>> {
-  try {
-    const res = await api.get('/dashboard/vehicle-pnl', {
-      params: {
-        date_from: dateFrom,
-        date_to: dateTo,
-        ...(vehicleId != null ? { vehicle_id: vehicleId } : {}),
-      },
-    })
-    return ok(toCamel<VehiclePnLResponse>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.get('/dashboard/vehicle-pnl', {
+    params: {
+      date_from: dateFrom,
+      date_to: dateTo,
+      ...(vehicleId != null ? { vehicle_id: vehicleId } : {}),
+    },
+  }))
 }
 
 export interface TripDayBucket {
@@ -98,27 +93,22 @@ export interface TripDailyStats {
   buckets: TripDayBucket[]
 }
 
-export async function getTripDailyStats(
+export function getTripDailyStats(
   dateFrom: string,
   dateTo: string,
   clientId?: number,
   driverId?: number,
   matched?: boolean,
 ): Promise<ApiResponse<TripDailyStats>> {
-  try {
-    const res = await api.get('/dashboard/trip-daily-stats', {
-      params: {
-        date_from: dateFrom,
-        date_to: dateTo,
-        ...(clientId ? { client_id: clientId } : {}),
-        ...(driverId ? { driver_id: driverId } : {}),
-        ...(matched !== undefined ? { matched } : {}),
-      },
-    })
-    return ok(toCamel<TripDailyStats>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.get('/dashboard/trip-daily-stats', {
+    params: {
+      date_from: dateFrom,
+      date_to: dateTo,
+      ...(clientId ? { client_id: clientId } : {}),
+      ...(driverId ? { driver_id: driverId } : {}),
+      ...(matched !== undefined ? { matched } : {}),
+    },
+  }))
 }
 
 export interface VehiclePnLGroup {
@@ -151,18 +141,13 @@ export interface DirectorDashboard {
   vendorPnl: VehiclePnLGroup
 }
 
-export async function getDirectorDashboard(
+export function getDirectorDashboard(
   dateFrom: string,
   dateTo: string,
 ): Promise<ApiResponse<DirectorDashboard>> {
-  try {
-    const res = await api.get('/dashboard/director', {
-      params: { date_from: dateFrom, date_to: dateTo },
-    })
-    return ok(toCamel<DirectorDashboard>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.get('/dashboard/director', {
+    params: { date_from: dateFrom, date_to: dateTo },
+  }))
 }
 
 /**
@@ -193,16 +178,11 @@ export async function exportVehiclePnL(dateFrom: string, dateTo: string): Promis
   URL.revokeObjectURL(objectUrl)
 }
 
-export async function getMonthlyPnL(
+export function getMonthlyPnL(
   startDate: string,
   endDate: string,
 ): Promise<ApiResponse<MonthlyPnL>> {
-  try {
-    const res = await api.get('/salary/pnl', {
-      params: { start_date: startDate, end_date: endDate },
-    })
-    return ok(toCamel<MonthlyPnL>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.get('/salary/pnl', {
+    params: { start_date: startDate, end_date: endDate },
+  }))
 }

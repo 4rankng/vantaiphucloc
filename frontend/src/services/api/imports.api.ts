@@ -1,7 +1,6 @@
 import { api } from './client'
-import { toCamel, ok, fail } from './utils'
+import { safeRequest, toCamel, toSnake } from '@/lib/safe-request'
 import type { ApiResponse } from '@/data/domain'
-
 
 // ──────────────────────────────────────────────────────────────────────────
 // Types
@@ -299,50 +298,39 @@ export interface VendorImportResponse {
   details: Record<string, unknown>[]
 }
 
-export async function uploadVendorReconciliation(file: File, vendorId: number): Promise<ApiResponse<VendorImportResponse>> {
-  try {
+export function uploadVendorReconciliation(file: File, vendorId: number): Promise<ApiResponse<VendorImportResponse>> {
+  return safeRequest(() => {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('vendor_id', String(vendorId))
-    const res = await api.post('/vendor-reconciliation/upload', fd, {
+    return api.post('/vendor-reconciliation/upload', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    return ok(toCamel<VendorImportResponse>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  })
 }
 
-export async function previewVendorReconciliation(
+export function previewVendorReconciliation(
   file: File,
   vendorId: number,
 ): Promise<ApiResponse<PreviewResultDto>> {
-  try {
+  return safeRequest(() => {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('vendor_id', String(vendorId))
-    const res = await api.post('/vendor-reconciliation/preview', fd, {
+    return api.post('/vendor-reconciliation/preview', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    return ok(res.data as PreviewResultDto)
-  } catch (err) {
-    return fail(err)
-  }
+  }, (res) => res.data as PreviewResultDto)
 }
 
-export async function commitVendorReconciliation(
+export function commitVendorReconciliation(
   vendorId: number,
   rows: Record<string, unknown>[],
 ): Promise<ApiResponse<VendorImportResponse>> {
-  try {
-    const res = await api.post('/vendor-reconciliation/commit', {
-      vendor_id: vendorId,
-      rows,
-    })
-    return ok(toCamel<VendorImportResponse>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.post('/vendor-reconciliation/commit', {
+    vendor_id: vendorId,
+    rows,
+  }))
 }
 
 export interface DriverImportResponse {
@@ -362,41 +350,30 @@ export interface DriverCommitResponse {
   details: Record<string, unknown>[]
 }
 
-export async function uploadDriverReconciliation(file: File): Promise<ApiResponse<DriverImportResponse>> {
-  try {
+export function uploadDriverReconciliation(file: File): Promise<ApiResponse<DriverImportResponse>> {
+  return safeRequest(() => {
     const fd = new FormData()
     fd.append('file', file)
-    const res = await api.post('/driver-reconciliation/upload', fd, {
+    return api.post('/driver-reconciliation/upload', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    return ok(toCamel<DriverImportResponse>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  })
 }
 
-export async function previewDriverReconciliation(file: File): Promise<ApiResponse<PreviewResultDto>> {
-  try {
+export function previewDriverReconciliation(file: File): Promise<ApiResponse<PreviewResultDto>> {
+  return safeRequest(() => {
     const fd = new FormData()
     fd.append('file', file)
-    const res = await api.post('/driver-reconciliation/preview', fd, {
+    return api.post('/driver-reconciliation/preview', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    return ok(res.data as PreviewResultDto)
-  } catch (err) {
-    return fail(err)
-  }
+  }, (res) => res.data as PreviewResultDto)
 }
 
-export async function commitDriverReconciliation(
+export function commitDriverReconciliation(
   rows: Record<string, unknown>[],
 ): Promise<ApiResponse<DriverCommitResponse>> {
-  try {
-    const res = await api.post('/driver-reconciliation/commit', { rows })
-    return ok(toCamel<DriverCommitResponse>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.post('/driver-reconciliation/commit', { rows }))
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -429,25 +406,18 @@ export interface LocationImportCommitResponse {
   errors: string[]
 }
 
-export async function previewLocationImport(file: File): Promise<ApiResponse<LocationImportPreviewResponse>> {
-  try {
+export function previewLocationImport(file: File): Promise<ApiResponse<LocationImportPreviewResponse>> {
+  return safeRequest(() => {
     const fd = new FormData()
     fd.append('file', file)
-    const res = await api.post('/locations/import/preview', fd, {
+    return api.post('/locations/import/preview', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    return ok(res.data as LocationImportPreviewResponse)
-  } catch (err) {
-    return fail(err)
-  }
+  }, (res) => res.data as LocationImportPreviewResponse)
 }
 
-export async function commitLocationImport(names: string[]): Promise<ApiResponse<LocationImportCommitResponse>> {
-  try {
-    const res = await api.post('/locations/import/commit', { names })
-    return ok(res.data as LocationImportCommitResponse)
-  } catch (err) {
-    return fail(err)
-  }
+export function commitLocationImport(names: string[]): Promise<ApiResponse<LocationImportCommitResponse>> {
+  return safeRequest(() => api.post('/locations/import/commit', { names }),
+    (res) => res.data as LocationImportCommitResponse,
+  )
 }
-

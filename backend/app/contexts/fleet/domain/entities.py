@@ -9,9 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from app.utils.dates import utcnow
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 @dataclass
@@ -28,5 +27,5 @@ class Driver:
     phone: str | None
     full_name: str | None
     is_active: bool = True
-    created_at: datetime = field(default_factory=_utcnow)
-    updated_at: datetime = field(default_factory=_utcnow)
+    created_at: datetime = field(default_factory=utcnow)
+    updated_at: datetime = field(default_factory=utcnow)

@@ -59,8 +59,8 @@ export function useUpdateBookedTrip() {
     mutationFn: ({ id, data }: { id: number; data: BookedTripUpdatePayload }) => apiClient.updateBookedTrip(id, data).then(unwrap),
     onSuccess: () => {
       invalidateBookedTripDeps(qc)
-      qc.invalidateQueries({ queryKey: ['suggest-matches'] })
-      qc.invalidateQueries({ queryKey: ['suggest-wos'] })
+      qc.invalidateQueries({ queryKey: queryKeys.suggestMatches })
+      qc.invalidateQueries({ queryKey: queryKeys.suggestWos })
     },
   })
 }

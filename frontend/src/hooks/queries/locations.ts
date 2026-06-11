@@ -47,7 +47,7 @@ export function useDeleteLocation() {
 
 export function useLocationAliases() {
   return useQuery({
-    queryKey: ['location-aliases'],
+    queryKey: queryKeys.locationAliases,
     queryFn: async () => {
       const res = await apiClient.getLocationAliases()
       return res.success ? res.data : []
@@ -60,8 +60,8 @@ export function useCreateAlias() {
   return useMutation({
     mutationFn: (data: { locationId: number; alias: string }) => apiClient.createAlias(data).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['location-aliases'] })
-      qc.invalidateQueries({ queryKey: ['locations'] })
+      qc.invalidateQueries({ queryKey: queryKeys.locationAliases })
+      qc.invalidateQueries({ queryKey: queryKeys.locations })
     },
   })
 }
@@ -71,8 +71,8 @@ export function usePromoteAlias() {
   return useMutation({
     mutationFn: (aliasId: number) => apiClient.promoteAlias(aliasId).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['location-aliases'] })
-      qc.invalidateQueries({ queryKey: ['locations'] })
+      qc.invalidateQueries({ queryKey: queryKeys.locationAliases })
+      qc.invalidateQueries({ queryKey: queryKeys.locations })
     },
   })
 }
@@ -82,8 +82,8 @@ export function useDeleteAlias() {
   return useMutation({
     mutationFn: (aliasId: number) => apiClient.deleteAlias(aliasId).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['location-aliases'] })
-      qc.invalidateQueries({ queryKey: ['locations'] })
+      qc.invalidateQueries({ queryKey: queryKeys.locationAliases })
+      qc.invalidateQueries({ queryKey: queryKeys.locations })
     },
   })
 }

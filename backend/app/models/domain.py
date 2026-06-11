@@ -8,6 +8,7 @@ as TIMESTAMP WITH TIME ZONE.
 """
 
 from datetime import datetime, timezone
+from app.utils.dates import utcnow
 
 from sqlalchemy import (
     Boolean,
@@ -23,6 +24,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import relationship
 
 from app.database import Base
 from app.models.mixins import AuditableMixin
@@ -31,8 +33,6 @@ from app.models.mixins import AuditableMixin
 JSON_TYPE = JSON().with_variant(JSONB(), "postgresql")
 
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 # ---------------------------------------------------------------------------
@@ -49,9 +49,9 @@ class Vehicle(AuditableMixin, Base):
     driver_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     vendor_id = Column(Integer, ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True, index=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
 
 
@@ -86,9 +86,9 @@ class VehicleDriver(AuditableMixin, Base):
     effective_from = Column(Date, nullable=False)
     effective_to = Column(Date, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
 
 
@@ -120,9 +120,9 @@ class VehicleExpense(AuditableMixin, Base):
     description = Column(String(500), nullable=True)
     receipt_url = Column(String(1000), nullable=True)
     created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
 
     __table_args__ = (
@@ -147,9 +147,9 @@ class Client(AuditableMixin, Base):
     address = Column(String(500), nullable=True)
     contact_person = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
 
 
@@ -169,9 +169,9 @@ class Vendor(AuditableMixin, Base):
     address = Column(String(500), nullable=True)
     contact_person = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
 
 
@@ -197,9 +197,9 @@ class Location(AuditableMixin, Base):
     created_via = Column(String(30), nullable=True)
     created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     location_review_needed = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
 
     __table_args__ = (Index("ix_locations_lat_lng", "lat", "lng"),)
@@ -218,7 +218,7 @@ class LocationAlias(Base):
     alias = Column(String(255), nullable=False)
     alias_normalized = Column(String(255), nullable=False, unique=True)
     source = Column(String(30), nullable=False, index=True)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
 
@@ -249,9 +249,9 @@ class RoutePricing(AuditableMixin, Base):
     e20_driver_salary = Column(Integer, nullable=True)
     e40_driver_salary = Column(Integer, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
 
     __table_args__ = (
@@ -283,9 +283,9 @@ class VendorRoutePricing(AuditableMixin, Base):
     e20_price = Column(Integer, nullable=True)
     e40_price = Column(Integer, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
 
     __table_args__ = (
@@ -329,10 +329,16 @@ class DeliveredTrip(AuditableMixin, Base):
     driver_salary = Column(Integer, nullable=False, default=0)
     trip_date = Column(Date, nullable=True)
     note = Column(String(500), nullable=True)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
+
+    client = relationship("Client", lazy="noload")
+    pickup_location = relationship("Location", foreign_keys=[pickup_location_id], lazy="noload")
+    dropoff_location = relationship("Location", foreign_keys=[dropoff_location_id], lazy="noload")
+    driver = relationship("UserORM", foreign_keys=[driver_id], lazy="noload")
+    vendor = relationship("Vendor", lazy="noload")
 
     __table_args__ = (
         Index("ix_delivered_trips_created_at", "created_at"),
@@ -362,9 +368,9 @@ class BookedTrip(AuditableMixin, Base):
     work_type = Column(String(30), nullable=False)
     cont_number = Column(String(50), nullable=True, index=True)
     cont_type = Column(String(10), nullable=True)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
 
     __table_args__ = (
@@ -384,7 +390,7 @@ class Setting(Base):
     key = Column(String(100), primary_key=True)
     value = Column(String(500), nullable=False)
     updated_at = Column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
 
 
@@ -414,7 +420,7 @@ class DriverSalaryConfig(AuditableMixin, Base):
     base_salary = Column(Integer, nullable=False)  # VND
     effective_from = Column(Date, nullable=False)
     note = Column(String(500), nullable=True)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     __table_args__ = (
@@ -461,9 +467,9 @@ class DriverSalary(AuditableMixin, Base):
     allowance = Column(Integer, nullable=False, default=0)  # VND
     note = Column(String(500), nullable=True)
     created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
 
     __table_args__ = (

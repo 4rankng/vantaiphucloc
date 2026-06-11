@@ -1,4 +1,4 @@
-"""Translate domain exceptions into HTTPException."""
+"""Translate Customer Pricing domain exceptions into HTTPException."""
 
 from __future__ import annotations
 
@@ -9,16 +9,14 @@ from app.contexts.customer_pricing.domain.exceptions import (
     LocationInUse,
     NotFound,
 )
+from app.core.error_translation import translate as _translate
+
+_MAPPINGS = {
+    NotFound: 404,
+    AlreadyExists: 409,
+    LocationInUse: 409,
+}
 
 
 def translate(exc: Exception) -> HTTPException:
-    if isinstance(exc, NotFound):
-        return HTTPException(status_code=404, detail=str(exc))
-    if isinstance(exc, AlreadyExists):
-        return HTTPException(status_code=409, detail=str(exc))
-    if isinstance(exc, LocationInUse):
-        return HTTPException(
-            status_code=409,
-            detail=f"location is referenced in {exc.table}.{exc.column}",
-        )
-    return HTTPException(status_code=500, detail=str(exc))
+    return _translate(exc, extra_mappings=_MAPPINGS)

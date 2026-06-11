@@ -54,12 +54,8 @@ def _salary_for_cont_type(row, cont_type: str | None) -> int:
 
 def _normalize_work_type(wt: str | None) -> str:
     """Normalize work_type for pricing lookup — uses centralized normalization."""
-    if not wt:
-        return "CHUYỂN BÃI"
     from app.contexts.operations.infrastructure.operation_type_resolver import normalize_operation_type
-    folded = normalize_operation_type(wt)
-    if not folded:
-        return "CHUYỂN BÃI"
+    folded = normalize_operation_type(wt, default="CHUYEN BAI")
     # Keyword-based canonical mapping for pricing lookup
     if "CHUYEN BAI" in folded:
         return "CHUYỂN BÃI"

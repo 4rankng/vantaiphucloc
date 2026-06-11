@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '../query-keys'
 import {
   previewVendorRoutePricingImport,
   commitVendorRoutePricingImport,
@@ -17,7 +18,7 @@ export function useCommitVendorRoutePricingImport() {
     mutationFn: (rows: VendorRoutePricingImportCommitRow[]) =>
       commitVendorRoutePricingImport(rows),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vendor-route-pricings'] })
+      qc.invalidateQueries({ queryKey: queryKeys.vendorRoutePricings })
     },
   })
 }

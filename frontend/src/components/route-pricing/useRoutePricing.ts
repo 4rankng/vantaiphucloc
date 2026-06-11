@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import {
   useRoutePricings,
   useCreateRoutePricing,
@@ -7,7 +7,8 @@ import {
   useClients,
   useLocations,
 } from '@/hooks/use-queries'
-import { useToast } from '@/components/atoms/Toast'
+import { parsePrice } from '@/lib/parse-price'
+import { usePricingManager } from '@/lib/pricing-manager'
 import type { WorkType } from '@/data/domain'
 import type {
   RoutePricingCreatePayload,
@@ -44,54 +45,61 @@ export const EMPTY_FORM: RoutePricingFormData = {
   e40DriverSalary: '',
 }
 
-function parsePrice(v: string): number | null {
-  if (!v.trim()) return null
-  const n = parseInt(v.replace(/[,.]/g, ''), 10)
-  return isNaN(n) ? null : n
+const PRICE_FIELDS = ['f20Price', 'f40Price', 'e20Price', 'e40Price'] as const
+
+type RoutePricingEntity = {
+  id: number
+  client: { id: number }
+  pickupLocation: { id: number }
+  dropoffLocation: { id: number }
+  workType: WorkType
+  f20Price: number | null
+  f40Price: number | null
+  e20Price: number | null
+  e40Price: number | null
+  f20DriverSalary: number | null
+  f40DriverSalary: number | null
+  e20DriverSalary: number | null
+  e40DriverSalary: number | null
 }
 
 export function useRoutePricing() {
-  const toast = useToast()
-  const [clientId, setClientIdState] = useState<number | undefined>()
-  const [workType, setWorkTypeState] = useState<string | undefined>()
-  const [pageSize] = useState(1000)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [form, setForm] = useState<RoutePricingFormData>(EMPTY_FORM)
-  const [deleteId, setDeleteId] = useState<number | null>(null)
-
-  const { data: routePricingsData, isLoading } = useRoutePricings({
-    clientId,
-    workType,
-    pageSize,
-  })
-
-  const setClientId = useCallback((id?: number) => {
-    setClientIdState(id)
-  }, [])
-
-  const setWorkType = useCallback((wt?: string) => {
-    setWorkTypeState(wt)
-  }, [])
-  const { data: clientsData } = useClients()
-  const { data: locationsData } = useLocations()
-  const createMutation = useCreateRoutePricing()
-  const updateMutation = useUpdateRoutePricing()
-  const deleteMutation = useDeleteRoutePricing()
-
-  const clients = clientsData ?? []
-  const locations = locationsData ?? []
-
-  const openCreate = useCallback(() => {
-    setEditingId(null)
-    setForm(EMPTY_FORM)
-    setDialogOpen(true)
-  }, [])
-
-  const openEdit = useCallback(
-    (rp: { id: number; client: { id: number }; pickupLocation: { id: number }; dropoffLocation: { id: number }; workType: WorkType; f20Price: number | null; f40Price: number | null; e20Price: number | null; e40Price: number | null; f20DriverSalary: number | null; f40DriverSalary: number | null; e20DriverSalary: number | null; e40DriverSalary: number | null }) => {
-      setEditingId(rp.id)
-      setForm({
+  const mgr = usePricingManager({
+    useQuery: useRoutePricings as unknown as (params: Record<string, unknown>) => {
+      data?: { items?: unknown[]; total?: number; totalPages?: number } | null
+      isLoading: boolean
+    },
+    useCreateMutation: useCreateRoutePricing as () => { mutate: (arg: unknown, opts?: { onSuccess?: () => void; onError?: (err: Error) => void }) => void; isPending: boolean },
+    useUpdateMutation: useUpdateRoutePricing as () => { mutate: (arg: unknown, opts?: { onSuccess?: () => void; onError?: (err: Error) => void }) => void; isPending: boolean },
+    useDeleteMutation: useDeleteRoutePricing as () => { mutate: (id: number, opts?: { onSuccess?: () => void; onError?: (err: Error) => void }) => void },
+    labels: {
+      createSuccess: 'Đã thêm cước tuyến',
+      updateSuccess: 'Đã cập nhật cước tuyến',
+      deleteSuccess: 'Đã xoá cước tuyến',
+      createError: 'Không thể thêm',
+      updateError: 'Không thể cập nhật',
+      deleteError: 'Không thể xoá',
+    },
+    formDefaults: EMPTY_FORM as unknown as Record<string, unknown>,
+    priceFields: [...PRICE_FIELDS],
+    requiredPayloadFields: ['clientId', 'pickupLocationId', 'dropoffLocationId'],
+    formToPayload: (form) => ({
+      clientId: form.clientId,
+      pickupLocationId: form.pickupLocationId,
+      dropoffLocationId: form.dropoffLocationId,
+      workType: form.workType,
+      f20Price: parsePrice(form.f20Price as string),
+      f40Price: parsePrice(form.f40Price as string),
+      e20Price: parsePrice(form.e20Price as string),
+      e40Price: parsePrice(form.e40Price as string),
+      f20DriverSalary: parsePrice(form.f20DriverSalary as string),
+      f40DriverSalary: parsePrice(form.f40DriverSalary as string),
+      e20DriverSalary: parsePrice(form.e20DriverSalary as string),
+      e40DriverSalary: parsePrice(form.e40DriverSalary as string),
+    }),
+    entityToForm: (entity) => {
+      const rp = entity as unknown as RoutePricingEntity
+      return {
         clientId: rp.client.id,
         pickupLocationId: rp.pickupLocation.id,
         dropoffLocationId: rp.dropoffLocation.id,
@@ -104,117 +112,55 @@ export function useRoutePricing() {
         f40DriverSalary: rp.f40DriverSalary?.toString() ?? '',
         e20DriverSalary: rp.e20DriverSalary?.toString() ?? '',
         e40DriverSalary: rp.e40DriverSalary?.toString() ?? '',
-      })
-      setDialogOpen(true)
+      }
     },
-    [],
-  )
+    buildQueryParams: (clientId, workType, pagination) => ({
+      clientId,
+      workType,
+      ...pagination,
+    }),
+    paginationEnabled: false,
+    defaultPageSize: 1000,
+  })
 
-  const handleSubmit = useCallback(() => {
-    const payload = {
-      clientId: form.clientId,
-      pickupLocationId: form.pickupLocationId,
-      dropoffLocationId: form.dropoffLocationId,
-      workType: form.workType,
-      f20Price: parsePrice(form.f20Price),
-      f40Price: parsePrice(form.f40Price),
-      e20Price: parsePrice(form.e20Price),
-      e40Price: parsePrice(form.e40Price),
-      f20DriverSalary: parsePrice(form.f20DriverSalary),
-      f40DriverSalary: parsePrice(form.f40DriverSalary),
-      e20DriverSalary: parsePrice(form.e20DriverSalary),
-      e40DriverSalary: parsePrice(form.e40DriverSalary),
-    }
-
-    if (!payload.clientId || !payload.pickupLocationId || !payload.dropoffLocationId) {
-      toast.error('Vui lòng điền đầy đủ thông tin')
-      return
-    }
-    if (
-      payload.f20Price === null &&
-      payload.f40Price === null &&
-      payload.e20Price === null &&
-      payload.e40Price === null
-    ) {
-      toast.error('Phải có ít nhất một giá cước')
-      return
-    }
-
-    if (editingId) {
-      updateMutation.mutate(
-        { id: editingId, data: payload as RoutePricingUpdatePayload },
-        {
-          onSuccess: () => {
-            toast.success('Đã cập nhật cước tuyến')
-            setDialogOpen(false)
-          },
-          onError: (err) => toast.error('Không thể cập nhật', err.message),
-        },
-      )
-    } else {
-      createMutation.mutate(payload as RoutePricingCreatePayload, {
-        onSuccess: () => {
-          toast.success('Đã thêm cước tuyến')
-          setDialogOpen(false)
-        },
-        onError: (err) => toast.error('Không thể thêm', err.message),
-      })
-    }
-  }, [form, editingId, createMutation, updateMutation, toast])
-
-  const handleDelete = useCallback(() => {
-    if (!deleteId) return
-    deleteMutation.mutate(deleteId, {
-      onSuccess: () => {
-        toast.success('Đã xoá cước tuyến')
-        setDeleteId(null)
-      },
-      onError: (err) => toast.error('Không thể xoá', err.message),
-    })
-  }, [deleteId, deleteMutation, toast])
+  const { data: clientsData } = useClients()
+  const { data: locationsData } = useLocations()
 
   const updateItem = useCallback(
     (id: number, data: RoutePricingUpdatePayload, callbacks?: { onSuccess?: () => void; onError?: () => void }) => {
-      updateMutation.mutate(
-        { id, data },
-        {
-          onSuccess: () => {
-            toast.success('Đã cập nhật cước tuyến')
-            callbacks?.onSuccess?.()
-          },
-          onError: (err) => {
-            toast.error('Không thể cập nhật', err.message)
-            callbacks?.onError?.()
-          },
-        },
-      )
+      mgr.updateItem(id, data, callbacks)
     },
-    [updateMutation, toast],
+    [mgr],
+  )
+
+  const setForm = useCallback(
+    (form: RoutePricingFormData) => mgr.setForm(form as unknown as Record<string, unknown>),
+    [mgr],
   )
 
   return {
-    routePricings: routePricingsData?.items ?? [],
-    total: routePricingsData?.total ?? 0,
-    isLoading,
-    clients,
-    locations,
-    clientId,
-    setClientId,
-    workType,
-    setWorkType,
-    dialogOpen,
-    setDialogOpen,
-    editingId,
-    form,
+    routePricings: mgr.items as RoutePricingEntity[],
+    total: mgr.total,
+    isLoading: mgr.isLoading,
+    clients: clientsData ?? [],
+    locations: locationsData ?? [],
+    clientId: mgr.filterValue,
+    setClientId: mgr.setFilterValue,
+    workType: mgr.workType,
+    setWorkType: mgr.setWorkType,
+    dialogOpen: mgr.dialogOpen,
+    setDialogOpen: mgr.setDialogOpen,
+    editingId: mgr.editingId,
+    form: mgr.form as unknown as RoutePricingFormData,
     setForm,
-    deleteId,
-    setDeleteId,
-    openCreate,
-    openEdit,
-    handleSubmit,
-    handleDelete,
+    deleteId: mgr.deleteId,
+    setDeleteId: mgr.setDeleteId,
+    openCreate: mgr.openCreate,
+    openEdit: mgr.openEdit as (entity: RoutePricingEntity) => void,
+    handleSubmit: mgr.handleSubmit,
+    handleDelete: mgr.handleDelete,
     updateItem,
-    isSubmitting: createMutation.isPending || updateMutation.isPending,
-    isUpdating: updateMutation.isPending,
+    isSubmitting: mgr.isSubmitting,
+    isUpdating: mgr.isUpdating,
   }
 }

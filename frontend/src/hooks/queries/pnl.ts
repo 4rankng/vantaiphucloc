@@ -17,7 +17,7 @@ export function useMonthlyPnL(startDate: string, endDate: string) {
 
 export function useVehiclePnL(dateFrom: string, dateTo: string, vehicleId?: number) {
   return useQuery({
-    queryKey: ['vehicle-pnl', dateFrom, dateTo, vehicleId],
+    queryKey: queryKeys.vehiclePnL(dateFrom, dateTo, vehicleId),
     queryFn: async () => {
       const res = await apiClient.getVehiclePnL(dateFrom, dateTo, vehicleId)
       return res.success ? res.data : null
@@ -35,7 +35,7 @@ export function useTripDailyStats(
   matched?: boolean,
 ) {
   return useQuery({
-    queryKey: ['trip-daily-stats', dateFrom, dateTo, clientId ?? null, driverId ?? null, matched ?? null],
+    queryKey: queryKeys.tripDailyStats(dateFrom, dateTo, clientId, driverId, matched),
     queryFn: async () => {
       const res = await apiClient.getTripDailyStats(dateFrom, dateTo, clientId, driverId, matched)
       return res.success ? res.data : null
@@ -47,7 +47,7 @@ export function useTripDailyStats(
 
 export function useDirectorDashboard(dateFrom: string, dateTo: string) {
   return useQuery({
-    queryKey: ['director-dashboard', dateFrom, dateTo],
+    queryKey: queryKeys.directorDashboard(dateFrom, dateTo),
     queryFn: async () => {
       const res = await getDirectorDashboard(dateFrom, dateTo)
       return res.success ? res.data : null

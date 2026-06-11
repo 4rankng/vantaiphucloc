@@ -1,12 +1,11 @@
 from datetime import datetime, timezone
+from app.utils.dates import utcnow
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 
 from app.database import Base
 
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 class OperationType(Base):
@@ -35,5 +34,5 @@ class OperationTypeAlias(Base):
     alias = Column(String(255), nullable=False)
     alias_normalized = Column(String(255), nullable=False, unique=True)
     source = Column(String(30), nullable=False, index=True)  # "manual" | "import_auto" | "promote" | "migration_seed"
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

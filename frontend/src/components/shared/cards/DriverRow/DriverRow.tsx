@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Key, Trash2 } from 'lucide-react'
 import { Plate } from '@/components/shared/data-display/Plate'
 import type { Driver } from '@/data/domain'
@@ -10,7 +11,7 @@ export interface DriverRowProps {
   onDelete?: () => void
 }
 
-export function DriverRow({
+export const DriverRow = memo(function DriverRow({
   driver,
   onEdit,
   onResetPassword,
@@ -80,4 +81,4 @@ export function DriverRow({
       )}
     </tr>
   )
-}
+})

@@ -10,7 +10,7 @@ function unwrap<T>(res: ApiResponse<T>): T {
 
 export function useLocationAliases(locationId?: number) {
   return useQuery({
-    queryKey: ['location-aliases', locationId ?? 'all'],
+    queryKey: queryKeys.locationAliasesFiltered(locationId),
     queryFn: async () => {
       const res = await apiClient.listAliases(locationId ? { locationId } : undefined)
       return res.success ? res.data : []
@@ -25,8 +25,8 @@ export function useCreateAlias() {
     mutationFn: ({ locationId, alias }: { locationId: number; alias: string }) =>
       apiClient.createAlias(locationId, alias).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['location-aliases'] })
-      qc.invalidateQueries({ queryKey: ['locations'] })
+      qc.invalidateQueries({ queryKey: queryKeys.locationAliases })
+      qc.invalidateQueries({ queryKey: queryKeys.locations })
     },
   })
 }
@@ -38,8 +38,8 @@ export function usePromoteAlias() {
     mutationFn: (aliasId: number) =>
       apiClient.confirmAlias(aliasId).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['location-aliases'] })
-      qc.invalidateQueries({ queryKey: ['pending-review-locations'] })
+      qc.invalidateQueries({ queryKey: queryKeys.locationAliases })
+      qc.invalidateQueries({ queryKey: queryKeys.pendingReviewLocations })
       qc.invalidateQueries({ queryKey: queryKeys.locations })
     },
   })
@@ -54,9 +54,9 @@ export function useDeleteAlias() {
       return unwrap(res)
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['location-aliases'] })
-      qc.invalidateQueries({ queryKey: ['locations'] })
-      qc.invalidateQueries({ queryKey: ['pending-review-locations'] })
+      qc.invalidateQueries({ queryKey: queryKeys.locationAliases })
+      qc.invalidateQueries({ queryKey: queryKeys.locations })
+      qc.invalidateQueries({ queryKey: queryKeys.pendingReviewLocations })
     },
   })
 }
@@ -69,7 +69,7 @@ export function useMergeLocations() {
       apiClient.mergeLocations(sourceLocationId, targetLocationId).then(unwrap),
     onSuccess: () => {
       invalidateLocationDeps(qc)
-      qc.invalidateQueries({ queryKey: ['pending-review-locations'] })
+      qc.invalidateQueries({ queryKey: queryKeys.pendingReviewLocations })
     },
   })
 }
@@ -77,7 +77,7 @@ export function useMergeLocations() {
 
 export function usePendingReviewLocations() {
   return useQuery({
-    queryKey: ['pending-review-locations'],
+    queryKey: queryKeys.pendingReviewLocations,
     queryFn: async () => {
       const res = await apiClient.getPendingReviewLocations()
       return res.success ? res.data : []

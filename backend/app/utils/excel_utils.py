@@ -15,7 +15,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 TEMPLATE_VERSION = "1.0"
 
 # Standard header styles
-_HEADER_FONT = Font(name="Arial", size=11, bold=True, color="FFFFFF")
+_HEADER_FONT = Font(bold=True, color="FFFFFF")
 _HEADER_FILL = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
 _HEADER_ALIGNMENT = Alignment(horizontal="center", vertical="center", wrap_text=True)
 _CELL_ALIGNMENT = Alignment(vertical="center", wrap_text=True)
@@ -122,6 +122,47 @@ def get_template_version(ws) -> str | None:
         if val and str(val).startswith("TEMPLATE_V"):
             return str(val).replace("TEMPLATE_V", "")
     return None
+
+
+def apply_header_style(
+    ws,
+    row: int,
+    num_cols: int,
+    *,
+    font: Font | None = None,
+    fill: PatternFill | None = None,
+    alignment: Alignment | None = None,
+) -> None:
+    """Apply standard header styling to a row of cells.
+
+    Defaults to the blue header style (white bold text on #4472C4 fill, centered).
+    """
+    _font = font or _HEADER_FONT
+    _fill = fill or _HEADER_FILL
+    _align = alignment or Alignment(horizontal="center")
+    for col in range(1, num_cols + 1):
+        cell = ws.cell(row=row, column=col)
+        cell.font = _font
+        cell.fill = _fill
+        cell.alignment = _align
+
+
+def auto_fit_columns(ws, max_width: int = 40) -> None:
+    """Auto-size column widths based on cell content."""
+    for col in ws.columns:
+        max_len = max(len(str(c.value or "")) for c in col)
+        ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, max_width)
+
+
+def workbook_to_bytes(wb) -> bytes:
+    """Save workbook to BytesIO and return bytes."""
+    from io import BytesIO
+
+    buf = BytesIO()
+    wb.save(buf)
+    wb.close()
+    buf.seek(0)
+    return buf.getvalue()
 
 
 def flatten_complex_sheet(raw_rows: list[tuple]) -> list[tuple]:

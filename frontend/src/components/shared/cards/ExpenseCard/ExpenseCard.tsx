@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Receipt } from 'lucide-react'
 import { formatCurrencyShort } from '@/data/domain'
@@ -8,7 +9,7 @@ const statusMap: Record<string, { variant: 'default' | 'success' | 'warning' | '
   CANCELLED: { variant: 'danger', label: 'Từ chối' },
 }
 
-export function ExpenseCard({ expense, onClick }: { expense: { status: string; category: string; description?: string; amount: number; date?: string }; onClick: () => void }) {
+export const ExpenseCard = memo(function ExpenseCard({ expense, onClick }: { expense: { status: string; category: string; description?: string; amount: number; date?: string }; onClick: () => void }) {
   const s = statusMap[expense.status] ?? statusMap.DRAFT
   return (
     <button
@@ -63,4 +64,4 @@ export function ExpenseCard({ expense, onClick }: { expense: { status: string; c
       </div>
     </button>
   )
-}
+})

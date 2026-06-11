@@ -1,5 +1,5 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail } from './utils'
+import { safeRequest, toCamel, toSnake } from '@/lib/safe-request'
 import type { ApiResponse } from '@/data/domain'
 
 export interface OperationTypeDTO {
@@ -20,85 +20,39 @@ export interface OperationTypeAliasDTO {
   createdById?: number | null
 }
 
-export async function getOperationTypes(): Promise<ApiResponse<OperationTypeDTO[]>> {
-  try {
-    const res = await api.get('/operation-types')
-    return ok(toCamel<OperationTypeDTO[]>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function getOperationTypes(): Promise<ApiResponse<OperationTypeDTO[]>> {
+  return safeRequest(() => api.get('/operation-types'))
 }
 
-export async function createOperationType(data: { name: string; label: string }): Promise<ApiResponse<OperationTypeDTO>> {
-  try {
-    const res = await api.post('/operation-types', toSnake(data))
-    return ok(toCamel<OperationTypeDTO>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function createOperationType(data: { name: string; label: string }): Promise<ApiResponse<OperationTypeDTO>> {
+  return safeRequest(() => api.post('/operation-types', toSnake(data)))
 }
 
-export async function updateOperationType(id: number, data: { name?: string; label?: string; isActive?: boolean }): Promise<ApiResponse<OperationTypeDTO>> {
-  try {
-    const res = await api.put(`/operation-types/${id}`, toSnake(data))
-    return ok(toCamel<OperationTypeDTO>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function updateOperationType(id: number, data: { name?: string; label?: string; isActive?: boolean }): Promise<ApiResponse<OperationTypeDTO>> {
+  return safeRequest(() => api.put(`/operation-types/${id}`, toSnake(data)))
 }
 
-export async function deleteOperationType(id: number): Promise<ApiResponse<{ success: boolean }>> {
-  try {
-    await api.delete(`/operation-types/${id}`)
-    return ok({ success: true })
-  } catch (err) {
-    return fail(err)
-  }
+export function deleteOperationType(id: number): Promise<ApiResponse<{ success: boolean }>> {
+  return safeRequest(() => api.delete(`/operation-types/${id}`), () => ({ success: true }))
 }
 
-// ── Alias CRUD ──────────────────────────────────────────────────────────────
-
-export async function listOperationTypeAliases(
+export function listOperationTypeAliases(
   params?: { operationTypeId?: number },
 ): Promise<ApiResponse<OperationTypeAliasDTO[]>> {
-  try {
-    const res = await api.get('/operation-types/aliases', { params: toSnake(params ?? {}) })
-    return ok(toCamel<OperationTypeAliasDTO[]>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.get('/operation-types/aliases', { params: toSnake(params ?? {}) }))
 }
 
-export async function createOperationTypeAlias(
+export function createOperationTypeAlias(
   operationTypeId: number,
   alias: string,
 ): Promise<ApiResponse<OperationTypeAliasDTO>> {
-  try {
-    const res = await api.post('/operation-types/aliases', toSnake({ operationTypeId, alias }))
-    return ok(toCamel<OperationTypeAliasDTO>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.post('/operation-types/aliases', toSnake({ operationTypeId, alias })))
 }
 
-export async function promoteOperationTypeAlias(
-  aliasId: number,
-): Promise<ApiResponse<OperationTypeAliasDTO>> {
-  try {
-    const res = await api.post(`/operation-types/aliases/${aliasId}/promote`)
-    return ok(toCamel<OperationTypeAliasDTO>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function promoteOperationTypeAlias(aliasId: number): Promise<ApiResponse<OperationTypeAliasDTO>> {
+  return safeRequest(() => api.post(`/operation-types/aliases/${aliasId}/promote`))
 }
 
-export async function deleteOperationTypeAlias(
-  aliasId: number,
-): Promise<ApiResponse<{ success: boolean }>> {
-  try {
-    await api.delete(`/operation-types/aliases/${aliasId}`)
-    return ok({ success: true })
-  } catch (err) {
-    return fail(err)
-  }
+export function deleteOperationTypeAlias(aliasId: number): Promise<ApiResponse<{ success: boolean }>> {
+  return safeRequest(() => api.delete(`/operation-types/aliases/${aliasId}`), () => ({ success: true }))
 }

@@ -1,5 +1,6 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, unwrapList, unwrapPaginated } from './utils'
+import { safeRequest, toCamel, toSnake } from '@/lib/safe-request'
+import { unwrapList, unwrapPaginated } from './utils'
 import type { ApiResponse, PaginatedResult } from '@/data/domain'
 import type { Role } from '@/data/domain'
 
@@ -48,19 +49,17 @@ export function toUserAccount(raw: Record<string, unknown>): UserAccount {
   }
 }
 
-export async function getUsers(): Promise<ApiResponse<UserAccount[]>> {
-  try {
-    const res = await api.get('/users', { params: { page_size: 500 } })
-    const items = unwrapList(res.data)
-    const users = (items as Record<string, unknown>[]).map(toUserAccount)
-    return ok(users)
-  } catch (err) {
-    return fail(err)
-  }
+export function getUsers(): Promise<ApiResponse<UserAccount[]>> {
+  return safeRequest(() => api.get('/users', { params: { page_size: 500 } }),
+    (res) => {
+      const items = unwrapList(res.data)
+      return (items as Record<string, unknown>[]).map(toUserAccount)
+    },
+  )
 }
 
-export async function getUsersPaged(filters?: UserFilters): Promise<ApiResponse<PaginatedResult<UserAccount>>> {
-  try {
+export function getUsersPaged(filters?: UserFilters): Promise<ApiResponse<PaginatedResult<UserAccount>>> {
+  return safeRequest(() => {
     const params: Record<string, string> = {}
     if (filters?.search) params.search = filters.search
     if (filters?.role) params.role = filters.role
@@ -68,15 +67,11 @@ export async function getUsersPaged(filters?: UserFilters): Promise<ApiResponse<
     if (filters?.sortOrder) params.sort_order = filters.sortOrder
     params.page = String(filters?.page ?? 1)
     params.page_size = String(filters?.pageSize ?? 50)
-    const res = await api.get('/users', { params })
-    const result = unwrapPaginated<UserAccount>(res.data, (raw) => toUserAccount(raw as Record<string, unknown>))
-    return ok(result)
-  } catch (err) {
-    return fail(err)
-  }
+    return api.get('/users', { params })
+  }, (res) => unwrapPaginated<UserAccount>(res.data, (raw) => toUserAccount(raw as Record<string, unknown>)))
 }
 
-export async function createUser(data: {
+export function createUser(data: {
   username: string
   fullName?: string
   phone?: string
@@ -85,30 +80,21 @@ export async function createUser(data: {
   password: string
   vendor?: string
 }): Promise<ApiResponse<UserAccount>> {
-  try {
-    const res = await api.post('/users', toSnake(data))
-    return ok(toUserAccount(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.post('/users', toSnake(data)),
+    (res) => toUserAccount(res.data),
+  )
 }
 
-export async function updateUser(id: string | number, data: Record<string, unknown>): Promise<ApiResponse<UserAccount>> {
-  try {
-    const res = await api.put(`/users/${id}`, toSnake(data))
-    return ok(toUserAccount(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function updateUser(id: string | number, data: Record<string, unknown>): Promise<ApiResponse<UserAccount>> {
+  return safeRequest(() => api.put(`/users/${id}`, toSnake(data)),
+    (res) => toUserAccount(res.data),
+  )
 }
 
-export async function deleteUser(id: string | number): Promise<ApiResponse<{ success: boolean }>> {
-  try {
-    await api.delete(`/users/${id}`)
-    return ok({ success: true })
-  } catch (err) {
-    return fail(err)
-  }
+export function deleteUser(id: string | number): Promise<ApiResponse<{ success: boolean }>> {
+  return safeRequest(() => api.delete(`/users/${id}`),
+    () => ({ success: true }),
+  )
 }
 
 export interface UserProfile {
@@ -119,35 +105,26 @@ export interface UserProfile {
   vehiclePlate: string | null
 }
 
-export async function getProfile(): Promise<ApiResponse<UserProfile>> {
-  try {
-    const res = await api.get('/users/me')
-    return ok({
+export function getProfile(): Promise<ApiResponse<UserProfile>> {
+  return safeRequest(() => api.get('/users/me'),
+    (res) => ({
       username: res.data.username ?? '',
       fullName: res.data.full_name ?? null,
       phone: res.data.phone ?? null,
       email: res.data.email ?? null,
       vehiclePlate: res.data.vehicle_plate ?? null,
-    })
-  } catch (err) {
-    return fail(err)
-  }
+    }),
+  )
 }
 
-export async function updateProfile(field: string, value: string): Promise<ApiResponse<{ field: string; value: string }>> {
-  try {
-    const res = await api.put('/users/me', { [field]: value })
-    return ok({ field, value: res.data[field] ?? value })
-  } catch (err) {
-    return fail(err)
-  }
+export function updateProfile(field: string, value: string): Promise<ApiResponse<{ field: string; value: string }>> {
+  return safeRequest(() => api.put('/users/me', { [field]: value }),
+    (res) => ({ field, value: res.data[field] ?? value }),
+  )
 }
 
-export async function changePassword(currentPassword: string, newPassword: string): Promise<ApiResponse<{ success: boolean }>> {
-  try {
-    await api.post('/change-password', { current_password: currentPassword, new_password: newPassword })
-    return ok({ success: true })
-  } catch (err) {
-    return fail(err)
-  }
+export function changePassword(currentPassword: string, newPassword: string): Promise<ApiResponse<{ success: boolean }>> {
+  return safeRequest(() => api.post('/change-password', { current_password: currentPassword, new_password: newPassword }),
+    () => ({ success: true }),
+  )
 }

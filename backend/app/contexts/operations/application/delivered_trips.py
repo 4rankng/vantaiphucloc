@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from app.utils.dates import utcnow
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,8 +34,6 @@ from app.contexts.operations.domain.value_objects import (
 )
 
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 # ── Reads ────────────────────────────────────────────────────────
@@ -214,7 +213,7 @@ class UpdateDeliveredTrip:
         if data.note is not None:
             w.note = data.note or None
 
-        w.updated_at = _utcnow()
+        w.updated_at = utcnow()
 
         await self.repo.save(w)
         await self.session.commit()

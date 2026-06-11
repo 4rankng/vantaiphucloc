@@ -542,7 +542,6 @@ async def export_vehicle_pnl(
     db: AsyncSession = Depends(get_db),
 ):
     """Export per-vehicle P&L as an Excel (.xlsx) file."""
-    import io
     from fastapi import HTTPException
     from fastapi.responses import StreamingResponse
     import openpyxl
@@ -553,6 +552,7 @@ async def export_vehicle_pnl(
     from app.contexts.payroll.infrastructure.repositories import SqlDriverSalaryConfigRepository
     from app.contexts.payroll.domain.base_salary import effective_base_salary
     from app.core.pricing_lookup import TripPriceInfo, lookup_vendor_prices
+    from app.utils.excel_utils import workbook_to_bytes
 
     try:
         df = _dt.strptime(date_from, "%Y-%m-%d").date()
@@ -798,10 +798,9 @@ async def export_vehicle_pnl(
     ws.cell(row=footer_row, column=1).font = Font(italic=True, color="888888", size=9)
 
     # Stream response
-    buf = io.BytesIO()
-    wb.save(buf)
-    buf.seek(0)
+    from io import BytesIO
 
+    buf = BytesIO(workbook_to_bytes(wb))
     filename = f"PnL_{date_from}_to_{date_to}.xlsx"
     return StreamingResponse(
         buf,

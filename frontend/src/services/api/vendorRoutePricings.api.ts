@@ -1,5 +1,6 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, unwrapPaginated } from './utils'
+import { safeRequest, toCamel, toSnake } from '@/lib/safe-request'
+import { unwrapPaginated } from './utils'
 import type { VendorRoutePricing, PaginatedResult, ApiResponse } from '@/data/domain'
 
 export interface VendorRoutePricingCreatePayload {
@@ -45,38 +46,23 @@ export async function getVendorRoutePricings(params?: {
   }
 }
 
-export async function createVendorRoutePricing(
+export function createVendorRoutePricing(
   data: VendorRoutePricingCreatePayload,
 ): Promise<ApiResponse<VendorRoutePricing>> {
-  try {
-    const res = await api.post('/vendor-route-pricings', toSnake(data))
-    return ok(toCamel<VendorRoutePricing>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.post('/vendor-route-pricings', toSnake(data)))
 }
 
-export async function updateVendorRoutePricing(
+export function updateVendorRoutePricing(
   id: number,
   data: VendorRoutePricingUpdatePayload,
 ): Promise<ApiResponse<VendorRoutePricing>> {
-  try {
-    const res = await api.put(`/vendor-route-pricings/${id}`, toSnake(data))
-    return ok(toCamel<VendorRoutePricing>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.put(`/vendor-route-pricings/${id}`, toSnake(data)))
 }
 
-export async function deleteVendorRoutePricing(
+export function deleteVendorRoutePricing(
   id: number,
 ): Promise<ApiResponse<{ success: boolean }>> {
-  try {
-    await api.delete(`/vendor-route-pricings/${id}`)
-    return ok({ success: true })
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.delete(`/vendor-route-pricings/${id}`), () => ({ success: true }))
 }
 
 export interface VendorRoutePricingImportPreviewRow {

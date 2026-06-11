@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { RouteDisplay } from '@/components/shared/data-display/RouteDisplay'
 import { ContBadge } from '@/components/shared/data-display/ContBadge'
 import { formatDate } from '@/lib/format'
@@ -17,7 +18,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }
   CANCELLED: { label: 'Đã huỷ',       bg: 'var(--theme-status-error-light)',    color: 'var(--theme-status-error)'   },
 }
 
-export function BookedTripCard({ trip, onClick }: BookedTripCardProps) {
+export const BookedTripCard = memo(function BookedTripCard({ trip, onClick }: BookedTripCardProps) {
   const statusCfg = STATUS_CONFIG[trip.status] ?? STATUS_CONFIG.DRAFT
   const isLocked = trip.status === 'MATCHED'
 
@@ -99,4 +100,4 @@ export function BookedTripCard({ trip, onClick }: BookedTripCardProps) {
       {inner}
     </div>
   )
-}
+})

@@ -1,5 +1,5 @@
 import { api } from './client'
-import { toCamel } from './utils'
+import { toCamel } from '@/lib/safe-request'
 
 export interface AuditLogEntry {
   id: number
@@ -32,6 +32,5 @@ export async function getAuditLogs(params?: {
       created_after: params?.createdAfter,
     }
   })
-  const data = toCamel<{ items: AuditLogEntry[]; total: number }>(res.data)
-  return data
+  return toCamel<{ items: AuditLogEntry[]; total: number }>(res.data)
 }

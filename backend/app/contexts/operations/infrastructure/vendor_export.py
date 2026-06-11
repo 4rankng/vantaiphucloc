@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import io
 from datetime import date
 
 from sqlalchemy import select
@@ -13,7 +12,7 @@ from app.models.domain import (
     Vendor,
     DeliveredTrip,
 )
-from app.utils.excel_utils import add_template_version
+from app.utils.excel_utils import add_template_version, workbook_to_bytes
 from app.utils.text import slugify_vi
 
 
@@ -207,13 +206,8 @@ async def generate_vendor_export_excel(
 
     add_template_version(ws, num_cols)
 
-    buf = io.BytesIO()
-    wb.save(buf)
-    wb.close()
-    buf.seek(0)
-
     slug = slugify_vi(vendor.name)
     month_str = date_from.strftime("%m-%Y")
     filename = f"DoiSoat_NhaXe_{slug}_{month_str}.xlsx"
 
-    return buf.getvalue(), filename
+    return workbook_to_bytes(wb), filename

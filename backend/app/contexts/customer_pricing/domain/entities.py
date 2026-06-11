@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from app.utils.dates import utcnow
 
 from app.contexts.customer_pricing.domain.value_objects import (
     GeocodeSource,
@@ -17,8 +18,6 @@ from app.contexts.customer_pricing.domain.value_objects import (
 )
 
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 # -- Partner (unified client + vendor) aggregate --------------------
@@ -42,16 +41,16 @@ class Partner:
     address: str | None = None
     contact_person: str | None = None
     is_active: bool = True
-    created_at: datetime = field(default_factory=_utcnow)
-    updated_at: datetime = field(default_factory=_utcnow)
+    created_at: datetime = field(default_factory=utcnow)
+    updated_at: datetime = field(default_factory=utcnow)
 
     def deactivate(self) -> None:
         self.is_active = False
-        self.updated_at = _utcnow()
+        self.updated_at = utcnow()
 
     def reactivate(self) -> None:
         self.is_active = True
-        self.updated_at = _utcnow()
+        self.updated_at = utcnow()
 
 
 # -- Location aggregate (with aliases) ------------------------------
@@ -66,7 +65,7 @@ class LocationAlias:
     alias: str
     alias_normalized: str
     source: str                # "import" | "manual" | "fuzzy_match"
-    created_at: datetime = field(default_factory=_utcnow)
+    created_at: datetime = field(default_factory=utcnow)
     created_by_id: int | None = None
 
 
@@ -90,8 +89,8 @@ class Location:
     created_via: str | None = None
     created_by_id: int | None = None
     location_review_needed: bool = False
-    created_at: datetime = field(default_factory=_utcnow)
-    updated_at: datetime = field(default_factory=_utcnow)
+    created_at: datetime = field(default_factory=utcnow)
+    updated_at: datetime = field(default_factory=utcnow)
     aliases: list[LocationAlias] = field(default_factory=list)
 
     # -- invariants --------------------
@@ -111,11 +110,11 @@ class Location:
     ) -> None:
         self.lat = lat
         self.lng = lng
-        self.geocoded_at = _utcnow()
+        self.geocoded_at = utcnow()
         self.geocode_source = source
         self.pending_geocode = False
         self.location_review_needed = review_needed
-        self.updated_at = _utcnow()
+        self.updated_at = utcnow()
 
     def add_alias(self, alias: str, alias_normalized: str, source: str,
                   *, created_by_id: int | None = None) -> LocationAlias:
@@ -134,12 +133,12 @@ class Location:
             created_by_id=created_by_id,
         )
         self.aliases.append(new)
-        self.updated_at = _utcnow()
+        self.updated_at = utcnow()
         return new
 
     def deactivate(self) -> None:
         self.is_active = False
-        self.updated_at = _utcnow()
+        self.updated_at = utcnow()
 
     def merge_into(self, *, target: "Location", user_id: int) -> None:
         if self.id is None or target.id is None:
@@ -147,6 +146,6 @@ class Location:
         if self.id == target.id:
             raise ValueError("cannot merge a location into itself")
         self.is_active = False
-        self.updated_at = _utcnow()
+        self.updated_at = utcnow()
 
 

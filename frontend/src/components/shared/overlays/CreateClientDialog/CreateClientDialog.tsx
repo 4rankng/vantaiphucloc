@@ -3,6 +3,7 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button, Input, Label } from '@/components/ui'
 import type { Client } from '@/data/domain'
+import { validateTaxCode } from '@/lib/validation'
 
 export type ClientFormData = Omit<Client, 'id' | 'createdAt' | 'updatedAt'>
 
@@ -15,8 +16,6 @@ interface CreateClientDialogProps {
   initial?: ClientFormData | null
   saving?: boolean
 }
-
-const VN_TAX_RE = /^\d{10}(\d{3})?$/
 
 const EMPTY_FORM: ClientFormData = {
   code: '',
@@ -66,7 +65,8 @@ export function CreateClientDialog({ open, onClose, onConfirm, defaultName, init
 
   const handleConfirm = async () => {
     const errs: typeof errors = {}
-    if (form.taxCode && !VN_TAX_RE.test(form.taxCode)) {
+    const taxErr = validateTaxCode(form.taxCode)
+    if (taxErr) {
       errs.taxCode = 'MST phải 10 hoặc 13 chữ số'
     }
     if (Object.keys(errs).length > 0) { setErrors(errs); return }

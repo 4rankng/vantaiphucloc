@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Truck, Plus, X, Trash2 } from 'lucide-react'
 import { Plate } from '@/components/shared/data-display/Plate'
 import { InlineEditable } from '@/components/shared/forms/InlineEditable/InlineEditable'
@@ -12,7 +13,7 @@ export interface VehicleGroupCardProps {
   onDeleteVehicle: () => void
 }
 
-export function VehicleGroupCard({
+export const VehicleGroupCard = memo(function VehicleGroupCard({
   plate,
   onEditPlate,
   drivers,
@@ -113,4 +114,4 @@ export function VehicleGroupCard({
       </div>
     </div>
   )
-}
+})

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from app.utils.dates import utcnow
 
 from app.contexts.operations.domain.value_objects import (
     Money,
@@ -19,8 +20,6 @@ from app.contexts.operations.domain.value_objects import (
 )
 
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 # ── BookedTrip aggregate ─────────────────────────────────────────
@@ -38,8 +37,8 @@ class BookedTrip:
     cont_type: str | None = None
     vessel: str | None = None
     vehicle_plate: str | None = None
-    created_at: datetime = field(default_factory=_utcnow)
-    updated_at: datetime = field(default_factory=_utcnow)
+    created_at: datetime = field(default_factory=utcnow)
+    updated_at: datetime = field(default_factory=utcnow)
 
 
 # ── DeliveredTrip aggregate ──────────────────────────────────────
@@ -64,8 +63,8 @@ class DeliveredTrip:
     driver_salary: Money = 0
     trip_date: object | None = None
     note: str | None = None
-    created_at: datetime = field(default_factory=_utcnow)
-    updated_at: datetime = field(default_factory=_utcnow)
+    created_at: datetime = field(default_factory=utcnow)
+    updated_at: datetime = field(default_factory=utcnow)
 
     @property
     def matched(self) -> bool:
@@ -79,4 +78,4 @@ class DeliveredTrip:
     ) -> None:
         self.revenue = int(revenue)
         self.driver_salary = int(driver_salary)
-        self.updated_at = _utcnow()
+        self.updated_at = utcnow()

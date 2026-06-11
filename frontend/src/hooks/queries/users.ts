@@ -35,7 +35,7 @@ export function useUsersPaged(filters?: UserFilters) {
 
 export function useProfile() {
   return useQuery({
-    queryKey: ['profile'] as const,
+    queryKey: queryKeys.profile,
     queryFn: async () => {
       const res = await apiClient.getProfile()
       return res.success ? res.data : null
@@ -48,7 +48,7 @@ export function useUpdateProfile() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ field, value }: { field: string; value: string }) => apiClient.updateProfile(field, value).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['profile'] }) },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.profile }) },
   })
 }
 
@@ -67,7 +67,7 @@ export function useCreateUser() {
     mutationFn: (data: Parameters<typeof apiClient.createUser>[0]) => apiClient.createUser(data).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.users })
-      qc.invalidateQueries({ queryKey: ['users-paged'] })
+      qc.invalidateQueries({ queryKey: queryKeys.usersPaged })
     },
   })
 }
@@ -79,7 +79,7 @@ export function useUpdateUser() {
     mutationFn: ({ id, data }: { id: string | number; data: Record<string, unknown> }) => apiClient.updateUser(id, data).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.users })
-      qc.invalidateQueries({ queryKey: ['users-paged'] })
+      qc.invalidateQueries({ queryKey: queryKeys.usersPaged })
     },
   })
 }
@@ -91,7 +91,7 @@ export function useDeleteUser() {
     mutationFn: (id: string | number) => apiClient.deleteUser(id).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.users })
-      qc.invalidateQueries({ queryKey: ['users-paged'] })
+      qc.invalidateQueries({ queryKey: queryKeys.usersPaged })
     },
   })
 }

@@ -66,8 +66,6 @@ def _parse_int_price(val: Any) -> int | None:
 def _normalize_work_type(raw: str) -> str | None:
     from app.contexts.operations.infrastructure.operation_type_resolver import normalize_operation_type
     cleaned = normalize_operation_type(raw)
-    # Also normalize slashes for "XUẤT/NHẬP TÀU" style values
-    cleaned = re.sub(r"\s*/\s*", "/", cleaned)
     for valid in get_valid_work_types():
         if cleaned == normalize_operation_type(valid):
             return valid

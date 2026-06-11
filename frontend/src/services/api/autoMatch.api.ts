@@ -1,5 +1,5 @@
 import { api } from './client'
-import { toCamel, ok, fail } from './utils'
+import { safeRequest, toCamel } from '@/lib/safe-request'
 
 export interface TripSummary {
   tripDate: string | null
@@ -57,89 +57,58 @@ export interface UnmatchResponse {
   bookedTripId: number | null
 }
 
-export async function autoMatchPreview(params: {
+export function autoMatchPreview(params: {
   dateFrom?: string
   dateTo?: string
 }) {
-  try {
-    const res = await api.post('/auto-match/preview', {
-      date_from: params.dateFrom || null,
-      date_to: params.dateTo || null,
-    })
-    return ok<AutoMatchPreviewResponse>(toCamel(res.data))
-  } catch (err) {
-    return fail<AutoMatchPreviewResponse>(err)
-  }
+  return safeRequest<AutoMatchPreviewResponse>(() => api.post('/auto-match/preview', {
+    date_from: params.dateFrom || null,
+    date_to: params.dateTo || null,
+  }))
 }
 
-export async function confirmAutoMatch(
+export function confirmAutoMatch(
   pairs: Array<{
     deliveredTripId: number
     bookedTripId: number
     syncSource?: string | null
     fieldChoices?: Record<string, 'delivered' | 'booked'> | null
     score?: number | null
-  }>
+  }>,
 ) {
-  try {
-    const res = await api.post('/auto-match/confirm', {
-      pairs: pairs.map((p) => ({
-        delivered_trip_id: p.deliveredTripId,
-        booked_trip_id: p.bookedTripId,
-        sync_source: p.syncSource || null,
-        field_choices: p.fieldChoices || null,
-        score: p.score ?? null,
-      })),
-    })
-    return ok<ConfirmMatchResponse>(toCamel(res.data))
-  } catch (err) {
-    return fail<ConfirmMatchResponse>(err)
-  }
+  return safeRequest<ConfirmMatchResponse>(() => api.post('/auto-match/confirm', {
+    pairs: pairs.map((p) => ({
+      delivered_trip_id: p.deliveredTripId,
+      booked_trip_id: p.bookedTripId,
+      sync_source: p.syncSource || null,
+      field_choices: p.fieldChoices || null,
+      score: p.score ?? null,
+    })),
+  }))
 }
 
-export async function aiSuggestMatch(deliveredTripId: number) {
-  try {
-    const res = await api.post(`/auto-match/ai-suggest/${deliveredTripId}`)
-    return ok<AISuggestionResponse>(toCamel(res.data))
-  } catch (err) {
-    return fail<AISuggestionResponse>(err)
-  }
+export function aiSuggestMatch(deliveredTripId: number) {
+  return safeRequest<AISuggestionResponse>(() => api.post(`/auto-match/ai-suggest/${deliveredTripId}`))
 }
 
-export async function unmatchTrip(deliveredTripId: number) {
-  try {
-    const res = await api.post('/auto-match/unmatch', { delivered_trip_id: deliveredTripId })
-    return ok<UnmatchResponse>(toCamel(res.data))
-  } catch (err) {
-    return fail<UnmatchResponse>(err)
-  }
+export function unmatchTrip(deliveredTripId: number) {
+  return safeRequest<UnmatchResponse>(() => api.post('/auto-match/unmatch', { delivered_trip_id: deliveredTripId }))
 }
 
 export interface SyncPricingResponse {
   updatedCount: number
 }
 
-export async function syncPricing(params: {
+export function syncPricing(params: {
   dateFrom: string
   dateTo: string
 }) {
-  try {
-    const res = await api.post('/auto-match/sync-pricing', {
-      date_from: params.dateFrom,
-      date_to: params.dateTo,
-    })
-    return ok<SyncPricingResponse>(toCamel(res.data))
-  } catch (err) {
-    return fail<SyncPricingResponse>(err)
-  }
+  return safeRequest<SyncPricingResponse>(() => api.post('/auto-match/sync-pricing', {
+    date_from: params.dateFrom,
+    date_to: params.dateTo,
+  }))
 }
 
-
-export async function syncAllPricing() {
-  try {
-    const res = await api.post('/auto-match/sync-all-pricing', {})
-    return ok<SyncPricingResponse>(toCamel(res.data))
-  } catch (err) {
-    return fail<SyncPricingResponse>(err)
-  }
+export function syncAllPricing() {
+  return safeRequest<SyncPricingResponse>(() => api.post('/auto-match/sync-all-pricing', {}))
 }

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import {useState, useRef, useEffect, memo} from 'react'
 import { User, Pencil, Check, X, Loader2 } from 'lucide-react'
 import { formatCurrency } from '@/data/domain'
 import type { DriverSalaryRecord, DriverEarnings } from '@/services/api/salary.api'
@@ -20,7 +20,7 @@ export interface SalaryMobileCardProps {
 
 const monoStyle: React.CSSProperties = { fontFamily: 'var(--theme-font-mono)' }
 
-export function SalaryMobileCard({
+export const SalaryMobileCard = memo(function SalaryMobileCard({
   row,
   onSaveAllowance,
   onClickBaseSalary,
@@ -195,4 +195,4 @@ export function SalaryMobileCard({
       </div>
     </div>
   )
-}
+})

@@ -1,7 +1,6 @@
 """Booked trip and doi-soat Excel export helpers."""
 
 import logging
-from io import BytesIO
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +10,12 @@ from app.models.domain import (
     Client,
     DeliveredTrip,
     Location,
+)
+from app.utils.excel_utils import (
+    add_template_version,
+    apply_header_style,
+    auto_fit_columns,
+    workbook_to_bytes,
 )
 
 _logger = logging.getLogger(__name__)
@@ -28,7 +33,6 @@ async def generate_booked_trips_excel(
     match status columns for customer reconciliation.
     """
     import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment
 
     query = select(BookedTrip).order_by(BookedTrip.id.desc())
     if client_id:
@@ -67,13 +71,7 @@ async def generate_booked_trips_excel(
         headers = ["Mã TO", "Ngày chạy", "Khách hàng", "Điểm lấy", "Điểm trả", "Số cont", "Loại", "Đơn giá", "Lương TX", "Phụ cấp", "Trạng thái"]
     ws.append(headers)
 
-    header_font = Font(bold=True, color="FFFFFF")
-    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-    for col_num in range(1, len(headers) + 1):
-        cell = ws.cell(row=1, column=col_num)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="center")
+    apply_header_style(ws, 1, len(headers))
 
     match_labels = {True: "Đã khớp", False: "Chưa khớp"}
 
@@ -120,16 +118,9 @@ async def generate_booked_trips_excel(
 
     from app.utils.excel_utils import add_template_version as _add_ver
 
-    for col in ws.columns:
-        max_len = max(len(str(c.value or "")) for c in col)
-        ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 40)
-
+    auto_fit_columns(ws)
     _add_ver(ws, 13)
-    buf = BytesIO()
-    wb.save(buf)
-    wb.close()
-    buf.seek(0)
-    return buf.getvalue(), client_name
+    return workbook_to_bytes(wb), client_name
 
 
 async def generate_doi_soat_excel(
@@ -314,8 +305,4 @@ async def generate_doi_soat_excel(
     # Freeze header
     ws.freeze_panes = "A12"
 
-    buf = BytesIO()
-    wb.save(buf)
-    wb.close()
-    buf.seek(0)
-    return buf.getvalue(), client_name
+    return workbook_to_bytes(wb), client_name

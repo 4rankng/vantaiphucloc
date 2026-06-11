@@ -1,90 +1,44 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail } from './utils'
+import { safeRequest, toCamel, toSnake, ok, fail } from '@/lib/safe-request'
 import type { Location, LocationAlias, ApiResponse } from '@/data/domain'
 
-export async function getLocations(): Promise<ApiResponse<Location[]>> {
-  try {
-    const res = await api.get('/locations/all')
-    const data = toCamel<Location[]>(res.data)
-    return ok(data)
-  } catch (err) {
-    return fail(err)
-  }
+export function getLocations(): Promise<ApiResponse<Location[]>> {
+  return safeRequest(() => api.get('/locations/all'))
 }
 
-export async function createLocation(data: { name: string }): Promise<ApiResponse<Location>> {
-  try {
-    const res = await api.post('/locations', toSnake(data))
-    return ok(toCamel<Location>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function createLocation(data: { name: string }): Promise<ApiResponse<Location>> {
+  return safeRequest(() => api.post('/locations', toSnake(data)))
 }
 
-export async function updateLocation(id: number, data: { name?: string }): Promise<ApiResponse<Location>> {
-  try {
-    const res = await api.put(`/locations/${id}`, toSnake(data))
-    return ok(toCamel<Location>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function updateLocation(id: number, data: { name?: string }): Promise<ApiResponse<Location>> {
+  return safeRequest(() => api.put(`/locations/${id}`, toSnake(data)))
 }
 
-export async function deleteLocation(id: number): Promise<ApiResponse<{ success: boolean }>> {
-  try {
-    await api.delete(`/locations/${id}`)
-    return ok({ success: true })
-  } catch (err) {
-    return fail(err)
-  }
+export function deleteLocation(id: number): Promise<ApiResponse<{ success: boolean }>> {
+  return safeRequest(() => api.delete(`/locations/${id}`), () => ({ success: true }))
 }
 
-export async function getLocationAliases(): Promise<ApiResponse<LocationAlias[]>> {
-  try {
-    const res = await api.get('/location-aliases')
-    return ok(toCamel<LocationAlias[]>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function getLocationAliases(): Promise<ApiResponse<LocationAlias[]>> {
+  return safeRequest(() => api.get('/location-aliases'))
 }
 
-export async function createAlias(data: { locationId: number; alias: string }): Promise<ApiResponse<LocationAlias>> {
-  try {
-    const res = await api.post('/location-aliases', toSnake(data))
-    return ok(toCamel<LocationAlias>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function createAlias(data: { locationId: number; alias: string }): Promise<ApiResponse<LocationAlias>> {
+  return safeRequest(() => api.post('/location-aliases', toSnake(data)))
 }
 
-export async function promoteAlias(aliasId: number): Promise<ApiResponse<Location>> {
-  try {
-    const res = await api.post(`/location-aliases/${aliasId}/promote`)
-    return ok(toCamel<Location>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function promoteAlias(aliasId: number): Promise<ApiResponse<Location>> {
+  return safeRequest(() => api.post(`/location-aliases/${aliasId}/promote`))
 }
 
-export async function deleteAlias(aliasId: number): Promise<ApiResponse<{ success: boolean }>> {
-  try {
-    await api.delete(`/location-aliases/${aliasId}`)
-    return ok({ success: true })
-  } catch (err) {
-    return fail(err)
-  }
+export function deleteAlias(aliasId: number): Promise<ApiResponse<{ success: boolean }>> {
+  return safeRequest(() => api.delete(`/location-aliases/${aliasId}`), () => ({ success: true }))
 }
 
-export async function mergeLocations(data: { sourceLocationId: number; targetLocationId: number }): Promise<ApiResponse<Location>> {
-  try {
-    const res = await api.post('/locations/merge', toSnake(data))
-    return ok(toCamel<Location>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function mergeLocations(data: { sourceLocationId: number; targetLocationId: number }): Promise<ApiResponse<Location>> {
+  return safeRequest(() => api.post('/locations/merge', toSnake(data)))
 }
 
-export async function previewLocationImport(file: File): Promise<ApiResponse<{
+export function previewLocationImport(file: File): Promise<ApiResponse<{
   filename: string
   sheetName: string
   rows: Array<{ name: string; row: number; column: number }>
@@ -93,27 +47,19 @@ export async function previewLocationImport(file: File): Promise<ApiResponse<{
   alreadyExist: string[]
   newNames: string[]
 }>> {
-  try {
+  return safeRequest(() => {
     const fd = new FormData()
     fd.append('file', file)
-    const res = await api.post('/locations/import/preview', fd, {
+    return api.post('/locations/import/preview', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    return ok(toCamel(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  }, (res) => toCamel(res.data))
 }
 
-export async function commitLocationImport(names: string[]): Promise<ApiResponse<{
+export function commitLocationImport(names: string[]): Promise<ApiResponse<{
   created: number
   skippedExisting: number
   errors: string[]
 }>> {
-  try {
-    const res = await api.post('/locations/import/commit', { names })
-    return ok(toCamel(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+  return safeRequest(() => api.post('/locations/import/commit', { names }), (res) => toCamel(res.data))
 }

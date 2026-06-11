@@ -1,6 +1,9 @@
 """OperationType resolver — single source of truth for work_type normalization and alias resolution.
 
-Replaces all scattered `_normalize_work_type` / `_fold` implementations across the codebase.
+Single entry point for all work_type normalization across the codebase.
+No scattered wrappers — all fallback and validation logic lives here via
+``default`` and ``valid_types`` parameters.
+
 Follows the `LocationResolverService` pattern but simpler — no fuzzy matching, just
 exact name + alias lookup with diacritics-insensitive comparison.
 """
@@ -28,20 +31,49 @@ _WS_RE = re.compile(r"\s+", flags=re.UNICODE)
 # ---------------------------------------------------------------------------
 
 
-def normalize_operation_type(s: str | None) -> str:
+def normalize_operation_type(
+    s: str | None,
+    *,
+    default: str | None = None,
+    valid_types: set[str] | None = None,
+) -> str:
     """NFD fold, strip diacritics, uppercase, collapse whitespace.
 
-    Pure function — no DB. Returns empty string for None/empty input.
+    Pure function — no DB.
+
+    Args:
+        s: Raw work_type string to normalize.
+        default: Fallback value returned when input is None/empty or the
+            normalized result is not in *valid_types*.  Pass ``None`` (the
+            default) to return ``""`` on empty input (backward-compatible).
+        valid_types: If provided, the result is checked against this set
+            (each member also normalised for comparison).  When the
+            normalised result does not match any member, *default* is
+            returned instead.
+
+    Returns:
+        Normalised string, *default*, or empty string.
     """
     if s is None:
-        return ""
+        return default if default is not None else ""
     s = str(s).strip().upper()
     if not s:
-        return ""
+        return default if default is not None else ""
     folded = unicodedata.normalize("NFD", s)
     folded = "".join(ch for ch in folded if not unicodedata.combining(ch))
     folded = folded.replace("Đ", "D").replace("đ", "D")
+    # Normalise slashes (e.g. "XUẤT / NHẬP TÀU" → "XUAT/NHAP TAU")
+    folded = re.sub(r"\s*/\s*", "/", folded)
     folded = _WS_RE.sub(" ", folded).strip()
+    if not folded:
+        return default if default is not None else ""
+
+    if valid_types is not None:
+        for vt in valid_types:
+            if folded == normalize_operation_type(vt):
+                return folded
+        return default if default is not None else ""
+
     return folded
 
 

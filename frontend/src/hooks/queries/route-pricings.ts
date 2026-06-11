@@ -38,7 +38,7 @@ export function useCreateRoutePricing() {
     mutationFn: (data: RoutePricingCreatePayload) =>
       apiClient.createRoutePricing(data).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['route-pricings'] })
+      qc.invalidateQueries({ queryKey: queryKeys.routePricings })
     },
   })
 }
@@ -54,11 +54,11 @@ export function useUpdateRoutePricing() {
       data: RoutePricingUpdatePayload
     }) => apiClient.updateRoutePricing(id, data).then(unwrap),
     onMutate: async ({ id, data }) => {
-      await qc.cancelQueries({ queryKey: ['route-pricings'] })
+      await qc.cancelQueries({ queryKey: queryKeys.routePricings })
       const previous = qc.getQueriesData<PaginatedResult<RoutePricing>>({
-        queryKey: ['route-pricings'],
+        queryKey: queryKeys.routePricings,
       })
-      qc.setQueriesData<PaginatedResult<RoutePricing>>({ queryKey: ['route-pricings'] }, (old) => {
+      qc.setQueriesData<PaginatedResult<RoutePricing>>({ queryKey: queryKeys.routePricings }, (old) => {
         if (!old) return old
         return {
           ...old,
@@ -84,7 +84,7 @@ export function useUpdateRoutePricing() {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['route-pricings'] })
+      qc.invalidateQueries({ queryKey: queryKeys.routePricings })
     },
   })
 }
@@ -94,7 +94,7 @@ export function useDeleteRoutePricing() {
   return useMutation({
     mutationFn: (id: number) => apiClient.deleteRoutePricing(id).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['route-pricings'] })
+      qc.invalidateQueries({ queryKey: queryKeys.routePricings })
     },
   })
 }

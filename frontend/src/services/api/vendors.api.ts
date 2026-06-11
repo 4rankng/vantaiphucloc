@@ -1,5 +1,6 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
+import { safeRequest, toCamel, toSnake } from '@/lib/safe-request'
+import { unwrapList } from './utils'
 import type { Vendor, ApiResponse, PaginatedResult } from '@/data/domain'
 
 export type VendorSortBy = 'name' | 'code' | 'created_at'
@@ -13,61 +14,43 @@ export interface VendorFilters {
   pageSize?: number
 }
 
-export async function getVendors(): Promise<ApiResponse<Vendor[]>> {
-  try {
-    const res = await api.get('/vendors')
-    const data = toCamel<Vendor[]>(unwrapList(res.data?.items ?? res.data))
-    return ok(data)
-  } catch (err) {
-    return fail(err)
-  }
+export function getVendors(): Promise<ApiResponse<Vendor[]>> {
+  return safeRequest(() => api.get('/vendors'),
+    (res) => toCamel<Vendor[]>(unwrapList(res.data?.items ?? res.data)),
+  )
 }
 
-export async function getVendorsPaged(filters?: VendorFilters): Promise<ApiResponse<PaginatedResult<Vendor>>> {
-  try {
+export function getVendorsPaged(filters?: VendorFilters): Promise<ApiResponse<PaginatedResult<Vendor>>> {
+  return safeRequest(() => {
     const params: Record<string, string> = {}
     if (filters?.search) params.search = filters.search
     if (filters?.sortBy) params.sort_by = filters.sortBy
     if (filters?.sortOrder) params.sort_order = filters.sortOrder
     params.page = String(filters?.page ?? 1)
     params.page_size = String(filters?.pageSize ?? 100)
-    const res = await api.get('/vendors', { params })
+    return api.get('/vendors', { params })
+  }, (res) => {
     const raw = res.data
-    return ok({
+    return {
       items: (raw.items ?? []).map((item: unknown) => toCamel<Vendor>(item)),
       total: raw.total ?? 0,
       page: raw.page ?? 1,
       pageSize: raw.page_size ?? 100,
       totalPages: raw.total_pages ?? 0,
-    })
-  } catch (err) {
-    return fail(err)
-  }
+    }
+  })
 }
 
-export async function createVendor(data: Omit<Vendor, 'id' | 'createdAt' | 'updatedAt'> & { type?: 'company' | 'individual' }): Promise<ApiResponse<Vendor>> {
-  try {
-    const res = await api.post('/vendors', toSnake(data))
-    return ok(toCamel<Vendor>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function createVendor(data: Omit<Vendor, 'id' | 'createdAt' | 'updatedAt'> & { type?: 'company' | 'individual' }): Promise<ApiResponse<Vendor>> {
+  return safeRequest(() => api.post('/vendors', toSnake(data)))
 }
 
-export async function updateVendor(id: number, data: Partial<Vendor>): Promise<ApiResponse<Vendor>> {
-  try {
-    const res = await api.put(`/vendors/${id}`, toSnake(data))
-    return ok(toCamel<Vendor>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
+export function updateVendor(id: number, data: Partial<Vendor>): Promise<ApiResponse<Vendor>> {
+  return safeRequest(() => api.put(`/vendors/${id}`, toSnake(data)))
 }
 
-export async function deleteVendor(id: number, reason = 'Xoá nhà thầu'): Promise<ApiResponse<{ success: boolean }>> {
-  try {
-    await api.delete(`/vendors/${id}`, { data: { reason } })
-    return ok({ success: true })
-  } catch (err) {
-    return fail(err)
-  }
+export function deleteVendor(id: number, reason = 'Xoá nhà thầu'): Promise<ApiResponse<{ success: boolean }>> {
+  return safeRequest(() => api.delete(`/vendors/${id}`, { data: { reason } }),
+    () => ({ success: true }),
+  )
 }
