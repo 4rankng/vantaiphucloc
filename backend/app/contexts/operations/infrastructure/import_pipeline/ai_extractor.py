@@ -70,7 +70,7 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
     if not api_key:
         return []
 
-    _FALLBACK_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"]
+    _GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
     # Pick the most content-rich sheet
     sheet = _pick_richest_sheet(sheets)
@@ -84,100 +84,114 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
 
     prompt = _EXTRACT_PROMPT + "\n\n--- DATA START ---\n" + text_data + "\n--- DATA END ---"
 
-    try:
-        import httpx
-        url = (
-            f"https://generativelanguage.googleapis.com/v1beta/"
-            f"models/{model}:generateContent?key={api_key}"
-        )
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "temperature": 0,
-                "maxOutputTokens": 8192,
-                "responseMimeType": "application/json",
-                "responseSchema": {
-                    "type": "ARRAY",
-                    "items": {
-                        "type": "OBJECT",
-                        "properties": {
-                            "container_number": {"type": "STRING"},
-                            "cont_type": {"type": "STRING", "enum": ["E20","E40","F20","F40"]},
-                            "pickup": {"type": "STRING"},
-                            "dropoff": {"type": "STRING"},
-                            "vessel_name": {"type": "STRING"},
-                            "consignee": {"type": "STRING"},
-                            "vehicle_plate": {"type": "STRING"},
-                            "freight_charge": {"type": "INTEGER", "nullable": True},
-                            "source_row": {"type": "INTEGER"},
-                        },
-                        "required": ["container_number", "cont_type", "source_row"],
-                    },
-                },
+    import httpx
+
+    _SCHEMA = {
+        "type": "ARRAY",
+        "items": {
+            "type": "OBJECT",
+            "properties": {
+                "container_number": {"type": "STRING"},
+                "cont_type": {"type": "STRING", "enum": ["E20", "E40", "F20", "F40"]},
+                "pickup": {"type": "STRING"},
+                "dropoff": {"type": "STRING"},
+                "vessel_name": {"type": "STRING"},
+                "consignee": {"type": "STRING"},
+                "vehicle_plate": {"type": "STRING"},
+                "freight_charge": {"type": "INTEGER", "nullable": True},
+                "source_row": {"type": "INTEGER"},
             },
-        }
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(url, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
+            "required": ["container_number", "cont_type", "source_row"],
+        },
+    }
 
-        text = (
-            data.get("candidates", [{}])[0]
-            .get("content", {})
-            .get("parts", [{}])[0]
-            .get("text", "")
-            .strip()
-        )
-        if not text:
-            return []
+    last_error = None
+    for model_name in _GEMINI_MODELS:
+        try:
+            url = (
+                f"https://generativelanguage.googleapis.com/v1beta/"
+                f"models/{model_name}:generateContent?key={api_key}"
+            )
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0,
+                    "maxOutputTokens": 8192,
+                    "responseMimeType": "application/json",
+                    "responseSchema": _SCHEMA,
+                },
+            }
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(url, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
 
-        items = json.loads(text)
-        if not isinstance(items, list):
-            return []
-
-        rows: list[ExtractedRow] = []
-        for item in items:
-            cont_no = str(item.get("container_number", "")).strip().upper()
-            if not cont_no:
+            text = (
+                data.get("candidates", [{}])[0]
+                .get("content", {})
+                .get("parts", [{}])[0]
+                .get("text", "")
+                .strip()
+            )
+            if not text:
+                last_error = "empty response"
                 continue
+
+            items = json.loads(text)
+            if not isinstance(items, list):
+                last_error = "non-array response"
+                continue
+
+            return _parse_extracted_items(items)
+
+        except Exception as exc:
+            last_error = str(exc)
+            _logger.warning("[AI extract] %s failed: %s", model_name, last_error)
+
+    _logger.warning("[AI extract] all models failed: %s", last_error)
+    return []
+
+
+def _parse_extracted_items(items: list[dict]) -> list[ExtractedRow]:
+    """Convert Gemini JSON items into ExtractedRow objects."""
+    rows: list[ExtractedRow] = []
+    for item in items:
+        cont_no = str(item.get("container_number", "")).strip().upper()
+        if not cont_no:
+            continue
+        try:
+            cont_no = parse_container_no(cont_no)
+        except ValueError:
+            continue
+
+        cont_type = str(item.get("cont_type", "E20")).strip().upper()
+        if not re.match(r"^[EF](20|40|45)$", cont_type):
+            cont_type = "E20"
+
+        pickup = str(item.get("pickup", "")).strip()
+        dropoff = str(item.get("dropoff", "")).strip()
+        vessel_name = str(item.get("vessel_name", "")).strip()
+        consignee = str(item.get("consignee", "")).strip()
+        vehicle_plate = str(item.get("vehicle_plate", "")).strip()
+        freight_charge = item.get("freight_charge")
+        if freight_charge is not None:
             try:
-                cont_no = parse_container_no(cont_no)
-            except ValueError:
-                continue
+                freight_charge = float(freight_charge)
+            except (ValueError, TypeError):
+                freight_charge = None
 
-            cont_type = str(item.get("cont_type", "E20")).strip().upper()
-            # Validate cont_type
-            if not re.match(r"^[EF](20|40|45)$", cont_type):
-                cont_type = "E20"
-
-            pickup = str(item.get("pickup", "")).strip()
-            dropoff = str(item.get("dropoff", "")).strip()
-            vessel_name = str(item.get("vessel_name", "")).strip()
-            consignee = str(item.get("consignee", "")).strip()
-            vehicle_plate = str(item.get("vehicle_plate", "")).strip()
-            freight_charge = item.get("freight_charge")
-            if freight_charge is not None:
-                try:
-                    freight_charge = float(freight_charge)
-                except (ValueError, TypeError):
-                    freight_charge = None
-
-            rows.append(ExtractedRow(
-                container_number=cont_no,
-                cont_type=cont_type,
-                pickup=pickup,
-                dropoff=dropoff,
-                vessel_name=vessel_name,
-                consignee=consignee,
-                vehicle_plate=vehicle_plate,
-                freight_charge=freight_charge,
-                source_row_index=item.get("source_row", 0),
-            ))
-        return rows
-
-    except Exception as exc:
-        _logger.warning("AI extraction failed: %s", exc)
-        return []
+        rows.append(ExtractedRow(
+            container_number=cont_no,
+            cont_type=cont_type,
+            pickup=pickup,
+            dropoff=dropoff,
+            vessel_name=vessel_name,
+            consignee=consignee,
+            vehicle_plate=vehicle_plate,
+            freight_charge=freight_charge,
+            source_row_index=item.get("source_row", 0),
+        ))
+    return rows
 
 
 def _pick_richest_sheet(sheets: list[SheetView]) -> SheetView | None:

@@ -136,7 +136,7 @@ class GeminiBatchClassifier:
         from app.config import settings
         self._enabled = bool(getattr(settings, "GEMINI_ENABLE", False))
         self._api_key = getattr(settings, "GEMINI_API_KEY", None)
-        self._model = getattr(settings, "GEMINI_MODEL", "gemini-3.5-flash")
+        self._models = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
     async def classify_batch(
         self,
@@ -145,69 +145,77 @@ class GeminiBatchClassifier:
     ) -> dict[int, str]:
         if not headers or not self._enabled or not self._api_key:
             return {}
-        try:
-            import httpx
-            prompt = _build_batch_prompt(headers, candidates)
-            url = (
-                f"https://generativelanguage.googleapis.com/v1beta/"
-                f"models/{self._model}:generateContent?key={self._api_key}"
-            )
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {
-                    "temperature": 0,
-                    "maxOutputTokens": 1024,
-                    "responseMimeType": "application/json",
-                    "responseSchema": {
+
+        import httpx
+
+        prompt = _build_batch_prompt(headers, candidates)
+
+        _SCHEMA = {
+            "type": "OBJECT",
+            "properties": {
+                "columns": {
+                    "type": "ARRAY",
+                    "items": {
                         "type": "OBJECT",
                         "properties": {
-                            "columns": {
-                                "type": "ARRAY",
-                                "items": {
-                                    "type": "OBJECT",
-                                    "properties": {
-                                        "index": {"type": "INTEGER"},
-                                        "field": {"type": "STRING"}
-                                    },
-                                    "required": ["index", "field"]
-                                }
-                            }
+                            "index": {"type": "INTEGER"},
+                            "field": {"type": "STRING"}
                         },
-                        "required": ["columns"]
+                        "required": ["index", "field"]
                     }
-                },
-            }
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(url, json=payload)
-                resp.raise_for_status()
-                data = resp.json()
+                }
+            },
+            "required": ["columns"]
+        }
 
-            text = (
-                data.get("candidates", [{}])[0]
-                    .get("content", {})
-                    .get("parts", [{}])[0]
-                    .get("text", "")
-                    .strip()
-            )
+        for model_name in self._models:
+            try:
+                url = (
+                    f"https://generativelanguage.googleapis.com/v1beta/"
+                    f"models/{model_name}:generateContent?key={self._api_key}"
+                )
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {
+                        "temperature": 0,
+                        "maxOutputTokens": 1024,
+                        "responseMimeType": "application/json",
+                        "responseSchema": _SCHEMA,
+                    },
+                }
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    resp = await client.post(url, json=payload)
+                    resp.raise_for_status()
+                    data = resp.json()
 
-            from app.contexts.operations.infrastructure.import_pipeline.canonical import SKIP_FIELD
+                text = (
+                    data.get("candidates", [{}])[0]
+                        .get("content", {})
+                        .get("parts", [{}])[0]
+                        .get("text", "")
+                        .strip()
+                )
 
-            parsed = json.loads(text)
-            result = {}
-            for col in parsed.get("columns", []):
-                idx = col.get("index")
-                if idx is None:
-                    continue
-                field = col.get("field", "").strip().lower()
-                if field == "skip":
-                    result[idx] = SKIP_FIELD
-                elif any(field == c.lower() for c in candidates):
-                    matched = next(c for c in candidates if c.lower() == field)
-                    result[idx] = matched
-            return result
-        except Exception as exc:
-            _logger.warning("Gemini batch header classify failed: %s", exc)
-            return {}
+                from app.contexts.operations.infrastructure.import_pipeline.canonical import SKIP_FIELD
+
+                parsed = json.loads(text)
+                result = {}
+                for col in parsed.get("columns", []):
+                    idx = col.get("index")
+                    if idx is None:
+                        continue
+                    field = col.get("field", "").strip().lower()
+                    if field == "skip":
+                        result[idx] = SKIP_FIELD
+                    elif any(field == c.lower() for c in candidates):
+                        matched = next(c for c in candidates if c.lower() == field)
+                        result[idx] = matched
+                return result
+            except Exception as exc:
+                _logger.warning("[Batch classify] %s failed: %s", model_name, exc)
+
+        _logger.warning("[Batch classify] all models failed")
+        return {}
 
 
 def get_batch_classifier() -> BatchHeaderClassifier:

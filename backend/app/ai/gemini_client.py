@@ -31,7 +31,7 @@ async def call_gemini(
 
     Args:
         prompt: Text prompt
-        model: Model name (default: gemini-3.5-flash)
+        model: Specific model to use (None = try fallback chain)
         max_tokens: Max output tokens
         temperature: Sampling temperature (low = more deterministic)
 
@@ -48,7 +48,7 @@ async def call_gemini(
             "Get one from https://aistudio.google.com/apikey"
         )
 
-    models_to_try = [model] if model else _FALLBACK_MODELS
+    models_to_try = [model] if model else _GEMINI_MODELS
     last_error = None
 
     for model_name in models_to_try:
