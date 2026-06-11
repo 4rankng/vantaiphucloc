@@ -14,7 +14,6 @@ from app.contexts.operations.infrastructure.ocr import (
     _crop_to_region,
     _parse_pass1_positions,
     _POSITION_REGIONS,
-    _VOTING_CALLS,
     extract_container_numbers,
 )
 
@@ -164,9 +163,9 @@ async def test_extract_container_numbers_oneshot_fail_twopass_success():
         def side_effect(prompt, image_bytes, mime_type, response_schema=None):
             # call_count increments before side_effect runs, so 1-based
             n = mock_ai.call_count
-            if n <= _VOTING_CALLS:
+            if n == 1:
                 return {"success": True, "text": "NONE", "provider": "gemini"}
-            if n == _VOTING_CALLS + 1:
+            if n == 2:
                 return pass1_response
             return pass2_response
 
@@ -244,9 +243,9 @@ async def test_extract_container_numbers_max_pass2_regions():
 
         def side_effect(prompt, image_bytes, mime_type, response_schema=None):
             n = mock_ai.call_count
-            if n <= _VOTING_CALLS:
+            if n == 1:
                 return {"success": True, "text": "NONE", "provider": "gemini"}
-            if n == _VOTING_CALLS + 1:
+            if n == 2:
                 return pass1_response
             return pass2_response
 
@@ -254,7 +253,7 @@ async def test_extract_container_numbers_max_pass2_regions():
 
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
-    # _VOTING_CALLS (one-shot) + 1 (pass-1) + min(6, MAX_PASS2_REGIONS=4) (pass-2)
-    assert mock_ai.call_count == _VOTING_CALLS + 1 + 4
+    # 1 (one-shot) + 1 (pass-1) + min(6, MAX_PASS2_REGIONS=4) (pass-2)
+    assert mock_ai.call_count == 1 + 1 + 4
     assert result["success"] is True
     assert len(result["container_numbers"]) > 0
