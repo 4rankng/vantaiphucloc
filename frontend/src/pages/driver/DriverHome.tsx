@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import { Plus, Search, X, CircleCheck } from 'lucide-react'
+import { Plus, Search, X } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { DayNavigator } from '@/components/shared/navigation/DayNavigator'
@@ -122,7 +122,8 @@ function MobileDriverHome() {
 
   const monthlyMatched = monthlyEarnings?.totalSalary ?? 0
   const monthlyUnmatched = monthlyEarnings?.unmatchedSalary ?? 0
-  const monthLabel = `T${monthPeriod.endDate.getMonth() + 1} (${monthPeriod.startDate.getDate()}/${monthPeriod.startDate.getMonth() + 1}→${monthPeriod.endDate.getDate()}/${monthPeriod.endDate.getMonth() + 1})`
+  const monthBadge = `T${monthPeriod.endDate.getMonth() + 1}`
+  const dateBadge = `${String(selectedDate.getDate()).padStart(2, '0')}/${String(selectedDate.getMonth() + 1).padStart(2, '0')}`
 
   // ── Infinite scroll observer ──
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -146,105 +147,48 @@ function MobileDriverHome() {
         />
       </div>
 
-      {/* Monthly earnings card */}
+      {/* Monthly earnings */}
       <div
         data-section="monthly-salary"
-        className="overflow-hidden relative rounded-2xl"
-        style={{
-          background: 'linear-gradient(135deg, #005A2D 0%, #00813F 100%)',
-          color: '#fff',
-        }}
+        className="rounded-xl overflow-hidden grid"
+        style={{ gridTemplateColumns: '80px 1fr', background: 'var(--theme-bg-secondary)' }}
       >
-        <p className="text-[10px] font-semibold uppercase tracking-wider px-3 pt-2.5 opacity-70">
-          Lương tháng {monthLabel}
-        </p>
-        <div className="flex">
-          {/* Left: matched monthly */}
-          <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5">
-            <CircleCheck size={20} className="shrink-0 opacity-80" />
-            <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-semibold uppercase tracking-wider opacity-60">
-                Đã ghép
-              </p>
-              <p className="text-lg font-bold tabular-nums leading-tight whitespace-nowrap">
-                {monthlyMatched.toLocaleString('vi-VN')}
-              </p>
-            </div>
+        {/* Month */}
+        <div className="flex items-center justify-center" style={{ borderRight: '1px solid var(--theme-border-default)' }}>
+          <span className="text-base font-bold leading-none" style={{ color: 'var(--theme-text-muted)' }}>{monthBadge}</span>
+        </div>
+        {/* Rows */}
+        <div className="flex flex-col">
+          <div className="flex items-center justify-between px-3 py-1.5">
+            <span className="text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>Đã ghép</span>
+            <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>{monthlyMatched.toLocaleString('vi-VN')}</span>
           </div>
-
-          <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.2)' }} />
-
-          {/* Right: unmatched monthly */}
-          <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5">
-            <CircleCheck size={20} className="shrink-0 opacity-80" />
-            <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-semibold uppercase tracking-wider opacity-60">
-                Chưa ghép
-              </p>
-              <p className="text-lg font-bold tabular-nums leading-tight whitespace-nowrap">
-                {monthlyUnmatched.toLocaleString('vi-VN')}
-              </p>
-            </div>
+          <div className="flex items-center justify-between px-3 py-1.5" style={{ borderTop: '1px solid var(--theme-border-default)' }}>
+            <span className="text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>Chưa ghép</span>
+            <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{monthlyUnmatched.toLocaleString('vi-VN')}</span>
           </div>
         </div>
       </div>
 
-      {/* Stat card: daily matched + unmatched */}
+      {/* Daily earnings */}
       <div
         data-section="salary"
-        className="flex overflow-hidden relative rounded-2xl stat-card-hover"
-        style={{
-          background: 'linear-gradient(135deg, color-mix(in srgb, var(--theme-brand-primary) 5%, var(--theme-bg-secondary)) 0%, var(--theme-bg-secondary) 55%)',
-          padding: 0,
-          cursor: 'default',
-        }}
+        className="rounded-xl overflow-hidden grid"
+        style={{ gridTemplateColumns: '80px 1fr', background: 'var(--theme-bg-secondary)' }}
       >
-        {/* Watermark truck silhouette */}
-        <svg
-          viewBox="0 0 120 60"
-          fill="none"
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            right: 0, bottom: 0,
-            width: 90, height: 45,
-            opacity: 0.045,
-            pointerEvents: 'none',
-            color: 'var(--theme-brand-primary)',
-          }}
-        >
-          <rect x="0"  y="10" width="72" height="35" rx="3" fill="currentColor"/>
-          <path d="M72 14 L92 14 Q96 14 96 18 L96 45 L72 45 Z" fill="currentColor"/>
-          <circle cx="18"  cy="48" r="8" fill="currentColor"/>
-          <circle cx="82"  cy="48" r="8" fill="currentColor"/>
-        </svg>
-
-        {/* Left: salary from matched trips */}
-        <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-3">
-          <CircleCheck data-salary-icon size={24} className="shrink-0" style={{ color: 'var(--theme-success, #16a34a)' }} />
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
-              Đã ghép
-            </p>
-            <p className="type-display tabular-nums leading-tight whitespace-nowrap" style={{ color: 'var(--theme-success, #16a34a)' }}>
-              {matchedSalary.toLocaleString('vi-VN')}
-            </p>
-          </div>
+        {/* Date */}
+        <div className="flex items-center justify-center" style={{ borderRight: '1px solid var(--theme-border-default)' }}>
+          <span className="text-base font-bold tabular-nums leading-none" style={{ color: 'var(--theme-text-muted)' }}>{dateBadge}</span>
         </div>
-
-        {/* Divider */}
-        <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--theme-border-light)' }} />
-
-        {/* Right: salary from unmatched trips */}
-        <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-3">
-          <CircleCheck data-salary-icon size={24} className="shrink-0" style={{ color: 'var(--theme-warning, #d97706)' }} />
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
-              Chưa ghép
-            </p>
-            <p className="type-display tabular-nums leading-tight whitespace-nowrap" style={{ color: 'var(--theme-warning, #d97706)' }}>
-              {unmatchedSalary.toLocaleString('vi-VN')}
-            </p>
+        {/* Rows */}
+        <div className="flex flex-col">
+          <div className="flex items-center justify-between px-3 py-1.5">
+            <span className="text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>Đã ghép</span>
+            <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>{matchedSalary.toLocaleString('vi-VN')}</span>
+          </div>
+          <div className="flex items-center justify-between px-3 py-1.5" style={{ borderTop: '1px solid var(--theme-border-default)' }}>
+            <span className="text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>Chưa ghép</span>
+            <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{unmatchedSalary.toLocaleString('vi-VN')}</span>
           </div>
         </div>
       </div>
