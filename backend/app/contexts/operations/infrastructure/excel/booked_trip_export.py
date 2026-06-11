@@ -141,8 +141,10 @@ async def generate_doi_soat_excel(
     """Generate reconciliation (đối soát) Excel for a specific client.
 
     Returns (excel_bytes, client_name) tuple.
-    Only includes MATCHED trip orders within the date range.
-    Columns: STT | Ngày chạy | Số cont | Loại | Điểm lấy | Điểm trả | Tác nghiệp | Biển số xe | Số tàu | Đơn giá
+    Exports ALL delivered trips for the client within the date range,
+    regardless of match status — so customers without uploaded files
+    (e.g. Tâm Cảng) still get a populated export.
+    Columns: STT | Ngày đi | Chủ hàng | Số container | F20' | F40' | E20' | E40' | Số xe chạy | Điểm đi | Điểm đến | Tác nghiệp
     Summary row at the bottom: count per work type + total amount.
     """
     import openpyxl
@@ -159,30 +161,31 @@ async def generate_doi_soat_excel(
     df = date_type.fromisoformat(date_from)
     dt = date_type.fromisoformat(date_to)
 
-    # -- 2. Load trip orders --
-    to_query = select(BookedTrip).where(
-        BookedTrip.client_id == client_id,
-        BookedTrip.trip_date >= df,
-        BookedTrip.trip_date <= dt,
-    ).order_by(BookedTrip.trip_date, BookedTrip.id)
-    to_result = await db.execute(to_query)
-    booked_trips = to_result.scalars().all()
+    # -- 2. Load delivered trips (actual work done) --
+    # Query DeliveredTrip instead of BookedTrip so customers without
+    # uploaded files still have data to export.
+    dt_query = select(DeliveredTrip).where(
+        DeliveredTrip.client_id == client_id,
+        DeliveredTrip.trip_date >= df,
+        DeliveredTrip.trip_date <= dt,
+    ).order_by(DeliveredTrip.trip_date, DeliveredTrip.id)
+    dt_result = await db.execute(dt_query)
+    delivered_trips = dt_result.scalars().all()
 
     # -- 3. Load location names --
     loc_ids: set[int] = set()
-    for to in booked_trips:
-        if to.pickup_location_id:
-            loc_ids.add(to.pickup_location_id)
-        if to.dropoff_location_id:
-            loc_ids.add(to.dropoff_location_id)
+    for trip in delivered_trips:
+        if trip.pickup_location_id:
+            loc_ids.add(trip.pickup_location_id)
+        if trip.dropoff_location_id:
+            loc_ids.add(trip.dropoff_location_id)
     loc_name_by_id: dict[int, str] = {}
     if loc_ids:
         loc_result = await db.execute(select(Location).where(Location.id.in_(loc_ids)))
         loc_name_by_id = {loc.id: loc.name for loc in loc_result.scalars().all()}
 
     # -- 4. Build Excel workbook --
-    # Plate and vessel come directly from BookedTrip; no Reconciliation link.
-    # work_type column in route_pricings; this export column stays blank.
+    # Data comes from DeliveredTrip — all actual work done for this client.
     wb = openpyxl.Workbook()
     ws = wb.active
     month_label = df.strftime("%m/%Y")
@@ -248,7 +251,7 @@ async def generate_doi_soat_excel(
         cell.border = thin_border
 
     # -- Subtotal row 11 --
-    last_data_row = max(len(booked_trips) + 12, 12)  # one row per trip now
+    last_data_row = max(len(delivered_trips) + 12, 12)
     ws.append([
         "", "", "", "",
         f"=SUBTOTAL(9,E12:E{last_data_row})",
@@ -262,17 +265,17 @@ async def generate_doi_soat_excel(
         ws.cell(row=11, column=col_num).font = _bold
         ws.cell(row=11, column=col_num).alignment = center
 
-    # -- Data rows (12+) -- one row per BookedTrip now
+    # -- Data rows (12+) -- one row per DeliveredTrip
     stt = 0
-    client_code = client.code if client else ""
+    client_code = client.code or client_name
 
-    for to in booked_trips:
-        pickup = loc_name_by_id.get(to.pickup_location_id or 0, "")
-        dropoff = loc_name_by_id.get(to.dropoff_location_id or 0, "")
-        plate = to.vehicle_plate or ""
-        trip_date_str = to.trip_date.strftime("%d/%m/%Y") if to.trip_date else ""
+    for trip in delivered_trips:
+        pickup = loc_name_by_id.get(trip.pickup_location_id or 0, "")
+        dropoff = loc_name_by_id.get(trip.dropoff_location_id or 0, "")
+        plate = trip.vehicle_plate or ""
+        trip_date_str = trip.trip_date.strftime("%d/%m/%Y") if trip.trip_date else ""
 
-        ct = (to.cont_type or "").upper()
+        ct = (trip.cont_type or "").upper()
 
         # Cont type flags
         f20 = 1 if ct == "F20" else None
@@ -283,10 +286,10 @@ async def generate_doi_soat_excel(
         stt += 1
         row_num = 11 + stt
         ws.append([
-            stt, trip_date_str, client_code, to.cont_number or "",
+            stt, trip_date_str, client_code, trip.cont_number or "",
             f20, f40, e20, e40,
             plate, pickup, dropoff,
-            "",  # work_type handled separately
+            trip.work_type or "",
         ])
 
         # Styling
