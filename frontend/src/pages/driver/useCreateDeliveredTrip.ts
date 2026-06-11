@@ -255,11 +255,16 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
             apiClient.validateContainer(num).then(vRes => {
               if (vRes.success && vRes.data?.valid) return
               if (vRes.data?.suggestions?.length) {
-                // Auto-correct with the top suggestion
                 const corrected = vRes.data.suggestions[0]
-                setContainers(prev => prev.map(c =>
-                  c.containerNumber === num ? { ...c, containerNumber: corrected } : c
-                ))
+                setContainers(prev => {
+                  const alreadyExists = prev.some(c => c.containerNumber === corrected && c.containerNumber !== num)
+                  if (alreadyExists) {
+                    return prev.filter(c => c.containerNumber !== num)
+                  }
+                  return prev.map(c =>
+                    c.containerNumber === num ? { ...c, containerNumber: corrected } : c
+                  )
+                })
               } else {
                 // No suggestion — mark badge as invalid (find by number, not index)
                 setContainers(prev => {
@@ -376,6 +381,12 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
    * validation so the error message + suggestion chips clear on success.
    */
   const applyContainerSuggestion = useCallback((idx: number, suggestion: string) => {
+    const alreadyExists = containers.some((c, i) => i !== idx && c.containerNumber === suggestion)
+    if (alreadyExists) {
+      removeContainer(idx)
+      return
+    }
+
     setContainers(prev => prev.map((c, i) =>
       i === idx ? { ...c, containerNumber: suggestion } : c,
     ))
@@ -389,7 +400,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     apiClient.validateContainer(suggestion).then(res => {
       applyValidationResult(idx, res)
     }).catch(() => {})
-  }, [applyValidationResult])
+  }, [containers, removeContainer, applyValidationResult])
 
   // Shared cont type / work type — updates ALL containers at once
   const updateAllContType = useCallback((ct: ContType | null) => {
