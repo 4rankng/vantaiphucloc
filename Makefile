@@ -165,7 +165,7 @@ test-backend:
 	@echo "── Backend: ruff format check ───────────"
 	cd backend && ruff format --check .
 	@echo "── Backend: pytest ──────────────────────"
-	cd backend && PYTHONPATH=. python -m pytest -q
+	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -q
 
 ## test-frontend: Run eslint, tsc build, and unit tests
 test-frontend:
