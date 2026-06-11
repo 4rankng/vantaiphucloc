@@ -140,6 +140,9 @@ importers:
       react-router-dom:
         specifier: ^7.14.1
         version: 7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      styled-components:
+        specifier: ^6.4.2
+        version: 6.4.2(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       tailwind-merge:
         specifier: ^3.5.0
         version: 3.6.0
