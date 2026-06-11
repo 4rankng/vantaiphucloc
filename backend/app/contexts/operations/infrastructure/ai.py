@@ -11,7 +11,7 @@ from pathlib import Path
 
 import httpx
 from dotenv import dotenv_values
-from PIL import Image
+from PIL import Image, ImageOps
 
 from app.config import settings
 
@@ -22,8 +22,8 @@ _PROJECT_ENV = dotenv_values(Path(__file__).resolve().parents[4] / ".env")
 GEMINI_API_KEY = _PROJECT_ENV.get("GEMINI_API_KEY") or settings.GEMINI_API_KEY
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta"
 
-# Hard-coded fallback chain — fastest/cheapest first, then more capable
-_GEMINI_MODELS = ["gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-flash-latest"]
+# Hard-coded fallback chain — using capable multimodal models to avoid 2-pass fallback
+_GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-pro"]
 
 # Shared HTTP client (lazy singleton)
 _http_client: httpx.AsyncClient | None = None
@@ -38,12 +38,11 @@ async def _get_http_client() -> httpx.AsyncClient:
 
 
 def preprocess_image(image_bytes: bytes) -> tuple[bytes, str]:
-    """Lightweight preprocessing — downsize only, preserve natural pixels.
+    """Lightweight preprocessing — downsize and enhance contrast.
 
-    Modern VLMs (Vision Transformers) are trained on unmanipulated photos.
-    Aggressive sharpening/contrast blows out metallic surfaces and degrades
-    semantic context.  We keep only the resolution gate to stay within API
-    payload limits.
+    Modern VLMs perform better when text stands out from the background.
+    We apply auto-contrast to help with faded paint, shadows, or night photos,
+    and downscale to stay within API payload limits.
 
     Returns (processed_bytes, mime_type).
     """
@@ -51,6 +50,11 @@ def preprocess_image(image_bytes: bytes) -> tuple[bytes, str]:
 
     if img.mode not in ("RGB", "L"):
         img = img.convert("RGB")
+
+    try:
+        img = ImageOps.autocontrast(img, cutoff=1)
+    except Exception as e:
+        _logger.warning("[OCR] auto-contrast failed, using original: %s", e)
 
     # Downsize large images to reduce payload without losing OCR accuracy
     MAX_DIMENSION = 2048
