@@ -210,7 +210,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
             {/* ③ Input row — textbox + plus + scan */}
             <div className="flex items-center gap-2">
               {/* Textbox */}
-              <div className="relative min-w-0 flex-1">
+              <div className="relative min-w-0 basis-1/2 flex-1">
                 <input
                   value={isEdit ? (containers[0]?.containerNumber ?? '') : stagingNumber}
                   onChange={e => {
@@ -261,7 +261,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                 <button
                   onClick={commitStagingNumber}
                   type="button"
-                  className="flex-1 h-12 flex items-center justify-center rounded-xl touch-manipulation transition-all active:scale-90 shrink-0"
+                  className="flex-1 basis-1/4 h-12 flex items-center justify-center rounded-xl touch-manipulation transition-all active:scale-90"
                   style={{
                     background: 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)',
                     border: '1.5px solid color-mix(in srgb, var(--theme-brand-primary) 30%, transparent)',
@@ -279,7 +279,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                 disabled={!!scanningContainer}
                 aria-label="Quét số container bằng camera"
                 type="button"
-                className="flex-1 h-12 flex items-center justify-center rounded-xl text-sm font-bold touch-manipulation transition-all active:scale-[0.96] shrink-0 disabled:opacity-50"
+                className="flex-1 basis-1/4 h-12 flex items-center justify-center rounded-xl text-sm font-bold touch-manipulation transition-all active:scale-[0.96] disabled:opacity-50"
                 style={{
                   background: 'var(--theme-brand-primary)',
                   color: 'var(--theme-text-on-brand, #fff)',
