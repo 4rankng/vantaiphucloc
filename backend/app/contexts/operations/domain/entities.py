@@ -10,7 +10,7 @@ Two aggregate roots:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from app.utils.dates import utcnow
 
 from app.contexts.operations.domain.value_objects import (

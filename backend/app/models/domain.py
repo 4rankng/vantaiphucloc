@@ -7,7 +7,6 @@ All timestamps use DateTime(timezone=True) so PostgreSQL stores them
 as TIMESTAMP WITH TIME ZONE.
 """
 
-from datetime import datetime, timezone
 from app.utils.dates import utcnow
 
 from sqlalchemy import (

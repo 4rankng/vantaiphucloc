@@ -7,7 +7,7 @@ The interface layer wires concrete repos via FastAPI `Depends`.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date
 from app.utils.dates import utcnow
 
 from sqlalchemy.ext.asyncio import AsyncSession  # transaction control only

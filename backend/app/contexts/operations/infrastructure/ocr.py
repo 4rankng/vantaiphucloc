@@ -13,7 +13,6 @@ Accuracy techniques:
 - ISO 6346 check-digit auto-correction
 """
 
-import io
 import json
 import logging
 import re

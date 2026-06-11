@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from app.utils.dates import utcnow
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String

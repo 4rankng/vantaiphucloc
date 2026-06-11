@@ -135,7 +135,7 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
       sortKey: 'client_code',
       render: (t) => (
         <span className="text-[13px] font-semibold whitespace-nowrap" style={{ color: 'var(--ink)' }}>
-          {t.client?.code || '—'}
+          {t.client?.code || t.client?.name || '—'}
         </span>
       ),
     },

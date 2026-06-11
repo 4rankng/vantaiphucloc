@@ -7,7 +7,7 @@ on the aggregates; mappers translate to/from ORM rows.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from app.utils.dates import utcnow
 
 from app.contexts.customer_pricing.domain.value_objects import (

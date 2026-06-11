@@ -9,7 +9,6 @@ identity package.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from app.utils.dates import utcnow
 
 from sqlalchemy import (

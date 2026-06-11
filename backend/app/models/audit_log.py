@@ -1,6 +1,5 @@
 """AuditLog model — auto-records all data changes."""
 
-from datetime import datetime, timezone
 from app.utils.dates import utcnow
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text

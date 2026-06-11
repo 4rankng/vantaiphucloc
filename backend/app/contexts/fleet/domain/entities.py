@@ -8,7 +8,7 @@ cases can talk in driver-language without leaking User onto callers.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from app.utils.dates import utcnow
 
 

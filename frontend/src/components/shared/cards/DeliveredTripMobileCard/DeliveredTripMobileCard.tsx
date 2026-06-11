@@ -134,9 +134,9 @@ export const DeliveredTripMobileCard = memo(function DeliveredTripMobileCard({
 
       {/* ── Row 3: Client · Date · Driver ── */}
       <div className="flex items-center gap-1.5 flex-wrap text-[12px]" style={{ color: 'var(--ink-3)' }}>
-        {trip.client?.code && (
+        {(trip.client?.code || trip.client?.name) && (
           <span className="font-semibold" style={{ color: 'var(--ink-2)' }}>
-            {trip.client.code}
+            {trip.client.code || trip.client.name}
           </span>
         )}
         {trip.tripDate && (

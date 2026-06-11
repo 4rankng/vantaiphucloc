@@ -7,7 +7,7 @@ their invariants in their own methods, not in services.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from app.utils.dates import utcnow
 
 from app.contexts.identity.domain.exceptions import (

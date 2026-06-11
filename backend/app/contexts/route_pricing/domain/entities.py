@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from app.utils.dates import utcnow
 
 from app.contexts.route_pricing.domain.exceptions import NoPriceSet

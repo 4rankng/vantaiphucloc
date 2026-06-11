@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date
 from app.utils.dates import utcnow
 
 from sqlalchemy.ext.asyncio import AsyncSession

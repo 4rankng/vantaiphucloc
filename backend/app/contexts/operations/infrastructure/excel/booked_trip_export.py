@@ -12,7 +12,6 @@ from app.models.domain import (
     Location,
 )
 from app.utils.excel_utils import (
-    add_template_version,
     apply_header_style,
     auto_fit_columns,
     workbook_to_bytes,
