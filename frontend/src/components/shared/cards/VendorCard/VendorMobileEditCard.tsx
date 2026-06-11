@@ -1,7 +1,7 @@
 import { useState, memo } from 'react'
 import { Button } from '@/components/ui'
 import type { VendorFormData } from './types'
-import { validateTaxCode } from './types'
+import { validateTaxCode } from '@/lib/validation'
 
 interface VendorMobileEditCardProps {
   initial: VendorFormData
@@ -34,7 +34,7 @@ export const VendorMobileEditCard = memo(function VendorMobileEditCard({
       setErrors(errs)
       return
     }
-    onSave({ name, type, phone, taxCode, address, contactPerson })
+    onSave({ name: name.trim(), type, phone, taxCode, address, contactPerson })
   }
 
   return (

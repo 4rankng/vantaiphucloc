@@ -170,7 +170,7 @@ def _score_pair(
 
     vessel_missing = not (to.vessel or wo.vessel)
     vehicle_missing = not (to.vehicle_plate or wo.vehicle_plate)
-    work_type_missing = not (_normalize_work_type(to.work_type) or _normalize_work_type(wo.work_type))
+    work_type_missing = not (normalize_operation_type(to.work_type) or normalize_operation_type(wo.work_type))
 
     w = _effective_weights(
         vessel_missing=vessel_missing,
@@ -224,8 +224,8 @@ def _score_pair(
 
     # 5. Container type (work_type) — normalized comparison with alias resolution
     if not work_type_missing:
-        to_wt = _normalize_work_type(to.work_type)
-        wo_wt = _normalize_work_type(wo.work_type)
+        to_wt = normalize_operation_type(to.work_type)
+        wo_wt = normalize_operation_type(wo.work_type)
         if to_wt and wo_wt:
             if to_wt == wo_wt:
                 matched_fields.append("work_type")

@@ -2,6 +2,8 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { Plus, Building2, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { DangerConfirmDialog } from '@/components/shared/overlays/DangerConfirmDialog/DangerConfirmDialog'
+import { validateTaxCode } from '@/lib/validation'
+import type { VendorFormData, VendorFocusableField } from '@/components/shared/cards/VendorCard/types'
 import { CreateVendorDialog } from '@/components/shared/overlays/CreateVendorDialog/CreateVendorDialog'
 import { Panel } from '@/components/shared/overlays/Panel'
 import { EmptyState } from '@/components/shared/feedback/EmptyState'
@@ -23,13 +25,6 @@ import { TableSkeleton } from '@/components/shared/data-display/TableSkeleton/Ta
 import { useInfiniteScroll, LoadMoreSentinel, SearchInput, FieldActions } from '@/components/shared/data-display/ListUtils'
 
 const BATCH = 15
-const VN_TAX_RE = /^\d{10}(\d{3})?$/
-
-type VendorFormData = {
-  name: string; type: 'company' | 'individual'
-  phone: string; taxCode: string; address: string; contactPerson: string
-}
-type VendorFocusableField = 'name' | 'type' | 'phone' | 'address' | 'contactPerson' | 'taxCode' | null
 
 
 export function VendorManagementDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -222,7 +217,8 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
     validate: (f) => {
       const errs: Record<string, string> = {}
       if (!f.name.trim()) errs.name = 'Bắt buộc'
-      if (f.taxCode && !VN_TAX_RE.test(f.taxCode)) errs.taxCode = 'MST không hợp lệ'
+      const taxErr = validateTaxCode(f.taxCode)
+      if (taxErr) errs.taxCode = taxErr
       return errs
     },
     onSave: (f) => onSave({ ...f, name: f.name.trim() }),
@@ -289,7 +285,6 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       {/* SĐT */}
       {activeField === 'phone' ? (
         <td style={tdActive}>
-          { }
           <input ref={phoneRef} className="nepo-input text-[12px]" style={{ minWidth: 90, width: '100%' }}
             type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="SĐT"
           />
@@ -304,7 +299,6 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       {/* Địa chỉ */}
       {activeField === 'address' ? (
         <td style={tdActive}>
-          { }
           <input ref={addressRef} className="nepo-input text-[12px]" style={{ minWidth: 100, width: '100%' }}
             value={form.address} onChange={e => set('address', e.target.value)} placeholder="Địa chỉ"
           />
@@ -319,7 +313,6 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       {/* Liên hệ */}
       {activeField === 'contactPerson' ? (
         <td style={tdActive}>
-          { }
           <input ref={contactPersonRef} className="nepo-input text-[12px]" style={{ minWidth: 80, width: '100%' }}
             value={form.contactPerson} onChange={e => set('contactPerson', e.target.value)} placeholder="Người liên hệ"
           />
@@ -334,7 +327,6 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
       {/* MST */}
       {activeField === 'taxCode' ? (
         <td style={tdActive}>
-          { }
           <input ref={taxCodeRef} className="nepo-input text-[12px]"
             style={{ width: '100%', borderColor: errors.taxCode ? 'var(--status-error, #e53)' : undefined }}
             value={form.taxCode} onChange={e => set('taxCode', e.target.value)} placeholder="MST"

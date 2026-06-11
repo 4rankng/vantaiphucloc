@@ -164,7 +164,7 @@ export function usePricingManager(config: PricingManagerConfig): PricingManagerR
     const payload = formToPayload(form)
 
     for (const field of requiredPayloadFields) {
-      if (!payload[field]) {
+      if (payload[field] == null || payload[field] === '') {
         toast.error('Vui lòng điền đầy đủ thông tin')
         return
       }

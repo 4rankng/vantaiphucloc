@@ -34,13 +34,15 @@ async def generate_booked_trips_excel(
     """
     import openpyxl
 
+    from datetime import date as date_type
+
     query = select(BookedTrip).order_by(BookedTrip.id.desc())
     if client_id:
         query = query.where(BookedTrip.client_id == client_id)
     if date_from:
-        query = query.where(BookedTrip.trip_date >= date_from)
+        query = query.where(BookedTrip.trip_date >= date_type.fromisoformat(date_from))
     if date_to:
-        query = query.where(BookedTrip.trip_date <= date_to)
+        query = query.where(BookedTrip.trip_date <= date_type.fromisoformat(date_to))
 
     result = await db.execute(query)
     booked_trips = result.scalars().all()

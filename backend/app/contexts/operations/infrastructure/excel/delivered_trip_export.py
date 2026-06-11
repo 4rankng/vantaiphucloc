@@ -24,11 +24,13 @@ async def generate_delivered_trips_excel(
     """Export work orders to Excel."""
     import openpyxl
 
+    from datetime import date as date_type
+
     query = select(DeliveredTrip).order_by(DeliveredTrip.id.desc())
     if date_from:
-        query = query.where(DeliveredTrip.created_at >= date_from)
+        query = query.where(DeliveredTrip.trip_date >= date_type.fromisoformat(date_from))
     if date_to:
-        query = query.where(DeliveredTrip.created_at <= date_to)
+        query = query.where(DeliveredTrip.trip_date <= date_type.fromisoformat(date_to))
     if matched is not None:
         if matched:
             query = query.where(DeliveredTrip.booked_trip_id.isnot(None))

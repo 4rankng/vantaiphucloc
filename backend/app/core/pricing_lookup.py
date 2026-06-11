@@ -8,6 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Sequence
 
+from app.utils.dates import utcnow
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -67,7 +69,7 @@ def _normalize_work_type(wt: str | None) -> str:
         return "ĐÓNG KHO"
     if "SA LAN" in folded:
         return "CHẠY SÀ LAN"
-    return wt
+    return folded
 
 
 async def lookup_client_prices(
@@ -223,8 +225,6 @@ async def sync_all_trip_pricing(session: AsyncSession) -> int:
 
     Returns total count of updated trips.
     """
-    from datetime import datetime, timezone
-
     stmt = select(DeliveredTripORM)
     all_trips = (await session.execute(stmt)).scalars().all()
     if not all_trips:
@@ -283,7 +283,7 @@ async def sync_all_trip_pricing(session: AsyncSession) -> int:
                 t.driver_salary = new_sal
                 changed = True
             if changed:
-                t.updated_at = datetime.now(timezone.utc)
+                t.updated_at = utcnow()
                 updated += 1
 
     if unmatched:
@@ -302,7 +302,7 @@ async def sync_all_trip_pricing(session: AsyncSession) -> int:
             new_sal = driver_salaries.get(t.id, 0)
             if new_sal > 0 and t.driver_salary != new_sal:
                 t.driver_salary = new_sal
-                t.updated_at = datetime.now(timezone.utc)
+                t.updated_at = utcnow()
                 updated += 1
 
     if updated > 0:

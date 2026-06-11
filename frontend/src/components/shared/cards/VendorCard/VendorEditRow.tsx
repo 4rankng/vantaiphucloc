@@ -4,7 +4,7 @@ import { useInlineEditForm } from '@/components/shared/forms/useInlineEditForm'
 import { FieldActions } from '@/components/shared/data-display/ListUtils'
 import { tdActive, tdDimmed } from '@/components/shared/forms/editCellStyles'
 import type { VendorFormData, VendorFocusableField } from './types'
-import { validateTaxCode } from './types'
+import { validateTaxCode } from '@/lib/validation'
 
 interface VendorEditRowProps {
   initial: VendorFormData

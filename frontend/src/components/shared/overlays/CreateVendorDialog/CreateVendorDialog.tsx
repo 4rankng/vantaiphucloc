@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button, Input, Label } from '@/components/ui'
-import type { VendorFormData, VendorType } from '@/services/api/vendors.api'
-
-const VN_TAX_RE = /^\d{10}(\d{3})?$/
+import type { VendorFormData } from '@/components/shared/cards/VendorCard/types'
+import { validateTaxCode } from '@/lib/validation'
+import { EMPTY_VENDOR_FORM } from '@/components/shared/cards/VendorCard/types'
 
 interface CreateVendorDialogProps {
   open: boolean
@@ -12,18 +12,9 @@ interface CreateVendorDialogProps {
   onConfirm: (data: VendorFormData) => Promise<void> | void
 }
 
-const EMPTY_FORM: VendorFormData = {
-  name: '',
-  type: 'company',
-  phone: '',
-  taxCode: '',
-  address: '',
-  contactPerson: '',
-}
-
 export function CreateVendorDialog({ open, onClose, onConfirm }: CreateVendorDialogProps) {
   const isMobile = useIsMobile()
-  const [form, setForm] = useState<VendorFormData>(EMPTY_FORM)
+  const [form, setForm] = useState<VendorFormData>(EMPTY_VENDOR_FORM)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
 
@@ -33,7 +24,7 @@ export function CreateVendorDialog({ open, onClose, onConfirm }: CreateVendorDia
   }
 
   const handleClose = () => {
-    setForm(EMPTY_FORM)
+    setForm(EMPTY_VENDOR_FORM)
     setErrors({})
     onClose()
   }
@@ -41,14 +32,15 @@ export function CreateVendorDialog({ open, onClose, onConfirm }: CreateVendorDia
   const handleConfirm = async () => {
     if (!form.name.trim()) return
     const errs: Record<string, string> = {}
-    if (form.taxCode && !VN_TAX_RE.test(form.taxCode)) {
-      errs.taxCode = 'MST phải 10 hoặc 13 chữ số'
+    const taxErr = validateTaxCode(form.taxCode)
+    if (taxErr) {
+      errs.taxCode = taxErr
     }
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
     setSaving(true)
     try {
       await onConfirm({ ...form, name: form.name.trim() })
-      setForm(EMPTY_FORM)
+      setForm(EMPTY_VENDOR_FORM)
       setErrors({})
     } finally {
       setSaving(false)
@@ -85,7 +77,7 @@ export function CreateVendorDialog({ open, onClose, onConfirm }: CreateVendorDia
           <div className="space-y-2">
             <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Loại</Label>
             <div className="flex gap-2">
-              {(['company', 'individual'] as VendorType[]).map(t => (
+              {(['company', 'individual'] as const).map(t => (
                 <button
                   key={t}
                   type="button"

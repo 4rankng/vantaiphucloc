@@ -3,10 +3,9 @@ import { X, AlertCircle, UserPlus, Plus, Loader2 } from 'lucide-react'
 import { InlineSelect } from '@/components/shared/forms/InlineSelect'
 import { Button } from '@/components/ui'
 import { type Client } from '@/data/domain'
+import { validateTaxCode } from '@/lib/validation'
 
 type ClientFormData = Omit<Client, 'id'>
-
-const VN_TAX_RE = /^\d{10}(\d{3})?$/
 
 const EMPTY_CLIENT_FORM: ClientFormData = {
   code: '',
@@ -69,8 +68,9 @@ export function ClientResolutionCard({
   async function handleSaveNewClient() {
     const errs: typeof clientFormErrors = {}
     if (!clientForm.name.trim()) errs.name = 'Vui lòng nhập tên'
-    if (clientForm.taxCode && !VN_TAX_RE.test(clientForm.taxCode)) {
-      errs.taxCode = 'MST phải 10 hoặc 13 chữ số'
+    const taxErr = validateTaxCode(clientForm.taxCode)
+    if (taxErr) {
+      errs.taxCode = taxErr
     }
     if (Object.keys(errs).length > 0) {
       setClientFormErrors(errs)
