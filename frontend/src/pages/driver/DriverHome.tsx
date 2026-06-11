@@ -5,10 +5,10 @@ import { useAuth } from '@/contexts/AuthContext'
 import { DayNavigator } from '@/components/shared/navigation/DayNavigator'
 import { DeliveredTripCard } from '@/components/shared/cards/DeliveredTripCard'
 import { FloatingActionButton } from '@/components/shared/feedback/FloatingActionButton'
-import { useMyEarnings, useDeliveredTripsInfinite, useContTypeStats } from '@/hooks/use-queries'
+import { useMyEarnings, useSalaryConfig, useDeliveredTripsInfinite, useContTypeStats } from '@/hooks/use-queries'
 import { CONT_TYPES } from '@/data/domain'
 import { useDebounce } from '@/hooks/use-debounce'
-import { toISODate } from '@/lib/salaryPeriod'
+import { toISODate, getSalaryPeriodDates } from '@/lib/salaryPeriod'
 
 type FilterTab = 'matched' | 'pending'
 
@@ -103,10 +103,26 @@ function MobileDriverHome() {
     [infiniteData],
   )
 
+  // ── Daily earnings ──
   const { data: myEarnings } = useMyEarnings(startISO, endISO)
 
   const matchedSalary = myEarnings?.totalSalary ?? 0
   const unmatchedSalary = myEarnings?.unmatchedSalary ?? 0
+
+  // ── Monthly earnings ──
+  const { data: salaryConfig } = useSalaryConfig()
+  const monthPeriod = useMemo(() => {
+    const fromDay = salaryConfig?.fromDay ?? 26
+    const toDay = salaryConfig?.toDay ?? 25
+    return getSalaryPeriodDates(selectedDate, { fromDay, toDay })
+  }, [selectedDate, salaryConfig])
+  const monthStartISO = toISODate(monthPeriod.startDate)
+  const monthEndISO = toISODate(monthPeriod.endDate)
+  const { data: monthlyEarnings } = useMyEarnings(monthStartISO, monthEndISO)
+
+  const monthlyMatched = monthlyEarnings?.totalSalary ?? 0
+  const monthlyUnmatched = monthlyEarnings?.unmatchedSalary ?? 0
+  const monthLabel = `T${monthPeriod.endDate.getMonth() + 1} (${monthPeriod.startDate.getDate()}/${monthPeriod.startDate.getMonth() + 1}→${monthPeriod.endDate.getDate()}/${monthPeriod.endDate.getMonth() + 1})`
 
   // ── Infinite scroll observer ──
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -130,23 +146,57 @@ function MobileDriverHome() {
         />
       </div>
 
-      {/* Stat card: matched salary + total earnings */}
+      {/* Monthly earnings card */}
+      <div
+        data-section="monthly-salary"
+        className="overflow-hidden relative rounded-2xl"
+        style={{
+          background: 'linear-gradient(135deg, #005A2D 0%, #00813F 100%)',
+          color: '#fff',
+        }}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-wider px-3 pt-2.5 opacity-70">
+          Lương tháng {monthLabel}
+        </p>
+        <div className="flex">
+          {/* Left: matched monthly */}
+          <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5">
+            <CircleCheck size={20} className="shrink-0 opacity-80" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[9px] font-semibold uppercase tracking-wider opacity-60">
+                Đã ghép
+              </p>
+              <p className="text-lg font-bold tabular-nums leading-tight whitespace-nowrap">
+                {monthlyMatched.toLocaleString('vi-VN')}
+              </p>
+            </div>
+          </div>
+
+          <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.2)' }} />
+
+          {/* Right: unmatched monthly */}
+          <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5">
+            <CircleCheck size={20} className="shrink-0 opacity-80" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[9px] font-semibold uppercase tracking-wider opacity-60">
+                Chưa ghép
+              </p>
+              <p className="text-lg font-bold tabular-nums leading-tight whitespace-nowrap">
+                {monthlyUnmatched.toLocaleString('vi-VN')}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stat card: daily matched + unmatched */}
       <div
         data-section="salary"
         className="flex overflow-hidden relative rounded-2xl stat-card-hover"
         style={{
           background: 'linear-gradient(135deg, color-mix(in srgb, var(--theme-brand-primary) 5%, var(--theme-bg-secondary)) 0%, var(--theme-bg-secondary) 55%)',
           padding: 0,
-          transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           cursor: 'default',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-2px)'
-          e.currentTarget.style.boxShadow = '0 4px 16px -4px rgba(9,9,11,0.08), 0 0 0 1px rgba(9,9,11,0.03)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)'
-          e.currentTarget.style.boxShadow = 'none'
         }}
       >
         {/* Watermark truck silhouette */}
@@ -160,12 +210,13 @@ function MobileDriverHome() {
             width: 90, height: 45,
             opacity: 0.045,
             pointerEvents: 'none',
+            color: 'var(--theme-brand-primary)',
           }}
         >
-          <rect x="0"  y="10" width="72" height="35" rx="3" fill="#059669"/>
-          <path d="M72 14 L92 14 Q96 14 96 18 L96 45 L72 45 Z" fill="#059669"/>
-          <circle cx="18"  cy="48" r="8" fill="#059669"/>
-          <circle cx="82"  cy="48" r="8" fill="#059669"/>
+          <rect x="0"  y="10" width="72" height="35" rx="3" fill="currentColor"/>
+          <path d="M72 14 L92 14 Q96 14 96 18 L96 45 L72 45 Z" fill="currentColor"/>
+          <circle cx="18"  cy="48" r="8" fill="currentColor"/>
+          <circle cx="82"  cy="48" r="8" fill="currentColor"/>
         </svg>
 
         {/* Left: salary from matched trips */}

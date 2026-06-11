@@ -82,7 +82,7 @@ if (!editing) setDraft(value) }, [value, editing])
           <button
             onClick={handleSave}
             disabled={saving}
-            className="touch-target w-10 h-10 flex items-center justify-center rounded-full transition-colors"
+            className="w-11 h-11 flex items-center justify-center rounded-full transition-colors"
             style={{ background: 'var(--theme-brand-primary)', color: 'white' }}
             aria-label="Lưu"
           >
@@ -90,7 +90,7 @@ if (!editing) setDraft(value) }, [value, editing])
           </button>
           <button
             onClick={handleCancel}
-            className="touch-target w-10 h-10 flex items-center justify-center rounded-full transition-colors"
+            className="w-11 h-11 flex items-center justify-center rounded-full transition-colors"
             style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
             aria-label="Huỷ"
           >
@@ -100,7 +100,7 @@ if (!editing) setDraft(value) }, [value, editing])
       ) : (
         <button
           onClick={() => setEditing(true)}
-          className="touch-target w-10 h-10 flex items-center justify-center rounded-full shrink-0 transition-colors hover:bg-[var(--theme-bg-tertiary)]"
+          className="w-11 h-11 flex items-center justify-center rounded-full shrink-0 transition-colors active:bg-[var(--theme-bg-tertiary)]"
           style={{ color: 'var(--theme-text-muted)' }}
           aria-label={`Sửa ${label}`}
         >

@@ -210,7 +210,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
             {/* ③ Input row — textbox + plus + scan */}
             <div className="flex items-center gap-2">
               {/* Textbox */}
-              <div className="relative min-w-0 max-w-[200px]">
+              <div className="relative min-w-0 flex-1">
                 <input
                   value={isEdit ? (containers[0]?.containerNumber ?? '') : stagingNumber}
                   onChange={e => {
