@@ -1,4 +1,5 @@
-from pydantic_settings import BaseSettings
+
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 
 
 class Settings(BaseSettings):
@@ -71,6 +72,22 @@ class Settings(BaseSettings):
             raise ValueError("SECRET_KEY must be changed from default in production")
 
     model_config = {"env_file": ".env", "extra": "ignore"}
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ):
+        """Prefer .env file over shell env vars.
+
+        Shell env vars like GEMINI_API_KEY can go stale (e.g. rotated keys).
+        The .env file is the source of truth for this project.
+        """
+        return init_settings, dotenv_settings, env_settings, file_secret_settings
 
 
 settings = Settings()
