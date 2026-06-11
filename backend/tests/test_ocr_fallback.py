@@ -127,12 +127,12 @@ async def test_extract_container_numbers_oneshot_success():
     with patch(
         "app.contexts.operations.infrastructure.ocr._single_ocr_call"
     ) as mock_single:
-        mock_single.return_value = ["MSKU1234567", "TCLU9876543"]
+        mock_single.return_value = ["MSKU1234565", "TCLU9876543"]
 
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
     assert result["success"] is True
-    assert result["container_numbers"] == ["MSKU1234567", "TCLU9876543"]
+    assert result["container_numbers"] == ["MSKU1234565", "TCLU9876543"]
     assert result["error"] is None
     assert result["provider"] == "gemini"
 
@@ -156,7 +156,7 @@ async def test_extract_container_numbers_oneshot_fail_twopass_success():
         }
         pass2_response = {
             "success": True,
-            "text": '{"container_numbers": ["MSKU1234567"]}',
+            "text": '{"container_numbers": ["MSKU1234565"]}',
             "provider": "gemini",
         }
 
@@ -174,7 +174,7 @@ async def test_extract_container_numbers_oneshot_fail_twopass_success():
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
     assert result["success"] is True
-    assert "MSKU1234567" in result["container_numbers"]
+    assert "MSKU1234565" in result["container_numbers"]
     assert result["error"] is None
 
 
@@ -237,7 +237,7 @@ async def test_extract_container_numbers_max_pass2_regions():
 
         pass2_response = {
             "success": True,
-            "text": '{"container_numbers": ["MSKU1234567"]}',
+            "text": '{"container_numbers": ["MSKU1234565"]}',
             "provider": "gemini",
         }
 
