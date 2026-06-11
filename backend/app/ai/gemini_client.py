@@ -13,8 +13,8 @@ import httpx
 
 _logger = logging.getLogger(__name__)
 
-# Default model
-DEFAULT_MODEL = "gemini-3.5-flash"
+# Fallback chain — tries each model in order until one succeeds
+_GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
 # API endpoint
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -48,31 +48,39 @@ async def call_gemini(
             "Get one from https://aistudio.google.com/apikey"
         )
 
-    model_name = model or DEFAULT_MODEL
-    url = f"{GEMINI_API_BASE}/{model_name}:generateContent?key={api_key}"
+    models_to_try = [model] if model else _FALLBACK_MODELS
+    last_error = None
 
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "maxOutputTokens": max_tokens,
-            "temperature": temperature,
-        },
-    }
-    
-    if response_schema:
-        payload["generationConfig"]["responseMimeType"] = "application/json"
-        payload["generationConfig"]["responseSchema"] = response_schema
+    for model_name in models_to_try:
+        url = f"{GEMINI_API_BASE}/{model_name}:generateContent?key={api_key}"
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.post(url, json=payload)
-        response.raise_for_status()
-        data = response.json()
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "maxOutputTokens": max_tokens,
+                "temperature": temperature,
+            },
+        }
 
-    try:
-        return data["candidates"][0]["content"]["parts"][0]["text"]
-    except (KeyError, IndexError) as e:
-        _logger.error(f"Unexpected Gemini response format: {e}\nData: {data}")
-        raise RuntimeError(f"Unexpected Gemini response format: {e}") from e
+        if response_schema:
+            payload["generationConfig"]["responseMimeType"] = "application/json"
+            payload["generationConfig"]["responseSchema"] = response_schema
+
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.post(url, json=payload)
+                response.raise_for_status()
+                data = response.json()
+
+            return data["candidates"][0]["content"]["parts"][0]["text"]
+        except (KeyError, IndexError) as e:
+            last_error = f"Unexpected response format: {e}"
+            _logger.error("[Gemini] %s: %s", model_name, last_error)
+        except Exception as e:
+            last_error = f"{type(e).__name__}: {e}"
+            _logger.warning("[Gemini] %s failed: %s", model_name, last_error)
+
+    raise RuntimeError(f"All models failed: {last_error}")
 
 
 async def call_gemini_row_cleanup(

@@ -64,12 +64,13 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
     try:
         from app.config import settings
         api_key = getattr(settings, "GEMINI_API_KEY", None)
-        model = getattr(settings, "GEMINI_MODEL", "gemini-3.5-flash")
     except Exception:
         return []
 
     if not api_key:
         return []
+
+    _FALLBACK_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
     # Pick the most content-rich sheet
     sheet = _pick_richest_sheet(sheets)

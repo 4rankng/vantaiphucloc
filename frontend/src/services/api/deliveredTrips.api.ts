@@ -2,6 +2,11 @@ import { api } from './client'
 import { toCamel, toSnake, ok, fail, unwrapPaginated } from './utils'
 import type { DeliveredTrip, ApiResponse, PaginatedResult } from '@/data/domain'
 
+/** Strip "data:image/...;base64," prefix from a data-URI to get raw base64. */
+function stripBase64Prefix(dataUrl: string): string {
+  return dataUrl.replace(/^data:[^;]+;base64,/, '')
+}
+
 export interface SuggestedRoute {
   client: { id: number; code: string | null; name: string }
   pickupLocation: { id: number; name: string }
@@ -112,8 +117,7 @@ export interface OCRContainerResponse {
 }
 
 export async function ocrContainer(imageDataUrl: string): Promise<OCRContainerResponse> {
-  // Strip data URI prefix: "data:image/jpeg;base64," → raw base64
-  const base64 = imageDataUrl.replace(/^data:[^;]+;base64,/, '')
+  const base64 = stripBase64Prefix(imageDataUrl)
   const res = await api.post('/delivered-trips/ocr-container', {
     image_data: base64,
     mime_type: 'image/jpeg',
@@ -146,8 +150,7 @@ export async function updateDeliveredTrip(id: number, data: DeliveredTripUpdateP
 /** Upload a container photo for a delivered trip. */
 export async function uploadDeliveredTripPhoto(id: number, imageDataUrl: string): Promise<ApiResponse<DeliveredTrip>> {
   try {
-    // Strip data URI prefix: "data:image/jpeg;base64," → raw base64
-    const base64 = imageDataUrl.replace(/^data:[^;]+;base64,/, '')
+    const base64 = stripBase64Prefix(imageDataUrl)
     const res = await api.put(`/delivered-trips/${id}/photo`, { image_data: base64 })
     return ok(toCamel<DeliveredTrip>(res.data))
   } catch (err) {

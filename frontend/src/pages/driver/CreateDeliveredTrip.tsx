@@ -49,7 +49,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
     updateContainer, removeContainer, validateContainerOnBlur,
     applyContainerSuggestion,
     updateAllContType, updateAllWorkType, scanNewContainer,
-    addContainerWithNumber,
+    addContainerWithNumber, validateContainerFormat,
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit, setSummaryOpen,
   } = useCreateDeliveredTrip(existingDeliveredTrip)
@@ -66,14 +66,15 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
   const commitStagingNumber = useCallback(() => {
     const num = stagingNumber.trim().toUpperCase().replace(/-/g, '')
     if (!num) return
-    if (num.length !== 11 || !/^[A-Z]{4}\d{7}$/.test(num)) {
-      setStagingError('Sai định dạng. Đúng: 4 chữ cái + 7 số')
+    const err = validateContainerFormat(num)
+    if (err) {
+      setStagingError(err)
       return
     }
     setStagingError(null)
     addContainerWithNumber(num)
     setStagingNumber('')
-  }, [stagingNumber, addContainerWithNumber])
+  }, [stagingNumber, addContainerWithNumber, validateContainerFormat])
 
   // The first container with an in-flight OCR request — feeds the AI scanning
   // overlay so the driver sees their captured photo being "scanned" while the

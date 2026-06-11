@@ -2,26 +2,21 @@
 
 Driver workflow:
 1. Take photo of container
-2. AI attempts single-shot OCR (temperature 0.0 = deterministic, no need for voting)
-3. If fails → two-pass fallback (localize positions, then focused extraction)
+2. AI single-shot OCR (temperature 0.0 = deterministic)
+3. Backend auto-corrects near-miss numbers via ISO 6346 check digit
 4. If all fail → driver enters manually
-5. Backend validates against ISO 6346
 
-Accuracy techniques applied:
+Accuracy techniques:
 - Structured JSON output via Gemini responseSchema
 - Temperature 0.0 for deterministic responses
-- Two-pass fallback (spatial localization → focused extraction)
-- Minimal preprocessing (downscale only, no aggressive enhancement)
+- Image preprocessing (downscale + auto-contrast)
+- ISO 6346 check-digit auto-correction
 """
 
-import asyncio
 import io
 import json
 import logging
 import re
-import time
-
-from PIL import Image
 
 from app.contexts.operations.infrastructure.ai import analyze_image_with_fallback, preprocess_image
 from app.utils.iso6346 import validate_check_digit, suggest_corrections
@@ -30,7 +25,7 @@ from app.utils.iso6346 import validate_check_digit, suggest_corrections
 _logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Multi-container OCR — uses structured JSON + self-consistency voting
+# Multi-container OCR — single deterministic call with ISO 6346 correction
 # ---------------------------------------------------------------------------
 
 MAX_DETECT = 10
@@ -71,16 +66,6 @@ Output: Return ONLY a clean JSON array containing the recognized container numbe
 _CONTAINER_RE = re.compile(r"[A-Z]{4}\d{7}")
 
 
-def _ocr_fail() -> dict:
-    """Standard OCR failure response."""
-    return {
-        "success": False,
-        "container_numbers": [],
-        "error": "Không nhận dạng được số cont",
-        "provider": "gemini",
-    }
-
-
 def _parse_numbers_from_response(text: str) -> list[str]:
     """Extract container numbers from Gemini response (JSON or fallback regex)."""
     # Try structured JSON first
@@ -102,24 +87,19 @@ def _parse_numbers_from_response(text: str) -> list[str]:
 
 
 
-
 async def _single_ocr_call(
     image_bytes: bytes,
     mime_type: str,
-    prompt_override: str | None = None,
-    response_schema_override: dict | None = None,
 ) -> list[str]:
     """Make one OCR call with JSON schema enforcement. Returns list of raw matches."""
-    prompt = prompt_override if prompt_override is not None else MULTI_CONTAINER_PROMPT
-    schema = response_schema_override if response_schema_override is not None else _CONTAINER_SCHEMA
     result = await analyze_image_with_fallback(
-        prompt,
+        MULTI_CONTAINER_PROMPT,
         image_bytes,
         mime_type,
-        response_schema=schema,
+        response_schema=_CONTAINER_SCHEMA,
     )
     if not result["success"]:
-        _logger.warning("[OCR-vote] call failed: %s", result["error"])
+        _logger.warning("[OCR] call failed: %s", result["error"])
         return []
     return _parse_numbers_from_response(result["text"])
 
@@ -137,26 +117,19 @@ def _auto_correct_numbers(numbers: list[str]) -> list[str]:
                 corrected.append(suggestions[0])
             else:
                 corrected.append(n)
-    
+
     # Deduplicate in case multiple misreads corrected to same valid number
-    seen: set[str] = set()
-    dedup: list[str] = []
-    for n in corrected:
-        if n not in seen:
-            seen.add(n)
-            dedup.append(n)
-    return dedup
+    return list(dict.fromkeys(corrected))
 
 
 async def extract_container_numbers(
     image_bytes: bytes,
     mime_type: str = "image/jpeg",
 ) -> dict:
-    """Extract ALL container numbers using single-shot OCR with two-pass fallback.
+    """Extract ALL container numbers using single-shot OCR.
 
-    Single deterministic call (temperature 0.0). If one-shot fails (empty or all
-    invalid), triggers two-pass fallback:
-    Pass 1: localize container positions, Pass 2: focused extraction per region.
+    Single deterministic call (temperature 0.0). Numbers with invalid ISO 6346
+    check digits are auto-corrected when a near-miss valid number exists.
 
     Returns:
         Dict with keys:
@@ -186,7 +159,12 @@ async def extract_container_numbers(
         if merged and not valid:
             _logger.warning("[OCR] one-shot near-miss (format invalid): %s", merged)
         _logger.info("[OCR] single-shot found no valid numbers")
-        return _ocr_fail()
+        return {
+            "success": False,
+            "container_numbers": [],
+            "error": "Không nhận dạng được số cont",
+            "provider": "gemini",
+        }
 
     valid = _auto_correct_numbers(valid)
 

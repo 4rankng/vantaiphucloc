@@ -44,33 +44,9 @@ def normalize_container_number(container_number: str) -> str:
 
 
 def validate_format(container_number: str) -> bool:
-    """Validate that the container number matches the format XXXX-NNNNNN-N.
-
-    Args:
-        container_number: Container number to validate
-
-    Returns:
-        True if format is valid, False otherwise
-    """
+    """Validate that the container number matches the format XXXXNNNNNNN (4 letters + 7 digits)."""
     normalized = normalize_container_number(container_number)
-
-    # Check length (11 characters: 4 letters + 6 digits + 1 check digit)
-    if len(normalized) != 11:
-        return False
-
-    # Check first 4 are letters
-    if not normalized[:4].isalpha():
-        return False
-
-    # Check next 6 are digits
-    if not normalized[4:10].isdigit():
-        return False
-
-    # Check last is digit
-    if not normalized[10].isdigit():
-        return False
-
-    return True
+    return len(normalized) == 11 and normalized[:4].isalpha() and normalized[4:].isdigit()
 
 
 def calculate_check_digit(container_number: str) -> int:
@@ -165,19 +141,6 @@ def validate_container_number(container_number: str) -> tuple[bool, str]:
         return False, "Sai số kiểm tra — định dạng đúng nhưng mã kiểm tra không khớp"
 
     return True, ""
-
-
-def get_container_number_error(container_number: str) -> str | None:
-    """Get validation error message for a container number.
-
-    Args:
-        container_number: Container number to validate
-
-    Returns:
-        Error message if invalid, None if valid
-    """
-    is_valid, error_message = validate_container_number(container_number)
-    return None if is_valid else error_message
 
 
 def suggest_corrections(container_number: str, max_results: int = 3) -> list[str]:

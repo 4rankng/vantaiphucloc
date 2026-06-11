@@ -43,6 +43,18 @@ const EMPTY_CONT: ContainerForm = {
 
 const CONT_TYPE_SET: ReadonlySet<string> = new Set(CONT_TYPES)
 
+/** Backward-compat: if workType historically held a ContType, treat it as contType instead. */
+function migrateWorkType(contType: ContType | null, workType: WorkType | null): [ContType | null, WorkType | null] {
+  if (!contType && workType && CONT_TYPE_SET.has(workType)) return [workType as ContType, null]
+  return [contType, workType]
+}
+
+/** Omit a key from a record without mutating. */
+function omitKey<V>(obj: Record<number, V>, k: number): Record<number, V> {
+  const { [k]: _, ...rest } = obj
+  return rest
+}
+
 /** Client-side ISO 6346 container number validation. Returns error message or null. */
 function validateContainerFormat(num: string): string | null {
   const raw = num.replace(/-/g, '').toUpperCase().trim()
@@ -54,15 +66,7 @@ function validateContainerFormat(num: string): string | null {
 }
 
 function woToContainers(wo: DeliveredTrip): ContainerForm[] {
-  // Edit mode: pre-populate both contType and workType from the saved trip.
-  // Backward-compat: if workType was historically used to hold a ContType, treat
-  // it as the contType instead so users don't see a duplicate selection.
-  let contType: ContType | null = wo.contType ?? null
-  let workType: WorkType | null = wo.workType ?? null
-  if (!contType && workType && CONT_TYPE_SET.has(workType)) {
-    contType = workType as ContType
-    workType = null
-  }
+  const [contType, workType] = migrateWorkType(wo.contType ?? null, wo.workType ?? null)
   return [{
     containerNumber: wo.contNumber ?? '',
     contType,
@@ -174,24 +178,19 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     const invalid = !res.success || !res.data?.valid
     setContainerErrors(prev => {
       if (invalid) return { ...prev, [idx]: res.data?.error ?? 'Số container không hợp lệ' }
-      const next = { ...prev }; delete next[idx]; return next
+      return omitKey(prev, idx)
     })
     setContainerSuggestions(prev => {
       const list = invalid ? (res.data?.suggestions ?? []) : []
       if (list.length === 0) {
         if (!(idx in prev)) return prev
-        const next = { ...prev }; delete next[idx]; return next
+        return omitKey(prev, idx)
       }
       return { ...prev, [idx]: list }
     })
   }, [])
 
   // Scanner handlers
-  const openScanner = useCallback((idx: number) => () => {
-    setActiveContIdx(idx)
-    setScannerOpen(true)
-  }, [])
-
   const handleScanComplete = useCallback((imageSrc: string, meta: PhotoMeta) => {
     // Capture index immediately — activeContIdx may change by the time .then() fires
     const idx = activeContIdx
@@ -311,7 +310,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       // Any edit invalidates the previous suggestions — they were for the old value.
       setContainerSuggestions(prev => {
         if (!(idx in prev)) return prev
-        const next = { ...prev }; delete next[idx]; return next
+        return omitKey(prev, idx)
       })
       // Frontend format check — immediate
       const fmtErr = validateContainerFormat(numStr)
@@ -324,7 +323,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       clearTimeout(validateTimers.current[idx])
       const raw = numStr.trim()
       if (!raw || raw.length !== 11) {
-        setContainerErrors(prev => { const next = { ...prev }; delete next[idx]; return next })
+        setContainerErrors(prev => { return omitKey(prev, idx) })
         return
       }
       validateTimers.current[idx] = setTimeout(() => {
@@ -346,7 +345,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       return
     }
     if (!raw || raw.length !== 11) {
-      setContainerErrors(prev => { const next = { ...prev }; delete next[idx]; return next })
+      setContainerErrors(prev => { return omitKey(prev, idx) })
       clearTimeout(validateTimers.current[idx])
       return
     }
@@ -355,10 +354,6 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       applyValidationResult(idx, res)
     }).catch(() => {})
   }, [containers, applyValidationResult])
-
-  const addContainer = useCallback(() => {
-    setContainers(prev => [...prev, { ...EMPTY_CONT }])
-  }, [])
 
   const removeContainer = useCallback((idx: number) => {
     setContainers(prev => prev.filter((_, i) => i !== idx))
@@ -394,7 +389,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     // them only if (somehow) the suggested value is also invalid.
     setContainerSuggestions(prev => {
       if (!(idx in prev)) return prev
-      const next = { ...prev }; delete next[idx]; return next
+      return omitKey(prev, idx)
     })
     clearTimeout(validateTimers.current[idx])
     apiClient.validateContainer(suggestion).then(res => {
@@ -658,13 +653,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   // doesn't have to repeat that lookup.
   const original = useMemo(() => {
     if (!existingDeliveredTrip) return null
-    // Backward-compat: if workType holds a ContType value, treat it as contType.
-    let contType: ContType | null = existingDeliveredTrip.contType ?? null
-    let workType: WorkType | null = existingDeliveredTrip.workType ?? null
-    if (!contType && workType && CONT_TYPE_SET.has(workType)) {
-      contType = workType as ContType
-      workType = null
-    }
+    const [contType, workType] = migrateWorkType(existingDeliveredTrip.contType ?? null, existingDeliveredTrip.workType ?? null)
     const tripDateRaw = existingDeliveredTrip.tripDate ?? existingDeliveredTrip.createdAt
     return {
       contNumber: existingDeliveredTrip.contNumber ?? '',
@@ -716,11 +705,11 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     setDropoffLocation: (v: string) => { setSelectedTripId(null); setDropoffLocation(v) },
     setTripDate,
     shiftTripDate: (days: number) => setTripDate(prev => shiftISODate(prev, days)),
-    openScanner, handleScanComplete, setScannerOpen,
-    updateContainer, addContainer, removeContainer, validateContainerOnBlur,
+    handleScanComplete, setScannerOpen,
+    updateContainer, removeContainer, validateContainerOnBlur,
     applyContainerSuggestion,
     updateAllContType, updateAllWorkType, scanNewContainer,
-    addContainerWithNumber,
+    addContainerWithNumber, validateContainerFormat,
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit,
     setSummaryOpen,
