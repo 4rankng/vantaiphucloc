@@ -2,15 +2,15 @@
 
 Driver workflow:
 1. Take photo of container
-2. AI attempts OCR with self-consistency voting
-3. If all fail → driver enters manually
-4. Backend validates against ISO 6346
+2. AI attempts single-shot OCR (temperature 0.0 = deterministic, no need for voting)
+3. If fails → two-pass fallback (localize positions, then focused extraction)
+4. If all fail → driver enters manually
+5. Backend validates against ISO 6346
 
 Accuracy techniques applied:
 - Structured JSON output via Gemini responseSchema
 - Temperature 0.0 for deterministic responses
-- Self-consistency voting (2 parallel calls → merge)
-- Spatial scanning prompt to anchor multi-container detection
+- Two-pass fallback (spatial localization → focused extraction)
 - Minimal preprocessing (downscale only, no aggressive enhancement)
 """
 
@@ -24,6 +24,7 @@ import time
 from PIL import Image
 
 from app.contexts.operations.infrastructure.ai import analyze_image_with_fallback, preprocess_image
+from app.utils.iso6346 import validate_check_digit, suggest_corrections
 
 
 _logger = logging.getLogger(__name__)
@@ -33,7 +34,6 @@ _logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 MAX_DETECT = 10
-_VOTING_CALLS = 2  # parallel calls for self-consistency
 
 # JSON schema enforced at the Gemini engine level
 _CONTAINER_SCHEMA = {
@@ -299,16 +299,38 @@ async def _single_ocr_call(
     return _parse_numbers_from_response(result["text"])
 
 
+def _auto_correct_numbers(numbers: list[str]) -> list[str]:
+    """Auto-correct numbers with bad check digits using ISO 6346 suggestions."""
+    corrected: list[str] = []
+    for n in numbers:
+        if validate_check_digit(n):
+            corrected.append(n)
+        else:
+            suggestions = suggest_corrections(n, max_results=1)
+            if suggestions:
+                _logger.info("[OCR] auto-corrected %s to %s", n, suggestions[0])
+                corrected.append(suggestions[0])
+            else:
+                corrected.append(n)
+    
+    # Deduplicate in case multiple misreads corrected to same valid number
+    seen: set[str] = set()
+    dedup: list[str] = []
+    for n in corrected:
+        if n not in seen:
+            seen.add(n)
+            dedup.append(n)
+    return dedup
+
+
 async def extract_container_numbers(
     image_bytes: bytes,
     mime_type: str = "image/jpeg",
 ) -> dict:
-    """Extract ALL container numbers using self-consistency voting with two-pass fallback.
+    """Extract ALL container numbers using single-shot OCR with two-pass fallback.
 
-    Fires _VOTING_CALLS parallel requests, merges via set union to maximize
-    recall — if either call finds a container, it's included in the result.
-
-    If one-shot fails (empty or all invalid), triggers two-pass fallback:
+    Single deterministic call (temperature 0.0). If one-shot fails (empty or all
+    invalid), triggers two-pass fallback:
     Pass 1: localize container positions, Pass 2: focused extraction per region.
 
     Returns:
@@ -323,25 +345,10 @@ async def extract_container_numbers(
     except Exception as e:
         _logger.warning("[OCR] preprocess failed, using raw image: %s", e)
 
-    # Self-consistency: fire multiple calls in parallel, merge results
-    vote_results = await asyncio.gather(
-        *[_single_ocr_call(image_bytes, mime_type) for _ in range(_VOTING_CALLS)]
-    )
+    # Single deterministic call (temperature 0.0 — no benefit from voting)
+    merged = await _single_ocr_call(image_bytes, mime_type)
 
-    # Union of all found numbers (preserving order, deduped)
-    seen: set[str] = set()
-    merged: list[str] = []
-    for nums in vote_results:
-        for n in nums:
-            if n not in seen:
-                seen.add(n)
-                merged.append(n)
-
-    _logger.info(
-        "[OCR-vote] vote results: %s → merged: %s",
-        [nums for nums in vote_results],
-        merged,
-    )
+    _logger.info("[OCR] one-shot result: %s", merged)
 
     # Validate FORMAT only (4 letters + 7 digits).  We intentionally skip the
     # ISO 6346 check-digit verification here because VLMs often misread 1-2
@@ -407,6 +414,7 @@ async def extract_container_numbers(
         _logger.info("[OCR] two-pass elapsed: %.3fs", fallback_elapsed)
 
         if pass2_numbers:
+            pass2_numbers = _auto_correct_numbers(pass2_numbers)
             if len(pass2_numbers) > MAX_DETECT:
                 _logger.warning("[OCR] truncating %d matches to %d", len(pass2_numbers), MAX_DETECT)
                 pass2_numbers = pass2_numbers[:MAX_DETECT]
@@ -423,6 +431,8 @@ async def extract_container_numbers(
 
         _logger.info("[OCR] two-pass found no valid numbers")
         return _ocr_fail()
+
+    valid = _auto_correct_numbers(valid)
 
     if len(valid) > MAX_DETECT:
         _logger.warning("[OCR] truncating %d matches to %d", len(valid), MAX_DETECT)
