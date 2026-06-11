@@ -107,26 +107,21 @@ export async function createDeliveredTrip(
 
 export interface OCRContainerResponse {
   success: boolean
-  containerNumber: string | null
   containerNumbers: string[]
   error: string | null
-  attemptsRemaining: number
 }
 
-export async function ocrContainer(imageDataUrl: string, containerIndex: number): Promise<OCRContainerResponse> {
+export async function ocrContainer(imageDataUrl: string): Promise<OCRContainerResponse> {
   // Strip data URI prefix: "data:image/jpeg;base64," → raw base64
   const base64 = imageDataUrl.replace(/^data:[^;]+;base64,/, '')
   const res = await api.post('/delivered-trips/ocr-container', {
     image_data: base64,
     mime_type: 'image/jpeg',
-    container_index: containerIndex,
   })
   return {
     success: res.data.success,
-    containerNumber: res.data.container_number,
     containerNumbers: res.data.container_numbers ?? [],
     error: res.data.error,
-    attemptsRemaining: res.data.attempts_remaining,
   }
 }
 

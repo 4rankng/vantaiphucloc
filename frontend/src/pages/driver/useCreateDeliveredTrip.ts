@@ -210,7 +210,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       i === idx ? { ...c, ocrLoading: true, ocrError: undefined, photoTaken: true, photoDataUrl: imageSrc } : c
     ))
 
-    apiClient.ocrContainer(imageSrc, idx)
+    apiClient.ocrContainer(imageSrc)
       .then((result) => {
         if (result.success && result.containerNumbers.length > 0) {
           setConsecutiveOCRFailures(0)

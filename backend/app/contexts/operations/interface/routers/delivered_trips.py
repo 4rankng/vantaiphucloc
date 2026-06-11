@@ -169,13 +169,11 @@ async def ocr_container(
 ):
     image_bytes = base64.b64decode(body.image_data)
     result = await extract_container_numbers(image_bytes, body.mime_type)
-    nums = result.get("container_numbers", [])
     return {
         "success": result["success"],
-        "container_number": nums[0] if nums else None,
-        "container_numbers": nums,
+        "container_numbers": result.get("container_numbers", []),
         "error": result.get("error"),
-        "attempts_remaining": 10,
+        "provider": result.get("provider"),
     }
 
 

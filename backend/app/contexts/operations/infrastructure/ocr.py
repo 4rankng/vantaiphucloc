@@ -2,7 +2,7 @@
 
 Driver workflow:
 1. Take photo of container
-2. AI attempts OCR (max MAX_OCR_ATTEMPTS attempts)
+2. AI attempts OCR with self-consistency voting
 3. If all fail → driver enters manually
 4. Backend validates against ISO 6346
 
@@ -15,120 +15,18 @@ Accuracy techniques applied:
 """
 
 import asyncio
+import io
 import json
 import logging
 import re
+import time
+
+from PIL import Image
 
 from app.contexts.operations.infrastructure.ai import analyze_image_with_fallback, preprocess_image
-from app.utils.iso6346 import validate_container_number
 
-MAX_OCR_ATTEMPTS = 10
 
 _logger = logging.getLogger(__name__)
-
-# Prompt for container number extraction
-CONTAINER_PROMPT = """Look at the photo and find the PRIMARY container number painted on the shipping container.
-
-The container number follows ISO 6346 format: 4 uppercase letters followed by 7 digits (e.g., MSKU1234567).
-
-Guidelines:
-- The number is usually the LARGEST text on the container side
-- Ignore smaller text like weight capacity codes, customs marks, or owner logos
-- May be white on colored background, or black on white background
-- Hyphens may appear between groups (e.g., MSKU-123456-7) — ignore them
-- If weathered or partially obscured, extract the visible portion only if highly confident
-
-CRITICAL: Your entire response must be EXACTLY one of these two things and NOTHING else:
-- The 11-character container number in uppercase with no spaces or hyphens (e.g. MSKU1234567)
-- The word NONE if you cannot find a container number
-
-Do NOT include explanations, calculations, reasoning, or any other text. Do NOT compute check digits. Just return the raw number as printed on the container.
-
-Examples:
-MSKU1234567
-TCLU9876543
-NONE"""
-
-
-async def extract_container_number(
-    image_bytes: bytes,
-    mime_type: str = "image/jpeg",
-) -> dict:
-    """Extract container number from image using Gemini AI.
-
-    Args:
-        image_bytes: Raw image data
-        mime_type: MIME type of the image (image/jpeg, image/png, etc.)
-
-    Returns:
-        Dict with keys:
-        - success: bool - True if extraction and validation succeeded
-        - container_number: str | None - Extracted container number
-        - error: str | None - Error message if failed
-        - provider: str | None - Which AI provider succeeded ("gemini")
-    """
-    # Preprocess image for better OCR
-    try:
-        image_bytes, mime_type = preprocess_image(image_bytes)
-    except Exception as e:
-        _logger.warning("[OCR] preprocess failed, using raw image: %s", e)
-
-    # Call Gemini AI
-    result = await analyze_image_with_fallback(CONTAINER_PROMPT, image_bytes, mime_type)
-
-    if not result["success"]:
-        _logger.error("[OCR] AI provider failed: %s", result["error"])
-        return {
-            "success": False,
-            "container_number": None,
-            "error": "Không nhận dạng được số cont",
-            "provider": result.get("provider"),
-        }
-
-    # Parse AI response
-    text = result["text"]
-
-    # Normalize AI output: strip markdown formatting, quotes, whitespace
-    text = re.sub(r"[`\"'\n\r]", "", text).strip()
-
-    # Extract container number pattern (4 letters + 7 digits including check digit)
-    match = re.search(r"[A-Z]{4}\d{7}", text.upper())
-    if match:
-        text = match.group(0)
-    else:
-        text = text.upper()
-
-    # Handle "NONE" response (AI couldn't find a container)
-    if text.upper() == "NONE":
-        _logger.info("[OCR] AI (%s) could not find container number", result["provider"])
-        return {
-            "success": False,
-            "container_number": None,
-            "error": "Không nhận dạng được số cont",
-            "provider": result["provider"],
-        }
-
-    # Validate against ISO 6346
-    is_valid, error_msg = validate_container_number(text)
-
-    if not is_valid:
-        _logger.warning("[OCR] invalid format: raw='%s' reason=%s", text, error_msg)
-        return {
-            "success": False,
-            "container_number": text,
-            "error": "Không nhận dạng được số cont",
-            "provider": result["provider"],
-        }
-
-    _logger.info("[OCR] success: %s (provider: %s, fallback: %s)", text, result["provider"], result["fallback_used"])
-    return {
-        "success": True,
-        "container_number": text,
-        "error": None,
-        "provider": result["provider"],
-        "fallback_used": result["fallback_used"],
-    }
-
 
 # ---------------------------------------------------------------------------
 # Multi-container OCR — uses structured JSON + self-consistency voting
@@ -153,25 +51,91 @@ _CONTAINER_SCHEMA = {
     "required": ["container_numbers"],
 }
 
-MULTI_CONTAINER_PROMPT = """You are inspecting a photo of shipping containers in a port or truck yard.
+MULTI_CONTAINER_PROMPT = """Inspect this photo of shipping containers carefully, scanning LEFT to RIGHT.
 
-Your task: find ALL container numbers painted on the shipping containers visible in this image.
+TASK: Find ALL container numbers painted on the containers.
 
-Container number format (ISO 6346): 4 uppercase letters followed by 7 digits (e.g., MSKU1234567).
+FORMAT: ISO 6346 - exactly 4 uppercase letters followed by 7 digits.
+Example: MSKU1234567
 
-Scanning procedure — follow this order:
-1. Scan the image systematically from LEFT to RIGHT.
-2. Inspect every distinct container hull, side panel, or surface independently.
-3. For EACH container surface found, look for the large painted owner code + serial number.
-4. If multiple separate views, panels, or zones are visible, treat each as independent and extract from ALL zones.
+STRATEGY:
+1. Scan the image systematically from left to right
+2. For each container, find the LARGEST painted text - that IS the container number
+3. Read character-by-character: letter, letter, letter, letter, digit×7
+4. The 7th (last) digit is a check digit - it's part of the number
 
-Rules:
-- Each container number is the LARGEST text on that container's side
-- Ignore weight capacity codes (e.g. MGW, tare), customs marks, or owner logos
-- Numbers may be white on colored background, or black on white background
-- Hyphens may appear between groups (e.g., MSKU-123456-7) — strip them
-- Include a number ONLY if you are highly confident in ALL 11 characters
-- Return an empty array if no containers are found"""
+WHAT TO IGNORE:
+- Weight/capacity codes (like MGW, MAX GROSS, TARE)
+- Size/type codes (like 22G1, 45G1)
+- Customs marks, country codes
+- Company names or logos
+
+WHAT TO INCLUDE:
+- Numbers that are weathered but still readable
+- Numbers with hyphens (remove hyphens)
+- Numbers on different containers stacked/visible
+
+RESPONSE FORMAT - respond with JSON:
+- Found: {"container_numbers": ["MSKU1234567", "TCLU9876543"]}
+- None found: {"container_numbers": []}
+
+NO explanations. NO reasoning. NO other text."""
+
+PASS1_PROMPT = """Look at this photo of shipping containers.
+
+Identify all visible containers and list their approximate positions alongside any visible text.
+Use combinations of vertical (Top, Middle, Bottom) and horizontal (Left, Center, Right) descriptors for the position.
+
+Respond with JSON: {"positions": [{"position": "TOP_LEFT", "text": "TCLU123?"}]}
+
+If you see partial text, include it with ? for unknown characters.
+If no containers are visible, respond: {"positions": []}"""
+
+PASS2_PROMPT = """Look at this photo carefully, specifically focusing on the region described as: {position}.
+
+Find the container number painted in this specific area. It follows the ISO 6346 format:
+4 uppercase letters + 7 digits (e.g., MSKU1234567).
+
+The number is usually the LARGEST text in this section. Read each character carefully, left to right.
+
+Reply with ONLY the container number (11 chars, no spaces, no hyphens). If you cannot definitively read it, reply with: NONE."""
+
+_PASS1_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "positions": {
+            "type": "ARRAY",
+            "description": "List of visible container positions and partial text.",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "position": {"type": "STRING", "description": "Position descriptor like TOP_LEFT, MIDDLE_CENTER, etc."},
+                    "text": {"type": "STRING", "description": "Visible or partial text at this position."}
+                },
+                "required": ["position", "text"]
+            }
+        }
+    },
+    "required": ["positions"],
+}
+
+# Pass-2 uses the same schema as one-shot
+_PASS2_SCHEMA = _CONTAINER_SCHEMA
+
+MAX_PASS2_REGIONS = 4
+
+# Pre-compiled container-number pattern — used across multiple functions
+_CONTAINER_RE = re.compile(r"[A-Z]{4}\d{7}")
+
+
+def _ocr_fail() -> dict:
+    """Standard OCR failure response."""
+    return {
+        "success": False,
+        "container_numbers": [],
+        "error": "Không nhận dạng được số cont",
+        "provider": "gemini",
+    }
 
 
 def _parse_numbers_from_response(text: str) -> list[str]:
@@ -182,7 +146,7 @@ def _parse_numbers_from_response(text: str) -> list[str]:
         if isinstance(data, dict) and "container_numbers" in data:
             nums = data["container_numbers"]
             if isinstance(nums, list):
-                return [str(n).upper().strip() for n in nums if isinstance(n, str) and re.match(r"^[A-Z]{4}\d{7}$", str(n).upper())]
+                return [str(n).upper().strip() for n in nums if isinstance(n, (str, int)) and _CONTAINER_RE.fullmatch(str(n).upper())]
     except (json.JSONDecodeError, TypeError):
         pass
 
@@ -190,19 +154,160 @@ def _parse_numbers_from_response(text: str) -> list[str]:
     cleaned = re.sub(r"[`\"'\n\r]", "", text).strip().upper()
     if cleaned == "NONE":
         return []
-    return list(dict.fromkeys(re.findall(r"[A-Z]{4}\d{7}", cleaned)))
+    return list(dict.fromkeys(_CONTAINER_RE.findall(cleaned)))
+
+
+# ---------------------------------------------------------------------------
+# Position-aware cropping — used by two-pass OCR to focus on specific regions
+# ---------------------------------------------------------------------------
+
+_POSITION_REGIONS: dict[str, tuple[float, float, float, float]] = {
+    "TOP_LEFT": (0.0, 0.5, 0.0, 0.5),
+    "TOP_CENTER": (0.0, 0.5, 0.25, 0.75),
+    "TOP_RIGHT": (0.0, 0.5, 0.5, 1.0),
+    "MIDDLE_LEFT": (0.25, 0.75, 0.0, 0.5),
+    "MIDDLE_CENTER": (0.25, 0.75, 0.25, 0.75),
+    "MIDDLE_RIGHT": (0.25, 0.75, 0.5, 1.0),
+    "BOTTOM_LEFT": (0.5, 1.0, 0.0, 0.5),
+    "BOTTOM_CENTER": (0.5, 1.0, 0.25, 0.75),
+    "BOTTOM_RIGHT": (0.5, 1.0, 0.5, 1.0),
+    "LEFT": (0.0, 1.0, 0.0, 0.5),
+    "CENTER": (0.0, 1.0, 0.25, 0.75),
+    "RIGHT": (0.0, 1.0, 0.5, 1.0),
+}
+
+
+def _parse_pass1_positions(text: str) -> list[tuple[str, str]]:
+    """Extract position-text pairs from pass-1 AI response.
+
+    Tries JSON parse first, then falls back to regex for free-text responses.
+
+    Args:
+        text: Raw AI response text.
+
+    Returns:
+        List of (position, text) tuples. Empty list if no valid entries.
+    """
+    result: list[tuple[str, str]] = []
+    try:
+        data = json.loads(text)
+        if isinstance(data, dict) and "positions" in data:
+            items = data["positions"]
+            if isinstance(items, list):
+                for item in items:
+                    if isinstance(item, dict):
+                        pos = str(item.get("position", "")).strip().upper()
+                        txt = str(item.get("text", "")).strip().upper()
+                        if pos and txt and txt != "NONE":
+                            result.append((pos, txt))
+                return result
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    result = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        match = re.match(r"^([A-Z_]+)\s*,\s*([A-Z0-9?]+)", line.upper())
+        if match:
+            pos = match.group(1)
+            txt = match.group(2)
+            if txt == "NONE":
+                continue
+            if pos and txt:
+                result.append((pos, txt))
+
+    return result
+
+
+def _crop_to_region(
+    image_bytes: bytes,
+    position: str,
+    mime_type: str = "image/jpeg",
+) -> tuple[bytes, str]:
+    """Crop image to the region defined by position.
+
+    Args:
+        image_bytes: Raw image data.
+        position: Position key from _POSITION_REGIONS.
+        mime_type: MIME type of the image.
+
+    Returns:
+        Tuple of (cropped_image_bytes, mime_type).
+        If position is unknown, returns original image_bytes and mime_type.
+    """
+    if position not in _POSITION_REGIONS:
+        return image_bytes, mime_type
+
+    y_start_pct, y_end_pct, x_start_pct, x_end_pct = _POSITION_REGIONS[position]
+
+    img = Image.open(io.BytesIO(image_bytes))
+    width, height = img.size
+
+    left = int(width * x_start_pct)
+    top = int(height * y_start_pct)
+    right = int(width * x_end_pct)
+    bottom = int(height * y_end_pct)
+
+    # Enforce minimum dimensions: expand from center if too small
+    MIN_WIDTH = 200
+    MIN_HEIGHT = 100
+
+    crop_width = right - left
+    crop_height = bottom - top
+
+    if crop_width < MIN_WIDTH:
+        expand = (MIN_WIDTH - crop_width) // 2
+        left = max(0, left - expand)
+        right = min(width, right + expand)
+        if right - left < MIN_WIDTH:
+            if left == 0:
+                right = min(width, left + MIN_WIDTH)
+            else:
+                left = max(0, right - MIN_WIDTH)
+
+    if crop_height < MIN_HEIGHT:
+        expand = (MIN_HEIGHT - crop_height) // 2
+        top = max(0, top - expand)
+        bottom = min(height, bottom + expand)
+        if bottom - top < MIN_HEIGHT:
+            if top == 0:
+                bottom = min(height, top + MIN_HEIGHT)
+            else:
+                top = max(0, bottom - MIN_HEIGHT)
+
+    left = max(0, left)
+    top = max(0, top)
+    right = min(width, right)
+    bottom = min(height, bottom)
+
+    cropped = img.crop((left, top, right, bottom))
+
+    if cropped.width < MIN_WIDTH or cropped.height < MIN_HEIGHT:
+        new_width = max(MIN_WIDTH, cropped.width)
+        new_height = max(MIN_HEIGHT, cropped.height)
+        cropped = cropped.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+    buf = io.BytesIO()
+    cropped.save(buf, format="JPEG", quality=95)
+    return buf.getvalue(), "image/jpeg"
 
 
 async def _single_ocr_call(
     image_bytes: bytes,
     mime_type: str,
+    prompt_override: str | None = None,
+    response_schema_override: dict | None = None,
 ) -> list[str]:
     """Make one OCR call with JSON schema enforcement. Returns list of raw matches."""
+    prompt = prompt_override if prompt_override is not None else MULTI_CONTAINER_PROMPT
+    schema = response_schema_override if response_schema_override is not None else _CONTAINER_SCHEMA
     result = await analyze_image_with_fallback(
-        MULTI_CONTAINER_PROMPT,
+        prompt,
         image_bytes,
         mime_type,
-        response_schema=_CONTAINER_SCHEMA,
+        response_schema=schema,
     )
     if not result["success"]:
         _logger.warning("[OCR-vote] call failed: %s", result["error"])
@@ -214,10 +319,13 @@ async def extract_container_numbers(
     image_bytes: bytes,
     mime_type: str = "image/jpeg",
 ) -> dict:
-    """Extract ALL container numbers using self-consistency voting.
+    """Extract ALL container numbers using self-consistency voting with two-pass fallback.
 
     Fires _VOTING_CALLS parallel requests, merges via set union to maximize
     recall — if either call finds a container, it's included in the result.
+
+    If one-shot fails (empty or all invalid), triggers two-pass fallback:
+    Pass 1: localize container positions, Pass 2: focused extraction per region.
 
     Returns:
         Dict with keys:
@@ -251,33 +359,90 @@ async def extract_container_numbers(
         merged,
     )
 
-    if not merged:
-        return {
-            "success": False,
-            "container_numbers": [],
-            "error": "Không nhận dạng được số cont",
-            "provider": "gemini",
-        }
-
-    # Safety cap
-    if len(merged) > MAX_DETECT:
-        _logger.warning("[OCR] truncating %d matches to %d", len(merged), MAX_DETECT)
-        merged = merged[:MAX_DETECT]
-
     # Validate FORMAT only (4 letters + 7 digits).  We intentionally skip the
     # ISO 6346 check-digit verification here because VLMs often misread 1-2
     # characters (O↔Q, 5↔6, 0↔O).  The driver visually confirms the numbers
     # on-screen, and the frontend's validate-container endpoint can flag
     # check-digit mismatches as a warning.
-    valid = [n for n in merged if re.fullmatch(r"[A-Z]{4}\d{7}", n)]
+    valid = [n for n in merged if _CONTAINER_RE.fullmatch(n)]
 
-    if not valid:
-        return {
-            "success": False,
-            "container_numbers": [],
-            "error": "Không nhận dạng được số cont",
-            "provider": "gemini",
-        }
+    if not merged or not valid:
+        if merged and not valid:
+            _logger.warning("[OCR] one-shot near-miss (format invalid): %s", merged)
+        _logger.info("[OCR] one-shot failed, attempting two-pass")
+        fallback_start = time.perf_counter()
+
+        pass1_raw = await analyze_image_with_fallback(
+            PASS1_PROMPT,
+            image_bytes,
+            mime_type,
+            response_schema=_PASS1_SCHEMA,
+        )
+        if not pass1_raw["success"]:
+            _logger.warning("[OCR] Pass 1 failed: %s", pass1_raw["error"])
+            return _ocr_fail()
+
+        positions = _parse_pass1_positions(pass1_raw["text"])
+        _logger.info("[OCR] Pass 1 found %d positions", len(positions))
+
+        if not positions:
+            return _ocr_fail()
+
+        # Filter to positions that map to known crop regions
+        valid_positions = [(p, t) for p, t in positions[:MAX_PASS2_REGIONS] if p in _POSITION_REGIONS]
+        if not valid_positions:
+            _logger.warning("[OCR] Pass 1 returned no mappable positions: %s",
+                            [p for p, _ in positions[:MAX_PASS2_REGIONS]])
+            return _ocr_fail()
+
+        # Run pass-2 region extractions in parallel
+        async def _pass2_region(pos: str) -> list[str]:
+            cropped_bytes, cropped_mime = _crop_to_region(image_bytes, pos, mime_type)
+            return await _single_ocr_call(
+                cropped_bytes,
+                cropped_mime,
+                prompt_override=PASS2_PROMPT.format(position=pos),
+                response_schema_override=_PASS2_SCHEMA,
+            )
+
+        pass2_results = await asyncio.gather(
+            *[_pass2_region(p) for p, _ in valid_positions]
+        )
+
+        # Deduplicate across all regions
+        pass2_numbers: list[str] = []
+        pass2_seen: set[str] = set()
+        for (position, _partial), region_nums in zip(valid_positions, pass2_results):
+            _logger.info("[OCR] Pass 2 position %s: found %d numbers", position, len(region_nums))
+            for n in region_nums:
+                if n not in pass2_seen:
+                    pass2_seen.add(n)
+                    pass2_numbers.append(n)
+
+        fallback_elapsed = time.perf_counter() - fallback_start
+        _logger.info("[OCR] two-pass elapsed: %.3fs", fallback_elapsed)
+
+        if pass2_numbers:
+            if len(pass2_numbers) > MAX_DETECT:
+                _logger.warning("[OCR] truncating %d matches to %d", len(pass2_numbers), MAX_DETECT)
+                pass2_numbers = pass2_numbers[:MAX_DETECT]
+            _logger.info(
+                "[OCR] two-pass success: %d numbers (%s)",
+                len(pass2_numbers), ", ".join(pass2_numbers),
+            )
+            return {
+                "success": True,
+                "container_numbers": pass2_numbers,
+                "error": None,
+                "provider": "gemini",
+            }
+
+        _logger.info("[OCR] two-pass found no valid numbers")
+        return _ocr_fail()
+
+    if len(valid) > MAX_DETECT:
+        _logger.warning("[OCR] truncating %d matches to %d", len(valid), MAX_DETECT)
+        valid = valid[:MAX_DETECT]
 
     _logger.info(
         "[OCR] multi-cont success: %d numbers (%s)",
