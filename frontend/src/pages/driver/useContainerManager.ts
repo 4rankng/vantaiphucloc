@@ -37,7 +37,7 @@ const EMPTY_CONT: ContainerForm = {
 const CONT_TYPE_SET: ReadonlySet<string> = new Set(CONT_TYPES)
 
 /** Backward-compat: if workType historically held a ContType, treat it as contType instead. */
-function migrateWorkType(contType: ContType | null, workType: WorkType | null): [ContType | null, WorkType | null] {
+export function migrateWorkType(contType: ContType | null, workType: WorkType | null): [ContType | null, WorkType | null] {
   if (!contType && workType && CONT_TYPE_SET.has(workType)) return [workType as ContType, null]
   return [contType, workType]
 }
