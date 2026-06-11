@@ -51,35 +51,19 @@ _CONTAINER_SCHEMA = {
     "required": ["container_numbers"],
 }
 
-MULTI_CONTAINER_PROMPT = """Inspect this photo of shipping containers carefully, scanning LEFT to RIGHT.
+MULTI_CONTAINER_PROMPT = """Role: You are an expert logistics OCR assistant specializing in shipping containers. Examine the provided image and extract all standard ISO shipping container numbers.
 
-TASK: Find ALL container numbers painted on the containers.
+Extraction Rules:
 
-FORMAT: ISO 6346 - exactly 4 uppercase letters followed by 7 digits.
-Example: MSKU1234567
+Format: A valid container number ALWAYS consists of exactly 4 uppercase letters followed by exactly 7 digits (e.g., MSKU1234567 or ALLU5216535).
 
-STRATEGY:
-1. Scan the image systematically from left to right
-2. For each container, find the LARGEST painted text - that IS the container number
-3. Read character-by-character: letter, letter, letter, letter, digit×7
-4. The 7th (last) digit is a check digit - it's part of the number
+Layout: The letters and digits may be separated by spaces, dashes, or printed across multiple lines. Concatenate them into a single, continuous 11-character alphanumeric string without spaces.
 
-WHAT TO IGNORE:
-- Weight/capacity codes (like MGW, MAX GROSS, TARE)
-- Size/type codes (like 22G1, 45G1)
-- Customs marks, country codes
-- Company names or logos
+Exclusions: Strictly ignore ISO size/type codes (e.g., 22G1, 45G1, 42G1), company names, and weight/capacity specifications (e.g., MAX GW, TARE, NET, CU CAP, KG, LB).
 
-WHAT TO INCLUDE:
-- Numbers that are weathered but still readable
-- Numbers with hyphens (remove hyphens)
-- Numbers on different containers stacked/visible
+Common Errors: Pay close attention to characters that look similar (e.g., distinguish the letter O from the number 0, the letter Q from O, and the letter S from the number 5). Remember: the first 4 characters are always letters, and the last 7 are always numbers.
 
-RESPONSE FORMAT - respond with JSON:
-- Found: {"container_numbers": ["MSKU1234567", "TCLU9876543"]}
-- None found: {"container_numbers": []}
-
-NO explanations. NO reasoning. NO other text."""
+Output: Return ONLY a clean JSON array containing the recognized container numbers. Do not include any conversational text. Example: {"container_numbers": ["ALLU5216535", "LSQU1077376"]}"""
 
 PASS1_PROMPT = """Look at this photo of shipping containers.
 

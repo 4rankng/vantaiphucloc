@@ -55,7 +55,7 @@ def preprocess_image(image_bytes: bytes) -> tuple[bytes, str]:
     # Downsize large images to reduce payload without losing OCR accuracy
     MAX_DIMENSION = 2048
     if max(img.size) > MAX_DIMENSION:
-        img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.LANCZOS)
+        img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
 
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=95)
