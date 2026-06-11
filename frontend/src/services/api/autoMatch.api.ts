@@ -78,6 +78,7 @@ export async function confirmAutoMatch(
     bookedTripId: number
     syncSource?: string | null
     fieldChoices?: Record<string, 'delivered' | 'booked'> | null
+    score?: number | null
   }>
 ) {
   try {
@@ -87,6 +88,7 @@ export async function confirmAutoMatch(
         booked_trip_id: p.bookedTripId,
         sync_source: p.syncSource || null,
         field_choices: p.fieldChoices || null,
+        score: p.score ?? null,
       })),
     })
     return ok<ConfirmMatchResponse>(toCamel(res.data))

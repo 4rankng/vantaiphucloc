@@ -310,8 +310,15 @@ async def auto_match_preview(
     if not delivered_trips:
         return {"candidates": [], "unmatched_count": 0, "scanned_count": 0}
 
-    # Load booked trips in date range
-    to_query = select(BookedTripORM)
+    # Load booked trips in date range — exclude those already matched to a
+    # DeliveredTrip, otherwise the preview shows candidates that confirm_matches
+    # will always reject ("BookedTrip#X already claimed").
+    matched_bt_subq = (
+        select(DeliveredTripORM.booked_trip_id)
+        .where(DeliveredTripORM.booked_trip_id.isnot(None))
+        .distinct()
+    )
+    to_query = select(BookedTripORM).where(BookedTripORM.id.notin_(matched_bt_subq))
     if date_from:
         to_query = to_query.where(BookedTripORM.trip_date >= date_from - timedelta(days=30))
     if date_to:

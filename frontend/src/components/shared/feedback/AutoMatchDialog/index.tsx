@@ -303,6 +303,7 @@ export function AutoMatchDialog({
         bookedTripId: c.bookedTripId,
         syncSource: null,
         fieldChoices: choices,
+        score: c.score,
       }
     })
     onConfirm(pairs)

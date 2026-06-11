@@ -34,6 +34,7 @@ export function useConfirmAutoMatch() {
       bookedTripId: number
       syncSource?: string | null
       fieldChoices?: Record<string, 'delivered' | 'booked'> | null
+      score?: number | null
     }>
   >({
     mutationFn: async (pairs) => {
