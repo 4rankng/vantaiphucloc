@@ -44,7 +44,7 @@ export function PreviewTable({
                     : key === 'Số Cont'
                     ? { width: 100 }
                     : key === 'Chủ hàng'
-                    ? { width: 160, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }
+                    ? { width: 120, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }
                     : undefined
                 }
               >
@@ -75,7 +75,7 @@ export function PreviewTable({
                     className={isNumeric ? 'text-right' : ''}
                     style={
                       key === 'Chủ hàng'
-                        ? { maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
+                        ? { maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
                         : undefined
                     }
                   >
