@@ -527,20 +527,27 @@ def _run_pattern_preview(
         extract_settlement_list,
         extract_dual_panel,
         extract_stacking_plan,
+        extract_terminal_log,
     )
-    extractors = {
-        "bay_plan": extract_bay_plan,
-        "loading_list": extract_loading_list,
-        "invoice": extract_invoice,
-        "settlement_list": extract_settlement_list,
-        "dual_panel": extract_dual_panel,
-        "stacking_plan": extract_stacking_plan,
-    }
-    extractor = extractors.get(pattern.pattern_name)
-    if extractor is None:
-        raise ValueError(f"Unknown pattern: {pattern.pattern_name}")
 
-    accepted_rows, rejected_rows = extractor(sheets, filename)
+    # terminal_log takes rows (list[list]) instead of (sheets, filename)
+    if pattern.pattern_name == "terminal_log":
+        sheet = sheets[pattern.sheet_index] if pattern.sheet_index < len(sheets) else sheets[0]
+        accepted_rows, rejected_rows = extract_terminal_log(sheet.rows)
+    else:
+        extractors = {
+            "bay_plan": extract_bay_plan,
+            "loading_list": extract_loading_list,
+            "invoice": extract_invoice,
+            "settlement_list": extract_settlement_list,
+            "dual_panel": extract_dual_panel,
+            "stacking_plan": extract_stacking_plan,
+        }
+        extractor = extractors.get(pattern.pattern_name)
+        if extractor is None:
+            raise ValueError(f"Unknown pattern: {pattern.pattern_name}")
+
+        accepted_rows, rejected_rows = extractor(sheets, filename)
     sheet_name = sheets[pattern.sheet_index].name if pattern.sheet_index < len(sheets) else ""
 
     return _build_preview_from_extracted(

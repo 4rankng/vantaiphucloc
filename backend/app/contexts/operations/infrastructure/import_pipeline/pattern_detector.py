@@ -10,6 +10,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from app.contexts.operations.infrastructure.import_pipeline.canonical import (
+    normalize_for_match,
+)
 from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView
 
 
@@ -36,6 +39,7 @@ def detect_pattern(sheets: list[SheetView], filename: str = "") -> DetectedPatte
             "loading_list": _score_loading_list(sheet),
             "invoice": _score_invoice(sheet),
             "settlement_list": _score_settlement_list(sheet),
+            "terminal_log": _score_terminal_log(sheet),
         }
         for name, score in scores.items():
             if score >= DETECTION_THRESHOLD:
@@ -356,3 +360,61 @@ def _score_settlement_list(sheet: SheetView) -> float:
             break
 
     return min(1.0, score)
+
+
+# ---------------------------------------------------------------------------
+# Terminal Log  (BDST / VIPI — terminal gate operations with 30+ columns)
+# ---------------------------------------------------------------------------
+
+_TERMINAL_LOG_HEADERS = {
+    "socontainer", "socont",        # Số Container
+    "hangkhaithac",                  # Hãng khai thác
+    "loaicongviec",                  # Loại công việc
+    "nhapxuat",                      # Nhập/xuất
+    "phuongthucra",                  # Phương thức ra
+    "loaihang",                      # Loại hàng
+    "hangnoingoai",                  # Hàng nội/ngoại
+}
+
+
+def _score_terminal_log(sheet: SheetView) -> float:
+    """Terminal Log (BDST/VIPI): wide operations log with 20+ columns.
+
+    Key signals: Số Container + Hãng khai thác + Loại công việc headers,
+    many columns (>= 20).
+    """
+    for r in range(min(5, len(sheet.rows))):
+        row = sheet.rows[r]
+        matched = set()
+        non_empty = 0
+        for cell in row:
+            t = _cell_text(cell)
+            if not t:
+                continue
+            non_empty += 1
+            n = normalize_for_match(t)
+            for header in _TERMINAL_LOG_HEADERS:
+                if header in n:
+                    matched.add(header)
+
+        # Must find container header
+        if "socontainer" not in matched and "socont" not in matched:
+            continue
+
+        score = 0.0
+        if "hangkhaithac" in matched:
+            score += 0.3
+        if "loaicongviec" in matched:
+            score += 0.3
+        if "nhapxuat" in matched:
+            score += 0.1
+        if "phuongthucra" in matched:
+            score += 0.1
+
+        # Wide table bonus
+        if non_empty >= 20:
+            score += 0.2
+
+        return min(1.0, score)
+
+    return 0.0
