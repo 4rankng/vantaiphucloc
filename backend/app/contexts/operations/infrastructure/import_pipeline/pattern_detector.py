@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView
 
 
-DETECTION_THRESHOLD = 0.6
+DETECTION_THRESHOLD = 0.5
 
 
 @dataclass

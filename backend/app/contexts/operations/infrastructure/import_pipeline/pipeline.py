@@ -572,7 +572,7 @@ def _build_preview_from_extracted(
                 "pickup_location": row.pickup,
                 "dropoff_location": row.dropoff,
                 "vessel": row.vessel_name,
-                "trip_date": default_trip_date.isoformat(),
+                "trip_date": (row.trip_date or default_trip_date).isoformat(),
                 "container_type_iso": "",
                 "gross_weight_kg": None,
                 "seal_no": "",

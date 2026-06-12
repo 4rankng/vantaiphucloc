@@ -124,8 +124,18 @@ def _xls_cell_value(cell: Any, wb: Any) -> Any:
         return None
     if cell.ctype == xlrd.XL_CELL_DATE:
         try:
-            tup = xlrd.xldate_as_tuple(cell.value, wb.datemode)
-            return datetime(*tup) if tup[0] else None
+            # Normalize 1904-system (datemode=1) to 1900-system (datemode=0)
+            # by adding the 1462-day offset between the two epochs.
+            raw = cell.value
+            datemode = wb.datemode
+            if datemode == 1:
+                raw += 1462
+                datemode = 0
+            # Use xldate_as_datetime which handles the ambiguous
+            # Excel 1900 leap-year bug range (serials 1-60) that
+            # xldate_as_tuple refuses with XLDateAmbiguous.
+            dt = xlrd.xldate_as_datetime(raw, datemode)
+            return dt if dt.year else None
         except Exception:
             return cell.value
     if cell.ctype == xlrd.XL_CELL_BOOLEAN:

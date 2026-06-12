@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass
+from datetime import date
 
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
     build_cont_type,
@@ -38,6 +39,7 @@ class ExtractedRow:
     vehicle_plate: str = ""
     freight_charge: float | None = None
     freight_kind_unknown: bool = False  # True if container E/F kind was not explicitly found
+    trip_date: date | None = None      # Parsed from NGÀY ĐI column (settlement list)
 
 
 # ---------------------------------------------------------------------------
@@ -789,14 +791,14 @@ def extract_settlement_list(sheets: list[SheetView], filename: str = "") -> tupl
         # the original value exactly as in the Excel (no uppercasing, no
         # diacritic stripping).  Normalization is only for DB matching,
         # done during the commit step.
-        work_type_val = "CHUYỂN BÃI"
+        op_val = ""
         if col_map.get("operation") is not None and col_map["operation"] < len(row):
             op_val = _cell_text(row[col_map["operation"]]).strip()
-            if op_val:
-                work_type_val = op_val
+        work_type_val = op_val or "CHUYỂN BÃI"
 
+        trip_date: date | None = None
         if col_map.get("date") is not None and col_map["date"] < len(row):
-            parse_date(row[col_map["date"]])
+            trip_date = parse_date(row[col_map["date"]])
 
         pickup = ""
         if col_map.get("pickup") is not None and col_map["pickup"] < len(row):
@@ -847,6 +849,7 @@ def extract_settlement_list(sheets: list[SheetView], filename: str = "") -> tupl
             consignee=consignee,
             vehicle_plate=plate,
             freight_charge=amount,
+            trip_date=trip_date,
         ))
 
     return accepted, rejected
