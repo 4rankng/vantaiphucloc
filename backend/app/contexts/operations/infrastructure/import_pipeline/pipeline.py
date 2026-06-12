@@ -478,9 +478,6 @@ async def _run_generic_preview(
     )
 
     warnings: list[str] = []
-    needs_review = [m for m in mappings if (m.canonical_field is None) or (m.confidence < 0.5 and m.canonical_field != SKIP_FIELD)]
-    if needs_review:
-        warnings.append(f"{len(needs_review)} cột chưa được mapping tự động — vui lòng kiểm tra.")
 
     required_fields = {f.name for f in CANONICAL_FIELDS if f.required}
     mapped_fields = {m.canonical_field for m in mappings if m.canonical_field and m.canonical_field != SKIP_FIELD}
