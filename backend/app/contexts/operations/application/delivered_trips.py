@@ -124,6 +124,10 @@ class CreateDeliveredTrip:
             salaries = await lookup_driver_salaries(self.session, [trip_info])
             estimated_salary = salaries.get(-1, 0)
 
+        from app.core.pricing_lookup import lookup_client_prices
+        client_prices = await lookup_client_prices(self.session, [trip_info])
+        estimated_revenue = client_prices.get(-1, 0)
+
         w = DeliveredTrip(
             id=None,
             client_id=data.client_id,
@@ -137,7 +141,7 @@ class CreateDeliveredTrip:
             cont_number=data.cont_number,
             cont_type=data.cont_type,
             cont_photo_url=data.cont_photo_url,
-            revenue=0,
+            revenue=estimated_revenue,
             driver_salary=estimated_salary,
             trip_date=data.trip_date if data.trip_date else date.today(),
             note=data.note,
@@ -300,6 +304,9 @@ class BatchCreateDeliveredTrips:
         if own_driver_infos:
             salary_map.update(await lookup_driver_salaries(self.session, own_driver_infos))
 
+        from app.core.pricing_lookup import lookup_client_prices
+        revenue_map = await lookup_client_prices(self.session, vendor_infos + own_driver_infos)
+
         async with self.session.begin():
             for i, item in enumerate(items):
                 async with self.session.begin_nested():
@@ -326,7 +333,7 @@ class BatchCreateDeliveredTrips:
                             work_type=work_type,
                             cont_number=item.cont_number,
                             cont_type=item.cont_type,
-                            revenue=0,
+                            revenue=revenue_map.get(i, 0),
                             driver_salary=salary_map.get(i, 0),
                             trip_date=item.trip_date if item.trip_date else date.today(),
                             note=item.note,

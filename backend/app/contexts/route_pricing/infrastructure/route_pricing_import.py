@@ -388,9 +388,9 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
 
     # Auto-sync unmatched trips with updated salary
     if affected_keys:
-        from app.core.pricing_lookup import sync_unmatched_trip_salaries
+        from app.core.pricing_lookup import sync_unmatched_trip_pricing
         for cid, pid, did, wt in affected_keys:
-            await sync_unmatched_trip_salaries(db, cid, pid, did, wt)
+            await sync_unmatched_trip_pricing(db, cid, pid, did, wt)
         await db.commit()
     return {
         "created": created,

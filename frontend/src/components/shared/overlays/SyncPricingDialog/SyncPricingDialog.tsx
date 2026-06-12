@@ -27,7 +27,7 @@ export function SyncPricingDialog({ open, onClose, isPending, onConfirm }: Props
         style={{ borderRadius: 20, boxShadow: '0 24px 60px rgba(0,0,0,0.35)' }}
       >
         <DialogTitle style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', borderWidth: 0 }}>
-          Đồng bộ cước/lương tất cả chuyến
+          Đồng bộ cước & lương
         </DialogTitle>
 
         {/* Header */}
@@ -36,17 +36,17 @@ export function SyncPricingDialog({ open, onClose, isPending, onConfirm }: Props
           style={{ background: 'linear-gradient(135deg, var(--theme-brand-primary, #059669) 0%, var(--theme-brand-primary-dark, #047857) 100%)' }}
         >
           <h3 className="type-h2 text-white">
-            Đồng bộ cước/lương tất cả chuyến
+            Đồng bộ cước & lương
           </h3>
           <p className="text-white/80 type-body-sm mt-1">
-            Cập nhật lại giá cước và lương lái xe cho tất cả các chuyến (đã ghép và chưa ghép) theo bảng giá mới nhất
+            Áp dụng bảng giá hiện tại cho mọi chuyến (cả đã ghép và chưa ghép booking).
           </p>
         </div>
 
         {/* Body */}
         <div className="px-6 py-5 space-y-4" style={{ background: 'var(--theme-bg-secondary)' }}>
           <div className="text-[12.5px] leading-relaxed" style={{ color: 'var(--ink-2)' }}>
-            Hệ thống sẽ quét <strong>tất cả các chuyến</strong> (bao gồm cả chuyến đã ghép và chưa ghép với booking) và ghi đè cước/lương của chúng bằng cấu hình hiện tại trong bảng giá. Thao tác này không thể hoàn tác.
+            <strong>Lưu ý:</strong> Dữ liệu cũ sẽ bị ghi đè và không thể hoàn tác.
           </div>
         </div>
 
