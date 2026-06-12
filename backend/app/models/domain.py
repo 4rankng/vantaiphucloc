@@ -502,7 +502,7 @@ class MappingProfile(Base):
 
     __tablename__ = "mapping_profiles"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     profile_name = Column(String(64), nullable=False, index=True)
     template_filename = Column(String(255), nullable=False)
     header_signature = Column(String(64), nullable=False, index=True)

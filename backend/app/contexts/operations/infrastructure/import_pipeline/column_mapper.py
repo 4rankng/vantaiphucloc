@@ -307,28 +307,14 @@ def _value_pattern_match(c: int, header_text: str, samples: list[str]) -> Column
 # Levenshtein fuzzy header matching
 # ---------------------------------------------------------------------------
 
-def _levenshtein(s1: str, s2: str) -> int:
-    if len(s1) < len(s2):
-        return _levenshtein(s2, s1)
-    if len(s2) == 0:
-        return len(s1)
-    prev_row = range(len(s2) + 1)
-    for i, c1 in enumerate(s1):
-        curr_row = [i + 1]
-        for j, c2 in enumerate(s2):
-            insertions = prev_row[j + 1] + 1
-            deletions = curr_row[j] + 1
-            substitutions = prev_row[j] + (c1 != c2)
-            curr_row.append(min(insertions, deletions, substitutions))
-        prev_row = curr_row
-    return prev_row[-1]
-
 
 def fuzzy_match_header(header: str, max_distance: int = 2) -> tuple[str, float] | None:
     """Match a header to a canonical field using Levenshtein distance.
 
     Returns (canonical_field, confidence) or None.
     """
+    from app.utils.fuzzy import levenshtein_distance
+
     from .canonical import SYNONYMS, normalize_for_match
 
     if not header:
@@ -345,7 +331,7 @@ def fuzzy_match_header(header: str, max_distance: int = 2) -> tuple[str, float] 
             syn_norm = normalize_for_match(word)
             if not syn_norm:
                 continue
-            dist = _levenshtein(normalized, syn_norm)
+            dist = levenshtein_distance(normalized, syn_norm)
             if dist < best_distance and dist <= max_distance:
                 best_distance = dist
                 best_field = field

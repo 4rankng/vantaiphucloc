@@ -142,6 +142,9 @@ def parse_weight_kg(raw: Any) -> float | None:
     return f * 1000 if f < 100 else f
 
 
+_MONEY_CLEAN_RE = re.compile(r"[^\d.,\-]")
+
+
 def parse_money(raw: Any) -> float | None:
     """Parse a currency/charge value handling Vietnamese comma/dot conventions.
 
@@ -151,16 +154,24 @@ def parse_money(raw: Any) -> float | None:
     """
     if raw is None or (isinstance(raw, str) and not raw.strip()):
         return None
-    cleaned = re.sub(r"[^\d.,\-]", "", str(raw))
+    cleaned = _MONEY_CLEAN_RE.sub("", str(raw))
     if not cleaned:
         return None
-    if "," in cleaned and "." in cleaned:
-        if cleaned.rfind(".") > cleaned.rfind(","):
+    # Decimal separator detection — mirrors parse_weight_kg logic
+    last_dot = cleaned.rfind(".")
+    last_comma = cleaned.rfind(",")
+    if last_dot > -1 and last_comma > -1:
+        if last_dot > last_comma:
             cleaned = cleaned.replace(",", "")
         else:
             cleaned = cleaned.replace(".", "").replace(",", ".")
-    elif "," in cleaned:
-        cleaned = cleaned.replace(",", "")
+    elif last_comma > -1:
+        # Only commas — treat as decimal unless exactly 3 trailing digits
+        # (thousands separator, e.g. "1,500,000")
+        if len(cleaned) - last_comma - 1 == 3 and cleaned.count(",") >= 1:
+            cleaned = cleaned.replace(",", "")
+        else:
+            cleaned = cleaned.replace(",", ".")
     try:
         return float(cleaned) if cleaned else None
     except ValueError:

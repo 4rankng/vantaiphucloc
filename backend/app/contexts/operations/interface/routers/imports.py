@@ -584,18 +584,24 @@ class MappingProfileSchema(BaseModel):
     last_used_at: datetime | None
     use_count: int
 
-    model_config = {"from_attributes": True}
-
 
 def _profile_to_dict(profile) -> dict:
     """Convert a MappingProfile ORM object to a dict for MappingProfileSchema."""
+    try:
+        col_mapping = json.loads(profile.column_mapping_json)
+    except (json.JSONDecodeError, TypeError):
+        col_mapping = {}
+    try:
+        pivot_cols = json.loads(profile.pivot_columns_json)
+    except (json.JSONDecodeError, TypeError):
+        pivot_cols = []
     return {
         "id": profile.id,
         "profile_name": profile.profile_name,
         "template_filename": profile.template_filename,
         "header_signature": profile.header_signature,
-        "column_mapping": json.loads(profile.column_mapping_json),
-        "pivot_columns": json.loads(profile.pivot_columns_json),
+        "column_mapping": col_mapping,
+        "pivot_columns": pivot_cols,
         "created_at": profile.created_at,
         "last_used_at": profile.last_used_at,
         "use_count": profile.use_count,
@@ -630,6 +636,16 @@ async def save_profile(
     repo: MappingProfileRepository = Depends(get_mapping_profile_repository),
     user: User = Depends(require_roles("accountant", "superadmin")),
 ):
+    # Upsert: if an active profile with same header_signature exists, update it
+    existing = await repo.get_by_signature(payload.header_signature)
+    if existing is not None:
+        existing.profile_name = payload.profile_name
+        existing.template_filename = payload.template_filename
+        existing.column_mapping_json = json.dumps(payload.column_mapping)
+        existing.pivot_columns_json = json.dumps(payload.pivot_columns)
+        existing.created_by_id = user.id
+        return _profile_to_dict(existing)
+
     profile = await repo.create(
         profile_name=payload.profile_name,
         template_filename=payload.template_filename,

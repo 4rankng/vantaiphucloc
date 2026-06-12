@@ -37,7 +37,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["created_by_id"], ["users.id"], ondelete="SET NULL"),
     )
-    op.create_index(op.f("ix_mapping_profiles_id"), "mapping_profiles", ["id"], unique=False)
     op.create_index(op.f("ix_mapping_profiles_profile_name"), "mapping_profiles", ["profile_name"], unique=False)
     op.create_index(op.f("ix_mapping_profiles_header_signature"), "mapping_profiles", ["header_signature"], unique=False)
 
@@ -45,5 +44,4 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index(op.f("ix_mapping_profiles_header_signature"), table_name="mapping_profiles")
     op.drop_index(op.f("ix_mapping_profiles_profile_name"), table_name="mapping_profiles")
-    op.drop_index(op.f("ix_mapping_profiles_id"), table_name="mapping_profiles")
     op.drop_table("mapping_profiles")

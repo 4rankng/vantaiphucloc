@@ -154,10 +154,13 @@ def parse_route_pricing_bytes(content: bytes) -> dict:
 
 
 def _find_client(raw_lower: str, client_by_code: dict, client_by_name: dict) -> Client | None:
-    """Exact match by code, then exact match by name (case-insensitive)."""
+    """Exact match by code, then exact match by name, then fuzzy match by name."""
     client = client_by_code.get(raw_lower)
     if client is None:
         client = client_by_name.get(raw_lower)
+    if client is None:
+        from app.utils.fuzzy import fuzzy_match_name
+        client = fuzzy_match_name(raw_lower, client_by_name, threshold=0.85)
     return client
 
 

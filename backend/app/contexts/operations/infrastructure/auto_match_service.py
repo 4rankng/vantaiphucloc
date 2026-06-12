@@ -43,7 +43,7 @@ from app.models.domain import (
 )
 from app.models.operation_type import OperationType, OperationTypeAlias
 from app.utils.iso6346 import normalize_container_number
-from app.utils.fuzzy import container_edit_distance
+from app.utils.fuzzy import container_edit_distance, levenshtein_distance
 from app.contexts.operations.infrastructure.operation_type_resolver import normalize_operation_type
 
 
@@ -249,6 +249,12 @@ def _score_pair(
             elif to_vessel in wo_vessel or wo_vessel in to_vessel:
                 matched_fields.append("vessel")
                 score += w.get("vessel", 0) * 0.67
+            else:
+                dist = levenshtein_distance(to_vessel, wo_vessel)
+                max_dist = max(2, int(min(len(to_vessel), len(wo_vessel)) * 0.1))
+                if 0 < dist <= max_dist:
+                    matched_fields.append("vessel_fuzzy")
+                    score += w.get("vessel", 0) * 0.5
 
     # 7. Vehicle plate
     if not vehicle_missing:
@@ -261,6 +267,11 @@ def _score_pair(
             elif re.sub(r'[^0-9]', '', to_plate) == re.sub(r'[^0-9]', '', wo_plate):
                 matched_fields.append("vehicle_plate")
                 score += w.get("vehicle_plate", 0) * 0.6
+            else:
+                dist = levenshtein_distance(to_plate, wo_plate)
+                if dist == 1:
+                    matched_fields.append("vehicle_plate_fuzzy")
+                    score += w.get("vehicle_plate", 0) * 0.7
 
     # 8. Client
     if to.client_id == wo.client_id:

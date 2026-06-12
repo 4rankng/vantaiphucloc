@@ -204,9 +204,13 @@ def parse_vendor_route_pricing_bytes(content: bytes) -> dict:
 
 
 def _find_vendor(raw_lower: str, vendor_by_code: dict, vendor_by_name: dict) -> Vendor | None:
+    """Exact match by code, then exact match by name, then fuzzy match by name."""
     vendor = vendor_by_code.get(raw_lower)
     if vendor is None:
         vendor = vendor_by_name.get(raw_lower)
+    if vendor is None:
+        from app.utils.fuzzy import fuzzy_match_name
+        vendor = fuzzy_match_name(raw_lower, vendor_by_name, threshold=0.85)
     return vendor
 
 

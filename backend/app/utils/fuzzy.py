@@ -1,6 +1,13 @@
 """Fuzzy string matching utilities for reconciliation."""
 
+from __future__ import annotations
+
+from typing import TypeVar
+
 import unicodedata
+from Levenshtein import distance as levenshtein_distance, ratio as _lev_ratio
+
+T = TypeVar("T")
 
 
 def remove_diacritics(text: str) -> str:
@@ -17,23 +24,39 @@ def remove_diacritics(text: str) -> str:
     return without_diacritics.lower().strip()
 
 
-def levenshtein_distance(s1: str, s2: str) -> int:
-    """Compute Levenshtein edit distance between two strings."""
-    if len(s1) < len(s2):
-        return levenshtein_distance(s2, s1)
-    if len(s2) == 0:
-        return len(s1)
+def fuzzy_ratio(a: str, b: str) -> float:
+    """Return similarity ratio (0.0 – 1.0) using Levenshtein package.
 
-    prev_row = list(range(len(s2) + 1))
-    for i, c1 in enumerate(s1):
-        curr_row = [i + 1]
-        for j, c2 in enumerate(s2):
-            insertions = prev_row[j + 1] + 1
-            deletions = curr_row[j] + 1
-            substitutions = prev_row[j] + (c1 != c2)
-            curr_row.append(min(insertions, deletions, substitutions))
-        prev_row = curr_row
-    return prev_row[-1]
+    Both strings are normalised (diacritics stripped, lowercased) first.
+    """
+    na = remove_diacritics(a)
+    nb = remove_diacritics(b)
+    if not na or not nb:
+        return 0.0
+    return _lev_ratio(na, nb)
+
+
+def fuzzy_match_name(
+    raw: str,
+    candidates: dict[str, T],
+    threshold: float = 0.85,
+) -> T | None:
+    """Find the best fuzzy match for *raw* among *candidates* keys.
+
+    Keys are expected to be normalised (lowered, diacritics-stripped).
+    Returns the value of the best match if its ratio >= *threshold*, else None.
+    """
+    if not raw or not candidates:
+        return None
+    norm = remove_diacritics(raw)
+    best: T | None = None
+    best_score = 0.0
+    for key, val in candidates.items():
+        score = _lev_ratio(norm, key)
+        if score > best_score:
+            best_score = score
+            best = val
+    return best if best_score >= threshold else None
 
 
 def fuzzy_match(

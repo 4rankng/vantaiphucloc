@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date
 from typing import Sequence
 
 from sqlalchemy import func, or_, select, update
@@ -293,7 +293,7 @@ class MappingProfileRepository:
     """
 
     def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+        self.session = session
 
     async def create(
         self,
@@ -315,21 +315,25 @@ class MappingProfileRepository:
             created_by_id=created_by_id,
             is_active=is_active,
         )
-        self._session.add(profile)
-        await self._session.flush()
+        self.session.add(profile)
+        await self.session.flush()
         return profile
 
     async def get_by_signature(self, header_signature: str) -> MappingProfile | None:
-        stmt = select(MappingProfile).where(
-            MappingProfile.header_signature == header_signature,
-            MappingProfile.is_active == True,  # noqa: E712
+        stmt = (
+            select(MappingProfile)
+            .where(
+                MappingProfile.header_signature == header_signature,
+                MappingProfile.is_active == True,  # noqa: E712
+            )
+            .order_by(MappingProfile.use_count.desc(), MappingProfile.last_used_at.desc())
         )
-        result = await self._session.execute(stmt)
-        return result.scalar_one_or_none()
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
 
     async def get_by_id(self, profile_id: int) -> MappingProfile | None:
         stmt = select(MappingProfile).where(MappingProfile.id == profile_id)
-        result = await self._session.execute(stmt)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def list_active(
@@ -344,7 +348,7 @@ class MappingProfileRepository:
             MappingProfile.use_count.desc(),
             MappingProfile.last_used_at.desc(),
         )
-        result = await self._session.execute(stmt)
+        result = await self.session.execute(stmt)
         return result.scalars().all()
 
     async def mark_used(self, profile_id: int) -> None:
@@ -352,8 +356,8 @@ class MappingProfileRepository:
             update(MappingProfile)
             .where(MappingProfile.id == profile_id)
             .values(
-                last_used_at=datetime.now(timezone.utc),
+                last_used_at=func.now(),
                 use_count=MappingProfile.use_count + 1,
             )
         )
-        await self._session.execute(stmt)
+        await self.session.execute(stmt)

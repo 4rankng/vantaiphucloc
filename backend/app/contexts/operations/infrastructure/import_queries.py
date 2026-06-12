@@ -47,3 +47,38 @@ async def find_duplicate_trip(
         .limit(1)
     )
     return res.scalar_one_or_none()
+
+
+async def find_near_duplicate_trip(
+    session: AsyncSession,
+    *,
+    client_id: int,
+    trip_date: date,
+    container_no: str,
+    max_distance: int = 1,
+) -> BookedTripORM | None:
+    """Find a trip with the same client/date but a container number within *max_distance* edits.
+
+    Returns None if no near-duplicate is found.
+    """
+    from app.utils.fuzzy import levenshtein_distance
+
+    norm = (container_no or "").upper().strip()
+    if not norm:
+        return None
+
+    candidates = (await session.execute(
+        select(BookedTripORM).where(
+            and_(
+                BookedTripORM.client_id == client_id,
+                BookedTripORM.trip_date == trip_date,
+                BookedTripORM.cont_number.isnot(None),
+            )
+        )
+    )).scalars().all()
+
+    for trip in candidates:
+        cn = (trip.cont_number or "").upper().strip()
+        if cn and levenshtein_distance(norm, cn) <= max_distance:
+            return trip
+    return None
