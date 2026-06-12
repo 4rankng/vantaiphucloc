@@ -45,6 +45,9 @@ Pillow>=10.0.0
 openpyxl>=3.1.0
 xlrd>=2.0.0
 
+# Fuzzy matching
+Levenshtein>=0.27.0
+
 # Monitoring
 sentry-sdk==2.13.0
 prometheus-fastapi-instrumentator==8.0.0

@@ -96,20 +96,20 @@ dev: clean dev-infra
 	(cd backend && PYTHONPATH=. DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:$(POSTGRES_PORT)/vantaihanghoa" \
 		REDIS_URL="redis://localhost:$(REDIS_PORT)/0" \
 		CORS_ORIGINS="http://localhost:$(FRONTEND_PORT),http://localhost:3000" \
-		uvicorn app.main:app --reload --host 0.0.0.0 --port $(BACKEND_PORT)) & \
+		.venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port $(BACKEND_PORT)) & \
 	(cd backend && PYTHONPATH=. DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:$(POSTGRES_PORT)/vantaihanghoa" \
 		REDIS_URL="redis://localhost:$(REDIS_PORT)/0" \
 		.venv/bin/python -m arq --watch app app.workers.worker.WorkerSettings) & \
 	(cd frontend && VITE_API_BASE=http://localhost:$(BACKEND_PORT)/api/v1 pnpm dev --port $(FRONTEND_PORT)) & \
 	wait
 
-## dev-backend: Start the FastAPI backend with uvicorn --reload
+## dev-backend: Start the FastAPI backend with uvicorn --reload (uses .venv so Levenshtein/etc are available)
 dev-backend:
 	cd backend && PYTHONPATH=. \
 		DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:$(POSTGRES_PORT)/vantaihanghoa" \
 		REDIS_URL="redis://localhost:$(REDIS_PORT)/0" \
 		CORS_ORIGINS="http://localhost:$(FRONTEND_PORT),http://localhost:3000" \
-		uvicorn app.main:app --reload --host 0.0.0.0 --port $(BACKEND_PORT)
+		.venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port $(BACKEND_PORT)
 
 ## dev-frontend: Start the Vite frontend dev server
 dev-frontend:

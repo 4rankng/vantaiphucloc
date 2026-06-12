@@ -11,13 +11,10 @@ import os
 import re
 from dataclasses import dataclass
 from datetime import date
-from typing import Any
 
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
-    build_cont_type,
     parse_container_no,
     parse_freight_kind,
-    parse_string,
 )
 from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView
 

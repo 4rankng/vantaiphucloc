@@ -14,7 +14,6 @@ from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     EXACT_LOOKUP,
     SKIP_EXACT,
     normalize_header_text,
-    normalize_for_match,
 )
 
 

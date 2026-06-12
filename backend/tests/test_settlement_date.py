@@ -1,4 +1,3 @@
-import pytest
 from datetime import date
 
 from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import (

@@ -326,7 +326,7 @@ def fuzzy_match_header(header: str, max_distance: int = 2) -> tuple[str, float] 
     best_field = None
     best_distance = max_distance + 1
 
-    for field, words in SYNONYMS.items():
+    for canon_field, words in SYNONYMS.items():
         for word in words:
             syn_norm = normalize_for_match(word)
             if not syn_norm:
@@ -334,7 +334,7 @@ def fuzzy_match_header(header: str, max_distance: int = 2) -> tuple[str, float] 
             dist = levenshtein_distance(normalized, syn_norm)
             if dist < best_distance and dist <= max_distance:
                 best_distance = dist
-                best_field = field
+                best_field = canon_field
 
     if best_field is None:
         return None

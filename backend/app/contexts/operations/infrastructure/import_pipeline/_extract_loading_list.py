@@ -8,7 +8,6 @@ from app.contexts.operations.infrastructure.import_pipeline._extractor_common im
     ExtractedRow,
     cell_text,
     cell_upper,
-    vessel_from_filename,
 )
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
     build_cont_type,

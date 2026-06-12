@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any
 
 from app.contexts.operations.infrastructure.import_pipeline._extractor_common import (
     ExtractedRow,
@@ -204,7 +203,9 @@ def _map_settlement_cols(header: list) -> dict[str, int | None]:
             col_map["operation"] = c
         elif "GHI" in t and ("CHÚ" in t or "CHU" in t):
             col_map["notes"] = c
-        elif "TÊN TẦU" in t or "TEN TAU" in t or "TÊN TÀU" in t or "TEN TAU" in t.upper():
+        elif ("TÊN TÀU" in t or "TEN TAU" in t or "TÊN TẦU" in t
+              or "SỐ TÀU" in t or "SO TAU" in t
+              or "HÃNG KHAI THÁC" in t or "HANG KHAITHAC" in t or "HANG KHAI THAC" in t):
             col_map["vessel"] = c
 
     return col_map

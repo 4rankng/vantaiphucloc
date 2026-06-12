@@ -7,12 +7,10 @@ matches so the generic pipeline can take over.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 
 from app.contexts.operations.infrastructure.import_pipeline._extractor_common import (
     _CONTAINER_NO_RE,
-    _CONTAINER_SYNONYMS,
     _PORT_CODE_RE,
     _SETTLEMENT_WT_HEADERS,
     cell_text as _cell_text,

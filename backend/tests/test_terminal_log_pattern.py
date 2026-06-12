@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-import pytest
 
 from app.contexts.operations.infrastructure.import_pipeline.pattern_detector import (
     _score_terminal_log,

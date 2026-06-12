@@ -1,4 +1,3 @@
-import pytest
 import xlrd
 from app.contexts.operations.infrastructure.import_pipeline.workbook import _xls_cell_value
 
