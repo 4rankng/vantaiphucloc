@@ -6,6 +6,7 @@ import { useDeliveredTrip, useDeleteDeliveredTrip, useUpdateDeliveredTrip } from
 import { DangerConfirmDialog } from '@/components/shared/overlays/DangerConfirmDialog/DangerConfirmDialog'
 import { DateNavigator } from '@/components/shared/navigation/DateNavigator'
 import { ContainerScanner } from '@/components/shared/overlays/ContainerScanner'
+import { PhotoLightbox } from '@/components/shared/overlays/PhotoLightbox'
 import { apiClient } from '@/services/api'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidateDeliveredTripDeps } from '@/hooks/query-keys'
@@ -65,6 +66,7 @@ export function JobDetail() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
   const [photoLoading, setPhotoLoading] = useState(false)
+const [lightboxOpen, setLightboxOpen] = useState(false)
   const isMatched = !!job?.bookedTripId
   const qc = useQueryClient()
 
@@ -181,6 +183,14 @@ export function JobDetail() {
         <ContainerScanner
           onCapture={handlePhotoCapture}
           onClose={() => setScannerOpen(false)}
+        />
+      )}
+
+      {/* Photo lightbox — fullscreen view */}
+      {lightboxOpen && job.contPhotoUrl && (
+        <PhotoLightbox
+          src={job.contPhotoUrl}
+          onClose={() => setLightboxOpen(false)}
         />
       )}
 
@@ -508,7 +518,7 @@ export function JobDetail() {
                   alt="Container photo"
                   className="w-full rounded-xl object-cover"
                   style={{ maxHeight: 260 }}
-                  onClick={() => window.open(job.contPhotoUrl!, '_blank')}
+                  onClick={() => setLightboxOpen(true)}
                 />
                 {canEdit && (
                   <div className="px-3 py-2.5">
