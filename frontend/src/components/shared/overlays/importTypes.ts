@@ -22,13 +22,14 @@ export function transformPreviewToTable(data: {
   rejected?: { source_row_index: number; reasons?: string[]; raw?: Record<string, unknown> }[]
   warnings?: string[]
 }) {
-  const cols = ['Ngày đi', 'Chủ hàng', 'Số Cont', 'Loại Cont', 'Tác nghiệp', 'Số xe chạy', 'Điểm đi', 'Điểm đến', 'Cước']
+  const cols = ['Ngày đi', 'Số tàu', 'Chủ hàng', 'Số Cont', 'Loại Cont', 'Tác nghiệp', 'Số xe chạy', 'Điểm đi', 'Điểm đến', 'Cước']
   const rows = (data.accepted ?? []).map(r => ({
     'Ngày đi': r.values.trip_date,
+    'Số tàu': r.values.vessel,
     'Chủ hàng': r.values.consignee,
     'Số Cont': r.values.container_no,
     'Loại Cont': r.values.cont_type ?? `${r.values.freight_kind ?? ''}${r.values.container_size ?? ''}`,
-    'Tác nghiệp': r.values.work_type ?? 'CHUYỂN BÃI',
+    'Tác nghiệp': r.values.work_type ?? '',
     'Số xe chạy': r.values.vehicle_plate,
     'Điểm đi': r.values.pickup_location,
     'Điểm đến': r.values.dropoff_location,
