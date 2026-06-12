@@ -204,6 +204,7 @@ SYNONYMS: dict[str, list[str]] = {
     "vessel": [
         "vessel", "ship", "ship name", "tau", "tàu", "ten tau", "tên tàu",
         "so tau", "số tàu", "tau trung quoc", "tàu trung quốc",
+        "hang khai thac", "hãng khai thác",
     ],
     "freight_charge": [
         "cuoc", "cước", "cuoc chuyen", "cước chuyến", "cuoc chay", "cước chạy",
@@ -218,6 +219,7 @@ SYNONYMS: dict[str, list[str]] = {
         "tac nghiep", "tác nghiệp", "loai tac nghiep", "loại tác nghiệp",
         "nghiep vu", "nghiệp vụ", "operation", "operation type",
         "work type",
+        "loai cong viec", "loại công việc", "loai cv", "loại cv",
     ],
 }
 
@@ -254,12 +256,10 @@ SKIP_PATTERNS: tuple[str, ...] = (
     # Vessel/operator-side fields (exact match — don't substring against
     # the much shorter synonym tokens)
     "hang tau", "hãng tàu",
-    "hang khai thac", "hãng khai thác",
     "line operator", "operator", "opr",
     "line",
     # Process / direction labels (operational, not a per-trip field)
     "nhap/xuat", "nhập/xuất", "nhap xuat", "nhập xuất",
-    "loai cong viec", "loại công việc",
     "phuong thuc ra", "phương thức ra",
     "hang noi/ngoai", "hàng nội/ngoại", "hang noi ngoai", "hàng nội ngoại",
     # Stowage / position

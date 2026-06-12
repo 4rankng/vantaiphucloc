@@ -104,8 +104,8 @@ def test_synonym_dictionary_matches_known_headers(header: str, expected_field: s
     [
         "POD", "POL",
         "Bay", "Slot", "Cell", "Crane", "QC01", "Sales/Mkt",
-        "Hãng tàu", "Hãng khai thác",
-        "Loại công việc", "Phương thức ra", "Hàng nội/ngoại",
+        "Hãng tàu",
+        "Phương thức ra", "Hàng nội/ngoại",
     ],
 )
 def test_skip_dictionary_classifies_vessel_and_admin(header: str):

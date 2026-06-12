@@ -293,6 +293,7 @@ def _parse_row(
     commodity = parse_string(raw_dict.get("commodity"), max_len=500) if "commodity" in raw_dict else ""
     driver_name = parse_string(raw_dict.get("driver_name"), max_len=255) if "driver_name" in raw_dict else ""
     plate = parse_plate(raw_dict.get("vehicle_plate")) if "vehicle_plate" in raw_dict else ""
+    vessel = parse_string(raw_dict.get("vessel"), max_len=255) if "vessel" in raw_dict else ""
     remarks = parse_string(raw_dict.get("remarks"), max_len=500) if "remarks" in raw_dict else ""
 
     # Parse money for freight charge. We can reuse parse_weight_kg since it handles 10.5M vs 10500 nicely, or just simple float parse.
@@ -334,6 +335,7 @@ def _parse_row(
         "commodity": commodity,
         "driver_name": driver_name,
         "vehicle_plate": plate,
+        "vessel": vessel,
         "freight_charge": freight_charge,
         "remarks": remarks,
         "freight_kind_unknown": freight_kind_unknown,
@@ -342,18 +344,19 @@ def _parse_row(
 
 
 def _read_work_type(raw_dict: dict[str, Any]) -> str:
-    """Read work_type from the mapped Excel column, fallback to default.
+    """Read work_type from the mapped Excel column, fallback to empty.
 
     Keeps the original value exactly as in the Excel — no uppercasing,
     no normalization.  New OperationType records are created during the
-    commit step.
+    commit step.  Returns empty string when no work_type column was
+    mapped so the caller can distinguish "not provided" from a real value.
     """
     raw = raw_dict.get("work_type")
     if raw is None:
-        return "CHUYỂN BÃI"
+        return ""
     val = str(raw).strip()
     if not val:
-        return "CHUYỂN BÃI"
+        return ""
     return val
 
 
