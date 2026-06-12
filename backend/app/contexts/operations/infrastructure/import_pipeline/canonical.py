@@ -112,6 +112,7 @@ SYNONYMS: dict[str, list[str]] = {
         "contno.", "cont no", "container id", "ctr no", "ctnr", "container#",
         "so container", "số container", "so cont", "số cont",
         "socontainer", "sốcontainer",  # no-space variant from SL sheets
+        "socont",  # BDST/VIPI compact form
         "ma cont", "mã cont", "ma container", "mã container",
         "หมายเลขตู้",  # Thai (Glory Shanghai files)
     ],
@@ -123,6 +124,7 @@ SYNONYMS: dict[str, list[str]] = {
         "iso", "iso size", "iso code", "kich co iso", "kích cỡ iso",
         "loai hop", "loại hộp", "loai cont", "loại cont", "loại", "loai",
         "type", "container type",
+        "kiech iso", "kiechiso",  # BDST/VIPI compact: kích cỡ ISO
     ],
     "freight_kind": [
         "f/e", "fe", "f e", "freight kind", "full/empty", "full empty",
@@ -162,6 +164,7 @@ SYNONYMS: dict[str, list[str]] = {
     "pickup_date": [
         "pickup date", "from date", "ngay lay", "ngày lấy",
         "loading date", "ngay di", "ngày đi",
+        "ngaydi",  # BDST/VIPI/ultima compact: ngày đi
         "箱子进场时间",  # Chinese: container gate-in time
     ],
     "dropoff_date": [
@@ -184,6 +187,7 @@ SYNONYMS: dict[str, list[str]] = {
         "consignee", "shipper", "customer", "cnee",
         "khach hang", "khách hàng", "chu hang", "chủ hàng",
         "nguoi gui", "người gửi", "nguoi nhan", "người nhận",
+        "chuhang",  # BDST/VIPI compact: chủ hàng
     ],
     "commodity": [
         "description", "description of goods", "goods", "commodity",
@@ -205,6 +209,8 @@ SYNONYMS: dict[str, list[str]] = {
         "vessel", "ship", "ship name", "tau", "tàu", "ten tau", "tên tàu",
         "so tau", "số tàu", "tau trung quoc", "tàu trung quốc",
         "hang khai thac", "hãng khai thác",
+        "hangkhaithac",  # BDST/VIPI compact: hãng khai thác
+        "tentau",  # BDST/VIPI compact: tên tàu
     ],
     "freight_charge": [
         "cuoc", "cước", "cuoc chuyen", "cước chuyến", "cuoc chay", "cước chạy",
@@ -220,6 +226,8 @@ SYNONYMS: dict[str, list[str]] = {
         "nghiep vu", "nghiệp vụ", "operation", "operation type",
         "work type",
         "loai cong viec", "loại công việc", "loai cv", "loại cv",
+        "loaicongviec",  # BDST/VIPI compact: loại công việc
+        "tacnghiep",  # BDST/VIPI compact: tác nghiệp
     ],
 }
 
