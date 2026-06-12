@@ -24,6 +24,8 @@ fields, instead of trying to map each to a single canonical field.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from dataclasses import asdict, dataclass, field
 from typing import Any
@@ -372,3 +374,39 @@ def _column_samples(sheet: SheetView, header_row: int, col: int, n: int = 8) -> 
         out.append(str(cell))
         seen += 1
     return out
+
+
+# ---------------------------------------------------------------------------
+# MappingProfilePicker — Layer 2 cache for saved column mappings
+# ---------------------------------------------------------------------------
+
+
+class MappingProfilePicker:
+    """Try to find a saved MappingProfile by header signature.
+
+    Layer 2 cache: if a user previously saved a column mapping for this
+    header structure, reuse it without synonym/fuzzy/AI work.
+    """
+
+    def __init__(self, repo) -> None:
+        self._repo = repo
+
+    @staticmethod
+    def _signature(headers: list[str]) -> str:
+        normalized = "|".join(h.strip().lower() for h in headers if h)
+        return hashlib.sha256(normalized.encode()).hexdigest()
+
+    async def pick(self, headers: list[str], sample_rows: list[list]) -> dict[int, str] | None:
+        """Return cached column mapping if a profile exists, else None.
+
+        On hit, marks the profile as used.
+        """
+        sig = self._signature(headers)
+        profile = await self._repo.get_by_signature(sig)
+        if profile is None:
+            return None
+
+        await self._repo.mark_used(profile.id)
+
+        raw = json.loads(profile.column_mapping_json)
+        return {int(k): v for k, v in raw.items()}

@@ -91,6 +91,8 @@ class ExtractedRow:
     freight_charge: float | None = None
     freight_kind_unknown: bool = False  # True if container E/F kind was not explicitly found
     trip_date: date | None = None      # Parsed from NGÀY ĐI column (settlement list)
+    confidence: float = 1.0            # Mapping quality per row (0.0 – 1.0)
+    source: str = "pattern"            # one of: pattern, synonym, fuzzy, value_pattern, ai, profile, unmapped
 
 
 # ---------------------------------------------------------------------------

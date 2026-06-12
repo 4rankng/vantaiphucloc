@@ -454,6 +454,35 @@ async def _run_generic_preview(
     else:
         mappings = await map_columns(chosen.sheet, hit.row_index, classifier=classifier)
 
+    # Layer 3: AI fallback — if required fields are missing or confidence is low,
+    # try Gemini header inference and merge into mappings.
+    mapped_fields = {m.canonical_field for m in mappings if m.canonical_field and m.canonical_field != SKIP_FIELD}
+    required_fields = {f.name for f in CANONICAL_FIELDS if f.required}
+    missing = required_fields - mapped_fields
+    low_conf = any(m.confidence < 0.6 for m in mappings if m.canonical_field and m.canonical_field != SKIP_FIELD)
+
+    if missing or low_conf:
+        try:
+            from app.contexts.operations.infrastructure.import_pipeline.ai_inference import infer_schema_with_ai
+            headers = [chosen.sheet.rows[hit.row_index][c] if c < len(chosen.sheet.rows[hit.row_index]) else ""
+                       for c in range(chosen.sheet.n_cols)]
+            sample_rows = [chosen.sheet.rows[r] for r in range(hit.row_index + 1, min(hit.row_index + 6, len(chosen.sheet.rows)))]
+            inferred = await infer_schema_with_ai(headers, sample_rows)
+            if inferred:
+                for col_idx, inf in inferred.items():
+                    if inf.canonical_field and inf.confidence > 0.5:
+                        # Only override if AI confidence beats existing or field is missing
+                        existing = next((m for m in mappings if m.col_index == col_idx), None)
+                        if existing is None or existing.confidence < inf.confidence:
+                            # Update or add mapping
+                            if existing:
+                                existing.canonical_field = inf.canonical_field
+                                existing.confidence = inf.confidence
+                                existing.source = "ai"
+                _logger.info("AI inference merged %d columns for %s", len(inferred), filename)
+        except Exception as e:
+            _logger.warning("AI fallback failed for %s: %s", filename, e)
+
     pivots = detect_pivot_columns(
         chosen.sheet.rows[hit.row_index] if 0 <= hit.row_index < len(chosen.sheet.rows) else []
     )
@@ -579,6 +608,8 @@ def _build_preview_from_extracted(
                 "freight_charge": row.freight_charge,
                 "remarks": "",
                 "freight_kind_unknown": row.freight_kind_unknown,
+                "confidence": row.confidence,
+                "source": row.source,
             },
         })
 
