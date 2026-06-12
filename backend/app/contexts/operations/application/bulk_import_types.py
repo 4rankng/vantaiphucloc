@@ -16,4 +16,5 @@ class ImportRow:
     cont_type: str | None = None  # E20, E40, F20, F40
     notes: str | None = None
     vehicle_plate: str | None = None
+    vessel: str | None = None
     parse_error: str | None = None

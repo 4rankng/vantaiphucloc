@@ -31,6 +31,7 @@ def _parse_iso_date(val: str | None) -> date | None:
     if not val:
         return None
     from datetime import datetime
+
     try:
         return datetime.strptime(val, "%Y-%m-%d").date()
     except (ValueError, TypeError):
@@ -72,7 +73,9 @@ class ReconciliationImportService:
         """Parse Excel and return preview data. No DB writes."""
         try:
             preview = await run_preview(
-                content, filename, default_trip_date=date.today(),
+                content,
+                filename,
+                default_trip_date=date.today(),
             )
         except ValueError as exc:
             raise ValueError(str(exc)) from exc
@@ -86,7 +89,8 @@ class ReconciliationImportService:
         return payload
 
     async def _resolve_preview_locations(
-        self, accepted: list[dict],
+        self,
+        accepted: list[dict],
     ) -> dict[str, dict]:
         resolver = LocationResolverService(self.session)
         seen: set[str] = set()
@@ -126,17 +130,20 @@ class ReconciliationImportService:
         """Take confirmed rows from preview, create DeliveredTrips, auto-match."""
         import_rows: list[ImportRow] = []
         for i, v in enumerate(rows):
-            import_rows.append(ImportRow(
-                row_number=i + 1,
-                container_number=v.get("container_no"),
-                trip_date=_parse_iso_date(v.get("trip_date")),
-                client_name=v.get("consignee") or v.get("customer_ref"),
-                pickup_location=v.get("pickup_location"),
-                dropoff_location=v.get("dropoff_location"),
-                amount=_parse_revenue(v.get("freight_charge")),
-                cont_type=v.get("cont_type") or "E20",
-                vehicle_plate=v.get("vehicle_plate"),
-            ))
+            import_rows.append(
+                ImportRow(
+                    row_number=i + 1,
+                    container_number=v.get("container_no"),
+                    trip_date=_parse_iso_date(v.get("trip_date")),
+                    client_name=v.get("consignee") or v.get("customer_ref"),
+                    pickup_location=v.get("pickup_location"),
+                    dropoff_location=v.get("dropoff_location"),
+                    amount=_parse_revenue(v.get("freight_charge")),
+                    cont_type=v.get("cont_type") or "E20",
+                    vehicle_plate=v.get("vehicle_plate"),
+                    vessel=v.get("vessel"),
+                )
+            )
 
         valid = [r for r in import_rows if r.container_number]
         if not valid:
@@ -153,12 +160,16 @@ class ReconciliationImportService:
         for row in valid:
             try:
                 trip_id = await self._create_reconciliation_trip(
-                    row, vendor_id, driver_id,
+                    row,
+                    vendor_id,
+                    driver_id,
                 )
                 result.created += 1
 
                 match_info = await self._try_auto_match(
-                    trip_id, row.container_number, unmatched_booked,
+                    trip_id,
+                    row.container_number,
+                    unmatched_booked,
                 )
                 detail = {
                     "row": row.row_number,
@@ -176,12 +187,14 @@ class ReconciliationImportService:
             except Exception as exc:
                 msg = f"Dòng {row.row_number}: {exc}"
                 result.errors.append(msg)
-                result.details.append({
-                    "row": row.row_number,
-                    "container": row.container_number,
-                    "match_status": "error",
-                    "error": str(exc),
-                })
+                result.details.append(
+                    {
+                        "row": row.row_number,
+                        "container": row.container_number,
+                        "match_status": "error",
+                        "error": str(exc),
+                    }
+                )
 
         await self._populate_matched_revenue()
         await self.session.commit()
@@ -202,7 +215,9 @@ class ReconciliationImportService:
         # pattern detection) instead of the simple ExcelParser.
         try:
             preview = await run_preview(
-                content, filename, default_trip_date=date.today(),
+                content,
+                filename,
+                default_trip_date=date.today(),
             )
         except ValueError as exc:
             return ReconciliationImportResult(
@@ -214,17 +229,20 @@ class ReconciliationImportService:
         rows: list[ImportRow] = []
         for item in preview.accepted:
             v = item.get("values") or {}
-            rows.append(ImportRow(
-                row_number=item.get("source_row_index", 0) + 1,
-                container_number=v.get("container_no"),
-                trip_date=_parse_iso_date(v.get("trip_date")),
-                client_name=v.get("consignee") or v.get("customer_ref"),
-                pickup_location=v.get("pickup_location"),
-                dropoff_location=v.get("dropoff_location"),
-                amount=_parse_revenue(v.get("freight_charge")),
-                cont_type=v.get("cont_type") or "E20",
-                vehicle_plate=v.get("vehicle_plate"),
-            ))
+            rows.append(
+                ImportRow(
+                    row_number=item.get("source_row_index", 0) + 1,
+                    container_number=v.get("container_no"),
+                    trip_date=_parse_iso_date(v.get("trip_date")),
+                    client_name=v.get("consignee") or v.get("customer_ref"),
+                    pickup_location=v.get("pickup_location"),
+                    dropoff_location=v.get("dropoff_location"),
+                    amount=_parse_revenue(v.get("freight_charge")),
+                    cont_type=v.get("cont_type") or "E20",
+                    vehicle_plate=v.get("vehicle_plate"),
+                    vessel=v.get("vessel"),
+                )
+            )
 
         # Collect rejected rows as errors
         error_msgs: list[str] = []
@@ -250,16 +268,22 @@ class ReconciliationImportService:
         # Load unmatched booked trips (for auto-match)
         unmatched_booked = await self._load_unmatched_booked_trips(valid)
 
-        result = ReconciliationImportResult(total_rows=len(rows) + len(preview.rejected))
+        result = ReconciliationImportResult(
+            total_rows=len(rows) + len(preview.rejected)
+        )
 
         for row in valid:
             try:
-                trip_id = await self._create_reconciliation_trip(row, vendor_id, driver_id)
+                trip_id = await self._create_reconciliation_trip(
+                    row, vendor_id, driver_id
+                )
                 result.created += 1
 
                 # Auto-match by container number
                 match_info = await self._try_auto_match(
-                    trip_id, row.container_number, unmatched_booked,
+                    trip_id,
+                    row.container_number,
+                    unmatched_booked,
                 )
                 detail = {
                     "row": row.row_number,
@@ -277,12 +301,14 @@ class ReconciliationImportService:
             except Exception as exc:
                 msg = f"Dòng {row.row_number}: {exc}"
                 result.errors.append(msg)
-                result.details.append({
-                    "row": row.row_number,
-                    "container": row.container_number,
-                    "match_status": "error",
-                    "error": str(exc),
-                })
+                result.details.append(
+                    {
+                        "row": row.row_number,
+                        "container": row.container_number,
+                        "match_status": "error",
+                        "error": str(exc),
+                    }
+                )
 
         await self._populate_matched_revenue()
         await self.session.commit()
@@ -293,12 +319,18 @@ class ReconciliationImportService:
         """Batch-lookup RoutePricing for matched DeliveredTrips with revenue=0."""
         from app.core.pricing_lookup import TripPriceInfo, lookup_client_prices
 
-        rows = (await self.session.execute(
-            select(DeliveredTripORM).where(
-                DeliveredTripORM.booked_trip_id.isnot(None),
-                DeliveredTripORM.revenue == 0,
+        rows = (
+            (
+                await self.session.execute(
+                    select(DeliveredTripORM).where(
+                        DeliveredTripORM.booked_trip_id.isnot(None),
+                        DeliveredTripORM.revenue == 0,
+                    )
+                )
             )
-        )).scalars().all()
+            .scalars()
+            .all()
+        )
 
         if not rows:
             return
@@ -340,8 +372,10 @@ class ReconciliationImportService:
             name_to_id[alias.alias_normalized.strip().lower()] = alias.location_id
 
         for r in rows:
-            for attr, val in (("pickup_location", r.pickup_location),
-                              ("dropoff_location", r.dropoff_location)):
+            for attr, val in (
+                ("pickup_location", r.pickup_location),
+                ("dropoff_location", r.dropoff_location),
+            ):
                 if not val:
                     continue
                 key = val.strip().lower()
@@ -359,28 +393,41 @@ class ReconciliationImportService:
     async def _resolve_client(self, client_name: str | None) -> int:
         if not client_name:
             raise ValueError("Không có tên khách hàng trong file")
-        clients = (await self.session.execute(
-            select(Client).where(_vi_ilike(Client.name, client_name.strip()))
-            .order_by(Client.name)
-            .limit(2)
-        )).scalars().all()
+        clients = (
+            (
+                await self.session.execute(
+                    select(Client)
+                    .where(_vi_ilike(Client.name, client_name.strip()))
+                    .order_by(Client.name)
+                    .limit(2)
+                )
+            )
+            .scalars()
+            .all()
+        )
         if not clients:
             raise ValueError(f"Không tìm thấy khách hàng '{client_name}'")
         if len(clients) > 1:
             # Multiple matches — pick exact match if exists, else first
             exact = next(
-                (c for c in clients if c.name.strip().lower() == client_name.strip().lower()),
+                (
+                    c
+                    for c in clients
+                    if c.name.strip().lower() == client_name.strip().lower()
+                ),
                 clients[0],
             )
             return exact.id
         return clients[0].id
 
     async def _load_unmatched_booked_trips(
-        self, rows: list[ImportRow],
+        self,
+        rows: list[ImportRow],
     ) -> dict[str, BookedTripORM]:
         containers = {
             r.container_number.upper().replace(" ", "")
-            for r in rows if r.container_number
+            for r in rows
+            if r.container_number
         }
         if not containers:
             return {}
@@ -397,7 +444,10 @@ class ReconciliationImportService:
         }
 
     async def _create_reconciliation_trip(
-        self, row: ImportRow, vendor_id: int | None, driver_id: int | None,
+        self,
+        row: ImportRow,
+        vendor_id: int | None,
+        driver_id: int | None,
     ) -> int:
         pickup_id = getattr(row, "_pickup_location_id", None)
         dropoff_id = getattr(row, "_dropoff_location_id", None)
@@ -405,9 +455,7 @@ class ReconciliationImportService:
         if not pickup_id or not dropoff_id:
             missing = "lấy" if not pickup_id else "trả"
             name = row.pickup_location if not pickup_id else row.dropoff_location
-            raise ValueError(
-                f"Không tìm thấy điểm {missing} '{name}' trong hệ thống"
-            )
+            raise ValueError(f"Không tìm thấy điểm {missing} '{name}' trong hệ thống")
 
         # Resolve client by name
         client_id = await self._resolve_client(row.client_name)
@@ -419,7 +467,13 @@ class ReconciliationImportService:
             driver_id=driver_id,
             vendor_id=vendor_id,
             vehicle_plate=row.vehicle_plate or "",
-            vessel=row.notes if row.notes and ("tau" in row.notes.lower() or "tàu" in row.notes.lower()) else None,
+            vessel=row.vessel
+            or (
+                row.notes
+                if row.notes
+                and ("tau" in row.notes.lower() or "tàu" in row.notes.lower())
+                else None
+            ),
             work_type="CHUYỂN BÃI",
             cont_number=row.container_number,
             cont_type=row.cont_type or "E20",
@@ -445,9 +499,11 @@ class ReconciliationImportService:
         if booked_orm is None:
             return "no_match"
 
-        delivered_orm = (await self.session.execute(
-            select(DeliveredTripORM).where(DeliveredTripORM.id == delivered_trip_id)
-        )).scalar_one_or_none()
+        delivered_orm = (
+            await self.session.execute(
+                select(DeliveredTripORM).where(DeliveredTripORM.id == delivered_trip_id)
+            )
+        ).scalar_one_or_none()
         if delivered_orm:
             delivered_orm.booked_trip_id = booked_orm.id
 
