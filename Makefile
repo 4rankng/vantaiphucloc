@@ -99,7 +99,7 @@ dev: clean dev-infra
 		uvicorn app.main:app --reload --host 0.0.0.0 --port $(BACKEND_PORT)) & \
 	(cd backend && PYTHONPATH=. DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:$(POSTGRES_PORT)/vantaihanghoa" \
 		REDIS_URL="redis://localhost:$(REDIS_PORT)/0" \
-		arq --watch app app.workers.worker.WorkerSettings) & \
+		.venv/bin/python -m arq --watch app app.workers.worker.WorkerSettings) & \
 	(cd frontend && VITE_API_BASE=http://localhost:$(BACKEND_PORT)/api/v1 pnpm dev --port $(FRONTEND_PORT)) & \
 	wait
 
@@ -115,12 +115,12 @@ dev-backend:
 dev-frontend:
 	cd frontend && VITE_API_BASE=http://localhost:$(BACKEND_PORT)/api/v1 pnpm dev --port $(FRONTEND_PORT)
 
-## dev-worker: Start the arq background worker
+## dev-worker: Start the arq background worker (uses .venv so xlrd/openpyxl are available)
 dev-worker:
 	cd backend && PYTHONPATH=. \
 		DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:$(POSTGRES_PORT)/vantaihanghoa" \
 		REDIS_URL="redis://localhost:$(REDIS_PORT)/0" \
-		arq --watch app app.workers.worker.WorkerSettings
+		.venv/bin/python -m arq --watch app app.workers.worker.WorkerSettings
 
 # ── Cleanup ────────────────────────────────────────────────────────────────────
 
