@@ -69,7 +69,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, vendors) -> DeliveredTripOut:
+def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, vendors, *, include_photo: bool = True) -> DeliveredTripOut:
     return DeliveredTripOut(
         id=int(w.id),  # type: ignore[arg-type]
         client=get_client_summary(partners, w.client_id),
@@ -83,7 +83,7 @@ def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, vendors) -> Deliv
         work_type=w.work_type,
         cont_number=w.cont_number,
         cont_type=w.cont_type,
-        cont_photo_url=w.cont_photo_url,
+        cont_photo_url=w.cont_photo_url if include_photo else None,
         revenue=w.revenue,
         driver_salary=w.driver_salary,
         trip_date=w.trip_date,
@@ -98,7 +98,7 @@ async def _load_one(session, w: DeliveredTrip) -> DeliveredTripOut:
     return (await _load_many(session, [w]))[0]
 
 
-async def _load_many(session, wos: list[DeliveredTrip]) -> list[DeliveredTripOut]:
+async def _load_many(session, wos: list[DeliveredTrip], *, include_photo: bool = True) -> list[DeliveredTripOut]:
     if not wos:
         return []
     partners = await load_client_summaries(session, {w.client_id for w in wos})
@@ -110,7 +110,7 @@ async def _load_many(session, wos: list[DeliveredTrip]) -> list[DeliveredTripOut
         | {w.dropoff_location_id for w in wos},
     )
     return [
-        _wo_to_out(w, partners, drivers, locations, vendors)
+        _wo_to_out(w, partners, drivers, locations, vendors, include_photo=include_photo)
         for w in wos
     ]
 
@@ -287,7 +287,7 @@ async def list_delivered_trips(
         sort_order=sort_order,
         search=search,
     ))
-    out = await _load_many(use_case.repo.session, items)  # type: ignore[attr-defined]
+    out = await _load_many(use_case.repo.session, items, include_photo=False)  # type: ignore[attr-defined]
 
     return PaginatedResponse[DeliveredTripOut](
         items=out, total=total, page=page, page_size=page_size,
