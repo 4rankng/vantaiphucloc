@@ -49,6 +49,7 @@ from app.contexts.operations.infrastructure.import_pipeline.value_parsers import
     parse_container_size,
     parse_date,
     parse_freight_kind,
+    parse_money,
     parse_plate,
     parse_string,
     parse_weight_kg,
@@ -296,23 +297,8 @@ def _parse_row(
     vessel = parse_string(raw_dict.get("vessel"), max_len=255) if "vessel" in raw_dict else ""
     remarks = parse_string(raw_dict.get("remarks"), max_len=500) if "remarks" in raw_dict else ""
 
-    # Parse money for freight charge. We can reuse parse_weight_kg since it handles 10.5M vs 10500 nicely, or just simple float parse.
-    raw_freight = raw_dict.get("freight_charge")
-    freight_charge = None
-    if raw_freight is not None and str(raw_freight).strip():
-        try:
-            # simple strip non-numeric except dot and comma
-            cleaned_fc = re.sub(r"[^\d.,\-]", "", str(raw_freight))
-            if "," in cleaned_fc and "." in cleaned_fc:
-                if cleaned_fc.rfind(".") > cleaned_fc.rfind(","):
-                    cleaned_fc = cleaned_fc.replace(",", "")
-                else:
-                    cleaned_fc = cleaned_fc.replace(".", "").replace(",", ".")
-            elif "," in cleaned_fc:
-                cleaned_fc = cleaned_fc.replace(",", "")
-            freight_charge = float(cleaned_fc) if cleaned_fc else None
-        except ValueError:
-            pass
+    # Parse money for freight charge
+    freight_charge = parse_money(raw_dict.get("freight_charge"))
 
     cont_type = f"{kind}{size}"  # F20 / F40 / E20 / E40
 

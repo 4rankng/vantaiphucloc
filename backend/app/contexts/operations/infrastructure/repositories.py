@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Sequence
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -28,6 +28,7 @@ from app.contexts.operations.infrastructure.orm import (
     BookedTripORM,
     DeliveredTripORM,
 )
+from app.models.domain import MappingProfile
 
 
 # ── BookedTrip ────────────────────────────────────────────────────
@@ -280,3 +281,79 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
             return
         await self.session.delete(orm)
         await self.session.flush()
+
+
+# ── MappingProfile ────────────────────────────────────────────────────
+
+
+class MappingProfileRepository:
+    """Async repository for MappingProfile persistence.
+
+    Caller owns the transaction (via get_db dependency). We only flush.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def create(
+        self,
+        *,
+        profile_name: str,
+        template_filename: str,
+        header_signature: str,
+        column_mapping_json: str,
+        pivot_columns_json: str,
+        created_by_id: int,
+        is_active: bool = True,
+    ) -> MappingProfile:
+        profile = MappingProfile(
+            profile_name=profile_name,
+            template_filename=template_filename,
+            header_signature=header_signature,
+            column_mapping_json=column_mapping_json,
+            pivot_columns_json=pivot_columns_json,
+            created_by_id=created_by_id,
+            is_active=is_active,
+        )
+        self._session.add(profile)
+        await self._session.flush()
+        return profile
+
+    async def get_by_signature(self, header_signature: str) -> MappingProfile | None:
+        stmt = select(MappingProfile).where(
+            MappingProfile.header_signature == header_signature,
+            MappingProfile.is_active == True,  # noqa: E712
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_by_id(self, profile_id: int) -> MappingProfile | None:
+        stmt = select(MappingProfile).where(MappingProfile.id == profile_id)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def list_active(
+        self, profile_name: str | None = None
+    ) -> Sequence[MappingProfile]:
+        stmt = select(MappingProfile).where(
+            MappingProfile.is_active == True  # noqa: E712
+        )
+        if profile_name:
+            stmt = stmt.where(MappingProfile.profile_name == profile_name)
+        stmt = stmt.order_by(
+            MappingProfile.use_count.desc(),
+            MappingProfile.last_used_at.desc(),
+        )
+        result = await self._session.execute(stmt)
+        return result.scalars().all()
+
+    async def mark_used(self, profile_id: int) -> None:
+        stmt = (
+            update(MappingProfile)
+            .where(MappingProfile.id == profile_id)
+            .values(
+                last_used_at=datetime.now(timezone.utc),
+                use_count=MappingProfile.use_count + 1,
+            )
+        )
+        await self._session.execute(stmt)

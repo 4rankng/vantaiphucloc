@@ -485,3 +485,31 @@ class DriverSalary(AuditableMixin, Base):
             "to_date",
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# MappingProfile — saved column mapping for repeat customer Excel imports
+# ---------------------------------------------------------------------------
+
+
+class MappingProfile(Base):
+    """Saved column mapping profile for repeat customer Excel imports.
+
+    Stores the detected column mapping (as JSON) keyed by a hash of the
+    header row so subsequent uploads of the same template auto-apply the
+    same mapping.
+    """
+
+    __tablename__ = "mapping_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    profile_name = Column(String(64), nullable=False, index=True)
+    template_filename = Column(String(255), nullable=False)
+    header_signature = Column(String(64), nullable=False, index=True)
+    column_mapping_json = Column(String, nullable=False)
+    pivot_columns_json = Column(String, nullable=False, default="[]")
+    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+    use_count = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, default=True, nullable=False)

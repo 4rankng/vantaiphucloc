@@ -15,9 +15,10 @@ from __future__ import annotations
 
 import base64
 
+import json
 import logging
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from fastapi import (
     APIRouter,
@@ -42,12 +43,16 @@ from app.contexts.operations.application.dto import (
 )
 from app.contexts.operations.interface.dependencies import (
     get_create_booked_trip_from_import,
+    get_mapping_profile_repository,
 )
 from app.contexts.operations.interface.error_translation import translate
 from app.core.deps import require_roles
 from app.database import get_db
 from app.models.base import User
 from app.models.domain import Client
+from app.contexts.operations.infrastructure.repositories import (
+    MappingProfileRepository,
+)
 from app.contexts.operations.infrastructure.import_pipeline.canonical import CANONICAL_FIELDS, SKIP_FIELD
 from app.contexts.operations.infrastructure.import_pipeline.llm import get_batch_classifier
 from app.contexts.operations.infrastructure.import_pipeline.pipeline import (
@@ -553,3 +558,84 @@ async def commit_customer_pricing(
         skipped_no_locations=result.skipped_no_locations,
         locations_created=result.locations_created,
     )
+
+
+# ---------------------------------------------------------------------------
+# Mapping Profile schemas
+# ---------------------------------------------------------------------------
+
+
+class MappingProfileCreateSchema(BaseModel):
+    profile_name: str = Field(..., min_length=1, max_length=64)
+    template_filename: str
+    header_signature: str
+    column_mapping: dict[str, str]
+    pivot_columns: list[str] = Field(default_factory=list)
+
+
+class MappingProfileSchema(BaseModel):
+    id: int
+    profile_name: str
+    template_filename: str
+    header_signature: str
+    column_mapping: dict[str, str]
+    pivot_columns: list[str]
+    created_at: datetime
+    last_used_at: datetime | None
+    use_count: int
+
+    model_config = {"from_attributes": True}
+
+
+def _profile_to_dict(profile) -> dict:
+    """Convert a MappingProfile ORM object to a dict for MappingProfileSchema."""
+    return {
+        "id": profile.id,
+        "profile_name": profile.profile_name,
+        "template_filename": profile.template_filename,
+        "header_signature": profile.header_signature,
+        "column_mapping": json.loads(profile.column_mapping_json),
+        "pivot_columns": json.loads(profile.pivot_columns_json),
+        "created_at": profile.created_at,
+        "last_used_at": profile.last_used_at,
+        "use_count": profile.use_count,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Mapping Profile endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/customer-excel/profiles",
+    response_model=list[MappingProfileSchema],
+)
+async def list_profiles(
+    profile_name: str | None = None,
+    repo: MappingProfileRepository = Depends(get_mapping_profile_repository),
+    _user: User = Depends(require_roles("accountant", "superadmin")),
+):
+    profiles = await repo.list_active(profile_name=profile_name)
+    return [_profile_to_dict(p) for p in profiles]
+
+
+@router.post(
+    "/customer-excel/profiles",
+    response_model=MappingProfileSchema,
+    status_code=201,
+)
+async def save_profile(
+    payload: MappingProfileCreateSchema,
+    repo: MappingProfileRepository = Depends(get_mapping_profile_repository),
+    user: User = Depends(require_roles("accountant", "superadmin")),
+):
+    profile = await repo.create(
+        profile_name=payload.profile_name,
+        template_filename=payload.template_filename,
+        header_signature=payload.header_signature,
+        column_mapping_json=json.dumps(payload.column_mapping),
+        pivot_columns_json=json.dumps(payload.pivot_columns),
+        created_by_id=user.id,
+    )
+    return _profile_to_dict(profile)

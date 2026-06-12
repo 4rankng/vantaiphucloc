@@ -26,6 +26,7 @@ from app.contexts.operations.domain.repositories import (
 from app.contexts.operations.infrastructure.repositories import (
     SqlBookedTripRepository,
     SqlDeliveredTripRepository,
+    MappingProfileRepository,
 )
 from app.database import get_db
 
@@ -43,6 +44,12 @@ def get_delivered_trip_repository(
     db: AsyncSession = Depends(get_db),
 ) -> DeliveredTripRepository:
     return SqlDeliveredTripRepository(db)
+
+
+def get_mapping_profile_repository(
+    db: AsyncSession = Depends(get_db),
+) -> MappingProfileRepository:
+    return MappingProfileRepository(db)
 
 
 # ── booked_trip use cases ────────────────────────────────────────

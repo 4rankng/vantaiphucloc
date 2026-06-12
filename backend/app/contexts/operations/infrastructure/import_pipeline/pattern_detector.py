@@ -10,6 +10,15 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from app.contexts.operations.infrastructure.import_pipeline._extractor_common import (
+    _CONTAINER_NO_RE,
+    _CONTAINER_SYNONYMS,
+    _PORT_CODE_RE,
+    _SETTLEMENT_WT_HEADERS,
+    cell_text as _cell_text,
+    cell_upper as _cell_upper,
+    is_container_header,
+)
 from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     normalize_for_match,
 )
@@ -48,46 +57,6 @@ def detect_pattern(sheets: list[SheetView], filename: str = "") -> DetectedPatte
                         pattern_name=name, confidence=score, sheet_index=idx,
                     )
     return best
-
-
-# ---------------------------------------------------------------------------
-# Scoring helpers
-# ---------------------------------------------------------------------------
-
-_CONTAINER_SYNONYMS = {
-    "CONTAINER", "CONTAINER NO", "CONTAINERNO", "CONTNO",
-    "CONT NO", "CONTAINER ID", "CTR NO", "CTNR", "CONTAINER#",
-    "SỐ CONTAINER", "SO CONTAINER", "SỐ CONT", "SO CONT",
-    "SỐCONTAINER", "SOCONTAINER",  # no-space variant from SL sheets
-    "MÃ CONT", "MA CONT", "MÃ CONTAINER", "MA CONTAINER",
-    "หมายเลขตู้", "CONT",
-}
-_CONTAINER_NO_RE = re.compile(r"^[A-Z]{4}\d{7}$")
-_PORT_CODE_RE = re.compile(r"^[A-Z]{2,5}$")
-
-
-def _cell_text(cell) -> str:
-    if cell is None:
-        return ""
-    return str(cell).strip()
-
-
-def _cell_upper(cell) -> str:
-    return _cell_text(cell).upper()
-
-
-def is_container_header(cell) -> bool:
-    """True if the cell is a Container NUMBER header.
-
-    Accepts "Container", "Số Container", "หมายเลขตู้" etc.
-    Rejects "Vị trí Container", "Loại Container" which also contain
-    the word but refer to position/type.
-    """
-    t = _cell_upper(cell)
-    if t in _CONTAINER_SYNONYMS:
-        return True
-    return (t.startswith("CONTAINER") or t.startswith("SỐ CONT") or t.startswith("SO CONT")
-            or t.startswith("SỐCONT") or t.startswith("SOCONT"))
 
 
 def _score_bay_plan(sheet: SheetView) -> float:
@@ -316,9 +285,6 @@ def _score_invoice(sheet: SheetView) -> float:
 # ---------------------------------------------------------------------------
 # Settlement List  (BẢNG KÊ QUYẾT TOÁN — Vietnamese reconciliation)
 # ---------------------------------------------------------------------------
-
-_SETTLEMENT_WT_HEADERS = {"F20", "F40", "E20", "E40"}
-
 
 def _score_settlement_list(sheet: SheetView) -> float:
     """Settlement List (BẢNG KÊ QUYẾT TOÁN): pivoted F20'/F40'/E20'/E40' columns.

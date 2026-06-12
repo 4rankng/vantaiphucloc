@@ -18,6 +18,7 @@ from .domain import (  # noqa: F401
     VehicleExpense,
     DriverSalaryConfig,
     DriverSalary,
+    MappingProfile,
 )
 from .operation_type import OperationType  # noqa: F401
 from .audit_log import AuditLog  # noqa: F401
@@ -40,6 +41,7 @@ __all__ = [
     "VehicleExpense",
     "DriverSalaryConfig",
     "DriverSalary",
+    "MappingProfile",
     "OperationType",
     "AuditLog",
     "PushSubscription",

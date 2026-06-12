@@ -142,6 +142,31 @@ def parse_weight_kg(raw: Any) -> float | None:
     return f * 1000 if f < 100 else f
 
 
+def parse_money(raw: Any) -> float | None:
+    """Parse a currency/charge value handling Vietnamese comma/dot conventions.
+
+    Handles: "1,500,000" -> 1500000, "1,5" -> 1.5,
+    "1.234,56" -> 1234.56, "1,234.56" -> 1234.56.
+    Returns None for empty / unparseable input.
+    """
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        return None
+    cleaned = re.sub(r"[^\d.,\-]", "", str(raw))
+    if not cleaned:
+        return None
+    if "," in cleaned and "." in cleaned:
+        if cleaned.rfind(".") > cleaned.rfind(","):
+            cleaned = cleaned.replace(",", "")
+        else:
+            cleaned = cleaned.replace(".", "").replace(",", ".")
+    elif "," in cleaned:
+        cleaned = cleaned.replace(",", "")
+    try:
+        return float(cleaned) if cleaned else None
+    except ValueError:
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Dates
 # ---------------------------------------------------------------------------
