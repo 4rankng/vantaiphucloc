@@ -43,6 +43,7 @@ Pillow>=10.0.0
 
 # Excel processing
 openpyxl>=3.1.0
+xlrd>=2.0.0
 
 # Monitoring
 sentry-sdk==2.13.0
