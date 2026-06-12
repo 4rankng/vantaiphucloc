@@ -10,7 +10,7 @@ import { CONT_TYPES } from '@/data/domain'
 import { useDebounce } from '@/hooks/use-debounce'
 import { toISODate, getSalaryPeriodDates } from '@/lib/salaryPeriod'
 
-type FilterTab = 'matched' | 'pending'
+type FilterTab = 'all' | 'matched' | 'pending'
 
 export function DriverHome() {
   return <MobileDriverHome />
@@ -25,11 +25,11 @@ function MobileDriverHome() {
   const [searchRaw, setSearchRaw] = useState('')
   const debouncedSearch = useDebounce(searchRaw, 300)
 
-  // Filter persisted in URL (?filter=pending). Survives navigate(-1) back from trip detail.
-  const filter = (searchParams.get('filter') as FilterTab | null) ?? 'matched'
+  // Filter persisted in URL (?filter=all|matched|pending). Survives navigate(-1) back from trip detail.
+  const filter = (searchParams.get('filter') as FilterTab | null) ?? 'all'
   const setFilter = useCallback((tab: FilterTab) => {
     setSearchParams(
-      prev => { const n = new URLSearchParams(prev); if (tab === 'matched') n.delete('filter'); else n.set('filter', tab); return n },
+      prev => { const n = new URLSearchParams(prev); if (tab === 'all') n.delete('filter'); else n.set('filter', tab); return n },
       { replace: true },
     )
   }, [setSearchParams])
@@ -82,7 +82,7 @@ function MobileDriverHome() {
   })
 
   // ── List: server-side infinite query with search + matched filter ──
-  const matchedFilter = filter === 'pending' ? false : true
+  const matchedFilter = filter === 'all' ? undefined : filter === 'pending' ? false : true
   const {
     data: infiniteData,
     fetchNextPage,
@@ -261,7 +261,7 @@ function MobileDriverHome() {
             className="flex rounded-full p-0.5 gap-0.5 shrink-0 relative"
             style={{ background: 'var(--theme-bg-tertiary)' }}
           >
-            {(['matched', 'pending'] as FilterTab[]).map(tab => (
+            {(['all', 'matched', 'pending'] as FilterTab[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
@@ -272,7 +272,7 @@ function MobileDriverHome() {
                     : { background: 'transparent', color: 'var(--theme-text-muted)' }
                 }
               >
-                {tab === 'matched' ? 'Đã ghép' : 'Chưa ghép'}
+                {tab === 'all' ? 'Tất cả' : tab === 'matched' ? 'Đã ghép' : 'Chưa ghép'}
               </button>
             ))}
           </div>
