@@ -91,12 +91,12 @@ async def lookup_client_prices(
 
     lane_map: dict[tuple, object] = {}
     for r in rows:
-        key = (r.client_id, r.pickup_location_id, r.dropoff_location_id, _normalize_work_type(r.work_type))
+        key = (r.client_id, r.pickup_location_id, r.dropoff_location_id)
         lane_map[key] = r
 
     result: dict[int, int] = {}
     for t in trips:
-        key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id, _normalize_work_type(t.work_type))
+        key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id)
         pricing = lane_map.get(key)
         result[t.id] = _price_for_cont_type(pricing, t.cont_type) if pricing else 0
 
@@ -122,12 +122,12 @@ async def lookup_vendor_prices(
 
     lane_map: dict[tuple, object] = {}
     for r in rows:
-        key = (r.vendor_id, r.pickup_location_id, r.dropoff_location_id, _normalize_work_type(r.work_type))
+        key = (r.vendor_id, r.pickup_location_id, r.dropoff_location_id)
         lane_map[key] = r
 
     result: dict[int, int] = {}
     for t in trips:
-        key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id, _normalize_work_type(t.work_type))
+        key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id)
         pricing = lane_map.get(key)
         result[t.id] = _price_for_cont_type(pricing, t.cont_type) if pricing else 0
 
@@ -153,12 +153,12 @@ async def lookup_driver_salaries(
 
     lane_map: dict[tuple, object] = {}
     for r in rows:
-        key = (r.client_id, r.pickup_location_id, r.dropoff_location_id, _normalize_work_type(r.work_type))
+        key = (r.client_id, r.pickup_location_id, r.dropoff_location_id)
         lane_map[key] = r
 
     result: dict[int, int] = {}
     for t in trips:
-        key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id, _normalize_work_type(t.work_type))
+        key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id)
         pricing = lane_map.get(key)
         result[t.id] = _salary_for_cont_type(pricing, t.cont_type) if pricing else 0
 
@@ -179,16 +179,13 @@ async def sync_unmatched_trip_salaries(
 
     Returns the number of trips updated.
     """
-    wt = _normalize_work_type(work_type)
-
     pricing = (await session.execute(
         select(ClientRoutePricingORM).where(
             ClientRoutePricingORM.client_id == client_id,
             ClientRoutePricingORM.pickup_location_id == pickup_location_id,
             ClientRoutePricingORM.dropoff_location_id == dropoff_location_id,
-            ClientRoutePricingORM.work_type == wt,
             ClientRoutePricingORM.is_active.is_(True),
-        )
+        ).limit(1)
     )).scalar_one_or_none()
 
     if not pricing:
@@ -200,7 +197,6 @@ async def sync_unmatched_trip_salaries(
             DeliveredTripORM.client_id == client_id,
             DeliveredTripORM.pickup_location_id == pickup_location_id,
             DeliveredTripORM.dropoff_location_id == dropoff_location_id,
-            DeliveredTripORM.work_type == wt,
         )
     )).scalars().all()
 
