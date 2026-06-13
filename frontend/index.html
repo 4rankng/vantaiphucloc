@@ -3,8 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/avif" href="/favicon.avif" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover" />
     <meta name="theme-color" content="#0a1f33" />
+    <!-- iOS PWA: standalone mode + translucent status bar (draws behind notch) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="TTransport" />
     <meta name="app-version" content="2026.04.22.18" />
     <meta name="deployed-at" content="2026.04.22.18:32:00Z" />
     <link rel="stylesheet" href="/fonts/fonts.css" />
