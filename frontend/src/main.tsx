@@ -34,3 +34,12 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </RootErrorBoundary>,
 )
+
+// PWA: register service worker in production for Android installability + offline app shell.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((error) => {
+      console.warn('[sw] registration failed', error)
+    })
+  })
+}
