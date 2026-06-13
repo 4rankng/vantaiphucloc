@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState, useEffect } from 'react'
+import { useRef, useCallback, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Camera } from 'react-camera-pro'
 import { StyleSheetManager } from 'styled-components'
@@ -57,19 +57,8 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
   const cameraRef = useRef<unknown>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [gpsCoords, setGpsCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null })
   const [flashOn, setFlashOn] = useState(false)
   const [busy, setBusy] = useState(false)
-
-  // GPS
-  useEffect(() => {
-    if (!navigator.geolocation) return
-    navigator.geolocation.getCurrentPosition(
-      pos => setGpsCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => setGpsCoords({ lat: null, lng: null }),
-      { enableHighAccuracy: true, timeout: 5000 },
-    )
-  }, [])
 
   // ── Flash toggle via MediaStreamTrack ────────────────────────────────────
   const handleFlashToggle = useCallback(() => {
@@ -93,19 +82,19 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
     try {
       const final = await downsizeImageToDataUrl(rawDataUrl)
       onCapture(final, {
-        lat: gpsCoords.lat,
-        lng: gpsCoords.lng,
+        lat: null,
+        lng: null,
         timestamp: new Date().toISOString(),
       })
     } catch {
       // If downsize fails (e.g. CORS on a remote URL), fall back to the raw source.
       onCapture(rawDataUrl, {
-        lat: gpsCoords.lat,
-        lng: gpsCoords.lng,
+        lat: null,
+        lng: null,
         timestamp: new Date().toISOString(),
       })
     }
-  }, [busy, onCapture, gpsCoords])
+  }, [busy, onCapture])
 
   // ── Camera capture: takePhoto() returns base64 directly ───────────────────
   const handleCapture = useCallback(() => {
