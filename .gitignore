@@ -55,6 +55,9 @@ node_modules/
 dist/
 .cache/
 
+# Runtime data (uploaded photos, local DB, etc.)
+backend/data/
+
 # OS
 .DS_Store
 Thumbs.db
