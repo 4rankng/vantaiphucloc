@@ -109,8 +109,14 @@ function CostDonut({ slices, total }: { slices: DonutSlice[]; total: string }) {
         ))}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="type-display tabular-nums leading-none" style={{ fontFamily: 'var(--theme-font-display, inherit)', color: 'var(--theme-text-primary)' }}>{total}</span>
-        <span className="type-overline mt-1" style={{ color: 'var(--theme-text-muted)' }}>Tổng CP</span>
+        <span className="tabular-nums leading-none flex items-baseline gap-[1px]" style={{ color: 'var(--theme-text-primary)' }}>
+          <span style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--theme-font-display, inherit)' }}>
+            {total.replace(/[a-zA-ZđĐ]+$/, '')}
+          </span>
+          <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--theme-text-muted)' }}>
+            {total.match(/[a-zA-ZđĐ]+$/)?.[0] ?? ''}
+          </span>
+        </span>
       </div>
     </div>
   )
@@ -465,9 +471,9 @@ function DesktopDashboard() {
             </p>
           </div>
           {costSlices.length > 0 ? (
-            <div className="flex items-start gap-4">
+            <div className="flex flex-col items-center gap-4">
               <CostDonut slices={costSlices} total={fmtCompact(chiPhi)} />
-              <div className="flex-1 flex flex-col gap-2.5 min-w-0 pt-1">
+              <div className="w-full flex flex-col gap-2.5">
                 {costSlices.map((s, i) => (
                   <div key={i} className="flex items-center gap-2.5 text-xs">
                     <span className="w-2.5 h-2.5 rounded-[3px] flex-shrink-0" style={{ background: s.color }} />
@@ -660,9 +666,9 @@ function MobileDashboard() {
             </p>
           </div>
           {costSlices.length > 0 ? (
-            <div className="flex items-start gap-4">
+            <div className="flex flex-col items-center gap-4">
               <CostDonut slices={costSlices} total={fmtCompact(chiPhi)} />
-              <div className="flex-1 flex flex-col gap-2.5 min-w-0 pt-1">
+              <div className="w-full flex flex-col gap-2.5">
                 {costSlices.map((s, i) => (
                   <div key={i} className="flex items-center gap-2.5 text-xs">
                     <span className="w-2.5 h-2.5 rounded-[3px] flex-shrink-0" style={{ background: s.color }} />
