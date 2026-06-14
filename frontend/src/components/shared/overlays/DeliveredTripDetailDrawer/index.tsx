@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Camera, StickyNote } from 'lucide-react'
 import { Drawer } from '@/components/shared/overlays/Drawer'
 import { PhotoLightbox } from '@/components/shared/overlays/PhotoLightbox'
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui'
 import { InlineEditable } from '@/components/shared/forms/InlineEditable/InlineEditable'
 import {
   useUpdateDeliveredTrip,
+  useDeliveredTrip,
   useClients,
   useLocations,
 } from '@/hooks/use-queries'
@@ -38,6 +39,15 @@ export function DeliveredTripDetailDrawer({
   const { data: clients = [] } = useClients()
   const { data: locations = [] } = useLocations()
   const { data: operationTypes = [] } = useOperationTypes()
+
+  // The list endpoint strips contPhotoUrl for performance. Fetch the full trip
+  // individually so the photo is available when the drawer opens.
+  const { data: fullTrip } = useDeliveredTrip(initialTrip.id)
+  useEffect(() => {
+    if (fullTrip?.contPhotoUrl && !trip.contPhotoUrl) {
+      setTrip(prev => ({ ...prev, contPhotoUrl: fullTrip.contPhotoUrl }))
+    }
+  }, [fullTrip?.contPhotoUrl])
 
   const updateTrip = {
     ...(_updateTrip),

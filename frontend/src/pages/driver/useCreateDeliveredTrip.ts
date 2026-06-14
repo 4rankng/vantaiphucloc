@@ -29,7 +29,6 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     updateContainer, removeContainer,
     addContainerWithNumber,
     updateAllContType, updateAllWorkType,
-    lastScanPhotoRef,
     hasAnyPhoto, containerCount,
     setContainerErrors,
   } = useContainerManager(existingDeliveredTrip)
@@ -189,50 +188,13 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
       const activeContainers = containers.filter(c => c.containerNumber.trim())
       let anyFailed = false
 
-      // Photo sharing: upload once for first trip, share URL to rest
-      let sharedPhotoUrl: string | null = null
-      const scanPhoto = lastScanPhotoRef.current
-
       for (let i = 0; i < activeContainers.length; i++) {
         const cont = activeContainers[i]
         try {
-          // First trip + scan photo available: create trip, upload photo, capture URL
-          if (i === 0 && scanPhoto) {
-            const res = await apiClient.createDeliveredTrip({
-              contNumber: cont.containerNumber.trim() || null,
-              contType: cont.contType ?? null,
-              workType: cont.workType ?? null,
-              clientId: Number(clientId),
-              pickupLocationId: pickupId,
-              dropoffLocationId: dropoffId,
-              driverId: Number(user!.id),
-              vessel: vessel || null,
-              vehiclePlate: null,
-              tripDate,
-              note: note.trim() || null,
-            })
-
-            if (!res.success) {
-              anyFailed = true
-              continue
-            }
-
-            // Upload photo for first trip → capture URL to share
-            if (res.data?.id) {
-              const uploadRes = await apiClient.uploadDeliveredTripPhoto(res.data.id, scanPhoto.dataUrl)
-              if (uploadRes.success && uploadRes.data?.contPhotoUrl) {
-                sharedPhotoUrl = uploadRes.data.contPhotoUrl
-              }
-            }
-            continue
-          }
-
-          // Subsequent trips (or no scan photo): create with shared photo URL if available
           const res = await apiClient.createDeliveredTrip({
             contNumber: cont.containerNumber.trim() || null,
             contType: cont.contType ?? null,
             workType: cont.workType ?? null,
-            contPhotoUrl: sharedPhotoUrl,
             clientId: Number(clientId),
             pickupLocationId: pickupId,
             dropoffLocationId: dropoffId,
@@ -245,6 +207,13 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
 
           if (!res.success) {
             anyFailed = true
+            continue
+          }
+
+          // Upload this container's own photo if it has one
+          if (res.data?.id && cont.photoTaken && cont.photoDataUrl) {
+            apiClient.uploadDeliveredTripPhoto(res.data.id, cont.photoDataUrl)
+              .catch(() => {})
           }
         } catch {
           anyFailed = true

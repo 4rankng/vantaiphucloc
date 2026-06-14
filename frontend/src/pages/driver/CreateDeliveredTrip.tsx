@@ -268,11 +268,16 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                 <button
                   onClick={commitStagingNumber}
                   type="button"
-                  className="flex-1 basis-1/4 h-12 flex items-center justify-center rounded-xl touch-manipulation transition-all active:scale-90"
-                  style={{
+                  disabled={!stagingNumber.trim()}
+                  className="flex-1 basis-1/4 h-12 flex items-center justify-center rounded-xl touch-manipulation transition-all active:scale-90 disabled:cursor-not-allowed disabled:pointer-events-none"
+                  style={stagingNumber.trim() ? {
                     background: 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)',
                     border: '1.5px solid color-mix(in srgb, var(--theme-brand-primary) 30%, transparent)',
                     color: 'var(--theme-brand-primary)',
+                  } : {
+                    background: 'var(--theme-bg-tertiary)',
+                    border: '1.5px solid var(--theme-border-default)',
+                    color: 'var(--theme-text-muted)',
                   }}
                   aria-label="Thêm container"
                 >
