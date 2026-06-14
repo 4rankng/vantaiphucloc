@@ -6,7 +6,7 @@ import { DayNavigator } from '@/components/shared/navigation/DayNavigator'
 import { DeliveredTripCard } from '@/components/shared/cards/DeliveredTripCard'
 import { FloatingActionButton } from '@/components/shared/feedback/FloatingActionButton'
 import { useMyEarnings, useSalaryConfig, useDeliveredTripsInfinite, useContTypeStats } from '@/hooks/use-queries'
-import { CONT_TYPES } from '@/data/domain'
+import { CONT_TYPES, type ContType } from '@/data/domain'
 import { useDebounce } from '@/hooks/use-debounce'
 import { toISODate, getSalaryPeriodDates } from '@/lib/salaryPeriod'
 
@@ -33,6 +33,20 @@ function MobileDriverHome() {
       { replace: true },
     )
   }, [setSearchParams])
+
+  // Cont-type filter persisted in URL (?contType=…). Tap toggles; tap the active type to clear.
+  const rawContType = searchParams.get('contType')
+  const contTypeFilter: ContType | null =
+    rawContType && (CONT_TYPES as readonly string[]).includes(rawContType) ? (rawContType as ContType) : null
+  const setContTypeFilter = useCallback((ct: ContType | null) => {
+    setSearchParams(
+      prev => { const n = new URLSearchParams(prev); if (ct === null) n.delete('contType'); else n.set('contType', ct); return n },
+      { replace: true },
+    )
+  }, [setSearchParams])
+  const toggleContType = useCallback((ct: ContType) => {
+    setContTypeFilter(contTypeFilter === ct ? null : ct)
+  }, [contTypeFilter, setContTypeFilter])
 
   const today = useMemo(() => {
     const d = new Date()
@@ -101,6 +115,12 @@ function MobileDriverHome() {
   const deliveredTrips = useMemo(
     () => infiniteData?.pages.flatMap(p => p.items) ?? [],
     [infiniteData],
+  )
+
+  // Apply the cont-type filter client-side over the loaded trips
+  const filteredTrips = useMemo(
+    () => contTypeFilter ? deliveredTrips.filter(t => t.contType === contTypeFilter) : deliveredTrips,
+    [deliveredTrips, contTypeFilter],
   )
 
   // ── Daily earnings ──
@@ -200,16 +220,27 @@ function MobileDriverHome() {
           className="flex items-stretch rounded-xl overflow-hidden"
           style={{ background: 'var(--theme-bg-secondary)' }}
         >
-          {CONT_TYPES.map((ct, i) => (
-            <div
-              key={ct}
-              className="flex-1 flex flex-col items-center justify-center py-2.5 cont-stat-hover"
-              style={i > 0 ? { borderLeft: '1px solid var(--theme-border-default)' } : undefined}
-            >
-              <span className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>{ct}</span>
-              <ContStatNumber value={contTypeStats[ct] ?? 0} />
-            </div>
-          ))}
+          {CONT_TYPES.map((ct, i) => {
+            const active = contTypeFilter === ct
+            return (
+              <button
+                key={ct}
+                type="button"
+                onClick={() => toggleContType(ct)}
+                aria-pressed={active}
+                aria-label={active ? `Đang lọc loại ${ct}, nhấn để bỏ lọc` : `Lọc theo loại ${ct}, ${contTypeStats[ct] ?? 0} chuyến`}
+                className="flex-1 flex flex-col items-center justify-center py-2.5 min-h-[44px] cursor-pointer touch-manipulation transition-colors"
+                style={{
+                  WebkitTapHighlightColor: 'transparent',
+                  ...(i > 0 ? { borderLeft: '1px solid var(--theme-border-default)' } : {}),
+                  ...(active ? { background: 'var(--theme-brand-primary)' } : {}),
+                }}
+              >
+                <span className="text-[10px] font-semibold" style={{ color: active ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)' }}>{ct}</span>
+                <ContStatNumber value={contTypeStats[ct] ?? 0} active={active} />
+              </button>
+            )
+          })}
         </div>
       )}
 
@@ -290,18 +321,34 @@ function MobileDriverHome() {
           />
         ) : (
           <>
-            <div className="space-y-2.5">
-              {deliveredTrips.map(job => (
-                <div data-trip-card key={job.id}>
-                  <DeliveredTripCard
-                    variant="driver"
-                    data={job}
-                    onClick={() => navigate(`/driver/job/${job.id}`)}
-                  />
-                </div>
-              ))}
-            </div>
+            {filteredTrips.length === 0 ? (
+              <div
+                className="rounded-lg p-8 flex flex-col items-center justify-center text-center gap-1"
+                style={{ background: 'var(--theme-bg-secondary)' }}
+              >
+                <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+                  {hasNextPage ? 'Đang tìm chuyến…' : `Không có chuyến ${contTypeFilter}`}
+                </p>
+                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                  Nhấn lại để xem tất cả
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {filteredTrips.map(job => (
+                  <div data-trip-card key={job.id}>
+                    <DeliveredTripCard
+                      variant="driver"
+                      data={job}
+                      onClick={() => navigate(`/driver/job/${job.id}`)}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
 
+            {/* Sentinel stays mounted so the observer can keep loading pages even when the
+                current filter matches nothing yet — matching trips may live on later pages. */}
             <div ref={sentinelRef} className="h-1" />
 
             {isFetchingNextPage && (
@@ -327,9 +374,9 @@ function MobileDriverHome() {
   )
 }
 
-function ContStatNumber({ value }: { value: number }) {
+function ContStatNumber({ value, active }: { value: number; active: boolean }) {
   return (
-    <span className="type-display tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>
+    <span className="type-display tabular-nums leading-tight" style={{ color: active ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)' }}>
       {value}
     </span>
   )
