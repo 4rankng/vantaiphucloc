@@ -271,9 +271,9 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                   disabled={!stagingNumber.trim()}
                   className="flex-1 basis-1/4 h-12 flex items-center justify-center rounded-xl touch-manipulation transition-all active:scale-90 disabled:cursor-not-allowed disabled:pointer-events-none"
                   style={stagingNumber.trim() ? {
-                    background: 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)',
-                    border: '1.5px solid color-mix(in srgb, var(--theme-brand-primary) 30%, transparent)',
-                    color: 'var(--theme-brand-primary)',
+                    background: 'var(--theme-brand-primary)',
+                    border: '1px solid var(--theme-brand-primary)',
+                    color: '#ffffff',
                   } : {
                     background: 'var(--theme-bg-tertiary)',
                     border: '1.5px solid var(--theme-border-default)',
@@ -281,7 +281,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                   }}
                   aria-label="Thêm container"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-6 h-6" />
                 </button>
               )}
 
