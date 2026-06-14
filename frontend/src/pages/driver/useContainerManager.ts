@@ -202,7 +202,7 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
                   return prev
                 })
               }
-            }).catch(() => { /* network error — ignore */ })
+            }).catch(() => { /* validation is best-effort — ignore errors */ })
           })
         } else {
           // No containers detected — show error on the active slot
@@ -214,9 +214,26 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
           ))
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        // The Axios interceptor (client.ts) converts errors to ApiError objects
+        // with a `type` field. 401 auth failures are already handled there —
+        // the interceptor clears tokens and redirects to "/" before this runs.
+        const apiType = err?.type as string | undefined
+
+        let ocrError: string
+        if (apiType === 'auth') {
+          // Session expired and refresh failed — interceptor is redirecting to login
+          ocrError = 'Phiên đăng nhập hết hạn – đang chuyển trang đăng nhập…'
+        } else if (apiType === 'network' || !navigator.onLine || !err?.response) {
+          ocrError = 'Mất kết nối – kiểm tra đường truyền'
+        } else {
+          // Backend returned 5xx / 429 — server-side crash or rate limit,
+          // not an AI reading failure (that comes back as HTTP 200 success:false in .then)
+          ocrError = 'Lỗi máy chủ – thử lại hoặc nhập tay'
+        }
+
         setContainers(prev => prev.map((c, i) =>
-          i === idx ? { ...c, ocrLoading: false, ocrError: 'Lỗi kết nối AI' } : c
+          i === idx ? { ...c, ocrLoading: false, ocrError } : c
         ))
       })
   }, [activeContIdx, applyValidationResult])
