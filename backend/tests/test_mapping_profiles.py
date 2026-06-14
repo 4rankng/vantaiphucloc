@@ -5,76 +5,88 @@ from __future__ import annotations
 import json
 
 import pytest
-from sqlalchemy import inspect
+from sqlalchemy import create_engine, inspect
+from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
+
+# Importing the models module registers every ORM table on Base.metadata so
+# Base.metadata.create_all() below materializes mapping_profiles (and its FK
+# target, users). Mirrors conftest.py's no-real-DB convention: in-memory
+# SQLite only — unit tests must not depend on a live Postgres.
+import app.models.domain  # noqa: F401
+from app.database import Base
+
+
+def _sqlite_engine():
+    """In-memory SQLite pinned to a single shared connection via StaticPool.
+
+    A plain ":memory:" database is per-connection, so inspect() and a Session
+    would each see an empty schema. StaticPool keeps one connection alive so
+    the schema created by create_all() is visible to both.
+    """
+    return create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
 
 
 # ---------------------------------------------------------------------------
-# Task 4.1 — Table exists (runs against real Postgres via sync engine)
+# Task 4.1 — Schema (in-memory SQLite; no real DB)
 # ---------------------------------------------------------------------------
 
 
 def test_mapping_profiles_table_exists():
-    """The mapping_profiles table should exist in the database."""
-    from sqlalchemy import create_engine
-
-    from app.config import settings
-
-    url = settings.DATABASE_URL.replace("+asyncpg", "").replace(
-        "postgresql://", "postgresql://"
-    )
-    engine = create_engine(url)
-    insp = inspect(engine)
-    assert "mapping_profiles" in insp.get_table_names()
+    """mapping_profiles is created from the model metadata."""
+    engine = _sqlite_engine()
+    Base.metadata.create_all(engine)
+    try:
+        insp = inspect(engine)
+        assert "mapping_profiles" in insp.get_table_names()
+    finally:
+        engine.dispose()
 
 
 def test_mapping_profiles_columns():
-    """The mapping_profiles table should have the expected columns."""
-    from sqlalchemy import create_engine
-
-    from app.config import settings
-
-    url = settings.DATABASE_URL.replace("+asyncpg", "").replace(
-        "postgresql://", "postgresql://"
-    )
-    engine = create_engine(url)
-    insp = inspect(engine)
-    cols = {c["name"] for c in insp.get_columns("mapping_profiles")}
-    expected = {
-        "id",
-        "profile_name",
-        "template_filename",
-        "header_signature",
-        "column_mapping_json",
-        "pivot_columns_json",
-        "created_by_id",
-        "created_at",
-        "last_used_at",
-        "use_count",
-        "is_active",
-    }
-    assert expected <= cols
+    """mapping_profiles declares the expected columns."""
+    engine = _sqlite_engine()
+    Base.metadata.create_all(engine)
+    try:
+        insp = inspect(engine)
+        cols = {c["name"] for c in insp.get_columns("mapping_profiles")}
+        expected = {
+            "id",
+            "profile_name",
+            "template_filename",
+            "header_signature",
+            "column_mapping_json",
+            "pivot_columns_json",
+            "created_by_id",
+            "created_at",
+            "last_used_at",
+            "use_count",
+            "is_active",
+        }
+        assert expected <= cols
+    finally:
+        engine.dispose()
 
 
 # ---------------------------------------------------------------------------
-# Task 4.2 — Repository unit tests (sync DB)
+# Task 4.2 — Repository unit tests (in-memory SQLite session)
 # ---------------------------------------------------------------------------
 
 
 @pytest.fixture
 def sync_db():
-    """Provide a synchronous SQLAlchemy session for repository tests."""
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import Session
-
-    from app.config import settings
-
-    url = settings.DATABASE_URL.replace("+asyncpg", "").replace(
-        "postgresql://", "postgresql://"
-    )
-    engine = create_engine(url)
-    with Session(engine) as session:
-        yield session
-        session.rollback()
+    """Provide an isolated in-memory SQLite session for repository tests."""
+    engine = _sqlite_engine()
+    Base.metadata.create_all(engine)
+    session = Session(engine)
+    yield session
+    session.rollback()
+    session.close()
+    engine.dispose()
 
 
 def test_repository_create_and_get(sync_db):

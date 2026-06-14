@@ -11,7 +11,10 @@ from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors i
     extract_terminal_log,
 )
 
-TEMPLATES_DIR = "/Users/dev/Documents/projects/vantaiphucloc/docs/templates"
+# Repo-relative so tests run on any checkout (including CI), not just the
+# dev machine. backend/tests/ -> repo root -> docs/templates/.
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+TEMPLATES_DIR = os.path.join(_REPO_ROOT, "docs", "templates")
 BDST_PATH = os.path.join(TEMPLATES_DIR, "BDST 30.5.xls")
 VIPI_PATH = os.path.join(TEMPLATES_DIR, "VIPI 28.5.xls")
 
