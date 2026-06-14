@@ -92,6 +92,7 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
   // Per-container validation errors and check-digit suggestions
   const [containerErrors, setContainerErrors] = useState<Record<number, string>>({})
   const [containerSuggestions, setContainerSuggestions] = useState<Record<number, string[]>>({})
+  const [containerIsoValidating, setContainerIsoValidating] = useState<Record<number, boolean>>({})
 
   // Shared photo from last scan — stored once, uploaded for first trip, URL shared to rest
   const lastScanPhotoRef = useRef<{ dataUrl: string; lat: number | null; lng: number | null; timestamp: string } | null>(null)
@@ -105,6 +106,7 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
     res: Awaited<ReturnType<typeof apiClient.validateContainer>>,
   ) => {
     const invalid = !res.success || !res.data?.valid
+    setContainerIsoValidating(prev => omitKey(prev, idx))
     setContainerErrors(prev => {
       if (invalid) return { ...prev, [idx]: res.data?.error ?? 'Số container không hợp lệ' }
       return omitKey(prev, idx)
@@ -347,10 +349,11 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
 
   /** Commit a number as a new container badge (fills empty slot or appends). */
   const addContainerWithNumber = useCallback((number: string) => {
+    const emptyIdx = containers.findIndex(c => !c.containerNumber.trim())
+    const targetIdx = emptyIdx >= 0 ? emptyIdx : containers.length
     setContainers(prev => {
       const contType = prev[0]?.contType ?? null
       const workType = prev[0]?.workType ?? null
-      const emptyIdx = prev.findIndex(c => !c.containerNumber.trim())
       if (emptyIdx >= 0) {
         return prev.map((c, i) =>
           i === emptyIdx ? { ...c, containerNumber: number, contType, workType } : c
@@ -358,7 +361,13 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
       }
       return [...prev, { ...EMPTY_CONT, containerNumber: number, contType, workType }]
     })
-  }, [])
+    setContainerIsoValidating(prev => ({ ...prev, [targetIdx]: true }))
+    apiClient.validateContainer(number).then(res => {
+      applyValidationResult(targetIdx, res)
+    }).catch(() => {
+      setContainerIsoValidating(prev => omitKey(prev, targetIdx))
+    })
+  }, [containers, applyValidationResult])
 
   // Whether any container has a photo taken (for nudge UI)
   const hasAnyPhoto = useMemo(() =>
@@ -383,6 +392,7 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
     containerErrors,
     setContainerErrors,
     containerSuggestions,
+    containerIsoValidating,
     validateContainerOnBlur,
     applyContainerSuggestion,
     validateContainerFormat,

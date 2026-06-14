@@ -23,7 +23,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     scannerOpen, setScannerOpen,
     forceManualEntry,
     handleScanComplete, scanNewContainer,
-    containerErrors, containerSuggestions,
+    containerErrors, containerSuggestions, containerIsoValidating,
     validateContainerOnBlur, applyContainerSuggestion,
     validateContainerFormat,
     updateContainer, removeContainer,
@@ -343,7 +343,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
 
     // UI state
     submitting, scannerOpen, summaryOpen, showSuccess,
-    forceManualEntry, missingFields, containerErrors, containerSuggestions, suggestionLoading,
+    forceManualEntry, missingFields, containerErrors, containerSuggestions, containerIsoValidating, suggestionLoading,
 
     // Derived
     canSubmit, summaryContNumber, summaryContType, summaryWorkType, summaryClientName,

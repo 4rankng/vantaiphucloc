@@ -40,7 +40,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
     containers, clientId, vessel, note, pickupLocation, dropoffLocation, tripDate,
     selectedTripId,
     submitting, scannerOpen, summaryOpen, showSuccess,
-    forceManualEntry, missingFields, containerErrors, containerSuggestions, suggestionLoading,
+    forceManualEntry, missingFields, containerErrors, containerSuggestions, containerIsoValidating, suggestionLoading,
     canSubmit, summaryContNumber, summaryContType, summaryWorkType, summaryClientName,
     hasAnyPhoto, containerCount,
     tripDateLabel,
@@ -177,6 +177,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                 {containers.map((cont, idx) => {
                   if (!cont.containerNumber.trim()) return null
                   const hasError = !!containerErrors[idx]
+                  const isValidating = !!containerIsoValidating[idx]
                   return (
                     <span
                       key={idx}
@@ -192,6 +193,12 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                       }}
                     >
                       {cont.containerNumber}
+                      {isValidating && (
+                        <Loader2
+                          className="w-3.5 h-3.5 animate-spin ml-0.5 shrink-0"
+                          style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }}
+                        />
+                      )}
                       <button
                         onClick={() => removeContainer(idx)}
                         type="button"
