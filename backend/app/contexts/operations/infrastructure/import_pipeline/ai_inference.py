@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import time
 from dataclasses import dataclass
 
@@ -17,6 +18,11 @@ _logger = logging.getLogger(__name__)
 # In-process cache with TTL (1 hour, same as llm.py)
 _CACHE_TTL_SECONDS = 3600
 _CACHE: dict[str, tuple[dict, float]] = {}
+
+# Same model list + fallback order used by llm.py, ai_extractor.py, and
+# gemini_client.py. Never hardcode a versioned id (e.g. gemini-2.0-flash)
+# here — those get retired and return 404.
+GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
 
 @dataclass
@@ -95,45 +101,57 @@ async def _call_gemini(prompt: str) -> dict:
         "required": ["columns"],
     }
 
-    url = (
-        "https://generativelanguage.googleapis.com/v1beta/"
-        "models/gemini-2.0-flash:generateContent"
-        f"?key={api_key}"
-    )
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.1,
-            "maxOutputTokens": 1024,
+            "maxOutputTokens": 8192,
             "responseMimeType": "application/json",
             "responseSchema": _SCHEMA,
         },
     }
+
+    # Try each model until one succeeds; same fallback order as llm.py.
+    last_exc: Exception | None = None
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(url, json=payload)
-        resp.raise_for_status()
-        data = resp.json()
+        for model_name in GEMINI_MODELS:
+            url = (
+                "https://generativelanguage.googleapis.com/v1beta/"
+                f"models/{model_name}:generateContent?key={api_key}"
+            )
+            try:
+                resp = await client.post(url, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+            except Exception as exc:
+                _logger.warning("[infer_schema] %s failed: %s", model_name, exc)
+                last_exc = exc
+                continue
 
-    text = (
-        data.get("candidates", [{}])[0]
-        .get("content", {})
-        .get("parts", [{}])[0]
-        .get("text", "")
-        .strip()
-    )
+            text = (
+                data.get("candidates", [{}])[0]
+                .get("content", {})
+                .get("parts", [{}])[0]
+                .get("text", "")
+                .strip()
+            )
+            # Models sometimes wrap JSON in ```json fences; strip them.
+            text = re.sub(r"^```(?:json)?\s*", "", text).rstrip("`").strip()
 
-    parsed = json.loads(text)
-    # Convert array-of-objects format to {col_index: {field, confidence}}
-    result: dict[str, dict] = {}
-    for col in parsed.get("columns", []):
-        idx = col.get("index")
-        if idx is None:
-            continue
-        result[str(idx)] = {
-            "field": col.get("field", ""),
-            "confidence": col.get("confidence", 0.0),
-        }
-    return result
+            parsed = json.loads(text)
+            # Convert array-of-objects format to {col_index: {field, confidence}}
+            result: dict[str, dict] = {}
+            for col in parsed.get("columns", []):
+                idx = col.get("index")
+                if idx is None:
+                    continue
+                result[str(idx)] = {
+                    "field": col.get("field", ""),
+                    "confidence": col.get("confidence", 0.0),
+                }
+            return result
+
+    raise last_exc or RuntimeError("infer_schema_with_ai: all Gemini models failed")
 
 
 async def infer_schema_with_ai(

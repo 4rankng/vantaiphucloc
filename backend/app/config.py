@@ -44,9 +44,8 @@ class Settings(BaseSettings):
     WORKER_TIMEOUT: int = 600
     WORKER_MAX_TRIES: int = 3
 
-    # AI provider
+    # AI provider (Gemini is always on whenever GEMINI_API_KEY is set)
     GEMINI_API_KEY: str = ""
-    GEMINI_ENABLE: bool = False
     CHATBOT_ENABLE: int = 0
 
     # Push notifications (VAPID)

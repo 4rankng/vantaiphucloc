@@ -117,9 +117,9 @@ async def run_preview(
     except ValueError:
         pass
 
-    # Step 3: Full AI extraction fallback
+    # Step 3: Full AI extraction fallback (always on when a key is set)
     from app.config import settings
-    if getattr(settings, "GEMINI_ENABLE", False):
+    if getattr(settings, "GEMINI_API_KEY", None):
         try:
             from app.contexts.operations.infrastructure.import_pipeline.ai_extractor import extract_with_ai
             ai_rows = await extract_with_ai(sheets, filename)
@@ -134,6 +134,49 @@ async def run_preview(
 
     # Step 4: Complete failure
     raise ValueError("Không thể đọc tệp Excel. Vui lòng kiểm tra lại cấu trúc cột hoặc nhập thủ công.")
+
+
+_ROUTE_SEPARATORS = (" - ", " – ", " — ", " → ", " -> ", " ⇒ ")
+
+
+def _looks_like_number(s: str) -> bool:
+    t = s.replace(",", "").replace(".", "").replace(" ", "")
+    return t.isdigit()
+
+
+def _split_route_cell(cell) -> tuple[str, str] | None:
+    """Split a combined route cell like 'JJ - NĐV' into (pickup, dropoff).
+
+    Returns None when the cell has no recognised separator or either side
+    looks like a bare number (so we don't split numeric ranges / amounts).
+    """
+    if cell is None:
+        return None
+    s = str(cell).strip()
+    if not s:
+        return None
+    for sep in _ROUTE_SEPARATORS:
+        if sep in s:
+            left, _, right = s.partition(sep)
+            left, right = left.strip(), right.strip()
+            if left and right and not _looks_like_number(left) and not _looks_like_number(right):
+                return left, right
+    return None
+
+
+def _find_route_column(sheet, header_row: int) -> int | None:
+    """Locate a single 'route' column (TUYẾN ĐƯỜNG / ROUTE / LỘ TRÌNH) by header."""
+    if not (0 <= header_row < len(sheet.rows)):
+        return None
+    for idx, h in enumerate(sheet.rows[header_row]):
+        if h is None:
+            continue
+        hl = str(h).strip().upper()
+        # Vietnamese route words are matched as substrings; "LINE" is matched
+        # exactly so it doesn't false-positive on "SHIPPING LINE" / "LINE NO".
+        if any(k in hl for k in ("TUYẾN", "ROUTE", "LỘ TRÌNH", "LO TRINH")) or hl == "LINE":
+            return idx
+    return None
 
 
 def apply_mapping(
@@ -172,6 +215,13 @@ def apply_mapping(
         "container_size" not in by_field or "freight_kind" not in by_field
     )
 
+    # Route column: a single combined "pickup - dropoff" column (e.g.
+    # TUYẾN ĐƯỜNG = "JJ - NĐV"). Split it into pickup_location /
+    # dropoff_location when those fields aren't mapped separately.
+    route_idx = _find_route_column(sheet, header_row)
+    route_need_pickup = route_idx is not None and "pickup_location" not in by_field
+    route_need_dropoff = route_idx is not None and "dropoff_location" not in by_field
+
     # Detect "all-empty" tail rows so we don't treat trailing whitespace
     # as 600 rejected entries. Stop once we hit 50 consecutive empty rows.
     empty_streak = 0
@@ -202,6 +252,15 @@ def apply_mapping(
                     row_overrides["container_size"] = pivot.container_size
                 if "freight_kind" not in by_field:
                     row_overrides["freight_kind"] = pivot.freight_kind
+
+        # Split a combined route cell into pickup/dropoff when needed.
+        if (route_need_pickup or route_need_dropoff) and route_idx is not None and route_idx < len(raw_row):
+            split = _split_route_cell(raw_row[route_idx])
+            if split is not None:
+                if route_need_pickup:
+                    row_overrides["pickup_location"] = split[0]
+                if route_need_dropoff:
+                    row_overrides["dropoff_location"] = split[1]
 
         raw_dict, parsed_or_reasons = _parse_row(
             raw_row, by_field, default_trip_date, row_overrides=row_overrides,
@@ -471,7 +530,7 @@ async def _run_generic_preview(
                 for col_idx, inf in inferred.items():
                     if inf.canonical_field and inf.confidence > 0.5:
                         # Only override if AI confidence beats existing or field is missing
-                        existing = next((m for m in mappings if m.col_index == col_idx), None)
+                        existing = next((m for m in mappings if m.column_index == col_idx), None)
                         if existing is None or existing.confidence < inf.confidence:
                             # Update or add mapping
                             if existing:

@@ -10,23 +10,6 @@ function unwrap<T>(res: ApiResponse<T>): T {
   throw new Error(res.message ?? 'Lỗi hệ thống')
 }
 
-export function useBulkImportAndMatch() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ file, clientId }: { file: File; clientId?: number }) =>
-      apiClient.bulkImportAndMatch(file, clientId).then(unwrap),
-    onSuccess: () => invalidateDeliveredTripDeps(qc),
-  })
-}
-
-
-export function useParsePreview() {
-  return useMutation({
-    mutationFn: ({ file }: { file: File }) =>
-      apiClient.parsePreview(file).then(unwrap),
-  })
-}
-
 export function usePreviewCustomerExcel() {
   return useMutation({
     mutationFn: (args: {

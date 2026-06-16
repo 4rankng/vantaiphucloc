@@ -869,20 +869,19 @@ def test_chinese_synonyms(header: str, expected_field: str):
 
 
 # ---------------------------------------------------------------------------
-# Gemini config flag — when enabled, get_batch_classifier returns a
-# Gemini-backed classifier; when disabled (the default), NullBatchHeaderClassifier.
-# We don't hit the network — we just check the wiring.
+# Gemini is always on in prod (gated on GEMINI_API_KEY); conftest forces the
+# key off for the suite. We only check the factory wiring — no network.
 # ---------------------------------------------------------------------------
 
-def test_default_classifier_is_null_when_gemini_disabled(monkeypatch):
+def test_classifier_is_null_without_api_key(monkeypatch):
     from app.config import settings
-    monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
     clf = get_batch_classifier()
-    assert isinstance(clf, type(NullBatchHeaderClassifier())) or \
-        clf.__class__.__name__ == "CachedBatchHeaderClassifier"
+    assert clf._inner.__class__.__name__ == "NullBatchHeaderClassifier"
 
 
-def test_settings_has_gemini_enable_flag():
+def test_classifier_is_gemini_when_api_key_set(monkeypatch):
     from app.config import settings
-    assert hasattr(settings, "GEMINI_ENABLE")
-    assert isinstance(settings.GEMINI_ENABLE, bool)
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "fake-key-for-wiring-test")
+    clf = get_batch_classifier()
+    assert clf._inner.__class__.__name__ == "GeminiBatchClassifier"

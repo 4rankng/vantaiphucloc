@@ -6,9 +6,10 @@ yield confidence < 0.5 for a header. The default implementation
 works end-to-end with zero LLM calls — it just leaves columns unmapped and
 flagged for human review.
 
-To enable real LLM classification, set
-``settings.GEMINI_ENABLE=True`` and provide
-``settings.GEMINI_API_KEY`` (already in use for OCR — see ai_service.py).
+LLM classification is always on whenever ``settings.GEMINI_API_KEY`` is
+set (the same key already used for OCR — see ai_service.py). With no key
+the factory returns ``NullBatchHeaderClassifier`` and the pipeline runs
+end-to-end with zero LLM calls.
 """
 
 from __future__ import annotations
@@ -99,8 +100,8 @@ class CachedBatchHeaderClassifier:
 
 
 # ---------------------------------------------------------------------------
-# Gemini-backed implementation. Wired but disabled by default — the
-# settings flag keeps it inert.
+# Gemini-backed implementation. Always on when GEMINI_API_KEY is set; the
+# factory falls back to NullBatchHeaderClassifier when no key is present.
 # ---------------------------------------------------------------------------
 
 def _build_batch_prompt(headers: list[tuple[int, str, list[str]]], candidates: list[str]) -> str:
@@ -134,8 +135,8 @@ class GeminiBatchClassifier:
 
     def __init__(self) -> None:
         from app.config import settings
-        self._enabled = bool(getattr(settings, "GEMINI_ENABLE", False))
         self._api_key = getattr(settings, "GEMINI_API_KEY", None)
+        self._enabled = bool(self._api_key)  # always on when a key is configured
         self._models = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
     async def classify_batch(
@@ -219,10 +220,15 @@ class GeminiBatchClassifier:
 
 
 def get_batch_classifier() -> BatchHeaderClassifier:
-    """Factory used by the pipeline. Honours ``settings.GEMINI_ENABLE``."""
+    """Factory used by the pipeline.
+
+    Returns the Gemini-backed classifier whenever ``GEMINI_API_KEY`` is set,
+    otherwise the no-op ``NullBatchHeaderClassifier`` (so the pipeline still
+    runs end-to-end with zero LLM calls, e.g. in tests).
+    """
     try:
         from app.config import settings
-        if getattr(settings, "GEMINI_ENABLE", False):
+        if getattr(settings, "GEMINI_API_KEY", None):
             return CachedBatchHeaderClassifier(GeminiBatchClassifier())
     except Exception:
         pass

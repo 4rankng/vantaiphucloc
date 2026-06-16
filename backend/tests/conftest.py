@@ -12,6 +12,12 @@ from app.models.base import User
 from app.core.security import hash_password
 from app.core.redis import get_redis
 
+# Gemini is always on in prod (gated on GEMINI_API_KEY). Force the key off
+# for the whole suite so no test ever hits the Gemini network — the import
+# pipeline then degrades to heuristics + NullBatchHeaderClassifier.
+from app.config import settings as _settings
+_settings.GEMINI_API_KEY = ""
+
 
 class _FakePipeline:
     async def execute(self):
