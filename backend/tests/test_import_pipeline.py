@@ -32,7 +32,10 @@ from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors i
     extract_settlement_list,
     extract_stacking_plan,
 )
-from app.contexts.operations.infrastructure.import_pipeline.pipeline import run_preview
+from app.contexts.operations.infrastructure.import_pipeline.pipeline import (
+    run_preview,
+    _split_container_cell,
+)
 from app.contexts.operations.infrastructure.import_pipeline.llm import (
     NullBatchHeaderClassifier,
     get_batch_classifier,
@@ -885,3 +888,47 @@ def test_classifier_is_gemini_when_api_key_set(monkeypatch):
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "fake-key-for-wiring-test")
     clf = get_batch_classifier()
     assert clf._inner.__class__.__name__ == "GeminiBatchClassifier"
+
+
+# ---------------------------------------------------------------------------
+# Joined container-number cells: "HACU2215738/HACU2242754" → 2 trips.
+# ---------------------------------------------------------------------------
+
+def test_split_container_cell_joined_slash():
+    assert _split_container_cell("HACU2215738/HACU2242754") == [
+        "HACU2215738",
+        "HACU2242754",
+    ]
+
+
+def test_split_container_cell_single_value_is_none():
+    # No separator → not a join; leave to normal parsing.
+    assert _split_container_cell("HACU2215738") is None
+
+
+def test_split_container_cell_malformed_is_none():
+    # Malformed value with no separator stays None → rejected as bad_container_no.
+    assert _split_container_cell("HLHHU8208208") is None
+
+
+def test_split_container_cell_one_part_invalid_is_none():
+    # If any part isn't a clean container number, don't split — let normal
+    # parsing reject it rather than emitting a junk record.
+    assert _split_container_cell("HACU2215738/JUNK123") is None
+
+
+def test_split_container_cell_empty_and_none_is_none():
+    assert _split_container_cell(None) is None
+    assert _split_container_cell("") is None
+    assert _split_container_cell("   ") is None
+
+
+def test_split_container_cell_other_separators():
+    assert _split_container_cell("HACU2215738,HACU2242754") == [
+        "HACU2215738",
+        "HACU2242754",
+    ]
+    assert _split_container_cell("HACU2215738+HACU2242754") == [
+        "HACU2215738",
+        "HACU2242754",
+    ]

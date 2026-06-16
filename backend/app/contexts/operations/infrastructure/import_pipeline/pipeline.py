@@ -164,6 +164,41 @@ def _split_route_cell(cell) -> tuple[str, str] | None:
     return None
 
 
+_CONTAINER_SEPARATORS = ("/", "\\", ",", ";", "&", "+")
+
+
+def _split_container_cell(cell) -> list[str] | None:
+    """If a cell holds two or more container numbers joined by a separator
+    (e.g. ``HACU2215738/HACU2242754``), return the list of normalized
+    container numbers — one per part.
+
+    Returns ``None`` when the cell is a single value or any part is not a
+    clean container number, so the caller falls back to normal parsing
+    (which keeps rejecting genuinely malformed values like ``HLHHU8208208``).
+    """
+    if cell is None:
+        return None
+    s = str(cell).strip()
+    if not s or not any(sep in s for sep in _CONTAINER_SEPARATORS):
+        return None
+    # Container joins in these spreadsheets use one consistent separator
+    # per cell, so split on the first separator that appears.
+    parts: list[str] = []
+    for sep in _CONTAINER_SEPARATORS:
+        if sep in s:
+            parts = [p.strip() for p in s.split(sep) if p.strip()]
+            break
+    if len(parts) < 2:
+        return None
+    normalized: list[str] = []
+    for p in parts:
+        try:
+            normalized.append(parse_container_no(p))
+        except ValueError:
+            return None
+    return normalized
+
+
 def _find_route_column(sheet, header_row: int) -> int | None:
     """Locate a single 'route' column (TUYẾN ĐƯỜNG / ROUTE / LỘ TRÌNH) by header."""
     if not (0 <= header_row < len(sheet.rows)):
@@ -222,10 +257,33 @@ def apply_mapping(
     route_need_pickup = route_idx is not None and "pickup_location" not in by_field
     route_need_dropoff = route_idx is not None and "dropoff_location" not in by_field
 
+    # Container column: a cell may hold two container numbers joined by a
+    # separator (e.g. "HACU2215738/HACU2242754"). When detected we emit one
+    # accepted row per container number, each inheriting the row's other
+    # fields (date/route/freight/size/kind).
+    cont_map = by_field.get("container_no")
+    cont_idx = cont_map.column_index if cont_map else None
+
     # Detect "all-empty" tail rows so we don't treat trailing whitespace
     # as 600 rejected entries. Stop once we hit 50 consecutive empty rows.
     empty_streak = 0
     EMPTY_TAIL_LIMIT = 50
+
+    def finalize(r: int, raw_dict: dict[str, Any], parsed: dict[str, Any] | list[str]) -> None:
+        """Accept a parsed row (deduped) or record it as rejected."""
+        if isinstance(parsed, list):
+            rejected.append(RejectedRow(source_row_index=r, reasons=parsed, raw=raw_dict))
+            return
+        row_key = (
+            parsed.get("container_no", ""),
+            (parsed.get("trip_date") or "").strip(),
+            (parsed.get("pickup_location") or "").strip().lower(),
+            (parsed.get("dropoff_location") or "").strip().lower(),
+        )
+        if row_key in seen_rows:
+            return
+        seen_rows.add(row_key)
+        accepted.append(ParsedRow(source_row_index=r, values=parsed))
 
     for r in range(header_row + 1, len(sheet.rows)):
         raw_row = sheet.rows[r]
@@ -262,24 +320,26 @@ def apply_mapping(
                 if route_need_dropoff:
                     row_overrides["dropoff_location"] = split[1]
 
-        raw_dict, parsed_or_reasons = _parse_row(
+        # Two container numbers joined in one cell (e.g. "A/B")? Parse one
+        # row per container number; otherwise parse the cell as-is.
+        cont_splits = (
+            _split_container_cell(raw_row[cont_idx])
+            if cont_idx is not None and cont_idx < len(raw_row)
+            else None
+        )
+        if cont_splits:
+            for part in cont_splits:
+                raw_dict, parsed = _parse_row(
+                    raw_row, by_field, default_trip_date,
+                    row_overrides={**row_overrides, "container_no": part},
+                )
+                finalize(r, raw_dict, parsed)
+            continue
+
+        raw_dict, parsed = _parse_row(
             raw_row, by_field, default_trip_date, row_overrides=row_overrides,
         )
-        if isinstance(parsed_or_reasons, list):
-            rejected.append(RejectedRow(source_row_index=r, reasons=parsed_or_reasons, raw=raw_dict))
-            continue
-
-        row_key = (
-            parsed_or_reasons.get("container_no", ""),
-            (parsed_or_reasons.get("trip_date") or "").strip(),
-            (parsed_or_reasons.get("pickup_location") or "").strip().lower(),
-            (parsed_or_reasons.get("dropoff_location") or "").strip().lower(),
-        )
-        if row_key in seen_rows:
-            continue
-        seen_rows.add(row_key)
-
-        accepted.append(ParsedRow(source_row_index=r, values=parsed_or_reasons))
+        finalize(r, raw_dict, parsed)
 
     return accepted, rejected
 
