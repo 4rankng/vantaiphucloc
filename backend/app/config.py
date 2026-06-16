@@ -90,3 +90,10 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+# Gemini generation models tried in order at every call site (OCR, column
+# mapping, schema inference, fallback extraction). Versioned ids such as
+# gemini-2.0-flash get retired and 404, so use the -latest aliases. Keep this
+# the single source of truth — import from here, don't redefine per module.
+GEMINI_MODELS: list[str] = ["gemini-flash-latest", "gemini-flash-lite-latest"]

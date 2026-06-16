@@ -62,15 +62,13 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
     Returns an empty list on any failure — never raises.
     """
     try:
-        from app.config import settings
+        from app.config import GEMINI_MODELS, settings
         api_key = getattr(settings, "GEMINI_API_KEY", None)
     except Exception:
         return []
 
     if not api_key:
         return []
-
-    _GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
     # Pick the most content-rich sheet
     sheet = _pick_richest_sheet(sheets)
@@ -106,7 +104,7 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
     }
 
     last_error = None
-    for model_name in _GEMINI_MODELS:
+    for model_name in GEMINI_MODELS:
         try:
             url = (
                 f"https://generativelanguage.googleapis.com/v1beta/"

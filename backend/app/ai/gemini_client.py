@@ -10,12 +10,9 @@ import logging
 
 import httpx
 
-from app.config import settings
+from app.config import GEMINI_MODELS, settings
 
 _logger = logging.getLogger(__name__)
-
-# Fallback chain — tries each model in order until one succeeds
-_GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
 # API endpoint
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -50,7 +47,7 @@ async def call_gemini(
             "Get one from https://aistudio.google.com/apikey"
         )
 
-    models_to_try = [model] if model else _GEMINI_MODELS
+    models_to_try = [model] if model else GEMINI_MODELS
     last_error = None
 
     for model_name in models_to_try:

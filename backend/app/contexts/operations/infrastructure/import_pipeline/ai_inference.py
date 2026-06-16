@@ -19,11 +19,6 @@ _logger = logging.getLogger(__name__)
 _CACHE_TTL_SECONDS = 3600
 _CACHE: dict[str, tuple[dict, float]] = {}
 
-# Same model list + fallback order used by llm.py, ai_extractor.py, and
-# gemini_client.py. Never hardcode a versioned id (e.g. gemini-2.0-flash)
-# here — those get retired and return 404.
-GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"]
-
 
 @dataclass
 class InferredColumn:

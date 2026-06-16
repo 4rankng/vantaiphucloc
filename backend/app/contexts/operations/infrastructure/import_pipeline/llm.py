@@ -134,10 +134,10 @@ class GeminiBatchClassifier:
     """Batch LLM classifier. Calls Gemini once for all unmapped columns."""
 
     def __init__(self) -> None:
-        from app.config import settings
+        from app.config import GEMINI_MODELS, settings
         self._api_key = getattr(settings, "GEMINI_API_KEY", None)
         self._enabled = bool(self._api_key)  # always on when a key is configured
-        self._models = ["gemini-flash-latest", "gemini-flash-lite-latest"]
+        self._models = GEMINI_MODELS
 
     async def classify_batch(
         self,

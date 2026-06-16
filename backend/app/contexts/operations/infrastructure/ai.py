@@ -11,16 +11,13 @@ import logging
 import httpx
 from PIL import Image, ImageOps
 
-from app.config import settings
+from app.config import GEMINI_MODELS, settings
 
 _logger = logging.getLogger(__name__)
 
 # Configuration — single source of truth via pydantic-settings
 GEMINI_API_KEY = settings.GEMINI_API_KEY
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta"
-
-# Hard-coded fallback chain — using capable multimodal models to avoid 2-pass fallback
-_GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
 # Shared HTTP client (lazy singleton)
 _http_client: httpx.AsyncClient | None = None
@@ -135,7 +132,7 @@ async def call_gemini_vision(
         "generationConfig": generation_config,
     }
 
-    models_to_try = [model] if model else _GEMINI_MODELS
+    models_to_try = [model] if model else GEMINI_MODELS
     last_error = None
 
     for m in models_to_try:
@@ -199,7 +196,7 @@ async def analyze_image_with_fallback(
     Thin wrapper around call_gemini_vision that adds ``fallback_used``.
     """
     result = await call_gemini_vision(prompt, image_bytes, mime_type, response_schema=response_schema)
-    result["fallback_used"] = result["success"] and result.get("model") != _GEMINI_MODELS[0]
+    result["fallback_used"] = result["success"] and result.get("model") != GEMINI_MODELS[0]
     return result
 
 
