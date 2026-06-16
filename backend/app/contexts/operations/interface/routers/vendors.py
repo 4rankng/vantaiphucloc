@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -15,6 +17,9 @@ from app.models.domain import Vendor
 router = APIRouter(tags=["vendors"])
 
 
+VendorType = Literal["company", "individual"]
+
+
 class VendorCreateBody(BaseModel):
     name: str
     code: str | None = None
@@ -22,7 +27,7 @@ class VendorCreateBody(BaseModel):
     tax_code: str | None = None
     address: str | None = None
     contact_person: str | None = None
-    type: str | None = None
+    type: VendorType | None = None
 
 
 class VendorUpdateBody(BaseModel):
@@ -32,7 +37,7 @@ class VendorUpdateBody(BaseModel):
     tax_code: str | None = None
     address: str | None = None
     contact_person: str | None = None
-    type: str | None = None
+    type: VendorType | None = None
 
 
 class VendorOut(BaseModel):
@@ -132,6 +137,7 @@ async def create_vendor(
         tax_code=body.tax_code,
         address=body.address,
         contact_person=body.contact_person,
+        type=body.type or "individual",
         is_active=True,
     )
     db.add(vendor)
@@ -154,8 +160,6 @@ async def update_vendor(
     if vendor is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy nhà thầu.")
     for field, value in body.model_dump(exclude_unset=True).items():
-        if field == "type":
-            continue
         setattr(vendor, field, value)
     await db.flush()
     await db.refresh(vendor)

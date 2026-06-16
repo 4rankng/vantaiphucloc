@@ -167,6 +167,7 @@ class Vendor(AuditableMixin, Base):
     tax_code = Column(String(50), nullable=True)
     address = Column(String(500), nullable=True)
     contact_person = Column(String(255), nullable=True)
+    type = Column(String(20), nullable=False, server_default="individual")
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(

@@ -90,3 +90,6 @@ heartbeat*.json
 # Next.js build output
 frontend/.next/
 frontend/next-env.d.ts
+
+qa/*
+.kilo
