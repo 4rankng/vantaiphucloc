@@ -69,7 +69,7 @@ Use empty object {{}} for unmappable columns. Be conservative with confidence.
 
 async def _call_gemini(prompt: str) -> dict:
     """Call Gemini API with structured JSON response. Raises on failure."""
-    from app.config import settings
+    from app.config import GEMINI_MODELS, settings
 
     api_key = settings.GEMINI_API_KEY
     if not api_key:
