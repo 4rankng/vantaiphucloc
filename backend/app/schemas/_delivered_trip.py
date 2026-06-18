@@ -13,6 +13,7 @@ __all__ = [
     "DeliveredTripUpdate",
     "DeliveredTripOut",
     "DeliveredTripPhotoUpload",
+    "DeliveredTripDuplicateCheck",
 ]
 
 
@@ -20,6 +21,23 @@ class DeliveredTripPhotoUpload(BaseModel):
     """Base64-encoded image data for a container photo."""
 
     image_data: str
+
+
+class DeliveredTripDuplicateCheck(BaseModel):
+    """A trip a driver is about to submit, checked for duplicates.
+
+    ``image_data`` is an optional raw base64 string (no ``data:`` prefix);
+    when present its sha256 is compared against existing trips' photo hashes
+    (the strongest duplicate signal).
+    """
+
+    cont_number: str | None = None
+    cont_type: str | None = None
+    pickup_location_id: int | None = None
+    dropoff_location_id: int | None = None
+    trip_date: date | None = None
+    image_data: str | None = None
+    exclude_trip_id: int | None = None
 
 
 class DeliveredTripCreate(BaseModel):

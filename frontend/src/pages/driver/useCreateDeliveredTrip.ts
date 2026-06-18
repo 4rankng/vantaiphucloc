@@ -10,6 +10,7 @@ import { toISODate, shiftISODate, formatISODate } from '@/lib/salaryPeriod'
 import { invalidateDeliveredTripDeps } from '@/hooks/query-keys'
 import { useContainerManager } from './useContainerManager'
 import { migrateWorkType } from './useContainerManager'
+import type { DuplicateCheckCandidate } from '@/services/api/deliveredTrips.api'
 
 export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | null) {
   const navigate = useNavigate()
@@ -65,6 +66,11 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   const [submitting, setSubmitting] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+
+  // Duplicate-trip warning (driver submit-time check against own last 7 days)
+  const [duplicateChecking, setDuplicateChecking] = useState(false)
+  const [duplicateCandidates, setDuplicateCandidates] = useState<DuplicateCheckCandidate[]>([])
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
 
   // Suggestion loading
   const [suggestionLoading, setSuggestionLoading] = useState(true)
@@ -251,10 +257,56 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     // Edit mode: skip the summary dialog — driver already reviewed on the detail page
     if (isEdit) {
       await confirmSubmit()
-    } else {
-      setSummaryOpen(true)
+      return
     }
-  }, [canSubmit, containers, isEdit, confirmSubmit, setContainerErrors])
+
+    // Create mode: warn if any container matches an existing trip of this
+    // driver from the last 7 days (same photo, or same cont + route + type).
+    const pickupId = locations.find(l => l.name === pickupLocation)?.id
+    const dropoffId = locations.find(l => l.name === dropoffLocation)?.id
+    if (!pickupId || !dropoffId) return
+
+    setDuplicateChecking(true)
+    try {
+      const found: DuplicateCheckCandidate[] = []
+      for (const c of containers.filter(x => x.containerNumber.trim())) {
+        const res = await apiClient.checkDeliveredTripDuplicate({
+          contNumber: c.containerNumber.trim() || null,
+          contType: c.contType ?? null,
+          pickupLocationId: pickupId,
+          dropoffLocationId: dropoffId,
+          tripDate,
+          photoDataUrl: c.photoDataUrl ?? null,
+        })
+        if (res.success) found.push(...res.data.candidates)
+      }
+      if (found.length > 0) {
+        setDuplicateCandidates(found)
+        setDuplicateDialogOpen(true)
+        return
+      }
+    } catch (err) {
+      // Fail open: never block submission because the check itself errored.
+      console.error('Duplicate check failed', err)
+    } finally {
+      setDuplicateChecking(false)
+    }
+
+    setSummaryOpen(true)
+  }, [canSubmit, containers, isEdit, confirmSubmit, setContainerErrors, locations, pickupLocation, dropoffLocation, tripDate])
+
+  // Driver acknowledged the duplicate warning → submit anyway.
+  const onDuplicateOverride = useCallback(() => {
+    setDuplicateDialogOpen(false)
+    setDuplicateCandidates([])
+    void confirmSubmit()
+  }, [confirmSubmit])
+
+  // Driver chose to cancel and revise the form.
+  const onDuplicateCancel = useCallback(() => {
+    setDuplicateDialogOpen(false)
+    setDuplicateCandidates([])
+  }, [])
 
   // ─── Summary data for dialog ──────────────────────────────────────────────
   const summaryContNumber = useMemo(() => {
@@ -312,6 +364,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
 
     // UI state
     submitting, scannerOpen, summaryOpen, showSuccess,
+    duplicateChecking, duplicateCandidates, duplicateDialogOpen,
     forceManualEntry, missingFields, containerErrors, containerSuggestions, containerIsoValidating, suggestionLoading,
 
     // Derived
@@ -335,5 +388,6 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit,
     setSummaryOpen,
+    onDuplicateOverride, onDuplicateCancel,
   }
 }

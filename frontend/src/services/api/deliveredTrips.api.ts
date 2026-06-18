@@ -221,6 +221,47 @@ export function getDuplicateContainers(
   }, (res) => toCamel<DuplicateContainersResult>(res.data))
 }
 
+// ── Submit-time duplicate check (driver warning) ─────────────────────────
+
+export interface DuplicateCheckCandidate {
+  tripId: number
+  contNumber: string | null
+  tripDate: string | null
+  workType: string
+  createdAt: string | null
+  /** 'photo' = identical photo hash (strongest); 'fields' = container + route + type. */
+  reason: 'photo' | 'fields'
+  photoMatch: boolean
+}
+
+export interface DuplicateCheckResult {
+  candidates: DuplicateCheckCandidate[]
+}
+
+export interface DeliveredTripDuplicateCheckPayload {
+  contNumber?: string | null
+  contType?: string | null
+  pickupLocationId: number
+  dropoffLocationId: number
+  tripDate?: string | null
+  /** Optional data-URL of the captured photo; its hash is the strongest signal. */
+  photoDataUrl?: string | null
+  /** Omit a trip from the check (e.g. the trip being edited). */
+  excludeTripId?: number | null
+}
+
+export function checkDeliveredTripDuplicate(
+  payload: DeliveredTripDuplicateCheckPayload,
+): Promise<ApiResponse<DuplicateCheckResult>> {
+  return safeRequest(() => {
+    const { photoDataUrl, ...rest } = payload
+    const body = toSnake(rest)
+    // image_data must be raw base64 (no data: prefix), matching the photo upload API.
+    if (photoDataUrl) body.image_data = stripBase64Prefix(photoDataUrl)
+    return api.post('/delivered-trips/duplicate-check', body)
+  }, (res) => toCamel<DuplicateCheckResult>(res.data))
+}
+
 type ContTypeStats = import('@/data/domain').ContTypeStats
 
 export function getContTypeStats(filters?: {

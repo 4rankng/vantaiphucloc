@@ -6,7 +6,10 @@ from abc import ABC, abstractmethod
 from datetime import date
 from typing import Sequence
 
-from app.contexts.operations.application.dto import DuplicateContainerGroup
+from app.contexts.operations.application.dto import (
+    DuplicateCheckCandidate,
+    DuplicateContainerGroup,
+)
 from app.contexts.operations.domain.entities import BookedTrip, DeliveredTrip
 from app.contexts.operations.domain.value_objects import (
     BookedTripId,
@@ -85,6 +88,20 @@ class DeliveredTripRepository(ABC):
         client_id: int | None = None,
         driver_id: int | None = None,
     ) -> list[DuplicateContainerGroup]: ...
+
+    @abstractmethod
+    async def find_duplicate_candidates(
+        self,
+        *,
+        driver_id: int,
+        photo_hash: str | None = None,
+        cont_number: str | None = None,
+        pickup_location_id: int | None = None,
+        dropoff_location_id: int | None = None,
+        cont_type: str | None = None,
+        since: date | None = None,
+        exclude_trip_id: int | None = None,
+    ) -> list[DuplicateCheckCandidate]: ...
 
     @abstractmethod
     async def add(self, w: DeliveredTrip) -> DeliveredTrip: ...

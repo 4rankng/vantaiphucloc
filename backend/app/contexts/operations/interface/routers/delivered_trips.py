@@ -13,6 +13,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.operations.application import (
+    CheckDeliveredTripDuplicate,
     CreateDeliveredTrip,
     CurrentUserContext,
     DeleteDeliveredTrip,
@@ -25,10 +26,12 @@ from app.contexts.operations.application.dto import (
     DeliveredTripCreateInput,
     DeliveredTripListFilters,
     DeliveredTripUpdateInput,
+    DuplicateCheckRequest,
     DuplicateContainersFilters,
 )
 from app.contexts.operations.domain.entities import DeliveredTrip
 from app.contexts.operations.interface.dependencies import (
+    get_check_delivered_trip_duplicate,
     get_create_delivered_trip,
     get_delete_delivered_trip,
     get_find_duplicate_containers,
@@ -43,6 +46,7 @@ from app.models.base import User
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import (
     DeliveredTripCreate,
+    DeliveredTripDuplicateCheck,
     DeliveredTripOut,
     DeliveredTripPhotoUpload,
     DeliveredTripUpdate,
@@ -59,7 +63,10 @@ from app.core.summaries import (
 )
 from app.schemas._ocr import ContainerOCRRequest
 from app.contexts.operations.infrastructure.ocr import extract_container_numbers
-from app.contexts.operations.infrastructure.photo_storage import save_base64_photo
+from app.contexts.operations.infrastructure.photo_storage import (
+    hash_image_bytes,
+    save_base64_photo,
+)
 from app.utils.iso6346 import normalize_container_number as _norm
 
 _logger = logging.getLogger(__name__)
@@ -414,6 +421,56 @@ async def list_duplicate_containers(
     }
 
 
+@router.post("/delivered-trips/duplicate-check")
+async def check_delivered_trip_duplicate(
+    body: DeliveredTripDuplicateCheck,
+    current_user: User = Depends(require_permission("create", "DeliveredTrip")),
+    use_case: CheckDeliveredTripDuplicate = Depends(
+        get_check_delivered_trip_duplicate
+    ),
+):
+    """Warn a driver if the trip they are about to submit likely already exists.
+
+    Compared against the caller's OWN trips in the last 7 days. Strongest
+    signal is an identical photo content hash; otherwise same container +
+    route + container type. Returns the matching existing trips so the driver
+    can choose to submit anyway or cancel.
+    """
+    try:
+        photo_hash: str | None = None
+        if body.image_data:
+            photo_hash = hash_image_bytes(base64.b64decode(body.image_data))
+
+        candidates = await use_case(
+            DuplicateCheckRequest(
+                driver_id=current_user.id,
+                photo_hash=photo_hash,
+                cont_number=body.cont_number,
+                pickup_location_id=body.pickup_location_id,
+                dropoff_location_id=body.dropoff_location_id,
+                cont_type=body.cont_type,
+                exclude_trip_id=body.exclude_trip_id,
+            )
+        )
+    except Exception as exc:
+        raise translate(exc)
+
+    return {
+        "candidates": [
+            {
+                "trip_id": c.trip_id,
+                "cont_number": c.cont_number,
+                "trip_date": c.trip_date.isoformat() if c.trip_date else None,
+                "work_type": c.work_type,
+                "created_at": c.created_at.isoformat() if c.created_at else None,
+                "reason": c.reason,
+                "photo_match": c.photo_match,
+            }
+            for c in candidates
+        ]
+    }
+
+
 @router.get("/delivered-trips/{delivered_trip_id:int}", response_model=DeliveredTripOut)
 async def get_delivered_trip(
     delivered_trip_id: int,
@@ -498,11 +555,14 @@ async def upload_delivered_trip_photo(
             raise translate(NotFound("DeliveredTrip", delivered_trip_id))
 
         data_url = f"data:image/jpeg;base64,{body.image_data}"
-        photo_url = save_base64_photo(data_url)
+        stored = save_base64_photo(data_url)
 
         w = await update_trip(
             delivered_trip_id,
-            DeliveredTripUpdateInput(cont_photo_url=photo_url),
+            DeliveredTripUpdateInput(
+                cont_photo_url=stored.url,
+                cont_photo_hash=stored.content_hash,
+            ),
             _user_ctx(current_user),
         )
     except Exception as exc:

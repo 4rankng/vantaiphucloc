@@ -57,6 +57,7 @@ class DeliveredTrip:
     cont_number: str | None = None
     cont_type: str | None = None
     cont_photo_url: str | None = None
+    cont_photo_hash: str | None = None
     vehicle_plate: str | None = None
     booked_trip_id: int | None = None
     revenue: Money = 0

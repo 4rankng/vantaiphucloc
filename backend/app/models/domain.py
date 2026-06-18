@@ -323,6 +323,7 @@ class DeliveredTrip(AuditableMixin, Base):
     cont_number = Column(String(50), nullable=True, index=True)
     cont_type = Column(String(10), nullable=True)
     cont_photo_url = Column(String(500), nullable=True)
+    cont_photo_hash = Column(String(64), nullable=True, index=True)
     vehicle_plate = Column(String(20), nullable=True)
     booked_trip_id = Column(Integer, ForeignKey("booked_trips.id"), nullable=True, index=True)
     revenue = Column(Integer, nullable=False, default=0)

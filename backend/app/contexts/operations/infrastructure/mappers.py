@@ -71,6 +71,7 @@ def delivered_trip_to_domain(orm: DeliveredTripORM) -> DeliveredTrip:
         cont_number=orm.cont_number,
         cont_type=orm.cont_type,
         cont_photo_url=orm.cont_photo_url,
+        cont_photo_hash=orm.cont_photo_hash,
         vehicle_plate=orm.vehicle_plate,
         booked_trip_id=orm.booked_trip_id,
         revenue=int(orm.revenue or 0),
@@ -99,6 +100,7 @@ def delivered_trip_to_orm(
     orm.cont_number = w.cont_number
     orm.cont_type = w.cont_type
     orm.cont_photo_url = w.cont_photo_url
+    orm.cont_photo_hash = w.cont_photo_hash
     orm.vehicle_plate = w.vehicle_plate
     orm.booked_trip_id = w.booked_trip_id
     orm.revenue = int(w.revenue)

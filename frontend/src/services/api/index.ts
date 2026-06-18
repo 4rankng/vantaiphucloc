@@ -75,6 +75,7 @@ export const apiClient = {
   uploadDeliveredTripPhoto: deliveredTripsApi.uploadDeliveredTripPhoto,
   getContTypeStats: deliveredTripsApi.getContTypeStats,
   getDuplicateContainers: deliveredTripsApi.getDuplicateContainers,
+  checkDeliveredTripDuplicate: deliveredTripsApi.checkDeliveredTripDuplicate,
 
   // Trip Orders
   getBookedTrip: bookedTripsApi.getBookedTrip,

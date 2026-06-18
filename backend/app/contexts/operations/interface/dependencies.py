@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.operations.application import (
     BatchCreateDeliveredTrips,
+    CheckDeliveredTripDuplicate,
     CreateBookedTrip,
     CreateBookedTripFromImport,
     CreateDeliveredTrip,
@@ -143,3 +144,9 @@ def get_find_duplicate_containers(
     repo: DeliveredTripRepository = Depends(get_delivered_trip_repository),
 ) -> FindDuplicateContainers:
     return FindDuplicateContainers(repo)
+
+
+def get_check_delivered_trip_duplicate(
+    repo: DeliveredTripRepository = Depends(get_delivered_trip_repository),
+) -> CheckDeliveredTripDuplicate:
+    return CheckDeliveredTripDuplicate(repo)

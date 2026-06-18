@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 
 
 # ── BookedTrip ────────────────────────────────────────────────────
@@ -123,6 +123,7 @@ class DeliveredTripUpdateInput:
     cont_number: str | None = None
     cont_type: str | None = None
     cont_photo_url: str | None = None
+    cont_photo_hash: str | None = None
     trip_date: date | None = None
     revenue: int | None = None
     driver_salary: int | None = None
@@ -161,3 +162,38 @@ class DuplicateContainersFilters:
     date_to: date | None = None
     client_id: int | None = None
     driver_id: int | None = None
+
+
+# ── DeliveredTrip duplicate check (driver submit-time warning) ────────
+
+
+@dataclass
+class DuplicateCheckRequest:
+    """A single trip a driver is about to submit, checked against the
+    driver's own trips within the look-back window."""
+
+    driver_id: int
+    photo_hash: str | None = None
+    cont_number: str | None = None
+    pickup_location_id: int | None = None
+    dropoff_location_id: int | None = None
+    cont_type: str | None = None
+    exclude_trip_id: int | None = None
+
+
+@dataclass
+class DuplicateCheckCandidate:
+    """An existing trip that looks like a duplicate of the submitted one.
+
+    ``reason`` is ``"photo"`` when the photo hash matched (Tier 1, strongest)
+    or ``"fields"`` when container + route + type matched (Tier 2).
+    """
+
+    trip_id: int
+    cont_number: str | None
+    trip_date: date | None
+    work_type: str
+    created_at: datetime
+    reason: str
+    photo_match: bool
+

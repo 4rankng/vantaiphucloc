@@ -348,6 +348,115 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         groups.sort(key=lambda g: (-g.count, g.cont_number))
         return groups
 
+    async def find_duplicate_candidates(
+        self,
+        *,
+        driver_id: int,
+        photo_hash: str | None = None,
+        cont_number: str | None = None,
+        pickup_location_id: int | None = None,
+        dropoff_location_id: int | None = None,
+        cont_type: str | None = None,
+        since: date | None = None,
+        exclude_trip_id: int | None = None,
+    ) -> list:
+        """Existing trips by the same driver that look like the submitted one.
+
+        Two tiers (``work_type`` ignored):
+          * Tier 1 (strongest): identical ``cont_photo_hash``.
+          * Tier 2: container edit distance <= 1 AND same pickup AND same
+            dropoff AND same cont_type.
+
+        The candidate set is tiny (one driver, ~7 days) so we fetch once and
+        score in Python.
+        """
+        from app.contexts.operations.application.dto import DuplicateCheckCandidate
+        from app.utils.fuzzy import container_edit_distance
+        from app.utils.iso6346 import normalize_container_number
+
+        q = select(
+            DeliveredTripORM.id,
+            DeliveredTripORM.cont_number,
+            DeliveredTripORM.cont_type,
+            DeliveredTripORM.cont_photo_hash,
+            DeliveredTripORM.pickup_location_id,
+            DeliveredTripORM.dropoff_location_id,
+            DeliveredTripORM.work_type,
+            DeliveredTripORM.trip_date,
+            DeliveredTripORM.created_at,
+        ).where(DeliveredTripORM.driver_id == driver_id)
+        if since is not None:
+            q = q.where(
+                (DeliveredTripORM.trip_date >= since)
+                | (
+                    (DeliveredTripORM.trip_date == None)  # noqa: E711
+                    & (DeliveredTripORM.created_at >= since)
+                )
+            )
+        if exclude_trip_id is not None:
+            q = q.where(DeliveredTripORM.id != exclude_trip_id)
+
+        rows = (await self.session.execute(q)).all()
+
+        norm_input = normalize_container_number(cont_number) if cont_number else ""
+        candidates: list[DuplicateCheckCandidate] = []
+        for (
+            trip_id,
+            t_cont,
+            t_type,
+            t_hash,
+            t_pickup,
+            t_dropoff,
+            t_work,
+            t_date,
+            t_created,
+        ) in rows:
+            # Tier 1: identical photo content hash.
+            if photo_hash and t_hash and t_hash == photo_hash:
+                candidates.append(
+                    DuplicateCheckCandidate(
+                        trip_id=int(trip_id),
+                        cont_number=t_cont,
+                        trip_date=t_date,
+                        work_type=t_work or "",
+                        created_at=t_created,
+                        reason="photo",
+                        photo_match=True,
+                    )
+                )
+                continue
+
+            # Tier 2: same container (fuzzy) + same route + same type.
+            if norm_input and t_cont:
+                t_norm = normalize_container_number(t_cont)
+                dist = container_edit_distance(norm_input, t_norm)
+                if (
+                    dist is not None
+                    and dist <= 1
+                    and pickup_location_id is not None
+                    and t_pickup == pickup_location_id
+                    and dropoff_location_id is not None
+                    and t_dropoff == dropoff_location_id
+                    and cont_type is not None
+                    and (t_type or None) == (cont_type or None)
+                ):
+                    candidates.append(
+                        DuplicateCheckCandidate(
+                            trip_id=int(trip_id),
+                            cont_number=t_cont,
+                            trip_date=t_date,
+                            work_type=t_work or "",
+                            created_at=t_created,
+                            reason="fields",
+                            photo_match=False,
+                        )
+                    )
+
+        # Photo matches first; within each tier, newest first (stable sort).
+        candidates.sort(key=lambda c: c.created_at, reverse=True)
+        candidates.sort(key=lambda c: 0 if c.photo_match else 1)
+        return candidates
+
     async def add(self, w: DeliveredTrip) -> DeliveredTrip:
         orm = delivered_trip_to_orm(w)
         self.session.add(orm)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from app.utils.dates import utcnow
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +21,8 @@ from app.contexts.operations.application.dto import (
     DeliveredTripCreateInput,
     DeliveredTripListFilters,
     DeliveredTripUpdateInput,
+    DuplicateCheckCandidate,
+    DuplicateCheckRequest,
     DuplicateContainerGroup,
     DuplicateContainersFilters,
 )
@@ -86,6 +88,38 @@ class FindDuplicateContainers:
             date_to=filters.date_to,
             client_id=filters.client_id,
             driver_id=filters.driver_id,
+        )
+
+
+class CheckDeliveredTripDuplicate:
+    """Find a driver's existing trips (last 7 days) that look like the trip
+    they are about to submit.
+
+    Tier 1 (strongest): identical photo content hash.
+    Tier 2: same container (edit distance <= 1) + same pickup + same dropoff
+    + same container type. ``work_type`` is deliberately ignored — the same
+    physical trip re-tagged with a different tác nghiệp still looks identical
+    otherwise, so a near-match here is almost always a duplicate.
+    """
+
+    DUPLICATE_LOOKBACK_DAYS = 7
+
+    def __init__(self, repo: DeliveredTripRepository) -> None:
+        self.repo = repo
+
+    async def __call__(
+        self, request: DuplicateCheckRequest
+    ) -> list[DuplicateCheckCandidate]:
+        since = date.today() - timedelta(days=self.DUPLICATE_LOOKBACK_DAYS)
+        return await self.repo.find_duplicate_candidates(
+            driver_id=request.driver_id,
+            photo_hash=request.photo_hash,
+            cont_number=request.cont_number,
+            pickup_location_id=request.pickup_location_id,
+            dropoff_location_id=request.dropoff_location_id,
+            cont_type=request.cont_type,
+            since=since,
+            exclude_trip_id=request.exclude_trip_id,
         )
 
 
@@ -223,6 +257,8 @@ class UpdateDeliveredTrip:
             w.cont_type = data.cont_type
         if data.cont_photo_url is not None:
             w.cont_photo_url = data.cont_photo_url
+        if data.cont_photo_hash is not None:
+            w.cont_photo_hash = data.cont_photo_hash
         if data.trip_date is not None:
             w.trip_date = data.trip_date
         if data.revenue is not None:

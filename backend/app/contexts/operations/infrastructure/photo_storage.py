@@ -1,16 +1,38 @@
 import base64
+import hashlib
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
 from app.config import settings
 
 
-def save_base64_photo(data_url: str) -> str:
-    """Decode a base64 data-URL, save to disk, return the URL path.
+@dataclass(frozen=True)
+class StoredPhoto:
+    """Result of persisting an uploaded photo: the served URL and a
+    content hash (sha256 of the decoded bytes) used for duplicate detection."""
+
+    url: str
+    content_hash: str
+
+
+def hash_image_bytes(image_bytes: bytes) -> str:
+    """Return the sha256 hex digest of raw image bytes.
+
+    Two trips that share the exact same submitted photo (e.g. a driver
+    re-submitting, or an app double-send) produce identical decoded bytes and
+    therefore an identical hash — the strongest duplicate signal.
+    """
+    return hashlib.sha256(image_bytes).hexdigest()
+
+
+def save_base64_photo(data_url: str) -> StoredPhoto:
+    """Decode a base64 data-URL, save to disk, return ``StoredPhoto``.
 
     Accepts strings like ``data:image/jpeg;base64,/9j/4AAQ...``.
-    Returns a path like ``/photos/2024/05/01/<uuid>.jpg``.
+    The URL is a path like ``/photos/2024/05/01/<uuid>.jpg`` and the content
+    hash is the sha256 of the decoded image bytes.
     """
     # Strip the data-URL prefix: "data:image/...;base64,"
     header, _, encoded = data_url.partition(",")
@@ -18,6 +40,7 @@ def save_base64_photo(data_url: str) -> str:
         raise ValueError("Invalid data URL: no base64 payload")
 
     image_bytes = base64.b64decode(encoded)
+    content_hash = hash_image_bytes(image_bytes)
 
     now = datetime.now(tz=timezone.utc)
     date_dir = f"{now.year:04d}/{now.month:02d}/{now.day:02d}"
@@ -30,4 +53,7 @@ def save_base64_photo(data_url: str) -> str:
     file_path = dir_path / filename
     file_path.write_bytes(image_bytes)
 
-    return f"/photos/{date_dir}/{filename}"
+    return StoredPhoto(
+        url=f"/photos/{date_dir}/{filename}",
+        content_hash=content_hash,
+    )

@@ -10,6 +10,7 @@ from app.contexts.operations.application.booked_trips import (
 )
 from app.contexts.operations.application.delivered_trips import (
     BatchCreateDeliveredTrips,
+    CheckDeliveredTripDuplicate,
     CreateDeliveredTrip,
     CurrentUserContext,
     DeleteDeliveredTrip,
@@ -27,6 +28,7 @@ __all__ = [
     "ListBookedTrips",
     "UpdateBookedTrip",
     "BatchCreateDeliveredTrips",
+    "CheckDeliveredTripDuplicate",
     "CreateDeliveredTrip",
     "CurrentUserContext",
     "DeleteDeliveredTrip",

@@ -9,6 +9,7 @@ import { getWorkTypeLabel } from '@/data/domain'
 import { ContainerScanner } from '@/components/shared/overlays/ContainerScanner'
 import { ContainerTypeGrid } from '@/components/shared/data-display/ContainerTypeGrid'
 import { TripSummaryDialog } from '@/components/shared/overlays/TripSummaryDialog'
+import { DuplicateTripWarningDialog } from '@/components/shared/overlays/DuplicateTripWarningDialog/DuplicateTripWarningDialog'
 import { SuccessOverlay } from '@/components/shared/feedback/SuccessOverlay'
 import { AIScanningOverlay } from '@/components/shared/feedback/AIScanningOverlay'
 import { RecentTripSuggestions } from '@/components/shared/cards/RecentTripSuggestions'
@@ -52,6 +53,8 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
     addContainerWithNumber, validateContainerFormat,
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit, setSummaryOpen,
+    duplicateChecking, duplicateCandidates, duplicateDialogOpen,
+    onDuplicateOverride, onDuplicateCancel,
   } = useCreateDeliveredTrip(existingDeliveredTrip)
   const { data: operationTypes } = useOperationTypes()
 
@@ -554,7 +557,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
               onClick={async () => {
                 await onRequestSubmit()
               }}
-              disabled={!canSubmit || submitting}
+              disabled={!canSubmit || submitting || duplicateChecking}
               type="button"
               className="flex-1 h-12 rounded-xl text-sm font-bold touch-manipulation transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:cursor-not-allowed"
               style={{
@@ -567,7 +570,9 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                   : 'none',
               }}
             >
-              {submitting ? (
+              {duplicateChecking ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Đang kiểm tra...</>
+              ) : submitting ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Đang gửi...</>
               ) : isEdit ? (
                 <><CheckCircle2 className="w-4 h-4" /> Cập nhật chuyến</>
@@ -596,6 +601,14 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
         containerCount={containerCount}
         hasPhoto={hasAnyPhoto}
         photoUrls={containers.filter(c => c.photoTaken && c.photoDataUrl).map(c => c.photoDataUrl!)}
+      />
+
+      {/* Duplicate-trip warning — shown when a matching trip already exists */}
+      <DuplicateTripWarningDialog
+        open={duplicateDialogOpen}
+        candidates={duplicateCandidates}
+        onConfirm={onDuplicateOverride}
+        onClose={onDuplicateCancel}
       />
 
       {/* AI scanning overlay — visible while backend OCR is in flight */}
