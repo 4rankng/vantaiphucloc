@@ -6,6 +6,9 @@ import {
   Zap,
   Unlink,
   ArrowLeftRight,
+  Copy,
+  CheckCircle2,
+  X,
 } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
@@ -15,7 +18,7 @@ import { DataTable } from '@/components/shared/data-display/DataTable'
 import { ToolbarSearch } from '@/components/shared/navigation/Toolbar'
 import { EmptyState } from '@/components/shared/feedback/EmptyState'
 import { TableSkeleton } from '@/components/shared/data-display/TableSkeleton/TableSkeleton'
-import { Button } from '@/components/ui'
+import { Button, Switch } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/forms/InlineSelect/InlineSelect'
 import { ExcelImportDrawer } from '@/components/shared/overlays/ExcelImportDrawer'
 import { DeliveredTripDetailDrawer } from '@/components/shared/overlays/DeliveredTripDetailDrawer'
@@ -40,6 +43,7 @@ import {
   useConfirmAutoMatch,
   useUnmatchTrip,
   useDeleteDeliveredTrip,
+  useDuplicateContainers,
 } from '@/hooks/use-queries'
 
 // ─── Status filter type ───────────────────────────────────────────────────────
@@ -66,6 +70,15 @@ export function DoiSoatPage() {
   const [sortBy, setSortBy] = useState<DeliveredTripSortBy>('trip_date')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
   const [showExportDialog, setShowExportDialog] = useState(false)
+
+  const [showDuplicates, setShowDuplicates] = useState(false)
+  const duplicatesQuery = useDuplicateContainers({
+    dateFrom,
+    dateTo,
+    clientId: doiSoatClientId !== 'ALL' && doiSoatClientId !== '' ? Number(doiSoatClientId) : undefined,
+    driverId: driverIdFilter !== 'ALL' && driverIdFilter !== '' ? Number(driverIdFilter) : undefined,
+    enabled: showDuplicates,
+  })
 
   const exportDoiSoat = useExportDoiSoatExcel()
   const { data: clients = [] } = useClients()
@@ -354,9 +367,96 @@ export function DoiSoatPage() {
                   style={{ width: '100%', height: 32, fontSize: 12.5 }}
                 />
               </div>
+              <label className="flex items-center gap-2 cursor-pointer select-none px-1 min-h-[44px]">
+                <Switch
+                  checked={showDuplicates}
+                  onCheckedChange={setShowDuplicates}
+                  aria-label="Hiện cont trùng"
+                />
+                <span className="text-[12.5px] inline-flex items-center gap-1" style={{ color: 'var(--ink-2)' }}>
+                  <Copy className="h-3.5 w-3.5" />
+                  Hiện cont trùng
+                </span>
+              </label>
             </div>
           </div>
         </Panel>
+
+        {showDuplicates && (
+          <Panel flush className="mb-2">
+            <div className="px-4 py-3">
+              {duplicatesQuery.isLoading ? (
+                <div className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--ink-3)' }}>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Đang tìm cont trùng…
+                </div>
+              ) : duplicatesQuery.isError ? (
+                <div className="flex items-center gap-2 text-[12.5px]" style={{ color: '#dc2626' }}>
+                  <X className="h-4 w-4" />
+                  Không tải được cont trùng — vui lòng bật lại để thử.
+                </div>
+              ) : duplicatesQuery.data && duplicatesQuery.data.totalGroups > 0 ? (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[12.5px] inline-flex items-center gap-2" style={{ color: 'var(--ink-2)' }}>
+                      <Copy className="h-3.5 w-3.5" style={{ color: 'var(--theme-status-warning)' }} />
+                      Tìm thấy <strong>{duplicatesQuery.data.totalGroups}</strong> cont trùng ·{' '}
+                      <strong>{duplicatesQuery.data.totalExtraRows}</strong> chuyến thừa trong kỳ
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowDuplicates(false)}
+                      title="Ẩn cont trùng"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      Ẩn
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {duplicatesQuery.data.groups.map((g) => {
+                      const isActive = search.trim().toUpperCase() === g.contNumber.trim().toUpperCase()
+                      return (
+                        <button
+                          key={g.contNumber}
+                          type="button"
+                          onClick={() => setSearch(isActive ? '' : g.contNumber)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-md text-[12px] font-mono transition-colors min-h-[44px]"
+                          style={{
+                            background: isActive ? 'var(--theme-status-warning)' : 'var(--theme-bg-tertiary)',
+                            color: isActive ? 'white' : 'var(--ink-1)',
+                            border: '1px solid',
+                            borderColor: isActive ? 'var(--theme-status-warning)' : 'var(--line)',
+                          }}
+                          title={`Lọc bảng theo ${g.contNumber} — ${g.count} chuyến${g.tripDates?.filter(Boolean).length ? ` (${g.tripDates.filter(Boolean).join(', ')})` : ''}`}
+                        >
+                          <span>{g.contNumber}</span>
+                          <span
+                            className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10.5px] font-sans font-semibold"
+                            style={{
+                              background: isActive ? 'rgba(255,255,255,0.25)' : 'var(--theme-status-warning)',
+                              color: isActive ? 'white' : 'white',
+                            }}
+                          >
+                            ×{g.count}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-[11px] mt-2" style={{ color: 'var(--ink-4)' }}>
+                    Nhấp vào cont để lọc bảng bên dưới — kiểm tra các chuyến trùng rồi xử lý thủ công.
+                  </p>
+                </>
+              ) : (
+                <div className="flex items-center gap-2 text-[12.5px]" style={{ color: 'var(--theme-status-success)' }}>
+                  <CheckCircle2 className="h-4 w-4" />
+                  Không có cont trùng trong kỳ này.
+                </div>
+              )}
+            </div>
+          </Panel>
+        )}
 
         {/* Hint text + legend — desktop only */}
         {!isLoading && filtered.length > 0 && !isMobile && (

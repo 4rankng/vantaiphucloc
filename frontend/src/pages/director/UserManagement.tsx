@@ -122,12 +122,14 @@ function UserManagementInner() {
 
   // ── Mobile: compact list ─────────────────────────────────────────────────────
   return (
-    <div className="space-y-4">
-      <SearchInput
-        value={searchInput}
-        onChange={setSearchInput}
-        placeholder="Tìm tên, SĐT, tên đăng nhập…"
-      />
+    <>
+      <BackButton label="Tổng quan" onClick={() => window.history.back()} />
+      <div className="space-y-4">
+        <SearchInput
+          value={searchInput}
+          onChange={setSearchInput}
+          placeholder="Tìm tên, SĐT, tên đăng nhập…"
+        />
 
       <FilterPills
         options={[
@@ -247,7 +249,8 @@ function UserManagementInner() {
         editableRoles={editableRoles}
         saving={updateUser.isPending || deleteUser.isPending}
       />
-    </div>
+      </div>
+    </>
   )
 }
 

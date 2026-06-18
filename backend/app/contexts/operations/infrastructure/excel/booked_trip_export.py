@@ -48,10 +48,32 @@ async def generate_booked_trips_excel(
 
     # Resolve display names via JOIN.
     client_ids = {to.client_id for to in booked_trips}
-    loc_ids = {to.pickup_location_id for to in booked_trips} | {to.dropoff_location_id for to in booked_trips}
+    loc_ids = {to.pickup_location_id for to in booked_trips} | {
+        to.dropoff_location_id for to in booked_trips
+    }
     loc_ids.discard(None)
-    client_name_by_id = {c.id: c.name for c in (await db.execute(select(Client).where(Client.id.in_(client_ids)))).scalars().all()} if client_ids else {}
-    loc_name_by_id = {loc.id: loc.name for loc in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
+    client_name_by_id = (
+        {
+            c.id: c.name
+            for c in (await db.execute(select(Client).where(Client.id.in_(client_ids))))
+            .scalars()
+            .all()
+        }
+        if client_ids
+        else {}
+    )
+    loc_name_by_id = (
+        {
+            loc.id: loc.name
+            for loc in (
+                await db.execute(select(Location).where(Location.id.in_(loc_ids)))
+            )
+            .scalars()
+            .all()
+        }
+        if loc_ids
+        else {}
+    )
 
     # For per-partner export: determine match status and vessel from BookedTrip directly
     client_name = None
@@ -66,10 +88,31 @@ async def generate_booked_trips_excel(
 
     if client_id:
         ws.title = "Chuyến theo khách hàng"
-        headers = ["STT", "Số container", "Tuyến đường", "Ngày chạy", "Biển số xe", "Số tàu", "Trạng thái khớp", "Đơn giá"]
+        headers = [
+            "STT",
+            "Số container",
+            "Tuyến đường",
+            "Ngày chạy",
+            "Biển số xe",
+            "Số tàu",
+            "Trạng thái khớp",
+            "Đơn giá",
+        ]
     else:
         ws.title = "Đơn hàng"
-        headers = ["Mã TO", "Ngày chạy", "Khách hàng", "Điểm lấy", "Điểm trả", "Số cont", "Loại", "Đơn giá", "Lương TX", "Phụ cấp", "Trạng thái"]
+        headers = [
+            "Mã TO",
+            "Ngày chạy",
+            "Khách hàng",
+            "Điểm lấy",
+            "Điểm trả",
+            "Số cont",
+            "Loại",
+            "Đơn giá",
+            "Lương TX",
+            "Phụ cấp",
+            "Trạng thái",
+        ]
     ws.append(headers)
 
     apply_header_style(ws, 1, len(headers))
@@ -80,11 +123,17 @@ async def generate_booked_trips_excel(
     bt_ids = [to.id for to in booked_trips]
     matched_bt_ids: set[int] = set()
     if bt_ids:
-        rows = (await db.execute(
-            select(DeliveredTrip.booked_trip_id).where(
-                DeliveredTrip.booked_trip_id.in_(bt_ids)
+        rows = (
+            (
+                await db.execute(
+                    select(DeliveredTrip.booked_trip_id).where(
+                        DeliveredTrip.booked_trip_id.in_(bt_ids)
+                    )
+                )
             )
-        )).scalars().all()
+            .scalars()
+            .all()
+        )
         matched_bt_ids = set(rows)
 
     if client_id:
@@ -97,25 +146,31 @@ async def generate_booked_trips_excel(
             match_status = match_labels.get(to.id in matched_bt_ids, "Chưa khớp")
             vessel = to.vessel or ""
             stt += 1
-            ws.append([
-                stt,
-                to.cont_number or "",
-                route,
-                to.trip_date,
-                plate,
-                vessel,
-                match_status,
-            ])
+            ws.append(
+                [
+                    stt,
+                    to.cont_number or "",
+                    route,
+                    to.trip_date,
+                    plate,
+                    vessel,
+                    match_status,
+                ]
+            )
     else:
         for to in booked_trips:
-            ws.append([
-                f"TO#{to.id}", to.trip_date,
-                client_name_by_id.get(to.client_id, ""),
-                loc_name_by_id.get(to.pickup_location_id, ""),
-                loc_name_by_id.get(to.dropoff_location_id, ""),
-                to.cont_number or "", to.cont_type or "",
-                match_labels.get(to.id in matched_bt_ids, "Chờ ghép"),
-            ])
+            ws.append(
+                [
+                    f"TO#{to.id}",
+                    to.trip_date,
+                    client_name_by_id.get(to.client_id, ""),
+                    loc_name_by_id.get(to.pickup_location_id, ""),
+                    loc_name_by_id.get(to.dropoff_location_id, ""),
+                    to.cont_number or "",
+                    to.cont_type or "",
+                    match_labels.get(to.id in matched_bt_ids, "Chờ ghép"),
+                ]
+            )
 
     from app.utils.excel_utils import add_template_version as _add_ver
 
@@ -133,57 +188,156 @@ async def generate_doi_soat_excel(
     """Generate reconciliation (đối soát) Excel for a specific client.
 
     Returns (excel_bytes, client_name) tuple.
-    Exports ALL delivered trips for the client within the date range,
-    regardless of match status — so customers without uploaded files
-    (e.g. Tâm Cảng) still get a populated export.
-    Columns: STT | Ngày đi | Chủ hàng | Số container | F20' | F40' | E20' | E40' | Số xe chạy | Điểm đi | Điểm đến | Tác nghiệp
-    Summary row at the bottom: count per work type + total amount.
+
+    Unions BookedTrip (containers listed in customer's ship file) and
+    DeliveredTrip (containers actually moved by drivers) for the same
+    client within the date range. Each container occurrence yields its
+    own row (duplicate numbers are not collapsed, so repeated trips stay
+    visible). The trailing ``TRẠNG THÁI`` column reads:
+    - ``Đã ghép`` when the container appears on both sides
+    - ``Chưa ghép`` when it appears on only one side
+
+    Columns: STT | NGÀY ĐI | CHỦ HÀNG | SỐ CONTAINER | F20' | F40' | E20' |
+    E40' | SỐ XE CHẠY | ĐIỂM ĐI | ĐIỂM ĐẾN | TÁC NGHIỆP | TRẠNG THÁI
+    Subtotal row at row 11 counts F20'/F40'/E20'/E40' across all rows.
     """
     import openpyxl
     from openpyxl.styles import Font, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
 
-    # -- 1. Load partner --
+    from app.utils.iso6346 import normalize_container_number
+
+    STATUS_MATCHED = "Đã ghép"
+    STATUS_UNMATCHED = "Chưa ghép"
+
+    # -- 1. Load client --
     p_result = await db.execute(select(Client).where(Client.id == client_id))
     client = p_result.scalar_one_or_none()
     client_name = client.name if client else f"Client #{client_id}"
+    client_code = (client.code or client_name) if client else f"Client #{client_id}"
 
     from datetime import date as date_type
 
     df = date_type.fromisoformat(date_from)
     dt = date_type.fromisoformat(date_to)
 
-    # -- 2. Load delivered trips (actual work done) --
-    # Query DeliveredTrip instead of BookedTrip so customers without
-    # uploaded files still have data to export.
-    dt_query = select(DeliveredTrip).where(
-        DeliveredTrip.client_id == client_id,
-        DeliveredTrip.trip_date >= df,
-        DeliveredTrip.trip_date <= dt,
-    ).order_by(DeliveredTrip.trip_date, DeliveredTrip.id)
-    dt_result = await db.execute(dt_query)
-    delivered_trips = dt_result.scalars().all()
+    # -- 2. Load BookedTrip (customer's ship file rows) --
+    bt_query = (
+        select(BookedTrip)
+        .where(
+            BookedTrip.client_id == client_id,
+            BookedTrip.trip_date >= df,
+            BookedTrip.trip_date <= dt,
+        )
+        .order_by(BookedTrip.trip_date, BookedTrip.id)
+    )
+    booked_trips = (await db.execute(bt_query)).scalars().all()
 
-    # -- 3. Load location names --
-    loc_ids: set[int] = set()
+    # -- 3. Load DeliveredTrip (driver's actual work) --
+    dt_query = (
+        select(DeliveredTrip)
+        .where(
+            DeliveredTrip.client_id == client_id,
+            DeliveredTrip.trip_date >= df,
+            DeliveredTrip.trip_date <= dt,
+        )
+        .order_by(DeliveredTrip.trip_date, DeliveredTrip.id)
+    )
+    delivered_trips = (await db.execute(dt_query)).scalars().all()
+
+    # -- 4. Bucket by normalized container number (preserve every trip) --
+    # A container is NOT collapsed when it repeats: if the same number is on
+    # several BookedTrips or DeliveredTrips, each trip keeps its own row so
+    # duplicate trips stay visible in the reconciliation sheet (the
+    # duplicate-containers endpoint exists to flag exactly these cases).
+    bt_by_cont: dict[str, list[BookedTrip]] = {}
+    bt_no_cont: list[BookedTrip] = []
+    for bt in booked_trips:
+        if bt.cont_number:
+            bt_by_cont.setdefault(
+                normalize_container_number(bt.cont_number), []
+            ).append(bt)
+        else:
+            bt_no_cont.append(bt)
+
+    dt_by_cont: dict[str, list[DeliveredTrip]] = {}
+    dt_no_cont: list[DeliveredTrip] = []
     for trip in delivered_trips:
-        if trip.pickup_location_id:
-            loc_ids.add(trip.pickup_location_id)
-        if trip.dropoff_location_id:
-            loc_ids.add(trip.dropoff_location_id)
+        if trip.cont_number:
+            dt_by_cont.setdefault(
+                normalize_container_number(trip.cont_number), []
+            ).append(trip)
+        else:
+            dt_no_cont.append(trip)
+
+    # -- 5. Build rows --
+    # A container's rows are "Đã ghép" when the number exists on both sides,
+    # otherwise "Chưa ghép". Fields prefer the DeliveredTrip (the executor's
+    # actual work) and fall back to the BookedTrip for anything missing.
+    def _doi_soat_row(source, fallback, status):
+        fb = fallback
+        return {
+            "trip_date": source.trip_date or (fb.trip_date if fb else None),
+            "cont_number": source.cont_number
+            or (fb.cont_number if fb else None)
+            or "",
+            "cont_type": source.cont_type or (fb.cont_type if fb else None),
+            "vehicle_plate": source.vehicle_plate
+            or (fb.vehicle_plate if fb else None)
+            or "",
+            "pickup_location_id": source.pickup_location_id
+            or (fb.pickup_location_id if fb else None),
+            "dropoff_location_id": source.dropoff_location_id
+            or (fb.dropoff_location_id if fb else None),
+            "work_type": source.work_type or (fb.work_type if fb else None) or "",
+            "status": status,
+        }
+
+    deduped_rows: list[dict] = []
+    for key in set(bt_by_cont) | set(dt_by_cont):
+        bts = bt_by_cont.get(key, [])
+        trips = dt_by_cont.get(key, [])
+        matched = bool(trips) and bool(bts)
+        status = STATUS_MATCHED if matched else STATUS_UNMATCHED
+        # Emit one row per delivered trip (the executor's work); pair each
+        # with the corresponding booked trip for field fallback. Booked trips
+        # in excess of delivered ones are emitted separately as "Chưa ghép"
+        # (customer listed but the container was not moved that many times).
+        primary = trips if trips else bts
+        for i, source in enumerate(primary):
+            fallback = bts[i] if i < len(bts) else (bts[0] if bts else None)
+            deduped_rows.append(_doi_soat_row(source, fallback, status))
+        if trips and len(bts) > len(trips):
+            for bt in bts[len(trips):]:
+                deduped_rows.append(_doi_soat_row(bt, None, STATUS_UNMATCHED))
+
+    for bt in bt_no_cont:
+        deduped_rows.append(_doi_soat_row(bt, None, STATUS_UNMATCHED))
+    for trip in dt_no_cont:
+        deduped_rows.append(_doi_soat_row(trip, None, STATUS_UNMATCHED))
+
+    # Sort by trip_date then container number for stable ordering
+    deduped_rows.sort(key=lambda r: (r["trip_date"] or df, r["cont_number"] or ""))
+
+    # -- 6. Load location names --
+    loc_ids: set[int] = set()
+    for row in deduped_rows:
+        if row["pickup_location_id"]:
+            loc_ids.add(row["pickup_location_id"])
+        if row["dropoff_location_id"]:
+            loc_ids.add(row["dropoff_location_id"])
     loc_name_by_id: dict[int, str] = {}
     if loc_ids:
         loc_result = await db.execute(select(Location).where(Location.id.in_(loc_ids)))
         loc_name_by_id = {loc.id: loc.name for loc in loc_result.scalars().all()}
 
-    # -- 4. Build Excel workbook --
-    # Data comes from DeliveredTrip — all actual work done for this client.
+    # -- 7. Build Excel workbook --
     wb = openpyxl.Workbook()
     ws = wb.active
     month_label = df.strftime("%m/%Y")
     ws.title = f"SL T{df.month}.{str(df.year)[2:]}"
 
-    num_cols = 12  # A-L
+    num_cols = 13  # A-M
     last_col = get_column_letter(num_cols)
 
     # -- Styles --
@@ -191,7 +345,9 @@ async def generate_doi_soat_excel(
     _bold14 = Font(bold=True, size=14)
     _header_font = Font(bold=True, size=11)
     thin_side = Side(style="thin", color="000000")
-    thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+    thin_border = Border(
+        left=thin_side, right=thin_side, top=thin_side, bottom=thin_side
+    )
     center = Alignment(horizontal="center", vertical="center", wrap_text=True)
     left = Alignment(horizontal="left", vertical="center")
     Alignment(horizontal="right", vertical="center")
@@ -225,14 +381,25 @@ async def generate_doi_soat_excel(
     ws["C7"].font = _bold
 
     ws.merge_cells(f"A8:{last_col}8")
-    ws["A8"] = "Công ty TNHH AMT Phúc Lộc xin gửi tới Quý Công ty bảng kê quyết toán vận tải như sau:"
+    ws["A8"] = (
+        "Công ty TNHH AMT Phúc Lộc xin gửi tới Quý Công ty bảng kê quyết toán vận tải như sau:"
+    )
 
     # -- Header row 10 --
     headers = [
-        "STT", "NGÀY ĐI", "CHỦ HÀNG", "SỐ CONTAINER",
-        "F20'", "F40'", "E20'", "E40'",
-        "SỐ XE CHẠY", "ĐIỂM ĐI", "ĐIỂM ĐẾN",
+        "STT",
+        "NGÀY ĐI",
+        "CHỦ HÀNG",
+        "SỐ CONTAINER",
+        "F20'",
+        "F40'",
+        "E20'",
+        "E40'",
+        "SỐ XE CHẠY",
+        "ĐIỂM ĐI",
+        "ĐIỂM ĐẾN",
         "TÁC NGHIỆP",
+        "TRẠNG THÁI",
     ]
     ws.append([])  # row 9 empty
     ws.append(headers)  # row 10
@@ -243,31 +410,40 @@ async def generate_doi_soat_excel(
         cell.border = thin_border
 
     # -- Subtotal row 11 --
-    last_data_row = max(len(delivered_trips) + 12, 12)
-    ws.append([
-        "", "", "", "",
-        f"=SUBTOTAL(9,E12:E{last_data_row})",
-        f"=SUBTOTAL(9,F12:F{last_data_row})",
-        f"=SUBTOTAL(9,G12:G{last_data_row})",
-        f"=SUBTOTAL(9,H12:H{last_data_row})",
-        "", "", "",
-        "",
-    ])
+    # Data rows run 12..(11 + N); use the correct last row up front so the
+    # subtotal formula doesn't need to be rewritten after the loop.
+    last_data_row = max(len(deduped_rows) + 11, 12)
+    ws.append(
+        [
+            "",
+            "",
+            "",
+            "",
+            f"=SUBTOTAL(9,E12:E{last_data_row})",
+            f"=SUBTOTAL(9,F12:F{last_data_row})",
+            f"=SUBTOTAL(9,G12:G{last_data_row})",
+            f"=SUBTOTAL(9,H12:H{last_data_row})",
+            "",
+            "",
+            "",
+            "",
+        ]
+    )
     for col_num in [5, 6, 7, 8]:
         ws.cell(row=11, column=col_num).font = _bold
         ws.cell(row=11, column=col_num).alignment = center
 
-    # -- Data rows (12+) -- one row per DeliveredTrip
+    # -- Data rows (12+) -- one row per unique container
     stt = 0
-    client_code = client.code or client_name
 
-    for trip in delivered_trips:
-        pickup = loc_name_by_id.get(trip.pickup_location_id or 0, "")
-        dropoff = loc_name_by_id.get(trip.dropoff_location_id or 0, "")
-        plate = trip.vehicle_plate or ""
-        trip_date_str = trip.trip_date.strftime("%d/%m/%Y") if trip.trip_date else ""
+    for row in deduped_rows:
+        pickup = loc_name_by_id.get(row["pickup_location_id"] or 0, "")
+        dropoff = loc_name_by_id.get(row["dropoff_location_id"] or 0, "")
+        trip_date_str = (
+            row["trip_date"].strftime("%d/%m/%Y") if row["trip_date"] else ""
+        )
 
-        ct = (trip.cont_type or "").upper()
+        ct = (row["cont_type"] or "").upper()
 
         # Cont type flags
         f20 = 1 if ct == "F20" else None
@@ -277,29 +453,35 @@ async def generate_doi_soat_excel(
 
         stt += 1
         row_num = 11 + stt
-        ws.append([
-            stt, trip_date_str, client_code, trip.cont_number or "",
-            f20, f40, e20, e40,
-            plate, pickup, dropoff,
-            trip.work_type or "",
-        ])
+        ws.append(
+            [
+                stt,
+                trip_date_str,
+                client_code,
+                row["cont_number"],
+                f20,
+                f40,
+                e20,
+                e40,
+                row["vehicle_plate"],
+                pickup,
+                dropoff,
+                row["work_type"],
+                row["status"],
+            ]
+        )
 
         # Styling
         for col_num in range(1, num_cols + 1):
             cell = ws.cell(row=row_num, column=col_num)
             cell.border = thin_border
-            if col_num in (1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12):
+            if col_num in (1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13):
                 cell.alignment = center
             elif col_num == 4:
                 cell.alignment = left
 
-    # Update subtotal range to actual last row
-    actual_last = 11 + stt if stt > 0 else 12
-    for col_num, col_letter in [(5, "E"), (6, "F"), (7, "G"), (8, "H")]:
-        ws.cell(row=11, column=col_num).value = f"=SUBTOTAL(9,{col_letter}12:{col_letter}{actual_last})"
-
     # -- Column widths --
-    col_widths = [6, 12, 12, 18, 6, 6, 6, 6, 14, 20, 20, 16]
+    col_widths = [6, 12, 12, 18, 6, 6, 6, 6, 14, 20, 20, 16, 14]
     for i, width in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
 

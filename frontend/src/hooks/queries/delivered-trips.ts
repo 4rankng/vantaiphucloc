@@ -2,7 +2,11 @@ import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tansta
 import { apiClient } from '@/services/api'
 import { queryKeys, invalidateDeliveredTripDeps } from '../query-keys'
 import type { ApiResponse, DeliveredTrip, PaginatedResult, ContTypeStats } from '@/data/domain'
-import type { DeliveredTripSortBy, SortOrder } from '@/services/api/deliveredTrips.api'
+import type {
+  DeliveredTripSortBy,
+  SortOrder,
+  DuplicateContainersResult,
+} from '@/services/api/deliveredTrips.api'
 
 function unwrap<T>(res: ApiResponse<T>): T {
   if (res.success) return res.data
@@ -127,6 +131,31 @@ export function useContTypeStats(filters?: { driverId?: number; dateFrom?: strin
       return res.success ? res.data : EMPTY_STATS
     },
     enabled: filters?.driverId != null,
+  })
+}
+
+const EMPTY_DUPLICATES: DuplicateContainersResult = {
+  groups: [],
+  totalGroups: 0,
+  totalExtraRows: 0,
+}
+
+export function useDuplicateContainers(filters?: {
+  dateFrom?: string
+  dateTo?: string
+  clientId?: number
+  driverId?: number
+  enabled?: boolean
+}) {
+  const { enabled, ...rest } = filters ?? {}
+  return useQuery<DuplicateContainersResult>({
+    queryKey: queryKeys.duplicateContainers(rest as Record<string, string | number | undefined>),
+    queryFn: async () => {
+      const res = await apiClient.getDuplicateContainers(rest)
+      return res.success ? res.data : EMPTY_DUPLICATES
+    },
+    enabled: enabled !== false,
+    gcTime: 0,
   })
 }
 

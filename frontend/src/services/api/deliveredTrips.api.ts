@@ -187,6 +187,40 @@ export function bulkImportAndMatch(file: File, clientId?: number): Promise<ApiRe
   })
 }
 
+export interface DuplicateContainerGroup {
+  contNumber: string
+  count: number
+  tripIds: number[]
+  tripDates: (string | null)[]
+  driverIds: (number | null)[]
+}
+
+export interface DuplicateContainersResult {
+  groups: DuplicateContainerGroup[]
+  totalGroups: number
+  totalExtraRows: number
+}
+
+export interface DuplicateContainersFilters {
+  dateFrom?: string
+  dateTo?: string
+  clientId?: number
+  driverId?: number
+}
+
+export function getDuplicateContainers(
+  filters?: DuplicateContainersFilters,
+): Promise<ApiResponse<DuplicateContainersResult>> {
+  return safeRequest(() => {
+    const params: Record<string, string> = {}
+    if (filters?.dateFrom) params.date_from = filters.dateFrom
+    if (filters?.dateTo) params.date_to = filters.dateTo
+    if (filters?.clientId != null) params.client_id = String(filters.clientId)
+    if (filters?.driverId != null) params.driver_id = String(filters.driverId)
+    return api.get('/delivered-trips/duplicate-containers', { params })
+  }, (res) => toCamel<DuplicateContainersResult>(res.data))
+}
+
 type ContTypeStats = import('@/data/domain').ContTypeStats
 
 export function getContTypeStats(filters?: {

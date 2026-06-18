@@ -21,6 +21,8 @@ from app.contexts.operations.application.dto import (
     DeliveredTripCreateInput,
     DeliveredTripListFilters,
     DeliveredTripUpdateInput,
+    DuplicateContainerGroup,
+    DuplicateContainersFilters,
 )
 from app.contexts.operations.domain.entities import DeliveredTrip
 from app.contexts.operations.domain.exceptions import (
@@ -32,8 +34,6 @@ from app.contexts.operations.domain.value_objects import (
     DeliveredTripId,
     normalize_work_type,
 )
-
-
 
 
 # ── Reads ────────────────────────────────────────────────────────
@@ -74,6 +74,21 @@ class ListDeliveredTrips:
         return list(items), total
 
 
+class FindDuplicateContainers:
+    def __init__(self, repo: DeliveredTripRepository) -> None:
+        self.repo = repo
+
+    async def __call__(
+        self, filters: DuplicateContainersFilters
+    ) -> list[DuplicateContainerGroup]:
+        return await self.repo.find_duplicate_containers(
+            date_from=filters.date_from,
+            date_to=filters.date_to,
+            client_id=filters.client_id,
+            driver_id=filters.driver_id,
+        )
+
+
 # ── Writes ───────────────────────────────────────────────────────
 
 
@@ -81,6 +96,7 @@ class ListDeliveredTrips:
 class CurrentUserContext:
     """Minimal user context the use cases need without importing the
     legacy User model."""
+
     id: int
     role: str
 
@@ -125,6 +141,7 @@ class CreateDeliveredTrip:
             estimated_salary = salaries.get(-1, 0)
 
         from app.core.pricing_lookup import lookup_client_prices
+
         client_prices = await lookup_client_prices(self.session, [trip_info])
         estimated_revenue = client_prices.get(-1, 0)
 
@@ -174,9 +191,7 @@ class UpdateDeliveredTrip:
 
         if user.role == "driver":
             if w.driver_id != user.id:
-                raise PermissionError(
-                    "You can only update your own work orders"
-                )
+                raise PermissionError("You can only update your own work orders")
             if w.matched:
                 raise AlreadyMatched("DeliveredTrip", wid)
         elif user.role not in ("accountant", "director", "superadmin"):
@@ -269,14 +284,14 @@ class BatchCreateDeliveredTrips:
     ) -> list[tuple[int, int | None, str | None]]:
         results: list[tuple[int, int | None, str | None]] = []
         # Pre-resolve all driver plates in one query to avoid N+1
-        items_needing_plate = [
-            item for item in items if not item.vehicle_plate
-        ]
-        driver_ids_batch = list({
-            user.id if user.role == "driver" else item.driver_id
-            for item in items_needing_plate
-            if (user.id if user.role == "driver" else item.driver_id) is not None
-        })
+        items_needing_plate = [item for item in items if not item.vehicle_plate]
+        driver_ids_batch = list(
+            {
+                user.id if user.role == "driver" else item.driver_id
+                for item in items_needing_plate
+                if (user.id if user.role == "driver" else item.driver_id) is not None
+            }
+        )
         plate_map = await resolve_driver_plates_batch(self.session, driver_ids_batch)
 
         # Pre-compute salary estimates for all items in one batch
@@ -302,10 +317,15 @@ class BatchCreateDeliveredTrips:
         if vendor_infos:
             salary_map.update(await lookup_vendor_prices(self.session, vendor_infos))
         if own_driver_infos:
-            salary_map.update(await lookup_driver_salaries(self.session, own_driver_infos))
+            salary_map.update(
+                await lookup_driver_salaries(self.session, own_driver_infos)
+            )
 
         from app.core.pricing_lookup import lookup_client_prices
-        revenue_map = await lookup_client_prices(self.session, vendor_infos + own_driver_infos)
+
+        revenue_map = await lookup_client_prices(
+            self.session, vendor_infos + own_driver_infos
+        )
 
         async with self.session.begin():
             for i, item in enumerate(items):
@@ -314,9 +334,7 @@ class BatchCreateDeliveredTrips:
                         work_type = item.work_type or "CHUYỂN BÃI"
                         if work_type:
                             work_type = normalize_work_type(work_type)
-                        driver_id = (
-                            user.id if user.role == "driver" else item.driver_id
-                        )
+                        driver_id = user.id if user.role == "driver" else item.driver_id
                         # Use pre-resolved plate from batch query
                         batch_plate = item.vehicle_plate or (
                             plate_map.get(driver_id) if driver_id else None
@@ -335,7 +353,9 @@ class BatchCreateDeliveredTrips:
                             cont_type=item.cont_type,
                             revenue=revenue_map.get(i, 0),
                             driver_salary=salary_map.get(i, 0),
-                            trip_date=item.trip_date if item.trip_date else date.today(),
+                            trip_date=item.trip_date
+                            if item.trip_date
+                            else date.today(),
                             note=item.note,
                         )
                         saved = await self.repo.add(w)

@@ -7,7 +7,7 @@ export type {
 export { useClients, useClientsInfinite, useCreateClient, useUpdateClient, useDeleteClient } from './queries/clients'
 export { useVendors, useVendorsPaged, useCreateVendor, useUpdateVendor, useDeleteVendor } from './queries/vendors'
 export { useLocations, useCreateLocation, useUpdateLocation, useDeleteLocation, usePreviewLocationImport, useCommitLocationImport } from './queries/locations'
-export { useDeliveredTrips, useDeliveredTripsInfinite, useDeliveredTrip, useCreateDeliveredTrip, useUpdateDeliveredTrip, useDeleteDeliveredTrip, useExportDeliveredTripsExcel, useContTypeStats } from './queries/delivered-trips'
+export { useDeliveredTrips, useDeliveredTripsInfinite, useDeliveredTrip, useCreateDeliveredTrip, useUpdateDeliveredTrip, useDeleteDeliveredTrip, useExportDeliveredTripsExcel, useContTypeStats, useDuplicateContainers } from './queries/delivered-trips'
 export { useBookedTrips, useBookedTrip, useCreateBookedTrip, useUpdateBookedTrip } from './queries/booked-trips'
 export { useDriverEarnings, useMyEarnings, useSalaryDashboard, useExportSalaryExcel, useCalculateSalary, useSalaryConfig, useUpdateSalaryConfig, useDriverBaseSalaryHistory, useSetDriverBaseSalary, useSalaryPeriod, useUpsertDriverSalary, useInitializeSalaryPeriod } from './queries/salary'
 export { useDrivers, useDriversPaged, useCreateDriver, useUpdateDriver, useDeleteDriver } from './queries/drivers'

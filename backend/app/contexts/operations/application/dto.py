@@ -45,6 +45,7 @@ class BookedTripListFilters:
 @dataclass
 class ImportTripRow:
     """One row from the customer-Excel import pipeline, post-mapping."""
+
     container_no: str
     container_size: str = ""
     freight_kind: str = ""
@@ -64,7 +65,9 @@ class ImportTripRow:
     driver_name: str = ""
     vessel: str = ""
     remarks: str = ""
-    freight_kind_unknown: bool = False  # True if freight_kind was not explicitly provided
+    freight_kind_unknown: bool = (
+        False  # True if freight_kind was not explicitly provided
+    )
 
 
 @dataclass
@@ -137,5 +140,24 @@ class DeliveredTripListFilters:
     date_to: date | None = None
     matched: bool | None = None
     sort_by: str | None = None
-    sort_order: str = 'desc'
+    sort_order: str = "desc"
     search: str | None = None
+
+
+@dataclass
+class DuplicateContainerGroup:
+    """One container number that appears on multiple DeliveredTrips within the filter window."""
+
+    cont_number: str
+    count: int
+    trip_ids: list[int]
+    trip_dates: list[date | None]
+    driver_ids: list[int | None]
+
+
+@dataclass
+class DuplicateContainersFilters:
+    date_from: date | None = None
+    date_to: date | None = None
+    client_id: int | None = None
+    driver_id: int | None = None

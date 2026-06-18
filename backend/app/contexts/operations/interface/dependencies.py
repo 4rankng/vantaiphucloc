@@ -12,6 +12,7 @@ from app.contexts.operations.application import (
     CreateDeliveredTrip,
     DeleteBookedTrip,
     DeleteDeliveredTrip,
+    FindDuplicateContainers,
     GetBookedTrip,
     GetDeliveredTrip,
     ListBookedTrips,
@@ -136,3 +137,9 @@ def get_batch_create_delivered_trips(
     db: AsyncSession = Depends(get_db),
 ) -> BatchCreateDeliveredTrips:
     return BatchCreateDeliveredTrips(repo, db)
+
+
+def get_find_duplicate_containers(
+    repo: DeliveredTripRepository = Depends(get_delivered_trip_repository),
+) -> FindDuplicateContainers:
+    return FindDuplicateContainers(repo)

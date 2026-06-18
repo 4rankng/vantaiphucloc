@@ -44,6 +44,8 @@ export const queryKeys = {
   deliveredTripsFiltered: (filters?: Record<string, string>) =>
     ['delivered-trips', filters] as const,
   deliveredTripsInfinite: ['delivered-trips-infinite'] as const,
+  duplicateContainers: (filters?: Record<string, string | number | undefined>) =>
+    ['delivered-trips', 'duplicate-containers', filters] as const,
   bookedTrips: ['booked-trips'] as const,
   bookedTrip: (id: number) => ['booked-trips', id] as const,
   bookedTripsFiltered: (filters?: Record<string, string>) =>

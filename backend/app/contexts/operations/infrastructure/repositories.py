@@ -259,6 +259,95 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         )).scalars().all())
         return [await self._hydrate(r) for r in rows]
 
+    async def find_duplicate_containers(
+        self,
+        *,
+        date_from: date | None = None,
+        date_to: date | None = None,
+        client_id: int | None = None,
+        driver_id: int | None = None,
+    ) -> list:
+        """Return container numbers that appear on 2+ delivered trips in the window.
+
+        Matching key is normalized (TRIM + lower) so 'hacu1234567' and
+        'HACU1234567 ' collapse into one group.
+
+        Implementation: query all matching trips in one shot, then group in
+        Python — keeps the SQL portable to SQLite (no array_agg) and Postgres.
+        """
+        from collections import defaultdict
+
+        from app.contexts.operations.application.dto import DuplicateContainerGroup
+
+        normalized = func.lower(func.trim(DeliveredTripORM.cont_number))
+
+        # Step 1: identify duplicate keys (unfiltered by client/driver so a cont
+        # that appears twice across clients still counts) within the date window
+        dup_q = (
+            select(normalized.label("key"), func.count().label("cnt"))
+            .where(
+                DeliveredTripORM.cont_number.isnot(None),
+                DeliveredTripORM.cont_number != "",
+            )
+            .group_by(normalized)
+            .having(func.count() > 1)
+        )
+        if date_from is not None:
+            dup_q = dup_q.where(DeliveredTripORM.trip_date >= date_from)
+        if date_to is not None:
+            dup_q = dup_q.where(DeliveredTripORM.trip_date <= date_to)
+
+        dup_keys = {key for key, _ in (await self.session.execute(dup_q)).all() if key}
+        if not dup_keys:
+            return []
+
+        # Step 2: fetch every trip whose normalized key is in the duplicate set,
+        # re-applying client/driver filters so the returned count reflects the
+        # caller's scope
+        keys = list(dup_keys)
+        trips_q = select(
+            DeliveredTripORM.cont_number,
+            DeliveredTripORM.id,
+            DeliveredTripORM.trip_date,
+            DeliveredTripORM.driver_id,
+        ).where(normalized.in_(keys))
+        if date_from is not None:
+            trips_q = trips_q.where(DeliveredTripORM.trip_date >= date_from)
+        if date_to is not None:
+            trips_q = trips_q.where(DeliveredTripORM.trip_date <= date_to)
+        if client_id is not None:
+            trips_q = trips_q.where(DeliveredTripORM.client_id == client_id)
+        if driver_id is not None:
+            trips_q = trips_q.where(DeliveredTripORM.driver_id == driver_id)
+
+        buckets: dict[str, list[tuple]] = defaultdict(list)
+        for raw, trip_id, trip_date, trip_driver_id in (await self.session.execute(trips_q)).all():
+            key = (raw or "").strip().lower()
+            if not key:
+                continue
+            buckets[key].append((raw, trip_id, trip_date, trip_driver_id))
+
+        groups: list[DuplicateContainerGroup] = []
+        for key, items in buckets.items():
+            # A container duplicated globally but reduced to a single trip by
+            # the caller's client/driver scope is NOT a duplicate in that
+            # scope — drop it so callers never see a count==1 "duplicate".
+            if len(items) < 2:
+                continue
+            display_cont = next(
+                (r.strip() for r, _, _, _ in items if r and r.strip()),
+                key.upper(),
+            )
+            groups.append(DuplicateContainerGroup(
+                cont_number=display_cont,
+                count=len(items),
+                trip_ids=[int(i) for _, i, _, _ in items],
+                trip_dates=[d for _, _, d, _ in items],
+                driver_ids=[dr if dr is not None else None for _, _, _, dr in items],
+            ))
+        groups.sort(key=lambda g: (-g.count, g.cont_number))
+        return groups
+
     async def add(self, w: DeliveredTrip) -> DeliveredTrip:
         orm = delivered_trip_to_orm(w)
         self.session.add(orm)

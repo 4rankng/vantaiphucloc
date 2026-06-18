@@ -16,6 +16,7 @@ from app.contexts.operations.application import (
     CreateDeliveredTrip,
     CurrentUserContext,
     DeleteDeliveredTrip,
+    FindDuplicateContainers,
     GetDeliveredTrip,
     ListDeliveredTrips,
     UpdateDeliveredTrip,
@@ -24,11 +25,13 @@ from app.contexts.operations.application.dto import (
     DeliveredTripCreateInput,
     DeliveredTripListFilters,
     DeliveredTripUpdateInput,
+    DuplicateContainersFilters,
 )
 from app.contexts.operations.domain.entities import DeliveredTrip
 from app.contexts.operations.interface.dependencies import (
     get_create_delivered_trip,
     get_delete_delivered_trip,
+    get_find_duplicate_containers,
     get_get_delivered_trip,
     get_list_delivered_trips,
     get_update_delivered_trip,
@@ -69,7 +72,15 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, vendors, *, include_photo: bool = True) -> DeliveredTripOut:
+def _wo_to_out(
+    w: DeliveredTrip,
+    partners,
+    drivers,
+    locations,
+    vendors,
+    *,
+    include_photo: bool = True,
+) -> DeliveredTripOut:
     return DeliveredTripOut(
         id=int(w.id),  # type: ignore[arg-type]
         client=get_client_summary(partners, w.client_id),
@@ -98,7 +109,9 @@ async def _load_one(session, w: DeliveredTrip) -> DeliveredTripOut:
     return (await _load_many(session, [w]))[0]
 
 
-async def _load_many(session, wos: list[DeliveredTrip], *, include_photo: bool = True) -> list[DeliveredTripOut]:
+async def _load_many(
+    session, wos: list[DeliveredTrip], *, include_photo: bool = True
+) -> list[DeliveredTripOut]:
     if not wos:
         return []
     partners = await load_client_summaries(session, {w.client_id for w in wos})
@@ -106,11 +119,12 @@ async def _load_many(session, wos: list[DeliveredTrip], *, include_photo: bool =
     vendors = await load_vendor_summaries(session, {w.vendor_id for w in wos})
     locations = await load_location_summaries(
         session,
-        {w.pickup_location_id for w in wos}
-        | {w.dropoff_location_id for w in wos},
+        {w.pickup_location_id for w in wos} | {w.dropoff_location_id for w in wos},
     )
     return [
-        _wo_to_out(w, partners, drivers, locations, vendors, include_photo=include_photo)
+        _wo_to_out(
+            w, partners, drivers, locations, vendors, include_photo=include_photo
+        )
         for w in wos
     ]
 
@@ -122,6 +136,7 @@ def _user_ctx(u: User) -> CurrentUserContext:
 async def _enqueue_notification(w: DeliveredTrip) -> None:
     try:
         from app.workers import enqueue
+
         await enqueue(
             "send_notification_task",
             user_id=None,
@@ -147,6 +162,7 @@ async def validate_container(
         suggest_corrections,
         validate_container_number,
     )
+
     valid, error = validate_container_number(container_number)
     # Only compute suggestions when the format is right but the check digit is
     # wrong — that's the recoverable case where a 1-2 digit typo is likely.
@@ -228,17 +244,25 @@ async def cont_type_stats(
         conditions.append("driver_id = :driver_id")
         params["driver_id"] = driver_id
     if date_from is not None:
-        conditions.append("(trip_date >= :date_from OR (trip_date IS NULL AND created_at >= :date_from))")
+        conditions.append(
+            "(trip_date >= :date_from OR (trip_date IS NULL AND created_at >= :date_from))"
+        )
         params["date_from"] = date_from
     if date_to is not None:
-        conditions.append("(trip_date <= :date_to OR (trip_date IS NULL AND created_at <= :date_to))")
+        conditions.append(
+            "(trip_date <= :date_to OR (trip_date IS NULL AND created_at <= :date_to))"
+        )
         params["date_to"] = date_to
 
     where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
-    rows = (await db.execute(
-        sa_text(f"SELECT cont_type, COUNT(*) AS cnt FROM delivered_trips{where} GROUP BY cont_type"),
-        params,
-    )).all()
+    rows = (
+        await db.execute(
+            sa_text(
+                f"SELECT cont_type, COUNT(*) AS cnt FROM delivered_trips{where} GROUP BY cont_type"
+            ),
+            params,
+        )
+    ).all()
 
     counts = {r[0]: r[1] for r in rows}
     return {
@@ -250,9 +274,18 @@ async def cont_type_stats(
 
 
 _VALID_SORT_COLS = {
-    'trip_date', 'vessel', 'matched', 'revenue', 'created_at',
-    'client_code', 'vehicle_plate', 'pickup_name', 'dropoff_name',
-    'cont_number', 'cont_type', 'work_type',
+    "trip_date",
+    "vessel",
+    "matched",
+    "revenue",
+    "created_at",
+    "client_code",
+    "vehicle_plate",
+    "pickup_name",
+    "dropoff_name",
+    "cont_number",
+    "cont_type",
+    "work_type",
 }
 
 
@@ -264,11 +297,16 @@ async def list_delivered_trips(
     date_from: date | None = None,
     date_to: date | None = None,
     matched: bool | None = None,
-    search: str | None = Query(None, description="Search vessel, container number, client name/code"),
+    search: str | None = Query(
+        None, description="Search vessel, container number, client name/code"
+    ),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=1000),
-    sort_by: str | None = Query(None, description="Sort column: trip_date | vessel | matched | revenue | created_at"),
-    sort_order: str = Query('desc', pattern='^(asc|desc)$'),
+    sort_by: str | None = Query(
+        None,
+        description="Sort column: trip_date | vessel | matched | revenue | created_at",
+    ),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     current_user: User = Depends(get_current_user),
     use_case: ListDeliveredTrips = Depends(get_list_delivered_trips),
 ):
@@ -277,20 +315,28 @@ async def list_delivered_trips(
 
     safe_sort_by = sort_by if sort_by in _VALID_SORT_COLS else None
 
-    items, total = await use_case(DeliveredTripListFilters(
-        page=page, page_size=page_size,
-        client_id=client_id,
-        driver_id=driver_id,
-        vendor_id=vendor_id,
-        date_from=date_from, date_to=date_to, matched=matched,
-        sort_by=safe_sort_by,
-        sort_order=sort_order,
-        search=search,
-    ))
+    items, total = await use_case(
+        DeliveredTripListFilters(
+            page=page,
+            page_size=page_size,
+            client_id=client_id,
+            driver_id=driver_id,
+            vendor_id=vendor_id,
+            date_from=date_from,
+            date_to=date_to,
+            matched=matched,
+            sort_by=safe_sort_by,
+            sort_order=sort_order,
+            search=search,
+        )
+    )
     out = await _load_many(use_case.repo.session, items, include_photo=False)  # type: ignore[attr-defined]
 
     return PaginatedResponse[DeliveredTripOut](
-        items=out, total=total, page=page, page_size=page_size,
+        items=out,
+        total=total,
+        page=page,
+        page_size=page_size,
         total_pages=math.ceil(total / page_size) if total > 0 else 0,
     )
 
@@ -303,7 +349,10 @@ async def export_delivered_trips_excel(
     current_user: User = Depends(require_permission("export", "DeliveredTrip")),
     use_case: GetDeliveredTrip = Depends(get_get_delivered_trip),
 ):
-    from app.contexts.operations.infrastructure.excel import generate_delivered_trips_excel
+    from app.contexts.operations.infrastructure.excel import (
+        generate_delivered_trips_excel,
+    )
+
     session = use_case.repo.session  # type: ignore[attr-defined]
     content = await generate_delivered_trips_excel(
         session,
@@ -320,6 +369,51 @@ async def export_delivered_trips_excel(
     )
 
 
+@router.get("/delivered-trips/duplicate-containers")
+async def list_duplicate_containers(
+    date_from: date | None = None,
+    date_to: date | None = None,
+    client_id: int | None = None,
+    driver_id: int | None = None,
+    current_user: User = Depends(require_permission("read_list", "DeliveredTrip")),
+    use_case: FindDuplicateContainers = Depends(get_find_duplicate_containers),
+):
+    """Return container numbers appearing on 2+ delivered trips in the window.
+
+    Used by accountants to spot drivers entering the same container twice
+    (typically a duplicate trip or a wrong-date entry). Matching is
+    case-insensitive after TRIM. Driver-scoped users only see their own
+    trips.
+    """
+    scoped_driver_id = driver_id
+    if current_user.role == "driver":
+        scoped_driver_id = current_user.id
+
+    groups = await use_case(
+        DuplicateContainersFilters(
+            date_from=date_from,
+            date_to=date_to,
+            client_id=client_id,
+            driver_id=scoped_driver_id,
+        )
+    )
+    total_extra_rows = sum(max(0, g.count - 1) for g in groups)
+    return {
+        "groups": [
+            {
+                "cont_number": g.cont_number,
+                "count": g.count,
+                "trip_ids": g.trip_ids,
+                "trip_dates": [d.isoformat() if d else None for d in g.trip_dates],
+                "driver_ids": g.driver_ids,
+            }
+            for g in groups
+        ],
+        "total_groups": len(groups),
+        "total_extra_rows": total_extra_rows,
+    }
+
+
 @router.get("/delivered-trips/{delivered_trip_id:int}", response_model=DeliveredTripOut)
 async def get_delivered_trip(
     delivered_trip_id: int,
@@ -334,6 +428,7 @@ async def get_delivered_trip(
     # to avoid leaking existence to a horizontally-scoped caller.
     if current_user.role == "driver" and w.driver_id != current_user.id:
         from app.contexts.operations.domain.exceptions import NotFound
+
         raise translate(NotFound("DeliveredTrip", delivered_trip_id))
     out = await _load_one(use_case.repo.session, w)  # type: ignore[attr-defined]
     return out
@@ -378,7 +473,9 @@ async def update_delivered_trip(
         raise translate(exc)
 
 
-@router.put("/delivered-trips/{delivered_trip_id:int}/photo", response_model=DeliveredTripOut)
+@router.put(
+    "/delivered-trips/{delivered_trip_id:int}/photo", response_model=DeliveredTripOut
+)
 async def upload_delivered_trip_photo(
     delivered_trip_id: int,
     body: DeliveredTripPhotoUpload,
@@ -397,6 +494,7 @@ async def upload_delivered_trip_photo(
         trip = await get_trip(delivered_trip_id)
         if current_user.role == "driver" and trip.driver_id != current_user.id:
             from app.contexts.operations.domain.exceptions import NotFound
+
             raise translate(NotFound("DeliveredTrip", delivered_trip_id))
 
         data_url = f"data:image/jpeg;base64,{body.image_data}"
@@ -433,6 +531,7 @@ async def delete_delivered_trip(
 # Parse preview (heuristic column mapping — no DB write)
 # ---------------------------------------------------------------------------
 
+
 @router.post("/delivered-trips/parse-preview")
 async def parse_preview(
     file: UploadFile,
@@ -456,6 +555,7 @@ async def parse_preview(
 
     try:
         from app.ai.pipeline import parse_template_excel
+
         result = parse_template_excel(io.BytesIO(contents), file.filename)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
