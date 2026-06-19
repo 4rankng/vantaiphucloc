@@ -93,3 +93,4 @@ frontend/next-env.d.ts
 
 qa/*
 .kilo
+.codex
