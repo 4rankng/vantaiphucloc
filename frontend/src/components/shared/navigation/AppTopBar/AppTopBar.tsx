@@ -76,50 +76,50 @@ export function AppTopBar(props: AppTopBarProps) {
 
   return (
     <>
-      <div className="px-4 py-2.5 flex items-center justify-between gap-2">
+      <div className="px-4 py-3 sm:py-2.5 flex items-center justify-between gap-2">
         {/* ── Left ── */}
         <div className="flex items-center gap-1.5 min-w-0">
           {/* Hamburger — always shown when onMenu is provided */}
           {props.onMenu && (
             <button
               onClick={props.onMenu}
-              className="w-8 h-8 flex items-center justify-center rounded-full shrink-0 touch-manipulation"
+              className="w-11 h-11 sm:w-10 sm:h-10 flex items-center justify-center rounded-full shrink-0 touch-manipulation"
               style={{ background: t.iconBg, color: t.iconColor }}
               aria-label="Menu"
             >
-              <Menu className="w-[18px] h-[18px]" />
+              <Menu className="w-[21px] h-[21px] sm:w-5 sm:h-5" />
             </button>
           )}
 
           {/* Logo — only when no onMenu */}
           {!props.onMenu && (
-            <img src="/logo.avif" alt="" className="w-8 h-8 shrink-0 object-contain rounded-md" />
+            <img src="/logo.avif" alt="" className="w-11 h-11 sm:w-10 sm:h-10 shrink-0 object-contain rounded-md" />
           )}
 
           {/* Back arrow — shown on page variant when showBackButton is true AND onBack provided */}
           {props.variant === 'page' && props.showBackButton && props.onBack && (
             <button
               onClick={props.onBack}
-              className="w-8 h-8 flex items-center justify-center rounded-full shrink-0 touch-manipulation"
+              className="w-11 h-11 sm:w-10 sm:h-10 flex items-center justify-center rounded-full shrink-0 touch-manipulation"
               style={{ background: t.iconBg, color: t.iconColor }}
               aria-label="Quay lại"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5 sm:w-[18px] sm:h-[18px]" />
             </button>
           )}
 
           {/* Title / greeting */}
           {props.variant === 'home' ? (
             <div className="min-w-0 ml-0.5">
-              <p className="text-[11px] leading-tight" style={{ color: t.subtitleColor }}>
+              <p className="text-xs sm:text-[11px] leading-tight" style={{ color: t.subtitleColor }}>
                 Xin chào,
               </p>
-              <p className="text-sm font-semibold leading-tight truncate" style={{ color: t.titleColor }}>
+              <p className="text-base sm:text-sm font-semibold leading-tight truncate" style={{ color: t.titleColor }}>
                 {props.name}
               </p>
             </div>
           ) : (
-            <p className="text-sm font-semibold truncate ml-0.5" style={{ color: t.titleColor }}>
+            <p className="text-base sm:text-sm font-semibold truncate ml-0.5" style={{ color: t.titleColor }}>
               {props.title}
             </p>
           )}
@@ -132,14 +132,14 @@ export function AppTopBar(props: AppTopBarProps) {
           {/* Bell */}
           <button
             onClick={handleBellClick}
-            className="w-8 h-8 flex items-center justify-center rounded-full relative touch-manipulation"
+            className="w-11 h-11 sm:w-10 sm:h-10 flex items-center justify-center rounded-full relative touch-manipulation"
             style={{ background: t.iconBg, color: t.iconColor }}
             aria-label="Thông báo"
           >
-            <Bell className="w-[17px] h-[17px]" />
+            <Bell className="w-[21px] h-[21px] sm:w-5 sm:h-5" />
             {unread > 0 && (
               <span
-                className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold leading-none px-1"
+                className="absolute top-0 right-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold leading-none px-1"
                 style={{ background: 'var(--theme-status-error)', color: 'var(--theme-text-on-brand)' }}
               >
                 {unread > 99 ? '99+' : unread}
@@ -151,11 +151,11 @@ export function AppTopBar(props: AppTopBarProps) {
           <div ref={profileBtnRef} className="relative">
             <button
               onClick={() => setProfileOpen(v => !v)}
-              className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation"
+              className="w-11 h-11 sm:w-10 sm:h-10 flex items-center justify-center rounded-full touch-manipulation"
               style={{ background: t.iconBg, color: t.iconColor }}
               aria-label="Tài khoản"
             >
-              <UserCircle className="w-[17px] h-[17px]" />
+              <UserCircle className="w-[21px] h-[21px] sm:w-5 sm:h-5" />
             </button>
             <UserDropdown
               open={profileOpen}

@@ -198,8 +198,9 @@ async def generate_doi_soat_excel(
     - ``Chưa ghép`` when it appears on only one side
 
     Columns: STT | NGÀY ĐI | CHỦ HÀNG | SỐ CONTAINER | F20' | F40' | E20' |
-    E40' | SỐ XE CHẠY | ĐIỂM ĐI | ĐIỂM ĐẾN | TÁC NGHIỆP | TRẠNG THÁI
-    Subtotal row at row 11 counts F20'/F40'/E20'/E40' across all rows.
+    E40' | SỐ XE CHẠY | ĐIỂM ĐI | ĐIỂM ĐẾN | TÁC NGHIỆP | CƯỚC | LƯƠNG |
+    TRẠNG THÁI. Subtotal row at row 11 counts F20'/F40'/E20'/E40' and
+    sums CƯỚC/LƯƠNG across all rows.
     """
     import openpyxl
     from openpyxl.styles import Font, Alignment, Border, Side
@@ -278,9 +279,7 @@ async def generate_doi_soat_excel(
         fb = fallback
         return {
             "trip_date": source.trip_date or (fb.trip_date if fb else None),
-            "cont_number": source.cont_number
-            or (fb.cont_number if fb else None)
-            or "",
+            "cont_number": source.cont_number or (fb.cont_number if fb else None) or "",
             "cont_type": source.cont_type or (fb.cont_type if fb else None),
             "vehicle_plate": source.vehicle_plate
             or (fb.vehicle_plate if fb else None)
@@ -290,6 +289,8 @@ async def generate_doi_soat_excel(
             "dropoff_location_id": source.dropoff_location_id
             or (fb.dropoff_location_id if fb else None),
             "work_type": source.work_type or (fb.work_type if fb else None) or "",
+            "revenue": getattr(source, "revenue", None),
+            "driver_salary": getattr(source, "driver_salary", None),
             "status": status,
         }
 
@@ -308,7 +309,7 @@ async def generate_doi_soat_excel(
             fallback = bts[i] if i < len(bts) else (bts[0] if bts else None)
             deduped_rows.append(_doi_soat_row(source, fallback, status))
         if trips and len(bts) > len(trips):
-            for bt in bts[len(trips):]:
+            for bt in bts[len(trips) :]:
                 deduped_rows.append(_doi_soat_row(bt, None, STATUS_UNMATCHED))
 
     for bt in bt_no_cont:
@@ -337,7 +338,7 @@ async def generate_doi_soat_excel(
     month_label = df.strftime("%m/%Y")
     ws.title = f"SL T{df.month}.{str(df.year)[2:]}"
 
-    num_cols = 13  # A-M
+    num_cols = 15  # A-O
     last_col = get_column_letter(num_cols)
 
     # -- Styles --
@@ -350,7 +351,7 @@ async def generate_doi_soat_excel(
     )
     center = Alignment(horizontal="center", vertical="center", wrap_text=True)
     left = Alignment(horizontal="left", vertical="center")
-    Alignment(horizontal="right", vertical="center")
+    right = Alignment(horizontal="right", vertical="center")
 
     # -- Title block (rows 1-8) --
     ws.merge_cells(f"A1:{last_col}1")
@@ -399,6 +400,8 @@ async def generate_doi_soat_excel(
         "ĐIỂM ĐI",
         "ĐIỂM ĐẾN",
         "TÁC NGHIỆP",
+        "CƯỚC",
+        "LƯƠNG",
         "TRẠNG THÁI",
     ]
     ws.append([])  # row 9 empty
@@ -427,11 +430,18 @@ async def generate_doi_soat_excel(
             "",
             "",
             "",
+            f"=SUBTOTAL(9,M12:M{last_data_row})",
+            f"=SUBTOTAL(9,N12:N{last_data_row})",
+            "",
         ]
     )
-    for col_num in [5, 6, 7, 8]:
+    for col_num in [5, 6, 7, 8, 13, 14]:
         ws.cell(row=11, column=col_num).font = _bold
-        ws.cell(row=11, column=col_num).alignment = center
+        ws.cell(row=11, column=col_num).alignment = (
+            right if col_num in (13, 14) else center
+        )
+        if col_num in (13, 14):
+            ws.cell(row=11, column=col_num).number_format = "#,##0"
 
     # -- Data rows (12+) -- one row per unique container
     stt = 0
@@ -467,6 +477,8 @@ async def generate_doi_soat_excel(
                 pickup,
                 dropoff,
                 row["work_type"],
+                row["revenue"],
+                row["driver_salary"],
                 row["status"],
             ]
         )
@@ -475,13 +487,16 @@ async def generate_doi_soat_excel(
         for col_num in range(1, num_cols + 1):
             cell = ws.cell(row=row_num, column=col_num)
             cell.border = thin_border
-            if col_num in (1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13):
+            if col_num in (1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 15):
                 cell.alignment = center
             elif col_num == 4:
                 cell.alignment = left
+            elif col_num in (13, 14):
+                cell.alignment = right
+                cell.number_format = "#,##0"
 
     # -- Column widths --
-    col_widths = [6, 12, 12, 18, 6, 6, 6, 6, 14, 20, 20, 16, 14]
+    col_widths = [6, 12, 12, 18, 6, 6, 6, 6, 14, 20, 20, 16, 14, 14, 14]
     for i, width in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
 
