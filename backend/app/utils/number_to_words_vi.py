@@ -70,7 +70,7 @@ def number_to_vietnamese_words(amount: int) -> str:
         block = groups[i]
         if block == 0:
             continue
-        is_leading = (i == len(groups) - 1)
+        is_leading = i == len(groups) - 1
         block_text = _read_three_digits(block, full=not is_leading)
         # Pick label. Beyond i=3 we cycle through "tỷ" multiples. For VND
         # bills we never exceed ~ 12 digits, so a defensive fallback only.

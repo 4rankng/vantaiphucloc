@@ -70,7 +70,5 @@ async def export_customer_settlement(
     return StreamingResponse(
         io.BytesIO(result.workbook_bytes),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={
-            "Content-Disposition": f'attachment; filename="{result.filename}"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="{result.filename}"'},
     )

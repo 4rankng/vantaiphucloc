@@ -5,7 +5,9 @@ from app.contexts.operations.infrastructure.geocoding import reverse_geocode
 logger = logging.getLogger(__name__)
 
 
-async def geocode_location_task(ctx: dict, location_id: int, lat: float, lng: float) -> dict:
+async def geocode_location_task(
+    ctx: dict, location_id: int, lat: float, lng: float
+) -> dict:
     redis = ctx["redis"]
     address = await reverse_geocode(redis, lat, lng)
     if not address:
@@ -22,7 +24,13 @@ async def geocode_location_task(ctx: dict, location_id: int, lat: float, lng: fl
         result = await db.execute(select(Location).where(Location.id == location_id))
         loc = result.scalar_one_or_none()
         if loc:
-            loc.geocoded_at = __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
+            loc.geocoded_at = __import__("datetime").datetime.now(
+                __import__("datetime").timezone.utc
+            )
             await db.commit()
 
-    return {"location_id": location_id, "status": "geocoded" if address != "Không xác định" else "fallback", "address": address}
+    return {
+        "location_id": location_id,
+        "status": "geocoded" if address != "Không xác định" else "fallback",
+        "address": address,
+    }

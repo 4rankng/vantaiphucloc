@@ -20,8 +20,6 @@ from app.contexts.operations.domain.value_objects import (
 )
 
 
-
-
 # ── BookedTrip aggregate ─────────────────────────────────────────
 
 

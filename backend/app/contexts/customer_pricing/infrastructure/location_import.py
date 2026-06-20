@@ -22,8 +22,12 @@ from app.contexts.customer_pricing.application import (
 )
 from app.contexts.customer_pricing.application.dto import LocationCreateInput
 from app.contexts.customer_pricing.domain.exceptions import AlreadyExists
-from app.contexts.customer_pricing.infrastructure.location_resolver import normalize as _normalize
-from app.contexts.customer_pricing.infrastructure.repositories import SqlLocationRepository
+from app.contexts.customer_pricing.infrastructure.location_resolver import (
+    normalize as _normalize,
+)
+from app.contexts.customer_pricing.infrastructure.repositories import (
+    SqlLocationRepository,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -31,6 +35,7 @@ _logger = logging.getLogger(__name__)
 @dataclass
 class LocationImportRow:
     """A single location name parsed from Excel."""
+
     name: str
     row: int
     column: int
@@ -39,6 +44,7 @@ class LocationImportRow:
 @dataclass
 class LocationPreviewResult:
     """Result of parsing location Excel file."""
+
     filename: str
     sheet_name: str
     rows: list[LocationImportRow]
@@ -51,6 +57,7 @@ class LocationPreviewResult:
 @dataclass
 class LocationCommitResult:
     """Result of committing location import."""
+
     created: int
     skipped_existing: int
     errors: list[str]
@@ -77,7 +84,18 @@ def _score_sheet_for_locations(sheet) -> tuple[int, str]:
     empty_cells = 0
     total_cells = 0
 
-    location_keywords = ["PORT", "BÃI", "BAY", "KHO", "ICD", "HẢI", "PHÀ", "BẾN", "CẢNG", "TERMINAL"]
+    location_keywords = [
+        "PORT",
+        "BÃI",
+        "BAY",
+        "KHO",
+        "ICD",
+        "HẢI",
+        "PHÀ",
+        "BẾN",
+        "CẢNG",
+        "TERMINAL",
+    ]
 
     for row in sheet.iter_rows(min_row=1, max_row=max_sample, values_only=True):
         for cell in row:
@@ -121,8 +139,12 @@ def _score_sheet_for_locations(sheet) -> tuple[int, str]:
     if sheet.max_column > 5:
         # Check if row 2+ has many numeric values
         numeric_cols = 0
-        for row in sheet.iter_rows(min_row=2, max_row=min(5, sheet.max_row), values_only=True):
-            row_numeric = sum(1 for c in row[1:] if isinstance(c, (int, float)) and c > 1000)
+        for row in sheet.iter_rows(
+            min_row=2, max_row=min(5, sheet.max_row), values_only=True
+        ):
+            row_numeric = sum(
+                1 for c in row[1:] if isinstance(c, (int, float)) and c > 1000
+            )
             numeric_cols += row_numeric
         if numeric_cols > 10:
             score -= 40
@@ -177,7 +199,9 @@ def parse_location_excel(content: bytes, filename: str) -> LocationPreviewResult
     if best_score < 0:
         _logger.warning(f"Best sheet '{sheet_name}' has negative score: {score_reason}")
 
-    _logger.info(f"Selected sheet: {sheet_name} (score: {best_score}, reason: {score_reason})")
+    _logger.info(
+        f"Selected sheet: {sheet_name} (score: {best_score}, reason: {score_reason})"
+    )
 
     rows: list[LocationImportRow] = []
     seen_names: dict[str, list[tuple[int, int]]] = {}  # Track duplicates
@@ -197,7 +221,9 @@ def parse_location_excel(content: bytes, filename: str) -> LocationPreviewResult
     start_row = 2 if skip_first_row else 1
 
     # Parse all cells
-    for row_idx, row in enumerate(sheet.iter_rows(min_row=start_row, values_only=True), start=start_row):
+    for row_idx, row in enumerate(
+        sheet.iter_rows(min_row=start_row, values_only=True), start=start_row
+    ):
         for col_idx, cell_value in enumerate(row, start=1):
             if cell_value and isinstance(cell_value, str):
                 name = cell_value.strip()
@@ -210,7 +236,9 @@ def parse_location_excel(content: bytes, filename: str) -> LocationPreviewResult
                     # Normalize for duplicate detection
                     normalized = _normalize(name)
 
-                    row_entry = LocationImportRow(name=name, row=row_idx, column=col_idx)
+                    row_entry = LocationImportRow(
+                        name=name, row=row_idx, column=col_idx
+                    )
                     rows.append(row_entry)
 
                     # Track duplicates
@@ -293,7 +321,9 @@ async def commit_location_import(
         try:
             await create_use_case(LocationCreateInput(name=name))
             created += 1
-            existing_normalized[norm] = name  # Add to set to avoid duplicates within batch
+            existing_normalized[norm] = (
+                name  # Add to set to avoid duplicates within batch
+            )
         except AlreadyExists:
             skipped_existing += 1
         except Exception as e:

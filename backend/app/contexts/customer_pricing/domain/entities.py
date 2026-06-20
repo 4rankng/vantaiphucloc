@@ -18,8 +18,6 @@ from app.contexts.customer_pricing.domain.value_objects import (
 )
 
 
-
-
 # -- Partner (unified client + vendor) aggregate --------------------
 
 
@@ -34,7 +32,7 @@ class Partner:
 
     id: PartnerId | None
     name: str
-    partner_type: str          # "client" | "vendor"
+    partner_type: str  # "client" | "vendor"
     code: str | None = None
     phone: str | None = None
     tax_code: str | None = None
@@ -64,7 +62,7 @@ class LocationAlias:
     location_id: LocationId
     alias: str
     alias_normalized: str
-    source: str                # "import" | "manual" | "fuzzy_match"
+    source: str  # "import" | "manual" | "fuzzy_match"
     created_at: datetime = field(default_factory=utcnow)
     created_by_id: int | None = None
 
@@ -116,8 +114,14 @@ class Location:
         self.location_review_needed = review_needed
         self.updated_at = utcnow()
 
-    def add_alias(self, alias: str, alias_normalized: str, source: str,
-                  *, created_by_id: int | None = None) -> LocationAlias:
+    def add_alias(
+        self,
+        alias: str,
+        alias_normalized: str,
+        source: str,
+        *,
+        created_by_id: int | None = None,
+    ) -> LocationAlias:
         # Idempotent: alias_normalized is unique inside the aggregate.
         for existing in self.aliases:
             if existing.alias_normalized == alias_normalized:
@@ -147,5 +151,3 @@ class Location:
             raise ValueError("cannot merge a location into itself")
         self.is_active = False
         self.updated_at = utcnow()
-
-

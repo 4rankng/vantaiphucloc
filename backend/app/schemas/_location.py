@@ -83,6 +83,7 @@ class LocationPinRequest(BaseModel):
 # LocationAlias
 # ---------------------------------------------------------------------------
 
+
 class LocationAliasOut(BaseModel):
     id: int
     location_id: int

@@ -4,6 +4,7 @@ Scans any sheet for a header row containing CHỦ HÀNG, ĐIỂM ĐI, ĐIỂM Đ
 at least one price column (F20/F40/E20/E40), and optionally TÁC NGHIỆP.
 Returns parsed rows ready for client/location matching.
 """
+
 from __future__ import annotations
 
 from io import BytesIO
@@ -63,7 +64,10 @@ def _parse_int_price(val: Any) -> int | None:
 
 
 def _normalize_work_type(raw: str) -> str | None:
-    from app.contexts.operations.infrastructure.operation_type_resolver import normalize_operation_type
+    from app.contexts.operations.infrastructure.operation_type_resolver import (
+        normalize_operation_type,
+    )
+
     cleaned = normalize_operation_type(raw)
     for valid in get_valid_work_types():
         if cleaned == normalize_operation_type(valid):
@@ -100,14 +104,22 @@ def parse_route_pricing_bytes(content: bytes) -> dict:
             if _is_aggregate_row(row):
                 continue
 
-            client_raw = str(row[col["chủ hàng"]] or "").strip() if "chủ hàng" in col else ""
-            pickup_raw = str(row[col["điểm đi"]] or "").strip() if "điểm đi" in col else ""
-            dropoff_raw = str(row[col["điểm đến"]] or "").strip() if "điểm đến" in col else ""
+            client_raw = (
+                str(row[col["chủ hàng"]] or "").strip() if "chủ hàng" in col else ""
+            )
+            pickup_raw = (
+                str(row[col["điểm đi"]] or "").strip() if "điểm đi" in col else ""
+            )
+            dropoff_raw = (
+                str(row[col["điểm đến"]] or "").strip() if "điểm đến" in col else ""
+            )
 
             if not client_raw or not pickup_raw:
                 continue
 
-            wt_raw = str(row[col["tác nghiệp"]] or "").strip() if "tác nghiệp" in col else ""
+            wt_raw = (
+                str(row[col["tác nghiệp"]] or "").strip() if "tác nghiệp" in col else ""
+            )
             work_type = _normalize_work_type(wt_raw) if wt_raw else None
 
             if wt_raw:
@@ -116,21 +128,39 @@ def parse_route_pricing_bytes(content: bytes) -> dict:
                 else:
                     missing_wt += 1
 
-            parsed.append({
-                "client_raw": client_raw,
-                "pickup_raw": pickup_raw,
-                "dropoff_raw": dropoff_raw,
-                "work_type": work_type,
-                "f20_price": _parse_int_price(row[col["f20"]] if "f20" in col else None),
-                "f40_price": _parse_int_price(row[col["f40"]] if "f40" in col else None),
-                "e20_price": _parse_int_price(row[col["e20"]] if "e20" in col else None),
-                "e40_price": _parse_int_price(row[col["e40"]] if "e40" in col else None),
-                "f20_driver_salary": _parse_int_price(row[col["lf20"]] if "lf20" in col else None),
-                "f40_driver_salary": _parse_int_price(row[col["lf40"]] if "lf40" in col else None),
-                "e20_driver_salary": _parse_int_price(row[col["le20"]] if "le20" in col else None),
-                "e40_driver_salary": _parse_int_price(row[col["le40"]] if "le40" in col else None),
-                "row_index": ridx,
-            })
+            parsed.append(
+                {
+                    "client_raw": client_raw,
+                    "pickup_raw": pickup_raw,
+                    "dropoff_raw": dropoff_raw,
+                    "work_type": work_type,
+                    "f20_price": _parse_int_price(
+                        row[col["f20"]] if "f20" in col else None
+                    ),
+                    "f40_price": _parse_int_price(
+                        row[col["f40"]] if "f40" in col else None
+                    ),
+                    "e20_price": _parse_int_price(
+                        row[col["e20"]] if "e20" in col else None
+                    ),
+                    "e40_price": _parse_int_price(
+                        row[col["e40"]] if "e40" in col else None
+                    ),
+                    "f20_driver_salary": _parse_int_price(
+                        row[col["lf20"]] if "lf20" in col else None
+                    ),
+                    "f40_driver_salary": _parse_int_price(
+                        row[col["lf40"]] if "lf40" in col else None
+                    ),
+                    "e20_driver_salary": _parse_int_price(
+                        row[col["le20"]] if "le20" in col else None
+                    ),
+                    "e40_driver_salary": _parse_int_price(
+                        row[col["le40"]] if "le40" in col else None
+                    ),
+                    "row_index": ridx,
+                }
+            )
 
         wb.close()
         return {
@@ -148,18 +178,23 @@ def parse_route_pricing_bytes(content: bytes) -> dict:
     return {
         "sheet_name": "",
         "rows": [],
-        "warnings": ["Không tìm thấy sheet chứa bảng cước tuyến. Cần có cột: CHỦ HÀNG, ĐIỂM ĐI, ĐIỂM ĐẾN, và ít nhất 1 cột giá (F20/F40/E20/E40)."],
+        "warnings": [
+            "Không tìm thấy sheet chứa bảng cước tuyến. Cần có cột: CHỦ HÀNG, ĐIỂM ĐI, ĐIỂM ĐẾN, và ít nhất 1 cột giá (F20/F40/E20/E40)."
+        ],
         "stats": {"total": 0, "has_work_type": 0, "missing_work_type": 0},
     }
 
 
-def _find_client(raw_lower: str, client_by_code: dict, client_by_name: dict) -> Client | None:
+def _find_client(
+    raw_lower: str, client_by_code: dict, client_by_name: dict
+) -> Client | None:
     """Exact match by code, then exact match by name, then fuzzy match by name."""
     client = client_by_code.get(raw_lower)
     if client is None:
         client = client_by_name.get(raw_lower)
     if client is None:
         from app.utils.fuzzy import fuzzy_match_name
+
         client = fuzzy_match_name(raw_lower, client_by_name, threshold=0.85)
     return client
 
@@ -169,9 +204,11 @@ async def preview_with_matching(db: AsyncSession, content: bytes) -> dict:
     if not parsed["rows"]:
         return parsed
 
-    all_clients = list((await db.execute(
-        select(Client).where(Client.is_active.is_(True))
-    )).scalars().all())
+    all_clients = list(
+        (await db.execute(select(Client).where(Client.is_active.is_(True))))
+        .scalars()
+        .all()
+    )
 
     client_by_code: dict[str, Client] = {}
     client_by_name: dict[str, Client] = {}
@@ -246,9 +283,11 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
     resolver = LocationResolverService(db)
 
     # Load all clients for matching
-    all_clients = list((await db.execute(
-        select(Client).where(Client.is_active.is_(True))
-    )).scalars().all())
+    all_clients = list(
+        (await db.execute(select(Client).where(Client.is_active.is_(True))))
+        .scalars()
+        .all()
+    )
     client_by_code: dict[str, Client] = {}
     client_by_name: dict[str, Client] = {}
     for c in all_clients:
@@ -282,9 +321,9 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
                 await db.flush()
         except IntegrityError:
             # Re-query in case another request created it
-            row = (await db.execute(
-                select(Client).where(Client.name == raw_stripped)
-            )).scalar_one_or_none()
+            row = (
+                await db.execute(select(Client).where(Client.name == raw_stripped))
+            ).scalar_one_or_none()
             if row is None:
                 raise
             new_client = row
@@ -304,7 +343,9 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
             return location_cache[key]
 
         result = await resolver.resolve_or_create(
-            raw_stripped, source=ResolverSource.IMPORT, user_id=None,
+            raw_stripped,
+            source=ResolverSource.IMPORT,
+            user_id=None,
         )
         loc = result.location
         if loc is None:
@@ -335,15 +376,17 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
             skipped += 1
             continue
 
-        existing = (await db.execute(
-            select(RoutePricingORM).where(
-                RoutePricingORM.client_id == client_id,
-                RoutePricingORM.pickup_location_id == pickup_id,
-                RoutePricingORM.dropoff_location_id == dropoff_id,
-                RoutePricingORM.work_type == work_type,
-                RoutePricingORM.is_active.is_(True),
+        existing = (
+            await db.execute(
+                select(RoutePricingORM).where(
+                    RoutePricingORM.client_id == client_id,
+                    RoutePricingORM.pickup_location_id == pickup_id,
+                    RoutePricingORM.dropoff_location_id == dropoff_id,
+                    RoutePricingORM.work_type == work_type,
+                    RoutePricingORM.is_active.is_(True),
+                )
             )
-        )).scalar_one_or_none()
+        ).scalar_one_or_none()
 
         if existing:
             changed = False
@@ -366,21 +409,23 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
             if changed:
                 affected_keys.add((client_id, pickup_id, dropoff_id, work_type))
         else:
-            db.add(RoutePricingORM(
-                client_id=client_id,
-                pickup_location_id=pickup_id,
-                dropoff_location_id=dropoff_id,
-                work_type=work_type,
-                f20_price=r.get("f20_price"),
-                f40_price=r.get("f40_price"),
-                e20_price=r.get("e20_price"),
-                e40_price=r.get("e40_price"),
-                f20_driver_salary=r.get("f20_driver_salary"),
-                f40_driver_salary=r.get("f40_driver_salary"),
-                e20_driver_salary=r.get("e20_driver_salary"),
-                e40_driver_salary=r.get("e40_driver_salary"),
-                is_active=True,
-            ))
+            db.add(
+                RoutePricingORM(
+                    client_id=client_id,
+                    pickup_location_id=pickup_id,
+                    dropoff_location_id=dropoff_id,
+                    work_type=work_type,
+                    f20_price=r.get("f20_price"),
+                    f40_price=r.get("f40_price"),
+                    e20_price=r.get("e20_price"),
+                    e40_price=r.get("e40_price"),
+                    f20_driver_salary=r.get("f20_driver_salary"),
+                    f40_driver_salary=r.get("f40_driver_salary"),
+                    e20_driver_salary=r.get("e20_driver_salary"),
+                    e40_driver_salary=r.get("e40_driver_salary"),
+                    is_active=True,
+                )
+            )
             created += 1
             affected_keys.add((client_id, pickup_id, dropoff_id, work_type))
 
@@ -389,6 +434,7 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
     # Auto-sync unmatched trips with updated salary
     if affected_keys:
         from app.core.pricing_lookup import sync_unmatched_trip_pricing
+
         for cid, pid, did, wt in affected_keys:
             await sync_unmatched_trip_pricing(db, cid, pid, did, wt)
         await db.commit()

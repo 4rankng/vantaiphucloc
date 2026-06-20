@@ -16,5 +16,6 @@ def test_delivered_trip_flat_container_fields():
 
 def test_no_container_join_tables():
     from app.models import domain
+
     assert not hasattr(domain, "BookedTripContainer")
     assert not hasattr(domain, "DeliveredTripContainer")

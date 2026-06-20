@@ -85,13 +85,21 @@ async def salary_dashboard(
 
     base_repo = SqlDriverSalaryConfigRepository(db)
     use_case = GetDriverEarnings(db, base_salary_repo=base_repo)
-    rows = (await db.execute(
-        select(User.id).where(User.role == "driver", User.is_active == True)  # noqa: E712
-    )).scalars().all()
+    rows = (
+        (
+            await db.execute(
+                select(User.id).where(User.role == "driver", User.is_active == True)  # noqa: E712
+            )
+        )
+        .scalars()
+        .all()
+    )
 
     results = []
     for driver_id in rows:
-        dto = await use_case(driver_id=driver_id, start_date=start_date, end_date=end_date)
+        dto = await use_case(
+            driver_id=driver_id, start_date=start_date, end_date=end_date
+        )
         results.append(_dto_to_out(dto))
     return results
 
@@ -141,11 +149,15 @@ async def export_salary_excel(
     db=Depends(get_db),
 ):
     from app.contexts.operations.infrastructure.excel import generate_salary_excel
-    from app.contexts.payroll.infrastructure.repositories import SqlDriverSalaryRepository
+    from app.contexts.payroll.infrastructure.repositories import (
+        SqlDriverSalaryRepository,
+    )
 
     driver_salary_repo = SqlDriverSalaryRepository(db)
     content = await generate_salary_excel(
-        db, start_date.isoformat(), end_date.isoformat(),
+        db,
+        start_date.isoformat(),
+        end_date.isoformat(),
         driver_salary_repo=driver_salary_repo,
     )
     return StreamingResponse(
@@ -273,7 +285,9 @@ def _record_to_out(
     )
 
 
-@router.get("/salary/periods/{from_date}/{to_date}", response_model=list[DriverSalaryOut])
+@router.get(
+    "/salary/periods/{from_date}/{to_date}", response_model=list[DriverSalaryOut]
+)
 async def list_driver_salaries_for_period(
     from_date: date,
     to_date: date,
@@ -288,13 +302,19 @@ async def list_driver_salaries_for_period(
     if driver_ids:
         rows = (
             await db.execute(
-                select(User.id, User.full_name, User.username).where(User.id.in_(driver_ids))
+                select(User.id, User.full_name, User.username).where(
+                    User.id.in_(driver_ids)
+                )
             )
         ).all()
-        driver_names = {rid: (full_name or username) for rid, full_name, username in rows}
+        driver_names = {
+            rid: (full_name or username) for rid, full_name, username in rows
+        }
         driver_usernames = {rid: username for rid, full_name, username in rows}
     return [
-        _record_to_out(r, driver_names.get(r.driver_id), driver_usernames.get(r.driver_id))
+        _record_to_out(
+            r, driver_names.get(r.driver_id), driver_usernames.get(r.driver_id)
+        )
         for r in records
     ]
 
@@ -314,7 +334,11 @@ async def upsert_driver_salary(
 ):
     existing = await repo.get_for_period(driver_id, from_date, to_date)
     if existing is not None:
-        basic = body.basic_salary if body.basic_salary is not None else existing.basic_salary
+        basic = (
+            body.basic_salary
+            if body.basic_salary is not None
+            else existing.basic_salary
+        )
         allow = body.allowance if body.allowance is not None else existing.allowance
         note = body.note if body.note is not None else existing.note
         bonus = existing.bonus_salary
@@ -372,10 +396,14 @@ async def initialize_driver_salaries(
     base_repo = SqlDriverSalaryConfigRepository(db)
 
     driver_rows = (
-        await db.execute(
-            select(User.id).where(User.role == "driver", User.is_active == True)  # noqa: E712
+        (
+            await db.execute(
+                select(User.id).where(User.role == "driver", User.is_active == True)  # noqa: E712
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     results: list[DriverSalaryOut] = []
     for driver_id in driver_rows:
@@ -388,9 +416,7 @@ async def initialize_driver_salaries(
 
         bonus_result = (
             await db.execute(
-                select(
-                    func.coalesce(func.sum(DT.driver_salary), 0)
-                ).where(
+                select(func.coalesce(func.sum(DT.driver_salary), 0)).where(
                     DT.driver_id == driver_id,
                     DT.trip_date >= from_date,
                     DT.trip_date <= to_date,
@@ -410,9 +436,13 @@ async def initialize_driver_salaries(
         )
         saved = await repo.upsert(record)
         driver_row = (
-            await db.execute(select(User.full_name, User.username).where(User.id == driver_id))
+            await db.execute(
+                select(User.full_name, User.username).where(User.id == driver_id)
+            )
         ).one_or_none()
-        display_name = (driver_row.full_name or driver_row.username) if driver_row else None
+        display_name = (
+            (driver_row.full_name or driver_row.username) if driver_row else None
+        )
         username = driver_row.username if driver_row else None
         results.append(_record_to_out(saved, display_name, username))
 

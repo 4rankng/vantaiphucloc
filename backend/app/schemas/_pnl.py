@@ -17,6 +17,10 @@ __all__ = [
     "TripDayBucket",
     "TripDailyStatsOut",
     "DirectorDashboardOut",
+    "DirectorDashboardDrilldownOut",
+    "DirectorDashboardDrilldownTotals",
+    "DirectorDashboardDrilldownClient",
+    "DirectorDashboardDrilldownVehicle",
     "VehiclePnLGroup",
 ]
 
@@ -24,6 +28,7 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # P&L dashboard
 # ---------------------------------------------------------------------------
+
 
 class ClientRevenueBreakdownOut(BaseModel):
     client_id: int
@@ -50,6 +55,7 @@ class MonthlyPnLOut(BaseModel):
 # Dashboard
 # ---------------------------------------------------------------------------
 
+
 class DriverSalarySummaryItem(BaseModel):
     driver_id: int
     driver_name: str
@@ -70,6 +76,7 @@ class DashboardSummaryOut(BaseModel):
 
 class KpiTrendDeltas(BaseModel):
     """Percent change comparing the second half of the window vs the first half."""
+
     unmatched_delivered_trips: float = 0.0
     pending_trips: float = 0.0
     driver_salary: float = 0.0
@@ -78,6 +85,7 @@ class KpiTrendDeltas(BaseModel):
 
 class KpiTrendsOut(BaseModel):
     """Daily time-series for accountant dashboard KPI cards."""
+
     end_date: date
     days: int
     labels: list[str]
@@ -92,8 +100,10 @@ class KpiTrendsOut(BaseModel):
 # Per-vehicle P&L
 # ---------------------------------------------------------------------------
 
+
 class VehicleExpenseSummary(BaseModel):
     """Expense subtotals by category for one vehicle."""
+
     xang_dau: int = 0
     sua_chua: int = 0
     tien_luat: int = 0
@@ -103,6 +113,7 @@ class VehicleExpenseSummary(BaseModel):
 
 class VehiclePnLRow(BaseModel):
     """P&L breakdown for a single vehicle in a period."""
+
     vehicle_id: int
     plate: str
     is_vendor: bool = False
@@ -147,26 +158,69 @@ class TripDailyStatsOut(BaseModel):
 # Director dashboard
 # ---------------------------------------------------------------------------
 
+
 class DirectorKpiTrend(BaseModel):
     value: str
     positive: bool
 
+
 class DirectorRouteStat(BaseModel):
     name: str
     count: int
+
 
 class DirectorDriverStat(BaseModel):
     name: str
     plate: str = ""
     trip_count: int
 
+
 class VehiclePnLGroup(BaseModel):
     """A PnL group (own fleet or from-vendor) bundling the rows and totals."""
+
     rows: list[VehiclePnLRow] = []
     total_revenue: int = 0
     total_cost: int = 0
     total_profit: int = 0
     trip_count: int = 0
+
+
+class DirectorDashboardDrilldownTotals(BaseModel):
+    total: int = 0
+    matched: int = 0
+    pending: int = 0
+    revenue: int = 0
+    cost: int = 0
+    profit: int = 0
+
+
+class DirectorDashboardDrilldownVehicle(BaseModel):
+    vehicle_plate: str
+    trip_count: int = 0
+    matched: int = 0
+    pending: int = 0
+    revenue: int = 0
+    cost: int = 0
+    profit: int = 0
+
+
+class DirectorDashboardDrilldownClient(BaseModel):
+    client_id: int
+    client_name: str
+    trip_count: int = 0
+    matched: int = 0
+    pending: int = 0
+    revenue: int = 0
+    cost: int = 0
+    profit: int = 0
+    vehicles: list[DirectorDashboardDrilldownVehicle] = []
+
+
+class DirectorDashboardDrilldownOut(BaseModel):
+    date_from: date
+    date_to: date
+    totals: DirectorDashboardDrilldownTotals
+    clients: list[DirectorDashboardDrilldownClient] = []
 
 
 class DirectorDashboardOut(BaseModel):

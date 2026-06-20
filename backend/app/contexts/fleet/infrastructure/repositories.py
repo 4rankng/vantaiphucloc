@@ -32,13 +32,15 @@ class SqlDriverRepository(DriverRepository):
         page_size: int,
         search: str | None = None,
         sort_by: str | None = None,
-        sort_order: str = 'asc',
+        sort_order: str = "asc",
     ) -> DriverPage:
         from sqlalchemy import or_
+
         base = select(DriverORM).where(DriverORM.role == "driver")
         count_q = select(func.count(DriverORM.id)).where(DriverORM.role == "driver")
         if search:
             from app.core.vi_search import vi_ilike
+
             cond = or_(
                 vi_ilike(DriverORM.username, search),
                 vi_ilike(DriverORM.full_name, search),
@@ -48,21 +50,25 @@ class SqlDriverRepository(DriverRepository):
             count_q = count_q.where(cond)
         total = (await self.session.execute(count_q)).scalar() or 0
         _SORTABLE = {
-            'username': DriverORM.username,
-            'full_name': DriverORM.full_name,
-            'phone': DriverORM.phone,
+            "username": DriverORM.username,
+            "full_name": DriverORM.full_name,
+            "phone": DriverORM.phone,
         }
-        sort_col = _SORTABLE.get(sort_by or '')
+        sort_col = _SORTABLE.get(sort_by or "")
         if sort_col is not None:
-            order_expr = sort_col.asc() if sort_order == 'asc' else sort_col.desc()
+            order_expr = sort_col.asc() if sort_order == "asc" else sort_col.desc()
             base = base.order_by(order_expr, DriverORM.id.asc())
         else:
             base = base.order_by(DriverORM.username.asc())
         rows = (
-            await self.session.execute(
-                base.offset((page - 1) * page_size).limit(page_size)
+            (
+                await self.session.execute(
+                    base.offset((page - 1) * page_size).limit(page_size)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return DriverPage(items=[to_domain(r) for r in rows], total=total)
 
     async def create(

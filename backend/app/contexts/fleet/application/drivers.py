@@ -39,7 +39,7 @@ class ListDrivers:
         page_size: int,
         search: str | None = None,
         sort_by: str | None = None,
-        sort_order: str = 'asc',
+        sort_order: str = "asc",
     ) -> DriverListDTO:
         result = await self.repo.list_paged(
             page=page,

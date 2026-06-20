@@ -22,9 +22,39 @@ def _make_settlement_sheets(rows):
 def test_settlement_list_trip_date_populated():
     """Regression: parse_date() result was discarded; trip_date was always None."""
     rows = [
-        ["NGÀY ĐI", "CHỦ HÀNG", "SỐ CONTAINER", "F20'", "F40'", "E20'", "E40'", "TÁC NGHIỆP", "TÊN TẦU"],
-        [date(2026, 6, 2), "MIPEC", "CAIU6167954", 1, "", "", "", "Xuất giao thẳng", "ULTIMA 1047SN"],
-        [date(2026, 6, 2), "MIPEC", "CAIU6386850", 1, "", "", "", "Xuất giao thẳng", "ULTIMA 1047SN"],
+        [
+            "NGÀY ĐI",
+            "CHỦ HÀNG",
+            "SỐ CONTAINER",
+            "F20'",
+            "F40'",
+            "E20'",
+            "E40'",
+            "TÁC NGHIỆP",
+            "TÊN TẦU",
+        ],
+        [
+            date(2026, 6, 2),
+            "MIPEC",
+            "CAIU6167954",
+            1,
+            "",
+            "",
+            "",
+            "Xuất giao thẳng",
+            "ULTIMA 1047SN",
+        ],
+        [
+            date(2026, 6, 2),
+            "MIPEC",
+            "CAIU6386850",
+            1,
+            "",
+            "",
+            "",
+            "Xuất giao thẳng",
+            "ULTIMA 1047SN",
+        ],
     ]
     sheets = _make_settlement_sheets(rows)
     accepted, rejected = extract_settlement_list(sheets)
@@ -40,8 +70,28 @@ def test_settlement_list_trip_date_populated():
 def test_settlement_list_work_type_uses_excel_value():
     """work_type should use the TÁC NGHIỆP column, not hardcode CHUYỂN BÃI."""
     rows = [
-        ["NGÀY ĐI", "CHỦ HÀNG", "SỐ CONTAINER", "F20'", "F40'", "E20'", "E40'", "TÁC NGHIỆP", "TÊN TẦU"],
-        [date(2026, 6, 2), "MIPEC", "CAIU6167954", 1, "", "", "", "Xuất giao thẳng", "ULTIMA 1047SN"],
+        [
+            "NGÀY ĐI",
+            "CHỦ HÀNG",
+            "SỐ CONTAINER",
+            "F20'",
+            "F40'",
+            "E20'",
+            "E40'",
+            "TÁC NGHIỆP",
+            "TÊN TẦU",
+        ],
+        [
+            date(2026, 6, 2),
+            "MIPEC",
+            "CAIU6167954",
+            1,
+            "",
+            "",
+            "",
+            "Xuất giao thẳng",
+            "ULTIMA 1047SN",
+        ],
     ]
     sheets = _make_settlement_sheets(rows)
     accepted, _ = extract_settlement_list(sheets)
@@ -52,7 +102,17 @@ def test_settlement_list_work_type_uses_excel_value():
 def test_settlement_list_work_type_fallback_when_no_operation():
     """work_type falls back to CHUYỂN BÃI when operation column is empty."""
     rows = [
-        ["NGÀY ĐI", "CHỦ HÀNG", "SỐ CONTAINER", "F20'", "F40'", "E20'", "E40'", "TÁC NGHIỆP", "TÊN TẦU"],
+        [
+            "NGÀY ĐI",
+            "CHỦ HÀNG",
+            "SỐ CONTAINER",
+            "F20'",
+            "F40'",
+            "E20'",
+            "E40'",
+            "TÁC NGHIỆP",
+            "TÊN TẦU",
+        ],
         [date(2026, 6, 2), "MIPEC", "CAIU6167954", 1, "", "", "", "", "ULTIMA 1047SN"],
     ]
     sheets = _make_settlement_sheets(rows)

@@ -13,7 +13,7 @@ class SalaryStatus(StrEnum):
 
 
 class VehicleExpenseCategory(StrEnum):
-    XANG_DAU = "XANG_DAU"   # Fuel
-    SUA_CHUA = "SUA_CHUA"   # Repairs
-    TIEN_LUAT = "TIEN_LUAT" # Law/Permits
-    KHAC = "KHAC"           # Other
+    XANG_DAU = "XANG_DAU"  # Fuel
+    SUA_CHUA = "SUA_CHUA"  # Repairs
+    TIEN_LUAT = "TIEN_LUAT"  # Law/Permits
+    KHAC = "KHAC"  # Other

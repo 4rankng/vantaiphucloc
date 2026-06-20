@@ -4,7 +4,15 @@ from __future__ import annotations
 
 import math
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, File as FastAPIFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+    File as FastAPIFile,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.route_pricing.application.dto import (
@@ -137,7 +145,11 @@ async def create_route_pricing(
     except Exception as e:
         raise translate(e)
     await sync_unmatched_trip_pricing(
-        db, rp.client_id, rp.pickup_location_id, rp.dropoff_location_id, rp.work_type,
+        db,
+        rp.client_id,
+        rp.pickup_location_id,
+        rp.dropoff_location_id,
+        rp.work_type,
     )
     await db.commit()
     return (await _to_out(db, [rp]))[0]
@@ -172,7 +184,11 @@ async def update_route_pricing(
     except Exception as e:
         raise translate(e)
     await sync_unmatched_trip_pricing(
-        db, rp.client_id, rp.pickup_location_id, rp.dropoff_location_id, rp.work_type,
+        db,
+        rp.client_id,
+        rp.pickup_location_id,
+        rp.dropoff_location_id,
+        rp.work_type,
     )
     await db.commit()
     return (await _to_out(db, [rp]))[0]

@@ -28,14 +28,13 @@ from app.models.domain import Location, Client
 
 _EXCEL_PATH = (
     Path(__file__).resolve().parent.parent.parent
-    / "docs" / "seed" / "DS_PORT_CU_OC_TUYEN.xlsx"
+    / "docs"
+    / "seed"
+    / "DS_PORT_CU_OC_TUYEN.xlsx"
 )
 
 # Fallback: check inbound media directory
-_MEDIA_PATH = (
-    Path.home() / ".openclaw" / "media" / "inbound"
-)
-
+_MEDIA_PATH = Path.home() / ".openclaw" / "media" / "inbound"
 
 
 def _find_excel() -> Path:
@@ -83,14 +82,18 @@ def _read_excel(path: Path) -> tuple[list[str], list[dict]]:
     # Sheet 1: DS PORT (column B, rows 1-62)
     ws_ports = wb["DS PORT"]
     ports: list[str] = []
-    for row in ws_ports.iter_rows(min_row=1, max_row=ws_ports.max_row, min_col=2, max_col=2, values_only=True):
+    for row in ws_ports.iter_rows(
+        min_row=1, max_row=ws_ports.max_row, min_col=2, max_col=2, values_only=True
+    ):
         if row[0] and str(row[0]).strip():
             ports.append(str(row[0]).strip())
 
     # Sheet 2: CƯỚC TUYẾN (row 2 = header, data from row 3)
     ws_pricing = wb["CƯỚC TUYẾN"]
     pricing_rows: list[dict] = []
-    for row in ws_pricing.iter_rows(min_row=3, max_row=ws_pricing.max_row, values_only=True):
+    for row in ws_pricing.iter_rows(
+        min_row=3, max_row=ws_pricing.max_row, values_only=True
+    ):
         client_name = row[1]  # B: CHỦ HÀNG
         if not client_name or not str(client_name).strip():
             continue
@@ -115,13 +118,15 @@ def _read_excel(path: Path) -> tuple[list[str], list[dict]]:
         best_price = max((v for v in prices.values() if v), default=None)
         work_type_raw = str(row[8]).strip() if row[8] else None
 
-        pricing_rows.append({
-            "client_name": str(client_name).strip(),
-            "pickup": str(row[2]).strip() if row[2] else None,
-            "dropoff": str(row[3]).strip() if row[3] else None,
-            "price": best_price,
-            "work_type": _normalize_work_type(work_type_raw),
-        })
+        pricing_rows.append(
+            {
+                "client_name": str(client_name).strip(),
+                "pickup": str(row[2]).strip() if row[2] else None,
+                "dropoff": str(row[3]).strip() if row[3] else None,
+                "price": best_price,
+                "work_type": _normalize_work_type(work_type_raw),
+            }
+        )
 
     return ports, pricing_rows
 
@@ -144,7 +149,9 @@ async def seed_ports_pricing() -> None:
 
     async with async_session() as db:
         # ── 1. Locations (62 ports + extras from pricing) ───────────────
-        print(f"\n=== Seeding Locations ({len(ports)} ports + {len(pricing_loc_names - set(ports))} from pricing) ===")
+        print(
+            f"\n=== Seeding Locations ({len(ports)} ports + {len(pricing_loc_names - set(ports))} from pricing) ==="
+        )
         loc_map: dict[str, Location] = {}
         created_locs = 0
 
@@ -170,7 +177,9 @@ async def seed_ports_pricing() -> None:
             print(f"  + {name} (id={loc.id})")
 
         await db.commit()
-        print(f"  Locations: {created_locs} created, {len(all_loc_names) - created_locs} existing")
+        print(
+            f"  Locations: {created_locs} created, {len(all_loc_names) - created_locs} existing"
+        )
 
         # ── 2. Partners (14 chủ hàng as clients) ────────────────────────
         print("\n=== Seeding Clients (Khách hàng) ===")
@@ -201,7 +210,9 @@ async def seed_ports_pricing() -> None:
             print(f"  + {name} (code={code}, id={client.id})")
 
         await db.commit()
-        print(f"  Clients: {created_partners} created, {len(chu_hang_names) - created_partners} existing")
+        print(
+            f"  Clients: {created_partners} created, {len(chu_hang_names) - created_partners} existing"
+        )
 
         # ── Summary ─────────────────────────────────────────────────────
         print("\n" + "=" * 60)

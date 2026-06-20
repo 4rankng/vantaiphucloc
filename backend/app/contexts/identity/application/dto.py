@@ -76,7 +76,7 @@ class UserListFilter:
     exclude_superadmin: bool
     search: str | None = None
     sort_by: str | None = None
-    sort_order: str = 'asc'
+    sort_order: str = "asc"
 
 
 @dataclass(frozen=True)

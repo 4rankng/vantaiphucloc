@@ -56,6 +56,7 @@ FIELD_DESCRIPTIONS = {
 @dataclass
 class TableRegion:
     """A detected table region for side-by-side tables."""
+
     start_column: int | None
     end_column: int | None
     mapping: dict[int, str]  # {column_index: canonical_field_name}
@@ -64,11 +65,12 @@ class TableRegion:
 @dataclass
 class ColumnMapping:
     """LLM-detected column mapping with multi-region support."""
+
     header_row: int  # 0-indexed row where headers are
     tables: list[TableRegion]
     confidence: float  # 0-1 overall confidence
     raw_response: str | None = None
-    
+
     @property
     def mapping(self) -> dict[int, str]:
         """Backward compatibility: return mapping of first table."""
@@ -80,6 +82,7 @@ class ColumnMapping:
 @dataclass
 class ParsedCell:
     """Single parsed cell with confidence."""
+
     value: Any
     confidence: float  # 0-1
     original_value: Any = None
@@ -89,6 +92,7 @@ class ParsedCell:
 @dataclass
 class ParsedRow:
     """Single row parsed from input file."""
+
     row_number: int
     cells: dict[str, ParsedCell]  # {canonical_field: ParsedCell}
     source_row_ref: str
@@ -98,6 +102,7 @@ class ParsedRow:
 @dataclass
 class ParseResult:
     """Complete parse result."""
+
     column_mapping: ColumnMapping | None
     rows: list[ParsedRow]
     total_rows: int
@@ -152,7 +157,9 @@ Rules:
 """
 
 
-async def sniff_columns(sample_rows: list[list[str]], source_id: str | None = None) -> ColumnMapping:
+async def sniff_columns(
+    sample_rows: list[list[str]], source_id: str | None = None
+) -> ColumnMapping:
     """Stage 1: Detect column mapping using Gemini."""
     prompt = _build_sniff_prompt(sample_rows)
 
@@ -169,15 +176,15 @@ async def sniff_columns(sample_rows: list[list[str]], source_id: str | None = No
                         "end_column": {"type": "INTEGER", "nullable": True},
                         "mapping": {
                             "type": "OBJECT",
-                            "additionalProperties": {"type": "STRING"}
-                        }
+                            "additionalProperties": {"type": "STRING"},
+                        },
                     },
-                    "required": ["mapping"]
-                }
+                    "required": ["mapping"],
+                },
             },
-            "confidence": {"type": "NUMBER"}
+            "confidence": {"type": "NUMBER"},
         },
-        "required": ["header_row", "tables", "confidence"]
+        "required": ["header_row", "tables", "confidence"],
     }
 
     response = await call_gemini(prompt, response_schema=schema)
@@ -186,13 +193,17 @@ async def sniff_columns(sample_rows: list[list[str]], source_id: str | None = No
         data = json.loads(response)
         tables = []
         for t in data.get("tables", []):
-            mapping = {int(k): v for k, v in t.get("mapping", {}).items() if str(k).isdigit()}
-            tables.append(TableRegion(
-                start_column=t.get("start_column"),
-                end_column=t.get("end_column"),
-                mapping=mapping
-            ))
-            
+            mapping = {
+                int(k): v for k, v in t.get("mapping", {}).items() if str(k).isdigit()
+            }
+            tables.append(
+                TableRegion(
+                    start_column=t.get("start_column"),
+                    end_column=t.get("end_column"),
+                    mapping=mapping,
+                )
+            )
+
         return ColumnMapping(
             header_row=data.get("header_row", 0),
             tables=tables,

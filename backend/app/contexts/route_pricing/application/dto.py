@@ -1,4 +1,5 @@
 """Application-layer DTOs for the Route Pricing context."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

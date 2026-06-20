@@ -86,13 +86,10 @@ async def _load_one(session, t: BookedTrip) -> BookedTripOut:
 async def _load_many(session, trips: list[BookedTrip]) -> list[BookedTripOut]:
     if not trips:
         return []
-    clients = await load_client_summaries(
-        session, {t.client_id for t in trips}
-    )
+    clients = await load_client_summaries(session, {t.client_id for t in trips})
     locations = await load_location_summaries(
         session,
-        {t.pickup_location_id for t in trips}
-        | {t.dropoff_location_id for t in trips},
+        {t.pickup_location_id for t in trips} | {t.dropoff_location_id for t in trips},
     )
     return [_trip_to_out(t, clients, locations) for t in trips]
 
@@ -110,14 +107,16 @@ async def create_booked_trip(
     use_case: CreateBookedTrip = Depends(get_create_booked_trip),
 ):
     try:
-        t = await use_case(BookedTripCreateInput(
-            trip_date=body.trip_date,
-            client_id=body.client_id,
-            pickup_location_id=body.pickup_location_id,
-            dropoff_location_id=body.dropoff_location_id,
-            cont_number=body.cont_number,
-            cont_type=body.cont_type,
-        ))
+        t = await use_case(
+            BookedTripCreateInput(
+                trip_date=body.trip_date,
+                client_id=body.client_id,
+                pickup_location_id=body.pickup_location_id,
+                dropoff_location_id=body.dropoff_location_id,
+                cont_number=body.cont_number,
+                cont_type=body.cont_type,
+            )
+        )
     except Exception as exc:
         raise translate(exc)
     return await _load_one(use_case.session, t)
@@ -133,14 +132,21 @@ async def list_booked_trips(
     current_user: User = Depends(require_permission("read", "BookedTrip")),
     use_case: ListBookedTrips = Depends(get_list_booked_trips),
 ):
-    items, total = await use_case(BookedTripListFilters(
-        page=page, page_size=page_size,
-        client_id=client_id,
-        date_from=date_from, date_to=date_to,
-    ))
+    items, total = await use_case(
+        BookedTripListFilters(
+            page=page,
+            page_size=page_size,
+            client_id=client_id,
+            date_from=date_from,
+            date_to=date_to,
+        )
+    )
     out = await _load_many(use_case.repo.session, items)  # type: ignore[attr-defined]
     return PaginatedResponse[BookedTripOut](
-        items=out, total=total, page=page, page_size=page_size,
+        items=out,
+        total=total,
+        page=page,
+        page_size=page_size,
         total_pages=math.ceil(total / page_size) if total > 0 else 0,
     )
 
@@ -149,7 +155,10 @@ async def list_booked_trips(
 async def download_booked_trip_template(
     current_user: User = Depends(require_permission("create", "BookedTrip")),
 ):
-    from app.contexts.operations.infrastructure.excel import generate_booked_trip_template
+    from app.contexts.operations.infrastructure.excel import (
+        generate_booked_trip_template,
+    )
+
     content = generate_booked_trip_template()
     return StreamingResponse(
         io.BytesIO(content),
@@ -170,7 +179,11 @@ async def import_booked_trips_excel(
 ):
     """Legacy plain-Excel BookedTrip import. Distinct from the partner-Excel
     import pipeline at `/imports/partner-excel/*`."""
-    from app.contexts.operations.infrastructure.excel import import_booked_trips, parse_booked_trip_excel
+    from app.contexts.operations.infrastructure.excel import (
+        import_booked_trips,
+        parse_booked_trip_excel,
+    )
+
     content = await file.read()
     rows = await parse_booked_trip_excel(content)
     if not rows:
@@ -190,6 +203,7 @@ async def export_booked_trips_excel(
     use_case: GetBookedTrip = Depends(get_get_booked_trip),
 ):
     from app.contexts.operations.infrastructure.excel import generate_booked_trips_excel
+
     session = use_case.repo.session  # type: ignore[attr-defined]
     content, client_name = await generate_booked_trips_excel(
         session,
@@ -199,6 +213,7 @@ async def export_booked_trips_excel(
     )
     if client_id and client_name:
         from app.utils.text import slugify_vi
+
         slug = slugify_vi(client_name)
         filename = f"chuyen_khach_hang_{slug}_{date.today().isoformat()}.xlsx"
     else:
@@ -222,10 +237,13 @@ async def get_distinct_trip_partners(
     """Return distinct partners that have trip orders in the given date range.
     Used by the Xuất đối soát dialog to populate the customer dropdown."""
     from sqlalchemy import text
+
     session = use_case.repo.session  # type: ignore[attr-defined]
-    sql = "SELECT DISTINCT p.id, p.name FROM clients p " \
-          "JOIN booked_trips t ON t.client_id = p.id " \
-          "WHERE p.is_active = true"
+    sql = (
+        "SELECT DISTINCT p.id, p.name FROM clients p "
+        "JOIN booked_trips t ON t.client_id = p.id "
+        "WHERE p.is_active = true"
+    )
     params = {}
     if date_from:
         sql += " AND t.trip_date >= :date_from"
@@ -251,7 +269,10 @@ async def export_doi_soat_excel(
 
     session = use_case.repo.session  # type: ignore[attr-defined]
     content, client_name = await generate_doi_soat_excel(
-        session, client_id, date_from.isoformat(), date_to.isoformat(),
+        session,
+        client_id,
+        date_from.isoformat(),
+        date_to.isoformat(),
     )
     slug = slugify_vi(client_name)
     # Format: DoiSoat_<KH>_MM-YYYY  (use date_from's month as the report month)
@@ -288,17 +309,20 @@ async def update_booked_trip(
     use_case: UpdateBookedTrip = Depends(get_update_booked_trip),
 ):
     try:
-        t = await use_case(booked_trip_id, BookedTripUpdateInput(
-            trip_date=body.trip_date,
-            client_id=body.client_id,
-            pickup_location_id=body.pickup_location_id,
-            dropoff_location_id=body.dropoff_location_id,
-            cont_number=body.cont_number,
-            cont_type=body.cont_type,
-            vessel=body.vessel,
-            vehicle_plate=body.vehicle_plate,
-            work_type=body.work_type,
-        ))
+        t = await use_case(
+            booked_trip_id,
+            BookedTripUpdateInput(
+                trip_date=body.trip_date,
+                client_id=body.client_id,
+                pickup_location_id=body.pickup_location_id,
+                dropoff_location_id=body.dropoff_location_id,
+                cont_number=body.cont_number,
+                cont_type=body.cont_type,
+                vessel=body.vessel,
+                vehicle_plate=body.vehicle_plate,
+                work_type=body.work_type,
+            ),
+        )
     except Exception as exc:
         raise translate(exc)
 

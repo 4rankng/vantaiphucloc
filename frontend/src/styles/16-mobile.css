@@ -97,7 +97,8 @@
         with role="dialog" and data-state. Limit width on tiny screens.
         Sheets are positioned via inline styles from the SheetContent wrapper,
         so we scope by the side attribute set by the Sheet component. */
-  [role="dialog"][data-state="open"][data-side] {
+  [role="dialog"][data-state="open"][data-side="left"],
+  [role="dialog"][data-state="open"][data-side="right"] {
     max-width: 300px !important;
     border: none !important;
     outline: none !important;

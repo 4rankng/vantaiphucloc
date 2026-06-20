@@ -21,7 +21,9 @@ from app.contexts.operations.infrastructure.import_pipeline.value_parsers import
 from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView
 
 
-def extract_dual_panel(sheets: list[SheetView], filename: str = "") -> tuple[list[ExtractedRow], list[dict]]:
+def extract_dual_panel(
+    sheets: list[SheetView], filename: str = ""
+) -> tuple[list[ExtractedRow], list[dict]]:
     """Extract from Dual Panel (side-by-side 40HC + 20GP tables).
 
     Layout: [STT | Số cont | Vị trí | Size | <gap> | STT | Số cont | Vị trí | Size]
@@ -59,11 +61,15 @@ def extract_dual_panel(sheets: list[SheetView], filename: str = "") -> tuple[lis
 
     # Find size column within each panel's column range
     left_size = _find_nearby_size_col(header, left_cont, right_cont)
-    right_size = _find_nearby_size_col(header, right_cont, len(header) if header else 999)
+    right_size = _find_nearby_size_col(
+        header, right_cont, len(header) if header else 999
+    )
 
     # Check section header rows above for size hints (e.g., "40HC", "20GP")
     left_size_hint = _find_section_size(sheet, header_idx, 0, right_cont)
-    right_size_hint = _find_section_size(sheet, header_idx, right_cont, len(header) if header else 999)
+    right_size_hint = _find_section_size(
+        sheet, header_idx, right_cont, len(header) if header else 999
+    )
 
     accepted: list[ExtractedRow] = []
     rejected: list[dict] = []
@@ -71,11 +77,27 @@ def extract_dual_panel(sheets: list[SheetView], filename: str = "") -> tuple[lis
     for r in range(header_idx + 1, len(sheet.rows)):
         row = sheet.rows[r]
         # Left panel
-        _extract_panel_row(row, r, left_cont, left_size, left_size_hint,
-                           vessel_name, accepted, rejected)
+        _extract_panel_row(
+            row,
+            r,
+            left_cont,
+            left_size,
+            left_size_hint,
+            vessel_name,
+            accepted,
+            rejected,
+        )
         # Right panel
-        _extract_panel_row(row, r, right_cont, right_size, right_size_hint,
-                           vessel_name, accepted, rejected)
+        _extract_panel_row(
+            row,
+            r,
+            right_cont,
+            right_size,
+            right_size_hint,
+            vessel_name,
+            accepted,
+            rejected,
+        )
 
     return accepted, rejected
 
@@ -83,6 +105,7 @@ def extract_dual_panel(sheets: list[SheetView], filename: str = "") -> tuple[lis
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
 
 def _find_nearby_size_col(header: list, cont_col: int, boundary: int) -> int | None:
     """Find a Size column within the panel (cont_col to boundary)."""
@@ -93,7 +116,9 @@ def _find_nearby_size_col(header: list, cont_col: int, boundary: int) -> int | N
     return None
 
 
-def _find_section_size(sheet: SheetView, header_idx: int, col_start: int, col_end: int) -> str:
+def _find_section_size(
+    sheet: SheetView, header_idx: int, col_start: int, col_end: int
+) -> str:
     """Look for section headers like '40HC' or '20GP' above the header row."""
     for r in range(max(0, header_idx - 3), header_idx):
         row = sheet.rows[r]
@@ -105,9 +130,14 @@ def _find_section_size(sheet: SheetView, header_idx: int, col_start: int, col_en
 
 
 def _extract_panel_row(
-    row, row_idx: int, cont_col: int, size_col: int | None,
-    size_hint: str, vessel_name: str,
-    accepted: list[ExtractedRow], rejected: list[dict],
+    row,
+    row_idx: int,
+    cont_col: int,
+    size_col: int | None,
+    size_hint: str,
+    vessel_name: str,
+    accepted: list[ExtractedRow],
+    rejected: list[dict],
 ) -> None:
     """Extract a container from one panel of a dual-panel row."""
     cont_val = cell_text(row[cont_col]) if cont_col < len(row) else ""
@@ -117,7 +147,9 @@ def _extract_panel_row(
     try:
         cont_no = parse_container_no(cont_val)
     except ValueError:
-        rejected.append({"source_row_index": row_idx, "reason": "bad_container_no", "raw": cont_val})
+        rejected.append(
+            {"source_row_index": row_idx, "reason": "bad_container_no", "raw": cont_val}
+        )
         return
 
     # Get size from column or section hint
@@ -129,12 +161,14 @@ def _extract_panel_row(
 
     work_type = build_cont_type("E", size_val)
 
-    accepted.append(ExtractedRow(
-        container_number=cont_no,
-        cont_type=work_type,
-        pickup="",
-        dropoff="",
-        vessel_name=vessel_name,
-        source_row_index=row_idx,
-        freight_kind_unknown=True,  # Hardcoded to E, not explicitly provided
-    ))
+    accepted.append(
+        ExtractedRow(
+            container_number=cont_no,
+            cont_type=work_type,
+            pickup="",
+            dropoff="",
+            vessel_name=vessel_name,
+            source_row_index=row_idx,
+            freight_kind_unknown=True,  # Hardcoded to E, not explicitly provided
+        )
+    )

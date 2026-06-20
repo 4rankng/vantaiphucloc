@@ -53,12 +53,19 @@ from app.models.domain import Client
 from app.contexts.operations.infrastructure.repositories import (
     MappingProfileRepository,
 )
-from app.contexts.operations.infrastructure.import_pipeline.canonical import CANONICAL_FIELDS, SKIP_FIELD
-from app.contexts.operations.infrastructure.import_pipeline.llm import get_batch_classifier
+from app.contexts.operations.infrastructure.import_pipeline.canonical import (
+    CANONICAL_FIELDS,
+    SKIP_FIELD,
+)
+from app.contexts.operations.infrastructure.import_pipeline.llm import (
+    get_batch_classifier,
+)
 from app.contexts.operations.infrastructure.import_pipeline.pipeline import (
     run_preview,
 )
-from app.contexts.operations.infrastructure.import_pipeline.workbook import load_workbook
+from app.contexts.operations.infrastructure.import_pipeline.workbook import (
+    load_workbook,
+)
 from app.core.worker import get_arq_pool
 from app.workers import enqueue
 
@@ -147,14 +154,20 @@ async def list_excel_sheets(
     if not content:
         raise HTTPException(status_code=400, detail="Tệp tải lên rỗng.")
 
-    from app.contexts.operations.infrastructure.import_pipeline.sheet_picker import score_sheets
+    from app.contexts.operations.infrastructure.import_pipeline.sheet_picker import (
+        score_sheets,
+    )
 
     sheets = load_workbook(content, file.filename)
     if not sheets:
         return []
 
     scored = score_sheets(sheets)
-    best_name = scored[0].sheet.name if scored and scored[0].score > 0 else (sheets[0].name if sheets else None)
+    best_name = (
+        scored[0].sheet.name
+        if scored and scored[0].score > 0
+        else (sheets[0].name if sheets else None)
+    )
 
     return [
         SheetInfo(
@@ -202,7 +215,9 @@ class ImportPreviewEnqueueResponse(BaseModel):
     message: str = "Đang phân tích file, vui lòng chờ."
 
 
-@router.post("/customer-excel/preview-async", response_model=ImportPreviewEnqueueResponse)
+@router.post(
+    "/customer-excel/preview-async", response_model=ImportPreviewEnqueueResponse
+)
 async def enqueue_preview_customer_excel(
     file: UploadFile = File(...),
     default_trip_date: date | None = Form(None),
@@ -211,7 +226,7 @@ async def enqueue_preview_customer_excel(
 ):
     """Enqueue a customer-Excel preview job. Returns job_id; the frontend
     polls `/imports/customer-excel/jobs/{job_id}` for the result.
-    
+
     Generates a unique job ID for every upload to prevent stale caching issues.
     """
     if file.filename is None:
@@ -321,7 +336,8 @@ async def preview_customer_excel(
 
 
 async def resolve_preview_locations(
-    db: AsyncSession, accepted: list[dict],
+    db: AsyncSession,
+    accepted: list[dict],
 ) -> dict[str, dict]:
     resolver = LocationResolverService(db)
     seen: set[str] = set()
@@ -359,16 +375,14 @@ async def commit_customer_excel(
     body: CommitRequest = Body(...),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_roles("accountant", "superadmin")),
-    use_case: CreateBookedTripFromImport = Depends(
-        get_create_booked_trip_from_import
-    ),
+    use_case: CreateBookedTripFromImport = Depends(get_create_booked_trip_from_import),
 ):
     if not body.rows:
         raise HTTPException(status_code=400, detail="Không có dòng nào để tạo.")
 
-    client = (await db.execute(
-        select(Client).where(Client.id == body.client_id)
-    )).scalar_one_or_none()
+    client = (
+        await db.execute(select(Client).where(Client.id == body.client_id))
+    ).scalar_one_or_none()
     if client is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy khách hàng.")
 
@@ -399,23 +413,23 @@ async def commit_customer_excel(
     ]
 
     # Validate that all rows have resolved freight kinds
-    unresolved_indices = [
-        i for i, row in enumerate(rows) if row.freight_kind_unknown
-    ]
+    unresolved_indices = [i for i, row in enumerate(rows) if row.freight_kind_unknown]
     if unresolved_indices:
         raise HTTPException(
             status_code=400,
             detail=f"Các dòng sau cần xác định loại container (E/F): {unresolved_indices}. "
-                   f"Vui lòng giải quyết trong preview trước khi lưu.",
+            f"Vui lòng giải quyết trong preview trước khi lưu.",
         )
 
     try:
-        result = await use_case(ImportCommitInput(
-            client_id=body.client_id,
-            rows=rows,
-            overwrite_duplicates=body.overwrite_duplicates,
-            user_id=user.id,
-        ))
+        result = await use_case(
+            ImportCommitInput(
+                client_id=body.client_id,
+                rows=rows,
+                overwrite_duplicates=body.overwrite_duplicates,
+                user_id=user.id,
+            )
+        )
     except Exception as exc:
         raise translate(exc)
 
@@ -506,7 +520,9 @@ async def preview_customer_pricing(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    location_resolutions = await resolve_preview_locations(db, preview.rows, client_id=client_id)
+    location_resolutions = await resolve_preview_locations(
+        db, preview.rows, client_id=client_id
+    )
     payload = preview.to_dict()
     payload["filename"] = file.filename
     payload["location_resolutions"] = location_resolutions
@@ -520,7 +536,10 @@ async def commit_customer_pricing(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_roles("accountant", "superadmin")),
 ):
-    from app.contexts.customer_pricing.infrastructure.pricing_import import TariffRow, commit_tariff_rows
+    from app.contexts.customer_pricing.infrastructure.pricing_import import (
+        TariffRow,
+        commit_tariff_rows,
+    )
 
     if not body.rows:
         raise HTTPException(status_code=400, detail="Không có dòng nào để tạo.")

@@ -22,6 +22,7 @@ PLATE_RE = re.compile(r"\s+")
 # Container number / size / freight kind
 # ---------------------------------------------------------------------------
 
+
 def parse_container_no(raw: Any) -> str:
     """Normalize and shape-validate a container number.
 
@@ -73,9 +74,11 @@ def parse_container_size(raw: Any, iso_hint: str | None = None) -> str:
     raise ValueError("unknown_size")
 
 
-def parse_freight_kind(raw: Any, default: str = "F", raise_on_unknown: bool = False) -> str:
-    """Return 'F' or 'E'. 
-    
+def parse_freight_kind(
+    raw: Any, default: str = "F", raise_on_unknown: bool = False
+) -> str:
+    """Return 'F' or 'E'.
+
     If raise_on_unknown is True, raises ValueError for empty/unknown freight kind instead of using default.
     This allows the import pipeline to detect rows that need manual resolution.
     """
@@ -183,14 +186,23 @@ def parse_money(raw: Any) -> float | None:
 # ---------------------------------------------------------------------------
 
 _DATE_FORMATS_DMY = (
-    "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y",
-    "%d/%m/%y", "%d-%m-%y", "%d.%m.%y",
-    "%d/%m/%Y %H:%M:%S", "%d-%m-%Y %H:%M:%S", "%d.%m.%Y %H:%M:%S",
-    "%d/%m/%Y %H:%M", "%d-%m-%Y %H:%M",
+    "%d/%m/%Y",
+    "%d-%m-%Y",
+    "%d.%m.%Y",
+    "%d/%m/%y",
+    "%d-%m-%y",
+    "%d.%m.%y",
+    "%d/%m/%Y %H:%M:%S",
+    "%d-%m-%Y %H:%M:%S",
+    "%d.%m.%Y %H:%M:%S",
+    "%d/%m/%Y %H:%M",
+    "%d-%m-%Y %H:%M",
 )
 _DATE_FORMATS_YMD = (
-    "%Y-%m-%d", "%Y/%m/%d",
-    "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S",
+    "%Y-%m-%d",
+    "%Y/%m/%d",
+    "%Y-%m-%d %H:%M:%S",
+    "%Y/%m/%d %H:%M:%S",
     "%Y-%m-%dT%H:%M:%S",
 )
 _EXCEL_EPOCH = datetime(1899, 12, 30)

@@ -119,10 +119,12 @@ Rules:
 
     schema = {
         "type": "OBJECT",
-        "properties": {k: {"type": "STRING"} for k in row_data.keys()}
+        "properties": {k: {"type": "STRING"} for k in row_data.keys()},
     }
 
-    response = await call_gemini(prompt, model=model, max_tokens=512, response_schema=schema)
+    response = await call_gemini(
+        prompt, model=model, max_tokens=512, response_schema=schema
+    )
 
     try:
         return json.loads(response.strip())

@@ -16,6 +16,7 @@ async def cleanup_expired_sessions(ctx: dict) -> None:
     cursor = 0
     cleaned = 0
     import time
+
     time.time()
     while True:
         cursor, keys = await redis.scan(cursor, match="rl:*", count=100)
@@ -45,9 +46,7 @@ async def cleanup_old_audit_logs(ctx: dict) -> None:
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=365)
     async with get_session() as db:
-        result = await db.execute(
-            delete(AuditLog).where(AuditLog.created_at < cutoff)
-        )
+        result = await db.execute(delete(AuditLog).where(AuditLog.created_at < cutoff))
         await db.commit()
         count = result.rowcount
         if count:

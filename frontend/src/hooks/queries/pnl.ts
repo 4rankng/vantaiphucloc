@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { getDirectorDashboard } from '@/services/api/pnl.api'
+import { getDirectorDashboard, getDirectorDashboardDrilldown } from '@/services/api/pnl.api'
 import { queryKeys } from '../query-keys'
 
 export function useMonthlyPnL(startDate: string, endDate: string) {
@@ -56,3 +56,13 @@ export function useDirectorDashboard(dateFrom: string, dateTo: string) {
   })
 }
 
+export function useDirectorDashboardDrilldown(dateFrom: string, dateTo: string) {
+  return useQuery({
+    queryKey: queryKeys.directorDashboardDrilldown(dateFrom, dateTo),
+    queryFn: async () => {
+      const res = await getDirectorDashboardDrilldown(dateFrom, dateTo)
+      return res.success ? res.data : null
+    },
+    enabled: !!dateFrom && !!dateTo,
+  })
+}

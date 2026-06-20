@@ -9,6 +9,7 @@ Revises: 0009_add_operation_type_aliases
 Create Date: 2026-06-08
 
 """
+
 from alembic import op
 
 

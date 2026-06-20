@@ -82,6 +82,8 @@ export const queryKeys = {
     ['dashboard-summary', dateFrom, dateTo] as const,
   directorDashboard: (dateFrom: string, dateTo: string) =>
     ['director-dashboard', dateFrom, dateTo] as const,
+  directorDashboardDrilldown: (dateFrom: string, dateTo: string) =>
+    ['director-dashboard-drilldown', dateFrom, dateTo] as const,
   kpiTrends: (days: number, endDate?: string) =>
     ['kpi-trends', days, endDate] as const,
   monthlyPnL: (startDate: string, endDate: string) =>

@@ -1,4 +1,5 @@
 """Value objects for the Vendor Route Pricing context."""
+
 from __future__ import annotations
 
 from typing import NewType

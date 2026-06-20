@@ -74,7 +74,9 @@ class UserOut(BaseModel):
     created_at: datetime
 
     @classmethod
-    def from_entity(cls, user: UserEntity, *, vehicle_plate: str | None = None) -> "UserOut":
+    def from_entity(
+        cls, user: UserEntity, *, vehicle_plate: str | None = None
+    ) -> "UserOut":
         assert user.id is not None
         return cls(
             id=int(user.id),

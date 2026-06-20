@@ -81,9 +81,7 @@ class TestParsePAN:
 
     def test_pickup_dropoff_present(self):
         preview = parse_tariff_bytes(_read(_PAN_FILE), "pan")
-        with_both = [
-            r for r in preview.rows if r.pickup_raw and r.dropoff_raw
-        ]
+        with_both = [r for r in preview.rows if r.pickup_raw and r.dropoff_raw]
         assert with_both, "Expected at least one PAN row with both pickup & dropoff"
 
 
@@ -223,11 +221,15 @@ class TestCommitTariffRows:
         partner = await self._seed_partner(db_session)
         rows = [
             TariffRow(
-                pickup_raw="", dropoff_raw="Kho B", work_type="F20",
+                pickup_raw="",
+                dropoff_raw="Kho B",
+                work_type="F20",
                 unit_price=1_000,
             ),
             TariffRow(
-                pickup_raw="Cảng A", dropoff_raw="", work_type="F20",
+                pickup_raw="Cảng A",
+                dropoff_raw="",
+                work_type="F20",
                 unit_price=1_000,
             ),
         ]

@@ -2,6 +2,7 @@
 
 All tests mock _call_gemini so they run without a real API key.
 """
+
 import pytest
 from unittest.mock import patch, AsyncMock
 

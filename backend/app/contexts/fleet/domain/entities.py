@@ -12,7 +12,6 @@ from datetime import datetime
 from app.utils.dates import utcnow
 
 
-
 @dataclass
 class Driver:
     """Driver master record (read side).

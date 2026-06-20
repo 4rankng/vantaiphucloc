@@ -8,6 +8,7 @@ Adds an optional column for storing the URL path of the container photo
 attached to a delivered trip.  The photo is saved to local disk by
 photo_storage.py and served through the /photos static mount.
 """
+
 from typing import Sequence, Union
 
 from alembic import op

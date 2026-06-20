@@ -38,13 +38,20 @@ from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     normalize_header_text,
     synonym_substring_match,
 )
-from app.contexts.operations.infrastructure.import_pipeline.llm import BatchHeaderClassifier, NullBatchHeaderClassifier
+from app.contexts.operations.infrastructure.import_pipeline.llm import (
+    BatchHeaderClassifier,
+    NullBatchHeaderClassifier,
+)
 from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView
-from app.contexts.operations.infrastructure.import_pipeline.value_parsers import parse_date
+from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
+    parse_date,
+)
 
 
 CONTAINER_RE = re.compile(r"^[A-Z]{4}\d{7}$")
-SIZE_VALUE_RE = re.compile(r"^(20|22|40|42|45)(?:DC|GP|HC|RF|RE|G[01]|R[01]|T0|U0)?$", re.IGNORECASE)
+SIZE_VALUE_RE = re.compile(
+    r"^(20|22|40|42|45)(?:DC|GP|HC|RF|RE|G[01]|R[01]|T0|U0)?$", re.IGNORECASE
+)
 FE_VALUE_RE = re.compile(r"^(F|E|FULL|EMPTY)$", re.IGNORECASE)
 NUMERIC_RE = re.compile(r"^[\d.,\s\-]+$")
 PLATE_RE = re.compile(r"^[0-9]{2}[A-Z]\d{4,6}$", re.IGNORECASE)
@@ -65,8 +72,9 @@ PIVOT_HEADER_RE = re.compile(r"^([FE])\s*([0-9]{2})['\"]?$", re.IGNORECASE)
 @dataclass(frozen=True)
 class PivotColumn:
     """A header cell that encodes both `freight_kind` and `container_size`."""
+
     column_index: int
-    freight_kind: str   # "F" or "E"
+    freight_kind: str  # "F" or "E"
     container_size: str  # "20" or "40"
 
     def to_dict(self) -> dict[str, Any]:
@@ -106,11 +114,13 @@ def detect_pivot_columns(headers: list[Any]) -> list[PivotColumn]:
             continue
         if fk not in ("F", "E"):
             continue
-        out.append(PivotColumn(
-            column_index=c,
-            freight_kind=fk,
-            container_size="20" if sz in ("20", "22") else "40",
-        ))
+        out.append(
+            PivotColumn(
+                column_index=c,
+                freight_kind=fk,
+                container_size="20" if sz in ("20", "22") else "40",
+            )
+        )
     return out if len(out) >= 2 else []
 
 
@@ -149,10 +159,10 @@ def derive_pivot_value(row: list[Any], pivots: list[PivotColumn]) -> PivotColumn
 class ColumnMapping:
     column_index: int
     header_text: str
-    canonical_field: str | None     # None | one of CANONICAL_FIELD_NAMES | SKIP_FIELD
-    confidence: float               # 0.0–1.0
-    source: str                     # "synonym_dict" | "skip_dict" | "synonym_substr" | "value_pattern" | "llm" | "unmapped"
-    reason: str = ""                # extra context (e.g., "vessel info" for skip, pattern name)
+    canonical_field: str | None  # None | one of CANONICAL_FIELD_NAMES | SKIP_FIELD
+    confidence: float  # 0.0–1.0
+    source: str  # "synonym_dict" | "skip_dict" | "synonym_substr" | "value_pattern" | "llm" | "unmapped"
+    reason: str = ""  # extra context (e.g., "vessel info" for skip, pattern name)
     sample_values: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -192,7 +202,7 @@ async def map_columns(
             m.source = "unmapped"
             m.reason = m.reason or "no synonym match"
         mappings.append(m)
-        
+
     # Batch LLM fallback for unmapped columns (or below threshold)
     unmapped_indices = []
     unmapped_headers = []
@@ -200,11 +210,11 @@ async def map_columns(
         if (not m.canonical_field or m.confidence < threshold) and m.header_text:
             unmapped_indices.append(m.column_index)
             unmapped_headers.append((m.column_index, m.header_text, m.sample_values))
-            
+
     if unmapped_headers:
         candidates = list(CANONICAL_FIELD_NAMES)
         batch_results = await classifier.classify_batch(unmapped_headers, candidates)
-        
+
         by_idx = {m.column_index: m for m in mappings}
         for c, field_name in batch_results.items():
             m = by_idx.get(c)
@@ -228,79 +238,118 @@ async def map_columns(
 # Heuristics
 # ---------------------------------------------------------------------------
 
+
 def _heuristic_match(c: int, header_text: str, samples: list[str]) -> ColumnMapping:
     norm = normalize_header_text(header_text)
     if not norm:
-        return ColumnMapping(c, header_text, None, 0.0, "unmapped",
-                             sample_values=samples,
-                             reason="empty header")
+        return ColumnMapping(
+            c,
+            header_text,
+            None,
+            0.0,
+            "unmapped",
+            sample_values=samples,
+            reason="empty header",
+        )
 
     if is_skip_header(norm):
-        return ColumnMapping(c, header_text, SKIP_FIELD, 1.0, "skip_dict",
-                             sample_values=samples,
-                             reason="vessel/port/admin column")
+        return ColumnMapping(
+            c,
+            header_text,
+            SKIP_FIELD,
+            1.0,
+            "skip_dict",
+            sample_values=samples,
+            reason="vessel/port/admin column",
+        )
 
     field = EXACT_LOOKUP.get(norm)
     if field:
-        return ColumnMapping(c, header_text, field, 1.0, "synonym_dict",
-                             sample_values=samples)
+        return ColumnMapping(
+            c, header_text, field, 1.0, "synonym_dict", sample_values=samples
+        )
 
     sub = synonym_substring_match(norm)
     if sub:
-        return ColumnMapping(c, header_text, sub, 0.7, "synonym_substr",
-                             sample_values=samples,
-                             reason=f"substring of header {norm!r}")
+        return ColumnMapping(
+            c,
+            header_text,
+            sub,
+            0.7,
+            "synonym_substr",
+            sample_values=samples,
+            reason=f"substring of header {norm!r}",
+        )
 
-    return ColumnMapping(c, header_text, None, 0.0, "unmapped",
-                         sample_values=samples)
+    return ColumnMapping(c, header_text, None, 0.0, "unmapped", sample_values=samples)
 
 
 def _value_pattern_match(c: int, header_text: str, samples: list[str]) -> ColumnMapping:
     if not samples:
-        return ColumnMapping(c, header_text, None, 0.0, "unmapped",
-                             sample_values=samples)
+        return ColumnMapping(
+            c, header_text, None, 0.0, "unmapped", sample_values=samples
+        )
     container_hits = sum(1 for s in samples if CONTAINER_RE.match(s.strip().upper()))
     if container_hits / max(len(samples), 1) >= 0.5:
         return ColumnMapping(
-            c, header_text, "container_no",
-            confidence=0.9, source="value_pattern",
-            sample_values=samples, reason="ISO 6346 shape",
+            c,
+            header_text,
+            "container_no",
+            confidence=0.9,
+            source="value_pattern",
+            sample_values=samples,
+            reason="ISO 6346 shape",
         )
 
     fe_hits = sum(1 for s in samples if FE_VALUE_RE.match(s.strip()))
     if fe_hits / max(len(samples), 1) >= 0.6:
         return ColumnMapping(
-            c, header_text, "freight_kind",
-            confidence=0.85, source="value_pattern",
-            sample_values=samples, reason="F/E values",
+            c,
+            header_text,
+            "freight_kind",
+            confidence=0.85,
+            source="value_pattern",
+            sample_values=samples,
+            reason="F/E values",
         )
 
     size_hits = sum(1 for s in samples if SIZE_VALUE_RE.match(s.strip()))
     if size_hits / max(len(samples), 1) >= 0.6:
         return ColumnMapping(
-            c, header_text, "container_size",
-            confidence=0.8, source="value_pattern",
-            sample_values=samples, reason="size tokens",
+            c,
+            header_text,
+            "container_size",
+            confidence=0.8,
+            source="value_pattern",
+            sample_values=samples,
+            reason="size tokens",
         )
 
     plate_hits = sum(1 for s in samples if PLATE_RE.match(s.strip()))
     if plate_hits / max(len(samples), 1) >= 0.5:
         return ColumnMapping(
-            c, header_text, "vehicle_plate",
-            confidence=0.7, source="value_pattern",
-            sample_values=samples, reason="VN plate shape",
+            c,
+            header_text,
+            "vehicle_plate",
+            confidence=0.7,
+            source="value_pattern",
+            sample_values=samples,
+            reason="VN plate shape",
         )
 
     date_hits = sum(1 for s in samples if parse_date(s) is not None)
     if date_hits / max(len(samples), 1) >= 0.6:
         return ColumnMapping(
-            c, header_text, "trip_date",
-            confidence=0.55, source="value_pattern",
-            sample_values=samples, reason="parseable dates",
+            c,
+            header_text,
+            "trip_date",
+            confidence=0.55,
+            source="value_pattern",
+            sample_values=samples,
+            reason="parseable dates",
         )
 
-    return ColumnMapping(c, header_text, None, 0.0, "unmapped",
-                         sample_values=samples)
+    return ColumnMapping(c, header_text, None, 0.0, "unmapped", sample_values=samples)
 
 
 # ---------------------------------------------------------------------------
@@ -343,7 +392,9 @@ def fuzzy_match_header(header: str, max_distance: int = 2) -> tuple[str, float] 
     return (best_field, confidence)
 
 
-def _column_samples(sheet: SheetView, header_row: int, col: int, n: int = 8) -> list[str]:
+def _column_samples(
+    sheet: SheetView, header_row: int, col: int, n: int = 8
+) -> list[str]:
     out: list[str] = []
     if not (0 <= col):
         return out
@@ -382,7 +433,9 @@ class MappingProfilePicker:
         normalized = "|".join(h.strip().lower() for h in headers if h)
         return hashlib.sha256(normalized.encode()).hexdigest()
 
-    async def pick(self, headers: list[str], sample_rows: list[list]) -> dict[int, str] | None:
+    async def pick(
+        self, headers: list[str], sample_rows: list[list]
+    ) -> dict[int, str] | None:
         """Return cached column mapping if a profile exists, else None.
 
         On hit, marks the profile as used.

@@ -5,8 +5,6 @@ from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from app.database import Base
 
 
-
-
 class OperationType(Base):
     """Configurable work/operation types (tác nghiệp)."""
 
@@ -32,6 +30,10 @@ class OperationTypeAlias(Base):
     )
     alias = Column(String(255), nullable=False)
     alias_normalized = Column(String(255), nullable=False, unique=True)
-    source = Column(String(30), nullable=False, index=True)  # "manual" | "import_auto" | "promote" | "migration_seed"
+    source = Column(
+        String(30), nullable=False, index=True
+    )  # "manual" | "import_auto" | "promote" | "migration_seed"
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
-    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_by_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )

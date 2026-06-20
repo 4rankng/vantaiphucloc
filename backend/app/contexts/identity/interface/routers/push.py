@@ -52,7 +52,9 @@ async def register_subscription(
         )
     except Exception:
         logger.warning("Push subscription registration failed", exc_info=True)
-        raise HTTPException(status_code=503, detail="Push notifications temporarily unavailable")
+        raise HTTPException(
+            status_code=503, detail="Push notifications temporarily unavailable"
+        )
 
 
 @router.delete("/subscriptions", status_code=200)

@@ -19,6 +19,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
 # ── Input sanitization ──────────────────────────────────────────────
 
+
 def _sanitize_identifier(value: str) -> str:
     return value.strip()[:255]
 

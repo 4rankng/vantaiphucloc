@@ -64,7 +64,9 @@ def looks_like_container(val: Any) -> bool:
     return bool(CONTAINER_RE.match(s))
 
 
-def detect_column_mapping(headers: Sequence[str], expected_fields: dict[str, list[str]]) -> dict[str, int]:
+def detect_column_mapping(
+    headers: Sequence[str], expected_fields: dict[str, list[str]]
+) -> dict[str, int]:
     """Auto-detect column indices by matching headers against expected field names.
 
     Args:
@@ -167,14 +169,14 @@ def workbook_to_bytes(wb) -> bytes:
 
 def flatten_complex_sheet(raw_rows: list[tuple]) -> list[tuple]:
     """Detect and flatten side-by-side tables into a single flat table.
-    
+
     If the sheet has multiple occurrences of a key header (like "container" or "số cont")
     on the same row, it slices the row into multiple sub-rows vertically and
     concatenates them.
     """
     if not raw_rows:
         return []
-        
+
     header_idx = -1
     container_cols = []
 
@@ -191,54 +193,65 @@ def flatten_complex_sheet(raw_rows: list[tuple]) -> list[tuple]:
                 continue
 
             # Substring matches for more specific Vietnamese terms
-            if any(pat in cell_str for pat in ["số cont", "số container", "container no", "số côn", "cont no"]):
+            if any(
+                pat in cell_str
+                for pat in [
+                    "số cont",
+                    "số container",
+                    "container no",
+                    "số côn",
+                    "cont no",
+                ]
+            ):
                 cols_found.append(col_idx)
-        
+
         if len(cols_found) > 1:
             header_idx = i
             container_cols = cols_found
             break
-            
+
     if header_idx == -1 or len(container_cols) <= 1:
         return raw_rows
-        
+
     header_row = raw_rows[header_idx]
     headers = [str(c).strip().lower() if c is not None else "" for c in header_row]
-    
+
     table_bounds = []
     for j, c_col in enumerate(container_cols):
         start = c_col
         prev_end = table_bounds[-1][1] if table_bounds else -1
-        
+
         while start - 1 > prev_end and headers[start - 1] != "":
             start -= 1
-            
+
         end = c_col
-        limit = container_cols[j+1] if j < len(container_cols) - 1 else len(headers)
+        limit = container_cols[j + 1] if j < len(container_cols) - 1 else len(headers)
         while end + 1 < limit and headers[end + 1] != "":
             end += 1
-            
+
         table_bounds.append((start, end))
-        
+
     max_width = max(end - start + 1 for start, end in table_bounds)
-    
+
     flattened = raw_rows[:header_idx]
-    
+
     first_table_start, first_table_end = table_bounds[0]
-    base_header_slice = list(raw_rows[header_idx][first_table_start:first_table_end + 1])
+    base_header_slice = list(
+        raw_rows[header_idx][first_table_start : first_table_end + 1]
+    )
     while len(base_header_slice) < max_width:
         base_header_slice.append(None)
     flattened.append(tuple(base_header_slice))
-    
-    for row in raw_rows[header_idx + 1:]:
+
+    for row in raw_rows[header_idx + 1 :]:
         for start, end in table_bounds:
             if start < len(row):
                 slice_len = min(end - start + 1, len(row) - start)
-                data_slice = list(row[start:start + slice_len])
-                
+                data_slice = list(row[start : start + slice_len])
+
                 if any(c is not None and str(c).strip() != "" for c in data_slice):
                     while len(data_slice) < max_width:
                         data_slice.append(None)
                     flattened.append(tuple(data_slice))
-                    
+
     return flattened

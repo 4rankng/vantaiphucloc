@@ -11,7 +11,9 @@ from app.core.deps import get_current_user
 from app.database import get_db
 from app.models.operation_type import OperationType, OperationTypeAlias
 from app.models.base import User
-from app.contexts.route_pricing.domain.value_objects import refresh_work_types_from_async
+from app.contexts.route_pricing.domain.value_objects import (
+    refresh_work_types_from_async,
+)
 
 router = APIRouter(prefix="/operation-types", tags=["operation-types"])
 
@@ -62,15 +64,24 @@ class CreateOperationTypeAliasRequest(BaseModel):
 
 async def _refresh_cache(db: AsyncSession) -> None:
     """Reload active work types from DB into the validation cache."""
-    rows = (await db.execute(
-        select(OperationType.name).where(OperationType.is_active == True)  # noqa: E712
-    )).scalars().all()
+    rows = (
+        (
+            await db.execute(
+                select(OperationType.name).where(OperationType.is_active == True)  # noqa: E712
+            )
+        )
+        .scalars()
+        .all()
+    )
     refresh_work_types_from_async(frozenset(rows))
 
 
 def _normalize_alias(alias: str) -> str:
     """Normalize alias for dedup — diacritics-insensitive."""
-    from app.contexts.operations.infrastructure.operation_type_resolver import normalize_operation_type
+    from app.contexts.operations.infrastructure.operation_type_resolver import (
+        normalize_operation_type,
+    )
+
     return normalize_operation_type(alias)
 
 
@@ -98,9 +109,7 @@ async def create_operation_type(
     _user: User = Depends(get_current_user),
 ):
     exists = (
-        await db.execute(
-            select(OperationType).where(OperationType.name == body.name)
-        )
+        await db.execute(select(OperationType).where(OperationType.name == body.name))
     ).scalar_one_or_none()
     if exists:
         raise HTTPException(409, f"Tác nghiệp '{body.name}' đã tồn tại")
@@ -194,9 +203,11 @@ async def list_aliases(
     _user: User = Depends(get_current_user),
 ):
     """List operation type aliases. Optional ?operation_type_id= filter."""
-    stmt = select(OperationTypeAlias, OperationType.name.label("operation_type_name")).join(
-        OperationType, OperationTypeAlias.operation_type_id == OperationType.id
-    ).order_by(OperationTypeAlias.created_at.desc())
+    stmt = (
+        select(OperationTypeAlias, OperationType.name.label("operation_type_name"))
+        .join(OperationType, OperationTypeAlias.operation_type_id == OperationType.id)
+        .order_by(OperationTypeAlias.created_at.desc())
+    )
     if operation_type_id is not None:
         stmt = stmt.where(OperationTypeAlias.operation_type_id == operation_type_id)
     rows = (await db.execute(stmt)).all()
@@ -233,7 +244,9 @@ async def create_alias(
     # Check if alias_normalized already exists
     existing = (
         await db.execute(
-            select(OperationTypeAlias).where(OperationTypeAlias.alias_normalized == norm)
+            select(OperationTypeAlias).where(
+                OperationTypeAlias.alias_normalized == norm
+            )
         )
     ).scalar_one_or_none()
     if existing:
@@ -295,9 +308,7 @@ async def promote_alias(
 
     # Check for name collision
     collision = (
-        await db.execute(
-            select(OperationType).where(OperationType.name == new_name)
-        )
+        await db.execute(select(OperationType).where(OperationType.name == new_name))
     ).scalar_one_or_none()
     if collision and collision.id != op_type.id:
         raise HTTPException(409, f"Tác nghiệp '{new_name}' đã tồn tại")

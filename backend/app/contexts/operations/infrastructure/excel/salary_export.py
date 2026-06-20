@@ -32,11 +32,13 @@ async def generate_salary_excel(
 
     # Find matched DeliveredTrips in the date range, grouped by driver
     result = await db.execute(
-        select(DeliveredTrip).where(
+        select(DeliveredTrip)
+        .where(
             DeliveredTrip.booked_trip_id.isnot(None),
             DeliveredTrip.trip_date >= start_dt,
             DeliveredTrip.trip_date <= end_dt,
-        ).order_by(DeliveredTrip.driver_id)
+        )
+        .order_by(DeliveredTrip.driver_id)
     )
     matched_trips = result.scalars().all()
 
@@ -61,30 +63,44 @@ async def generate_salary_excel(
 
     driver_ids = set(driver_earnings.keys())
     driver_name_by_id = (
-        {u.id: (u.full_name or u.username) for u in
-         (await db.execute(select(_User).where(_User.id.in_(driver_ids)))).scalars().all()}
-        if driver_ids else {}
+        {
+            u.id: (u.full_name or u.username)
+            for u in (await db.execute(select(_User).where(_User.id.in_(driver_ids))))
+            .scalars()
+            .all()
+        }
+        if driver_ids
+        else {}
     )
 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Bảng lương"
 
-    headers = ["Tài xế", "Kỳ lương", "Số chuyến", "Tổng lương", "Phụ cấp", "Tổng thu nhập"]
+    headers = [
+        "Tài xế",
+        "Kỳ lương",
+        "Số chuyến",
+        "Tổng lương",
+        "Phụ cấp",
+        "Tổng thu nhập",
+    ]
     ws.append(headers)
 
     apply_header_style(ws, 1, len(headers))
 
     for driver_id, data in sorted(driver_earnings.items()):
         total_allowance = driver_allowance.get(driver_id, 0)
-        ws.append([
-            driver_name_by_id.get(driver_id, ""),
-            f"{start_date} → {end_date}",
-            data["order_count"],
-            data["total_salary"],
-            total_allowance,
-            data["total_salary"] + total_allowance,
-        ])
+        ws.append(
+            [
+                driver_name_by_id.get(driver_id, ""),
+                f"{start_date} → {end_date}",
+                data["order_count"],
+                data["total_salary"],
+                total_allowance,
+                data["total_salary"] + total_allowance,
+            ]
+        )
 
     auto_fit_columns(ws)
 

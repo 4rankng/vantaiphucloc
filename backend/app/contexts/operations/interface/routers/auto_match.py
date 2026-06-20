@@ -133,44 +133,65 @@ async def auto_match_preview_endpoint(
             location_ids.add(c[side]["dropoff_location_id"])
 
     from sqlalchemy import select
-    clients = dict((await db.execute(
-        select(Client.id, Client.name).where(Client.id.in_(client_ids))
-    )).all()) if client_ids else {}
-    locations = dict((await db.execute(
-        select(Location.id, Location.name).where(Location.id.in_(location_ids))
-    )).all()) if location_ids else {}
+
+    clients = (
+        dict(
+            (
+                await db.execute(
+                    select(Client.id, Client.name).where(Client.id.in_(client_ids))
+                )
+            ).all()
+        )
+        if client_ids
+        else {}
+    )
+    locations = (
+        dict(
+            (
+                await db.execute(
+                    select(Location.id, Location.name).where(
+                        Location.id.in_(location_ids)
+                    )
+                )
+            ).all()
+        )
+        if location_ids
+        else {}
+    )
 
     candidates_out = []
     for c in result["candidates"]:
         d = c["delivered"]
         b = c["booked"]
-        candidates_out.append(MatchCandidateOut(
-            delivered_trip_id=c["delivered_trip_id"],
-            booked_trip_id=c["booked_trip_id"],
-            score=c["score"],
-            confidence=c["confidence"],
-            matched_fields=c["matched_fields"],
-            delivered=TripSummary(
-                trip_date=d["trip_date"],
-                cont_number=d["cont_number"],
-                client_name=clients.get(d["client_id"]),
-                pickup_name=locations.get(d["pickup_location_id"]),
-                dropoff_name=locations.get(d["dropoff_location_id"]),
-                work_type=d["work_type"],
-                vessel=d["vessel"],
-                vehicle_plate=d["vehicle_plate"],
-            ),
-            booked=TripSummary(
-                trip_date=b["trip_date"],
-                cont_number=b["cont_number"],
-                client_name=clients.get(b["client_id"]),
-                pickup_name=locations.get(b["pickup_location_id"]),
-                dropoff_name=locations.get(b["dropoff_location_id"]),
-                work_type=b["work_type"],
-                vessel=b["vessel"],
-                vehicle_plate=b["vehicle_plate"],
-            ),
-        ))
+        candidates_out.append(
+            MatchCandidateOut(
+                delivered_trip_id=c["delivered_trip_id"],
+                booked_trip_id=c["booked_trip_id"],
+                score=c["score"],
+                confidence=c["confidence"],
+                matched_fields=c["matched_fields"],
+                delivered=TripSummary(
+                    trip_date=d["trip_date"],
+                    cont_number=d["cont_number"],
+                    client_name=clients.get(d["client_id"]),
+                    pickup_name=locations.get(d["pickup_location_id"]),
+                    dropoff_name=locations.get(d["dropoff_location_id"]),
+                    work_type=d["work_type"],
+                    vessel=d["vessel"],
+                    vehicle_plate=d["vehicle_plate"],
+                ),
+                booked=TripSummary(
+                    trip_date=b["trip_date"],
+                    cont_number=b["cont_number"],
+                    client_name=clients.get(b["client_id"]),
+                    pickup_name=locations.get(b["pickup_location_id"]),
+                    dropoff_name=locations.get(b["dropoff_location_id"]),
+                    work_type=b["work_type"],
+                    vessel=b["vessel"],
+                    vehicle_plate=b["vehicle_plate"],
+                ),
+            )
+        )
 
     return AutoMatchResponse(
         candidates=candidates_out,
@@ -188,7 +209,13 @@ async def auto_match_confirm_endpoint(
     result = await confirm_matches(
         db,
         [
-            (p.delivered_trip_id, p.booked_trip_id, p.sync_source, p.field_choices, p.score)
+            (
+                p.delivered_trip_id,
+                p.booked_trip_id,
+                p.sync_source,
+                p.field_choices,
+                p.score,
+            )
             for p in body.pairs
         ],
     )
@@ -206,9 +233,11 @@ async def unmatch_endpoint(
     from app.core.audit_context import set_audit_reason
     from app.models.domain import DeliveredTrip
 
-    wo = (await db.execute(
-        select(DeliveredTrip).where(DeliveredTrip.id == body.delivered_trip_id)
-    )).scalar_one_or_none()
+    wo = (
+        await db.execute(
+            select(DeliveredTrip).where(DeliveredTrip.id == body.delivered_trip_id)
+        )
+    ).scalar_one_or_none()
 
     if not wo:
         raise HTTPException(404, "Delivered trip not found")
@@ -240,7 +269,9 @@ async def unmatch_endpoint(
     )
 
 
-@router.post("/auto-match/ai-suggest/{delivered_trip_id}", response_model=AISuggestionResponse)
+@router.post(
+    "/auto-match/ai-suggest/{delivered_trip_id}", response_model=AISuggestionResponse
+)
 async def ai_suggest_endpoint(
     delivered_trip_id: int,
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
@@ -261,9 +292,9 @@ async def ai_suggest_endpoint(
     booked_summary: BookedTripSummary | None = None
 
     if suggested_id:
-        bt = (await db.execute(
-            select(BookedTrip).where(BookedTrip.id == suggested_id)
-        )).scalar_one_or_none()
+        bt = (
+            await db.execute(select(BookedTrip).where(BookedTrip.id == suggested_id))
+        ).scalar_one_or_none()
 
         if bt:
             # Resolve location and client names
@@ -275,16 +306,28 @@ async def ai_suggest_endpoint(
             client_ids = {bt.client_id} - {None}
 
             if loc_ids:
-                locs = dict((await db.execute(
-                    select(Location.id, Location.name).where(Location.id.in_(loc_ids))
-                )).all())
+                locs = dict(
+                    (
+                        await db.execute(
+                            select(Location.id, Location.name).where(
+                                Location.id.in_(loc_ids)
+                            )
+                        )
+                    ).all()
+                )
                 pickup_name = locs.get(bt.pickup_location_id)
                 dropoff_name = locs.get(bt.dropoff_location_id)
 
             if client_ids:
-                clients_res = dict((await db.execute(
-                    select(Client.id, Client.name).where(Client.id.in_(client_ids))
-                )).all())
+                clients_res = dict(
+                    (
+                        await db.execute(
+                            select(Client.id, Client.name).where(
+                                Client.id.in_(client_ids)
+                            )
+                        )
+                    ).all()
+                )
                 client_name = clients_res.get(bt.client_id)
 
             booked_summary = BookedTripSummary(
@@ -328,6 +371,7 @@ async def sync_pricing_endpoint(
         return SyncPricingResponse(updated_count=updated_count)
     except Exception as exc:
         from fastapi import HTTPException
+
         _logger.exception("Failed to sync matched trips pricing")
         raise HTTPException(500, detail=str(exc))
 
@@ -372,5 +416,6 @@ async def sync_all_pricing_endpoint(
         return SyncPricingResponse(updated_count=updated_count)
     except Exception as exc:
         from fastapi import HTTPException
+
         _logger.exception("Failed to sync all trips pricing")
         raise HTTPException(500, detail=str(exc))

@@ -1,5 +1,5 @@
 import { api } from './client'
-import { safeRequest, toCamel } from '@/lib/safe-request'
+import { safeRequest } from '@/lib/safe-request'
 
 export interface TripSummary {
   tripDate: string | null

@@ -51,7 +51,7 @@ _CONT_TYPE_PRICE_COL = {
 class TariffRow:
     pickup_raw: str
     dropoff_raw: str
-    work_type: str          # CHUYỂN BÃI | XUẤT/NHẬP TÀU | etc.
+    work_type: str  # CHUYỂN BÃI | XUẤT/NHẬP TÀU | etc.
     unit_price: int
     quantity: int = 1
     driver_salary: int = 0
@@ -153,18 +153,22 @@ def parse_pan_bytes(content: bytes) -> PricingPreview:
         full40 = ws.cell(r, 38).value
         pickup, dropoff = _split_route(route)
         for price, ct in (
-            (empty_p, "E40"), (empty_p, "E20"),
-            (full20, "F20"), (full40, "F40"),
+            (empty_p, "E40"),
+            (empty_p, "E20"),
+            (full20, "F20"),
+            (full40, "F40"),
         ):
             if isinstance(price, (int, float)) and price > 0:
-                rows.append(TariffRow(
-                    pickup_raw=pickup,
-                    dropoff_raw=dropoff,
-                    work_type="CHUYỂN BÃI",
-                    unit_price=int(round(price)),
-                    cont_type=ct,
-                    note=f"Trucking (HD) row {r}",
-                ))
+                rows.append(
+                    TariffRow(
+                        pickup_raw=pickup,
+                        dropoff_raw=dropoff,
+                        work_type="CHUYỂN BÃI",
+                        unit_price=int(round(price)),
+                        cont_type=ct,
+                        note=f"Trucking (HD) row {r}",
+                    )
+                )
     wb.close()
     return PricingPreview(format="pan", sheet_name="Trucking (HD)", rows=rows)
 
@@ -195,18 +199,22 @@ def parse_hap_bytes(content: bytes) -> PricingPreview:
         empty40 = ws.cell(r, 6).value
         pickup, dropoff = _split_route(route)
         for price, ct in (
-            (full20, "F20"), (full40, "F40"),
-            (empty20, "E20"), (empty40, "E40"),
+            (full20, "F20"),
+            (full40, "F40"),
+            (empty20, "E20"),
+            (empty40, "E40"),
         ):
             if isinstance(price, (int, float)) and price > 0:
-                rows.append(TariffRow(
-                    pickup_raw=pickup,
-                    dropoff_raw=dropoff,
-                    work_type="CHUYỂN BÃI",
-                    unit_price=int(round(price)),
-                    cont_type=ct,
-                    note=f"CUOC row {r}",
-                ))
+                rows.append(
+                    TariffRow(
+                        pickup_raw=pickup,
+                        dropoff_raw=dropoff,
+                        work_type="CHUYỂN BÃI",
+                        unit_price=int(round(price)),
+                        cont_type=ct,
+                        note=f"CUOC row {r}",
+                    )
+                )
     wb.close()
     return PricingPreview(format="hap", sheet_name="CUOC", rows=rows)
 
@@ -230,8 +238,17 @@ def parse_newway_bytes(content: bytes) -> PricingPreview:
         empty40 = ws.cell(r, 6).value
         full20 = ws.cell(r, 7).value
         full40 = ws.cell(r, 8).value
-        ct = ("F40" if full40 else "F20" if full20
-              else "E40" if empty40 else "E20" if empty20 else None)
+        ct = (
+            "F40"
+            if full40
+            else "F20"
+            if full20
+            else "E40"
+            if empty40
+            else "E20"
+            if empty20
+            else None
+        )
         if ct is None:
             continue
         rows_seen.setdefault((route, ct), {})[int(round(price))] = (
@@ -243,14 +260,16 @@ def parse_newway_bytes(content: bytes) -> PricingPreview:
     for (route, ct), counts in rows_seen.items():
         best_price = max(counts.items(), key=lambda kv: kv[1])[0]
         pickup, dropoff = _split_route(route)
-        rows.append(TariffRow(
-            pickup_raw=pickup,
-            dropoff_raw=dropoff,
-            work_type="CHUYỂN BÃI",
-            unit_price=best_price,
-            cont_type=ct,
-            note=f"settlement modal across {sum(counts.values())} trips",
-        ))
+        rows.append(
+            TariffRow(
+                pickup_raw=pickup,
+                dropoff_raw=dropoff,
+                work_type="CHUYỂN BÃI",
+                unit_price=best_price,
+                cont_type=ct,
+                note=f"settlement modal across {sum(counts.values())} trips",
+            )
+        )
     if not rows:
         warnings.append(
             "NEWWAY: không trích được dòng giá nào — định dạng có thể "
@@ -326,10 +345,14 @@ async def commit_tariff_rows(
             result.skipped_no_locations += 1
             continue
         pickup_resp = await resolver.resolve_or_create(
-            row.pickup_raw, source=ResolverSource.MANUAL, user_id=user_id,
+            row.pickup_raw,
+            source=ResolverSource.MANUAL,
+            user_id=user_id,
         )
         dropoff_resp = await resolver.resolve_or_create(
-            row.dropoff_raw, source=ResolverSource.MANUAL, user_id=user_id,
+            row.dropoff_raw,
+            source=ResolverSource.MANUAL,
+            user_id=user_id,
         )
         pickup_loc = pickup_resp.location
         dropoff_loc = dropoff_resp.location
@@ -340,14 +363,16 @@ async def commit_tariff_rows(
         route_groups.setdefault(key, []).append(row)
 
     for (pickup_id, dropoff_id, work_type), group_rows in route_groups.items():
-        existing = (await db.execute(
-            select(RoutePricing).where(
-                RoutePricing.client_id == _partner.id,
-                RoutePricing.work_type == work_type,
-                RoutePricing.pickup_location_id == pickup_id,
-                RoutePricing.dropoff_location_id == dropoff_id,
+        existing = (
+            await db.execute(
+                select(RoutePricing).where(
+                    RoutePricing.client_id == _partner.id,
+                    RoutePricing.work_type == work_type,
+                    RoutePricing.pickup_location_id == pickup_id,
+                    RoutePricing.dropoff_location_id == dropoff_id,
+                )
             )
-        )).scalar_one_or_none()
+        ).scalar_one_or_none()
 
         if existing is None:
             existing = RoutePricing(
@@ -387,6 +412,7 @@ async def commit_tariff_rows(
 
 async def _location_count(db: AsyncSession) -> int:
     from app.models.domain import Location
+
     res = await db.execute(select(func.count()).select_from(Location))
     return int(res.scalar_one())
 
@@ -439,14 +465,16 @@ async def resolve_preview_locations(
             if not p_id or not d_id:
                 continue
 
-            existing_rp = (await db.execute(
-                select(RoutePricing).where(
-                    RoutePricing.client_id == client_id,
-                    RoutePricing.pickup_location_id == p_id,
-                    RoutePricing.dropoff_location_id == d_id,
-                    RoutePricing.work_type == row.work_type,
+            existing_rp = (
+                await db.execute(
+                    select(RoutePricing).where(
+                        RoutePricing.client_id == client_id,
+                        RoutePricing.pickup_location_id == p_id,
+                        RoutePricing.dropoff_location_id == d_id,
+                        RoutePricing.work_type == row.work_type,
+                    )
                 )
-            )).scalar_one_or_none()
+            ).scalar_one_or_none()
             if existing_rp is not None and row.cont_type:
                 col = _CONT_TYPE_PRICE_COL.get(row.cont_type)
                 if col:

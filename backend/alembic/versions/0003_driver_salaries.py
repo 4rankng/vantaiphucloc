@@ -5,6 +5,7 @@ Revises: 0002_enable_unaccent
 Create Date: 2026-05-24
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -22,19 +23,41 @@ def upgrade() -> None:
     op.create_table(
         "driver_salaries",
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
-        sa.Column("driver_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
+        sa.Column(
+            "driver_id",
+            sa.Integer(),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
         sa.Column("from_date", sa.Date(), nullable=False),
         sa.Column("to_date", sa.Date(), nullable=False),
         sa.Column("basic_salary", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("bonus_salary", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("allowance", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("note", sa.String(500), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
         sa.Column("created_by", sa.Integer(), sa.ForeignKey("users.id"), nullable=True),
-        sa.UniqueConstraint("driver_id", "from_date", "to_date", name="uq_driver_salaries_period"),
+        sa.UniqueConstraint(
+            "driver_id", "from_date", "to_date", name="uq_driver_salaries_period"
+        ),
     )
-    op.create_index("ix_driver_salaries_driver_period", "driver_salaries", ["driver_id", "from_date", "to_date"])
+    op.create_index(
+        "ix_driver_salaries_driver_period",
+        "driver_salaries",
+        ["driver_id", "from_date", "to_date"],
+    )
 
     # 2. Bootstrap driver_salaries from existing data
     # Seed current period: basic_salary from config, bonus_salary from trips in period, allowance=0
@@ -123,10 +146,16 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Re-add allowance to pricing_lines
-    op.add_column("pricing_lines", sa.Column("allowance", sa.Integer(), nullable=False, server_default="0"))
+    op.add_column(
+        "pricing_lines",
+        sa.Column("allowance", sa.Integer(), nullable=False, server_default="0"),
+    )
 
     # Re-add allowance to delivered_trips
-    op.add_column("delivered_trips", sa.Column("allowance", sa.Integer(), nullable=False, server_default="0"))
+    op.add_column(
+        "delivered_trips",
+        sa.Column("allowance", sa.Integer(), nullable=False, server_default="0"),
+    )
 
     # Drop driver_salaries
     op.drop_index("ix_driver_salaries_driver_period", table_name="driver_salaries")

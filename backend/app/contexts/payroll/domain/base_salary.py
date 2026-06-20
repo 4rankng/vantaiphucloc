@@ -22,9 +22,7 @@ class DriverSalaryConfig:
     note: str | None = None
 
 
-def effective_base_salary(
-    history: list[DriverSalaryConfig], at: date
-) -> int:
+def effective_base_salary(history: list[DriverSalaryConfig], at: date) -> int:
     """Return the base salary in effect on *at* given the full history.
 
     Picks the entry with the greatest ``effective_from`` that is still

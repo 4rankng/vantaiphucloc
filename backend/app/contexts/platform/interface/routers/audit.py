@@ -59,7 +59,15 @@ async def list_audit_logs(
         count_q = count_q.where(AuditLog.created_at >= created_after)
 
     if is_financial:
-        financial_tables = ["booked_trips", "pricing_lines", "delivered_trips", "driver_salaries", "vehicle_expenses", "route_pricings", "vendor_route_pricings"]
+        financial_tables = [
+            "booked_trips",
+            "pricing_lines",
+            "delivered_trips",
+            "driver_salaries",
+            "vehicle_expenses",
+            "route_pricings",
+            "vendor_route_pricings",
+        ]
         q = q.where(AuditLog.table_name.in_(financial_tables))
         count_q = count_q.where(AuditLog.table_name.in_(financial_tables))
 
@@ -76,10 +84,16 @@ async def list_audit_logs(
     user_ids = {row.user_id for row in rows if row.user_id}
     user_map: dict[int, tuple[str, str, str]] = {}
     if user_ids:
-        user_rows = (await db.execute(
-            select(User.id, User.full_name, User.role, User.username).where(User.id.in_(user_ids))
-        )).all()
-        user_map = {r.id: (r.full_name or r.username, r.role, r.username) for r in user_rows}
+        user_rows = (
+            await db.execute(
+                select(User.id, User.full_name, User.role, User.username).where(
+                    User.id.in_(user_ids)
+                )
+            )
+        ).all()
+        user_map = {
+            r.id: (r.full_name or r.username, r.role, r.username) for r in user_rows
+        }
 
     # ── Batch resolve: driver names, vendor names, client names, locations ──────
     def _collect_ids(table: str, key: str) -> set[int]:
@@ -108,13 +122,11 @@ async def list_audit_logs(
         | _collect_ids("booked_trips", "client_id")
         | _collect_ids("route_pricings", "client_id")
     )
-    vendor_ids = (
-        _collect_ids("vehicles", "vendor_id")
-        | _collect_ids("vendor_route_pricings", "vendor_id")
+    vendor_ids = _collect_ids("vehicles", "vendor_id") | _collect_ids(
+        "vendor_route_pricings", "vendor_id"
     )
-    vehicle_ids = (
-        _collect_ids("vehicle_expenses", "vehicle_id")
-        | _collect_ids("vehicle_drivers", "vehicle_id")
+    vehicle_ids = _collect_ids("vehicle_expenses", "vehicle_id") | _collect_ids(
+        "vehicle_drivers", "vehicle_id"
     )
     location_ids = (
         _collect_ids("route_pricings", "pickup_location_id")
@@ -129,7 +141,13 @@ async def list_audit_logs(
 
     driver_name_map: dict[int, str] = {}
     if driver_ids:
-        for r in (await db.execute(select(User.id, User.full_name, User.username).where(User.id.in_(driver_ids)))).all():
+        for r in (
+            await db.execute(
+                select(User.id, User.full_name, User.username).where(
+                    User.id.in_(driver_ids)
+                )
+            )
+        ).all():
             driver_name_map[r.id] = r.full_name or r.username
 
     # Fallback: resolve driver_salaries / driver_salary_configs record_ids → driver_ids
@@ -141,56 +159,109 @@ async def list_audit_logs(
         except (json.JSONDecodeError, TypeError):
             return False
 
-    from app.models.domain import DriverSalary, DriverSalaryConfig, Client, Vendor, Vehicle, Location
+    from app.models.domain import (
+        DriverSalary,
+        DriverSalaryConfig,
+        Client,
+        Vendor,
+        Vehicle,
+        Location,
+    )
 
     salary_to_driver: dict[int, int] = {}
     salary_record_ids = {
-        row.record_id for row in rows
-        if row.table_name == "driver_salaries" and not _has_key(row.new_value, "driver_id") and not _has_key(row.old_value, "driver_id")
+        row.record_id
+        for row in rows
+        if row.table_name == "driver_salaries"
+        and not _has_key(row.new_value, "driver_id")
+        and not _has_key(row.old_value, "driver_id")
     }
     if salary_record_ids:
-        for r in (await db.execute(select(DriverSalary.id, DriverSalary.driver_id).where(DriverSalary.id.in_(salary_record_ids)))).all():
+        for r in (
+            await db.execute(
+                select(DriverSalary.id, DriverSalary.driver_id).where(
+                    DriverSalary.id.in_(salary_record_ids)
+                )
+            )
+        ).all():
             salary_to_driver[r.id] = r.driver_id
         for did in salary_to_driver.values():
             if did not in driver_name_map:
                 driver_ids.add(did)
         if driver_ids:
-            for r in (await db.execute(select(User.id, User.full_name, User.username).where(User.id.in_(driver_ids)))).all():
+            for r in (
+                await db.execute(
+                    select(User.id, User.full_name, User.username).where(
+                        User.id.in_(driver_ids)
+                    )
+                )
+            ).all():
                 driver_name_map[r.id] = r.full_name or r.username
 
     salary_config_to_driver: dict[int, int] = {}
     config_record_ids = {
-        row.record_id for row in rows
-        if row.table_name == "driver_salary_configs" and not _has_key(row.new_value, "driver_id") and not _has_key(row.old_value, "driver_id")
+        row.record_id
+        for row in rows
+        if row.table_name == "driver_salary_configs"
+        and not _has_key(row.new_value, "driver_id")
+        and not _has_key(row.old_value, "driver_id")
     }
     if config_record_ids:
-        for r in (await db.execute(select(DriverSalaryConfig.id, DriverSalaryConfig.driver_id).where(DriverSalaryConfig.id.in_(config_record_ids)))).all():
+        for r in (
+            await db.execute(
+                select(DriverSalaryConfig.id, DriverSalaryConfig.driver_id).where(
+                    DriverSalaryConfig.id.in_(config_record_ids)
+                )
+            )
+        ).all():
             salary_config_to_driver[r.id] = r.driver_id
         for did in salary_config_to_driver.values():
             if did not in driver_name_map:
                 driver_ids.add(did)
         if driver_ids:
-            for r in (await db.execute(select(User.id, User.full_name, User.username).where(User.id.in_(driver_ids)))).all():
+            for r in (
+                await db.execute(
+                    select(User.id, User.full_name, User.username).where(
+                        User.id.in_(driver_ids)
+                    )
+                )
+            ).all():
                 driver_name_map[r.id] = r.full_name or r.username
 
     client_name_map: dict[int, str] = {}
     if client_ids:
-        for r in (await db.execute(select(Client.id, Client.name).where(Client.id.in_(client_ids)))).all():
+        for r in (
+            await db.execute(
+                select(Client.id, Client.name).where(Client.id.in_(client_ids))
+            )
+        ).all():
             client_name_map[r.id] = r.name
 
     vendor_name_map: dict[int, str] = {}
     if vendor_ids:
-        for r in (await db.execute(select(Vendor.id, Vendor.name).where(Vendor.id.in_(vendor_ids)))).all():
+        for r in (
+            await db.execute(
+                select(Vendor.id, Vendor.name).where(Vendor.id.in_(vendor_ids))
+            )
+        ).all():
             vendor_name_map[r.id] = r.name
 
     vehicle_plate_map: dict[int, str] = {}
     if vehicle_ids:
-        for r in (await db.execute(select(Vehicle.id, Vehicle.plate).where(Vehicle.id.in_(vehicle_ids)))).all():
+        for r in (
+            await db.execute(
+                select(Vehicle.id, Vehicle.plate).where(Vehicle.id.in_(vehicle_ids))
+            )
+        ).all():
             vehicle_plate_map[r.id] = r.plate
 
     location_name_map: dict[int, str] = {}
     if location_ids:
-        for r in (await db.execute(select(Location.id, Location.name).where(Location.id.in_(location_ids)))).all():
+        for r in (
+            await db.execute(
+                select(Location.id, Location.name).where(Location.id.in_(location_ids))
+            )
+        ).all():
             location_name_map[r.id] = r.name
 
     # ── Subject extraction ────────────────────────────────────────────────────
@@ -219,7 +290,9 @@ async def list_audit_logs(
             return f"{p} → {q}"
         return None
 
-    def _extract_subject(table_name: str, nv: str | None, ov: str | None, record_id: int | None = None) -> str | None:
+    def _extract_subject(
+        table_name: str, nv: str | None, ov: str | None, record_id: int | None = None
+    ) -> str | None:
         data = _j(nv) or _j(ov)
 
         if table_name == "driver_salaries":
@@ -350,21 +423,29 @@ async def list_audit_logs(
     # ── Build response ────────────────────────────────────────────────────────
     items = []
     for row in rows:
-        uname, urole, _ = (user_map.get(row.user_id, (None, None, None))) if row.user_id else (None, None, None)
-        items.append(AuditLogOut(
-            id=row.id,
-            user_id=row.user_id,
-            user_name=uname,
-            user_role=urole,
-            action=row.action,
-            table_name=row.table_name,
-            record_id=row.record_id,
-            old_value=row.old_value,
-            new_value=row.new_value,
-            reason=row.reason,
-            created_at=row.created_at,
-            subject_name=_extract_subject(row.table_name, row.new_value, row.old_value, row.record_id),
-        ))
+        uname, urole, _ = (
+            (user_map.get(row.user_id, (None, None, None)))
+            if row.user_id
+            else (None, None, None)
+        )
+        items.append(
+            AuditLogOut(
+                id=row.id,
+                user_id=row.user_id,
+                user_name=uname,
+                user_role=urole,
+                action=row.action,
+                table_name=row.table_name,
+                record_id=row.record_id,
+                old_value=row.old_value,
+                new_value=row.new_value,
+                reason=row.reason,
+                created_at=row.created_at,
+                subject_name=_extract_subject(
+                    row.table_name, row.new_value, row.old_value, row.record_id
+                ),
+            )
+        )
 
     return PaginatedResponse[AuditLogOut](
         items=items,

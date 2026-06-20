@@ -104,7 +104,7 @@ async def update_own_profile(
     return UserOut.from_entity(user, vehicle_plate=plate)
 
 
-_VALID_USER_SORT = {'username', 'full_name', 'role', 'phone'}
+_VALID_USER_SORT = {"username", "full_name", "role", "phone"}
 
 
 @router.get("/users", response_model=PaginatedResponse[UserOut])
@@ -112,7 +112,7 @@ async def list_users(
     role: str | None = None,
     search: str | None = None,
     sort_by: str | None = None,
-    sort_order: str = Query('asc', pattern='^(asc|desc)$'),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=1000),
     current_user: UserORM = Depends(require_permission("list", "User")),
@@ -137,12 +137,19 @@ async def list_users(
     # Batch-load vehicle plates for driver-role users
     from app.models.vehicle_helpers import resolve_driver_plates_batch
 
-    driver_ids = [int(u.id) for u in items if u.role == UserRole.DRIVER and u.id is not None]  # type: ignore[arg-type]
+    driver_ids = [
+        int(u.id) for u in items if u.role == UserRole.DRIVER and u.id is not None
+    ]  # type: ignore[arg-type]
     plate_map = await resolve_driver_plates_batch(repo.session, driver_ids)
 
     return PaginatedResponse[UserOut](
         items=[
-            UserOut.from_entity(u, vehicle_plate=plate_map.get(int(u.id)) if u.role == UserRole.DRIVER else None)  # type: ignore[arg-type]
+            UserOut.from_entity(
+                u,
+                vehicle_plate=plate_map.get(int(u.id))
+                if u.role == UserRole.DRIVER
+                else None,
+            )  # type: ignore[arg-type]
             for u in items
         ],
         total=total,

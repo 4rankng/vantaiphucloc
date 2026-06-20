@@ -23,7 +23,9 @@ from app.contexts.operations.infrastructure.import_pipeline.column_mapper import
     derive_pivot_value,
     detect_pivot_columns,
 )
-from app.contexts.operations.infrastructure.import_pipeline.pattern_detector import detect_pattern
+from app.contexts.operations.infrastructure.import_pipeline.pattern_detector import (
+    detect_pattern,
+)
 from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import (
     extract_bay_plan,
     extract_dual_panel,
@@ -49,7 +51,9 @@ from app.contexts.operations.infrastructure.import_pipeline.value_parsers import
     parse_size_type,
     parse_weight_kg,
 )
-from app.contexts.operations.infrastructure.import_pipeline.workbook import load_workbook
+from app.contexts.operations.infrastructure.import_pipeline.workbook import (
+    load_workbook,
+)
 
 
 DOCS = Path(__file__).resolve().parents[2] / "docs"
@@ -76,6 +80,7 @@ CONSERO_DUAL = REAL_LIFE / "4.CONSERO 2621N.xlsx"
 # Canonical / synonyms
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize(
     "header,expected_field",
     [
@@ -99,16 +104,25 @@ CONSERO_DUAL = REAL_LIFE / "4.CONSERO 2621N.xlsx"
 )
 def test_synonym_dictionary_matches_known_headers(header: str, expected_field: str):
     norm = normalize_header_text(header)
-    assert EXACT_LOOKUP.get(norm) == expected_field, f"{header!r} → {EXACT_LOOKUP.get(norm)} ≠ {expected_field}"
+    assert EXACT_LOOKUP.get(norm) == expected_field, (
+        f"{header!r} → {EXACT_LOOKUP.get(norm)} ≠ {expected_field}"
+    )
 
 
 @pytest.mark.parametrize(
     "header",
     [
-        "POD", "POL",
-        "Bay", "Slot", "Cell", "Crane", "QC01", "Sales/Mkt",
+        "POD",
+        "POL",
+        "Bay",
+        "Slot",
+        "Cell",
+        "Crane",
+        "QC01",
+        "Sales/Mkt",
         "Hãng tàu",
-        "Phương thức ra", "Hàng nội/ngoại",
+        "Phương thức ra",
+        "Hàng nội/ngoại",
     ],
 )
 def test_skip_dictionary_classifies_vessel_and_admin(header: str):
@@ -146,6 +160,7 @@ def test_normalize_for_match_strips_whitespace_and_diacritics(raw, expected):
 # Pivot column detection (F20'/F40'/E20'/E40' as compound size+kind)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize(
     "header,expected_fk,expected_size",
     [
@@ -170,7 +185,9 @@ def test_detect_pivot_columns_matches(header, expected_fk, expected_size):
 
 
 def test_detect_pivot_columns_ignores_non_pivot():
-    assert detect_pivot_columns(["Container", "Date", "F20'"]) == []  # only 1 pivot → ignore
+    assert (
+        detect_pivot_columns(["Container", "Date", "F20'"]) == []
+    )  # only 1 pivot → ignore
 
 
 def test_detect_pivot_columns_full_sheet():
@@ -178,7 +195,10 @@ def test_detect_pivot_columns_full_sheet():
     pivots = detect_pivot_columns(headers)
     assert len(pivots) == 4
     assert [(p.freight_kind, p.container_size) for p in pivots] == [
-        ("F", "20"), ("F", "40"), ("E", "20"), ("E", "40"),
+        ("F", "20"),
+        ("F", "40"),
+        ("E", "20"),
+        ("E", "40"),
     ]
     assert [p.column_index for p in pivots] == [2, 3, 4, 5]
 
@@ -205,6 +225,7 @@ async def test_pivot_fallback_via_generic_pipeline(tmp_path):
     container_size/freight_kind columns should still parse via the
     generic pipeline thanks to pivot fallback."""
     import openpyxl
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.append(["Ngày đi", "Số cont", "F20'", "F40'", "E20'", "E40'"])
@@ -216,7 +237,9 @@ async def test_pivot_fallback_via_generic_pipeline(tmp_path):
     wb.save(path)
 
     res = await run_preview(
-        path.read_bytes(), path.name, default_trip_date=date(2026, 6, 1),
+        path.read_bytes(),
+        path.name,
+        default_trip_date=date(2026, 6, 1),
     )
     assert res.stats["accepted_count"] == 4
     assert res.stats["rejected_count"] == 0
@@ -227,6 +250,7 @@ async def test_pivot_fallback_via_generic_pipeline(tmp_path):
 # ---------------------------------------------------------------------------
 # Value parsers
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize(
     "raw,expected",
@@ -242,7 +266,12 @@ def test_parse_container_no_normalizes(raw, expected):
 
 @pytest.mark.parametrize(
     "raw,expected",
-    [("#REF!", "missing_container_no"), ("0", "bad_container_no"), ("", "missing_container_no"), (None, "missing_container_no")],
+    [
+        ("#REF!", "missing_container_no"),
+        ("0", "bad_container_no"),
+        ("", "missing_container_no"),
+        (None, "missing_container_no"),
+    ],
 )
 def test_parse_container_no_rejects(raw, expected):
     with pytest.raises(ValueError, match=expected):
@@ -270,7 +299,16 @@ def test_parse_container_size_handles_format_variants(raw, iso, expected):
 
 @pytest.mark.parametrize(
     "raw,expected",
-    [("F", "F"), ("E", "E"), ("FULL", "F"), ("EMPTY", "E"), ("", "F"), (None, "F"), ("hàng", "F"), ("rỗng", "E")],
+    [
+        ("F", "F"),
+        ("E", "E"),
+        ("FULL", "F"),
+        ("EMPTY", "E"),
+        ("", "F"),
+        (None, "F"),
+        ("hàng", "F"),
+        ("rỗng", "E"),
+    ],
 )
 def test_parse_freight_kind(raw, expected):
     assert parse_freight_kind(raw) == expected
@@ -293,7 +331,7 @@ def test_parse_freight_kind_raises_on_unknown():
     "raw,expected",
     [
         (32000, 32000.0),
-        (15.66, 15660.0),       # tonnes auto-upscaled
+        (15.66, 15660.0),  # tonnes auto-upscaled
         ("32,000", 32000.0),
         ("32.000,5", 32000.5),  # European decimal
         ("1,234.56", 1234.56),
@@ -325,37 +363,86 @@ async def test_import_preview_marks_unknown_freight_kinds():
     import openpyxl
     import tempfile
     from pathlib import Path
-    
+
     with tempfile.TemporaryDirectory() as tmp_dir:
         # Create a workbook with some rows having empty freight_kind
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.append(["Ngày đi", "Số cont", "Kích thước", "F/E", "Điểm đi", "Điểm đến", "Người gửi", "Ghi chú", "Trọng lượng"])
-        ws.append(["2026-06-01", "CAIU6167954", "20", "F", "HaiPhong", "HCMC", "ABC", "", "5000"])
-        ws.append(["2026-06-01", "CAIU6386850", "40", "", "HaiPhong", "HCMC", "DEF", "", "8000"])  # Empty freight_kind
-        ws.append(["2026-06-01", "FCIU6219871", "20", "E", "HaiPhong", "HCMC", "GHI", "", "3000"])
-        
+        ws.append(
+            [
+                "Ngày đi",
+                "Số cont",
+                "Kích thước",
+                "F/E",
+                "Điểm đi",
+                "Điểm đến",
+                "Người gửi",
+                "Ghi chú",
+                "Trọng lượng",
+            ]
+        )
+        ws.append(
+            [
+                "2026-06-01",
+                "CAIU6167954",
+                "20",
+                "F",
+                "HaiPhong",
+                "HCMC",
+                "ABC",
+                "",
+                "5000",
+            ]
+        )
+        ws.append(
+            [
+                "2026-06-01",
+                "CAIU6386850",
+                "40",
+                "",
+                "HaiPhong",
+                "HCMC",
+                "DEF",
+                "",
+                "8000",
+            ]
+        )  # Empty freight_kind
+        ws.append(
+            [
+                "2026-06-01",
+                "FCIU6219871",
+                "20",
+                "E",
+                "HaiPhong",
+                "HCMC",
+                "GHI",
+                "",
+                "3000",
+            ]
+        )
+
         path = Path(tmp_dir) / "test_unknown.xlsx"
         wb.save(path)
-        
+
         res = await run_preview(
             path.read_bytes(),
             path.name,
             default_trip_date=date(2026, 6, 1),
             classifier=NullBatchHeaderClassifier(),
         )
-        
+
         # Check that the row with empty freight_kind is marked as unknown
         assert len(res.accepted) == 3
         assert not res.accepted[0]["values"]["freight_kind_unknown"]
         assert res.accepted[0]["values"]["freight_kind"] == "F"
-        
+
         assert res.accepted[1]["values"]["freight_kind_unknown"]
-        assert res.accepted[1]["values"]["freight_kind"] == "F"  # Defaults to F but marked unknown
-        
+        assert (
+            res.accepted[1]["values"]["freight_kind"] == "F"
+        )  # Defaults to F but marked unknown
+
         assert not res.accepted[2]["values"]["freight_kind_unknown"]
         assert res.accepted[2]["values"]["freight_kind"] == "E"
-
 
 
 @pytest.fixture
@@ -367,10 +454,12 @@ def files_present():
 
 @pytest.mark.asyncio
 async def test_loading_list_picks_total_sheet_and_parses(files_present):
-    res = await run_preview(LOADING.read_bytes(), LOADING.name, default_trip_date=date(2026, 4, 19))
+    res = await run_preview(
+        LOADING.read_bytes(), LOADING.name, default_trip_date=date(2026, 4, 19)
+    )
     assert res.sheet_name == "TOTAL"
-    assert res.header_row_index == 9            # row 10 is the header
-    assert res.stats["accepted_count"] >= 600   # 686 in fixture, allow some rejected
+    assert res.header_row_index == 9  # row 10 is the header
+    assert res.stats["accepted_count"] >= 600  # 686 in fixture, allow some rejected
     # Required mapping present
     fields = {m["canonical_field"] for m in res.column_mappings if m["canonical_field"]}
     assert {"container_no", "container_size", "freight_kind"} <= fields
@@ -378,7 +467,9 @@ async def test_loading_list_picks_total_sheet_and_parses(files_present):
 
 @pytest.mark.asyncio
 async def test_discharging_list_picks_sample_sheet_and_parses(files_present):
-    res = await run_preview(DISCHARGING.read_bytes(), DISCHARGING.name, default_trip_date=date(2026, 4, 6))
+    res = await run_preview(
+        DISCHARGING.read_bytes(), DISCHARGING.name, default_trip_date=date(2026, 4, 6)
+    )
     assert res.sheet_name == "Sample Sheet"
     assert res.header_row_index == 0
     assert res.stats["accepted_count"] >= 500
@@ -388,7 +479,9 @@ async def test_discharging_list_picks_sample_sheet_and_parses(files_present):
 
 @pytest.mark.asyncio
 async def test_glory_shanghai_skips_stowage_picks_sheet1(files_present):
-    res = await run_preview(GLORY.read_bytes(), GLORY.name, default_trip_date=date(2026, 3, 31))
+    res = await run_preview(
+        GLORY.read_bytes(), GLORY.name, default_trip_date=date(2026, 3, 31)
+    )
     # Must NOT pick the side-by-side stowage diagram
     assert res.sheet_name == "Sheet1"
     assert res.stats["accepted_count"] >= 100
@@ -398,7 +491,9 @@ async def test_glory_shanghai_skips_stowage_picks_sheet1(files_present):
 
 @pytest.mark.asyncio
 async def test_bdst_xls_loads_and_parses(files_present):
-    res = await run_preview(BDST.read_bytes(), BDST.name, default_trip_date=date(2026, 4, 11))
+    res = await run_preview(
+        BDST.read_bytes(), BDST.name, default_trip_date=date(2026, 4, 11)
+    )
     assert res.sheet_name == "Sheet1"
     assert res.stats["accepted_count"] >= 400
 
@@ -412,6 +507,7 @@ async def test_bdst_xls_loads_and_parses(files_present):
 # price annotations. We strip those and verify the canonical output is
 # unchanged (same accepted count, same first row container).
 # ---------------------------------------------------------------------------
+
 
 def _strip_columns(content: bytes, sheet_name: str, drop_columns: list[int]) -> bytes:
     """Return a new .xlsx workbook with the given column indices (0-based) removed
@@ -433,7 +529,9 @@ async def test_loading_list_stripped_extra_cols_same_output(files_present):
     res_full = await run_preview(raw, LOADING.name, default_trip_date=date(2026, 4, 19))
     # Accountant scratch columns observed: cols 17 (SALES/MKT) and 18 (formula key)
     stripped = _strip_columns(raw, "TOTAL", [17, 18])
-    res_stripped = await run_preview(stripped, LOADING.name, default_trip_date=date(2026, 4, 19))
+    res_stripped = await run_preview(
+        stripped, LOADING.name, default_trip_date=date(2026, 4, 19)
+    )
     assert res_stripped.sheet_name == res_full.sheet_name
     assert res_stripped.header_row_index == res_full.header_row_index
     assert res_stripped.stats["accepted_count"] == res_full.stats["accepted_count"]
@@ -444,14 +542,19 @@ async def test_glory_picks_correct_sheet_with_stowage_present(files_present):
     """The stowage CONSCIENCE sheet stays in the workbook — the picker must
     still choose Sheet1. (Removing the stowage sheet would be unfair to the
     test; production files won't contain it but the parser must reject it.)"""
-    res = await run_preview(GLORY.read_bytes(), GLORY.name, default_trip_date=date(2026, 3, 31))
+    res = await run_preview(
+        GLORY.read_bytes(), GLORY.name, default_trip_date=date(2026, 3, 31)
+    )
     assert res.sheet_name == "Sheet1"
-    assert "CONSCIENCE 2612N" in [s["sheet_name"] for s in res.sheet_alternatives] + [res.sheet_name]
+    assert "CONSCIENCE 2612N" in [s["sheet_name"] for s in res.sheet_alternatives] + [
+        res.sheet_name
+    ]
 
 
 # ---------------------------------------------------------------------------
 # Value parsers — parse_size_type / build_cont_type
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize(
     "raw,expected_size,expected_type",
@@ -479,8 +582,8 @@ def test_parse_size_type(raw, expected_size, expected_type):
         ("E", "40", "E40"),
         ("F", "20", "F20"),
         ("F", "40", "F40"),
-        ("H", "20", "F20"),    # H → F (hàng)
-        ("R", "40", "E40"),    # R → E (rỗng)
+        ("H", "20", "F20"),  # H → F (hàng)
+        ("R", "40", "E40"),  # R → E (rỗng)
         ("FULL", "20", "F20"),
         ("EMPTY", "40", "E40"),
     ],
@@ -492,6 +595,7 @@ def test_build_cont_type(fe, size, expected):
 # ---------------------------------------------------------------------------
 # Pattern detection
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def glory_sheets():
@@ -554,6 +658,7 @@ def test_detect_invoice(phucloc_sheets):
 # Pattern extractors — unit tests
 # ---------------------------------------------------------------------------
 
+
 def test_extract_bay_plan_glory(glory_sheets):
     accepted, rejected = extract_bay_plan(glory_sheets, "2.GLORY SHANGHAI- 2612N.xlsx")
     assert len(accepted) > 0
@@ -575,7 +680,9 @@ def test_extract_bay_plan_conscience(conscience_sheets):
 
 
 def test_extract_loading_list(haian_sheets):
-    accepted, rejected = extract_loading_list(haian_sheets, "Loading list of HAIAN BETA 062S.xls")
+    accepted, rejected = extract_loading_list(
+        haian_sheets, "Loading list of HAIAN BETA 062S.xls"
+    )
     assert len(accepted) > 0
     for row in accepted:
         assert len(row.container_number) == 11
@@ -586,7 +693,9 @@ def test_extract_loading_list(haian_sheets):
 
 
 def test_extract_invoice(phucloc_sheets):
-    accepted, rejected = extract_invoice(phucloc_sheets, "Phúc Lộc - Shipside T4.26 HAP.xlsx")
+    accepted, rejected = extract_invoice(
+        phucloc_sheets, "Phúc Lộc - Shipside T4.26 HAP.xlsx"
+    )
     assert len(accepted) > 0
     for row in accepted:
         assert len(row.container_number) == 11
@@ -599,16 +708,21 @@ def test_extract_invoice(phucloc_sheets):
 # End-to-end preview via pipeline — pattern-detected files
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def pattern_files_present():
-    missing = [p for p in [GLORY_NEW, CONSCIENCE, HAIAN_BETA, PHUC_LOC] if not p.exists()]
+    missing = [
+        p for p in [GLORY_NEW, CONSCIENCE, HAIAN_BETA, PHUC_LOC] if not p.exists()
+    ]
     if missing:
         pytest.skip(f"sample files missing: {missing}")
 
 
 @pytest.mark.asyncio
 async def test_glory_pattern_preview(pattern_files_present):
-    res = await run_preview(GLORY_NEW.read_bytes(), GLORY_NEW.name, default_trip_date=date(2026, 3, 31))
+    res = await run_preview(
+        GLORY_NEW.read_bytes(), GLORY_NEW.name, default_trip_date=date(2026, 3, 31)
+    )
     assert res.stats["accepted_count"] > 0
     first = res.accepted[0]["values"]
     assert "container_no" in first
@@ -619,13 +733,17 @@ async def test_glory_pattern_preview(pattern_files_present):
 
 @pytest.mark.asyncio
 async def test_conscience_pattern_preview(pattern_files_present):
-    res = await run_preview(CONSCIENCE.read_bytes(), CONSCIENCE.name, default_trip_date=date(2026, 3, 31))
+    res = await run_preview(
+        CONSCIENCE.read_bytes(), CONSCIENCE.name, default_trip_date=date(2026, 3, 31)
+    )
     assert res.stats["accepted_count"] > 0
 
 
 @pytest.mark.asyncio
 async def test_haian_pattern_preview(pattern_files_present):
-    res = await run_preview(HAIAN_BETA.read_bytes(), HAIAN_BETA.name, default_trip_date=date(2026, 4, 19))
+    res = await run_preview(
+        HAIAN_BETA.read_bytes(), HAIAN_BETA.name, default_trip_date=date(2026, 4, 19)
+    )
     assert res.stats["accepted_count"] > 0
     first = res.accepted[0]["values"]
     assert first["pickup_location"] != ""
@@ -633,7 +751,9 @@ async def test_haian_pattern_preview(pattern_files_present):
 
 @pytest.mark.asyncio
 async def test_phucloc_pattern_preview(pattern_files_present):
-    res = await run_preview(PHUC_LOC.read_bytes(), PHUC_LOC.name, default_trip_date=date(2026, 4, 26))
+    res = await run_preview(
+        PHUC_LOC.read_bytes(), PHUC_LOC.name, default_trip_date=date(2026, 4, 26)
+    )
     assert res.stats["accepted_count"] > 0
     first = res.accepted[0]["values"]
     assert first["pickup_location"] != ""
@@ -643,6 +763,7 @@ async def test_phucloc_pattern_preview(pattern_files_present):
 # ---------------------------------------------------------------------------
 # Settlement List (BẢNG KÊ QUYẾT TOÁN — Vietnamese reconciliation)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def sample_io_sheets():
@@ -660,7 +781,9 @@ def test_detect_settlement_list(sample_io_sheets):
 
 
 def test_extract_settlement_list(sample_io_sheets):
-    accepted, rejected = extract_settlement_list(sample_io_sheets, "sample-input-output.xlsx")
+    accepted, rejected = extract_settlement_list(
+        sample_io_sheets, "sample-input-output.xlsx"
+    )
     assert len(accepted) > 0
     for row in accepted:
         assert len(row.container_number) == 11
@@ -689,7 +812,9 @@ def test_settlement_list_locations(sample_io_sheets):
 async def test_settlement_list_e2e_preview():
     if not SAMPLE_IO.exists():
         pytest.skip("sample-input-output.xlsx missing")
-    res = await run_preview(SAMPLE_IO.read_bytes(), SAMPLE_IO.name, default_trip_date=date(2026, 4, 1))
+    res = await run_preview(
+        SAMPLE_IO.read_bytes(), SAMPLE_IO.name, default_trip_date=date(2026, 4, 1)
+    )
     assert res.stats["accepted_count"] > 0
     first = res.accepted[0]["values"]
     assert "container_no" in first
@@ -704,6 +829,7 @@ async def test_settlement_list_e2e_preview():
 # ---------------------------------------------------------------------------
 # Ultima02.06 — real-world file with SỐ CONTAINER (space) and F20'/F40'/E20'/E40' headers
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def ultima_sheets():
@@ -729,7 +855,9 @@ def test_extract_settlement_list_ultima(ultima_sheets):
 
 @pytest.mark.asyncio
 async def test_ultima_e2e_preview(ultima_sheets):
-    res = await run_preview(ULTIMA.read_bytes(), ULTIMA.name, default_trip_date=date(2026, 6, 2))
+    res = await run_preview(
+        ULTIMA.read_bytes(), ULTIMA.name, default_trip_date=date(2026, 6, 2)
+    )
     assert res.stats["accepted_count"] > 0
     assert res.stats["rejected_count"] == 0
     for w in res.warnings:
@@ -746,6 +874,7 @@ async def test_ultima_e2e_preview(ultima_sheets):
 # ---------------------------------------------------------------------------
 # New chu hang formats — Stacking Plan + Dual Panel
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def glory_stacking_sheets():
@@ -777,7 +906,8 @@ def test_detect_dual_panel_consero(consero_dual_sheets):
 
 def test_extract_stacking_plan_glory(glory_stacking_sheets):
     accepted, rejected = extract_stacking_plan(
-        glory_stacking_sheets, "3.GLORY SHANGHAI 2621N.xlsx",
+        glory_stacking_sheets,
+        "3.GLORY SHANGHAI 2621N.xlsx",
     )
     assert len(accepted) > 0
     for row in accepted:
@@ -788,7 +918,8 @@ def test_extract_stacking_plan_glory(glory_stacking_sheets):
 
 def test_extract_dual_panel_consero(consero_dual_sheets):
     accepted, rejected = extract_dual_panel(
-        consero_dual_sheets, "4.CONSERO 2621N.xlsx",
+        consero_dual_sheets,
+        "4.CONSERO 2621N.xlsx",
     )
     assert len(accepted) > 0
     for row in accepted:
@@ -799,7 +930,8 @@ def test_extract_dual_panel_consero(consero_dual_sheets):
 
 def test_stacking_plan_has_vessel_from_filename(glory_stacking_sheets):
     accepted, _ = extract_stacking_plan(
-        glory_stacking_sheets, "3.GLORY SHANGHAI 2621N.xlsx",
+        glory_stacking_sheets,
+        "3.GLORY SHANGHAI 2621N.xlsx",
     )
     assert len(accepted) > 0
     assert "GLORY SHANGHAI" in accepted[0].vessel_name
@@ -807,7 +939,8 @@ def test_stacking_plan_has_vessel_from_filename(glory_stacking_sheets):
 
 def test_dual_panel_has_vessel_from_filename(consero_dual_sheets):
     accepted, _ = extract_dual_panel(
-        consero_dual_sheets, "4.CONSERO 2621N.xlsx",
+        consero_dual_sheets,
+        "4.CONSERO 2621N.xlsx",
     )
     assert len(accepted) > 0
     assert "CONSERO" in accepted[0].vessel_name
@@ -816,7 +949,8 @@ def test_dual_panel_has_vessel_from_filename(consero_dual_sheets):
 def test_dual_panel_extracts_both_panels(consero_dual_sheets):
     """Dual panel should extract containers from BOTH left and right panels."""
     accepted, _ = extract_dual_panel(
-        consero_dual_sheets, "4.CONSERO 2621N.xlsx",
+        consero_dual_sheets,
+        "4.CONSERO 2621N.xlsx",
     )
     cont_types = {r.cont_type for r in accepted}
     # Should have both 20ft and 40ft containers (from different panels)
@@ -829,7 +963,8 @@ async def test_glory_stacking_e2e_preview():
     if not GLORY_STACKING.exists():
         pytest.skip("3.GLORY SHANGHAI 2621N.xlsx missing")
     res = await run_preview(
-        GLORY_STACKING.read_bytes(), GLORY_STACKING.name,
+        GLORY_STACKING.read_bytes(),
+        GLORY_STACKING.name,
         default_trip_date=date(2026, 6, 1),
     )
     assert res.stats["accepted_count"] > 0
@@ -844,7 +979,8 @@ async def test_consero_dual_e2e_preview():
     if not CONSERO_DUAL.exists():
         pytest.skip("4.CONSERO 2621N.xlsx missing")
     res = await run_preview(
-        CONSERO_DUAL.read_bytes(), CONSERO_DUAL.name,
+        CONSERO_DUAL.read_bytes(),
+        CONSERO_DUAL.name,
         default_trip_date=date(2026, 6, 1),
     )
     assert res.stats["accepted_count"] > 0
@@ -858,6 +994,7 @@ async def test_consero_dual_e2e_preview():
 # Chinese synonyms
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize(
     "header,expected_field",
     [
@@ -868,7 +1005,9 @@ async def test_consero_dual_e2e_preview():
 )
 def test_chinese_synonyms(header: str, expected_field: str):
     norm = normalize_header_text(header)
-    assert EXACT_LOOKUP.get(norm) == expected_field, f"{header!r} → {EXACT_LOOKUP.get(norm)} ≠ {expected_field}"
+    assert EXACT_LOOKUP.get(norm) == expected_field, (
+        f"{header!r} → {EXACT_LOOKUP.get(norm)} ≠ {expected_field}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -876,8 +1015,10 @@ def test_chinese_synonyms(header: str, expected_field: str):
 # key off for the suite. We only check the factory wiring — no network.
 # ---------------------------------------------------------------------------
 
+
 def test_classifier_is_null_without_api_key(monkeypatch):
     from app.config import settings
+
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
     clf = get_batch_classifier()
     assert clf._inner.__class__.__name__ == "NullBatchHeaderClassifier"
@@ -885,6 +1026,7 @@ def test_classifier_is_null_without_api_key(monkeypatch):
 
 def test_classifier_is_gemini_when_api_key_set(monkeypatch):
     from app.config import settings
+
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "fake-key-for-wiring-test")
     clf = get_batch_classifier()
     assert clf._inner.__class__.__name__ == "GeminiBatchClassifier"
@@ -893,6 +1035,7 @@ def test_classifier_is_gemini_when_api_key_set(monkeypatch):
 # ---------------------------------------------------------------------------
 # Joined container-number cells: "HACU2215738/HACU2242754" → 2 trips.
 # ---------------------------------------------------------------------------
+
 
 def test_split_container_cell_joined_slash():
     assert _split_container_cell("HACU2215738/HACU2242754") == [

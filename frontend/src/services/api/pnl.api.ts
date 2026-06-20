@@ -6,7 +6,7 @@
  */
 
 import { api, getAccessToken } from './client'
-import { safeRequest, toCamel } from '@/lib/safe-request'
+import { safeRequest } from '@/lib/safe-request'
 import type { ApiResponse } from '@/data/domain'
 
 export interface ClientRevenueBreakdown {
@@ -141,11 +141,56 @@ export interface DirectorDashboard {
   vendorPnl: VehiclePnLGroup
 }
 
+export interface DirectorDashboardDrilldownVehicle {
+  vehiclePlate: string
+  tripCount: number
+  matched: number
+  pending: number
+  revenue: number
+  cost: number
+  profit: number
+}
+
+export interface DirectorDashboardDrilldownClient {
+  clientId: number
+  clientName: string
+  tripCount: number
+  matched: number
+  pending: number
+  revenue: number
+  cost: number
+  profit: number
+  vehicles: DirectorDashboardDrilldownVehicle[]
+}
+
+export interface DirectorDashboardDrilldown {
+  dateFrom: string
+  dateTo: string
+  totals: {
+    total: number
+    matched: number
+    pending: number
+    revenue: number
+    cost: number
+    profit: number
+  }
+  clients: DirectorDashboardDrilldownClient[]
+}
+
 export function getDirectorDashboard(
   dateFrom: string,
   dateTo: string,
 ): Promise<ApiResponse<DirectorDashboard>> {
   return safeRequest(() => api.get('/dashboard/director', {
+    params: { date_from: dateFrom, date_to: dateTo },
+  }))
+}
+
+export function getDirectorDashboardDrilldown(
+  dateFrom: string,
+  dateTo: string,
+): Promise<ApiResponse<DirectorDashboardDrilldown>> {
+  return safeRequest(() => api.get('/dashboard/director/drilldown', {
     params: { date_from: dateFrom, date_to: dateTo },
   }))
 }

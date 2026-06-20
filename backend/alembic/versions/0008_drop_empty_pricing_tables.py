@@ -9,18 +9,19 @@ data model that was superseded by `route_pricings`. They contained 0 rows
 in production and are no longer used by any active code path.
 
 """
+
 from alembic import op
 
 
-revision = '0008_drop_pricing_tables'
-down_revision = '9c81f08d14c0'
+revision = "0008_drop_pricing_tables"
+down_revision = "9c81f08d14c0"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
-    op.drop_table('pricing_lines')
-    op.drop_table('pricings')
+    op.drop_table("pricing_lines")
+    op.drop_table("pricings")
 
 
 def downgrade() -> None:

@@ -70,7 +70,9 @@ def _batch_cache_key(headers: list[tuple[int, str, list[str]]]) -> str:
 def _evict_expired() -> None:
     """Remove cache entries older than TTL."""
     now = time.monotonic()
-    expired = [k for k, (_, ts) in _BATCH_LLM_CACHE.items() if now - ts > _CACHE_TTL_SECONDS]
+    expired = [
+        k for k, (_, ts) in _BATCH_LLM_CACHE.items() if now - ts > _CACHE_TTL_SECONDS
+    ]
     for k in expired:
         del _BATCH_LLM_CACHE[k]
 
@@ -104,7 +106,10 @@ class CachedBatchHeaderClassifier:
 # factory falls back to NullBatchHeaderClassifier when no key is present.
 # ---------------------------------------------------------------------------
 
-def _build_batch_prompt(headers: list[tuple[int, str, list[str]]], candidates: list[str]) -> str:
+
+def _build_batch_prompt(
+    headers: list[tuple[int, str, list[str]]], candidates: list[str]
+) -> str:
     cand_list = ", ".join(candidates)
 
     # Format the columns to classify
@@ -135,6 +140,7 @@ class GeminiBatchClassifier:
 
     def __init__(self) -> None:
         from app.config import GEMINI_MODELS, settings
+
         self._api_key = getattr(settings, "GEMINI_API_KEY", None)
         self._enabled = bool(self._api_key)  # always on when a key is configured
         self._models = GEMINI_MODELS
@@ -160,13 +166,13 @@ class GeminiBatchClassifier:
                         "type": "OBJECT",
                         "properties": {
                             "index": {"type": "INTEGER"},
-                            "field": {"type": "STRING"}
+                            "field": {"type": "STRING"},
                         },
-                        "required": ["index", "field"]
-                    }
+                        "required": ["index", "field"],
+                    },
                 }
             },
-            "required": ["columns"]
+            "required": ["columns"],
         }
 
         for model_name in self._models:
@@ -191,13 +197,15 @@ class GeminiBatchClassifier:
 
                 text = (
                     data.get("candidates", [{}])[0]
-                        .get("content", {})
-                        .get("parts", [{}])[0]
-                        .get("text", "")
-                        .strip()
+                    .get("content", {})
+                    .get("parts", [{}])[0]
+                    .get("text", "")
+                    .strip()
                 )
 
-                from app.contexts.operations.infrastructure.import_pipeline.canonical import SKIP_FIELD
+                from app.contexts.operations.infrastructure.import_pipeline.canonical import (
+                    SKIP_FIELD,
+                )
 
                 parsed = json.loads(text)
                 result = {}
@@ -228,6 +236,7 @@ def get_batch_classifier() -> BatchHeaderClassifier:
     """
     try:
         from app.config import settings
+
         if getattr(settings, "GEMINI_API_KEY", None):
             return CachedBatchHeaderClassifier(GeminiBatchClassifier())
     except Exception:

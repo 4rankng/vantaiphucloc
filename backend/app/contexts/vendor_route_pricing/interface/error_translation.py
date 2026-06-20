@@ -1,4 +1,5 @@
 """Translate Vendor Route Pricing domain exceptions into HTTPException."""
+
 from __future__ import annotations
 
 from fastapi import HTTPException

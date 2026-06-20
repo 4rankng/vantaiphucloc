@@ -24,7 +24,9 @@ async def parse_customer_response_excel(file_content: bytes) -> list[dict]:
     # Find header row — look for known headers
     header_row_idx = None
     headers = []
-    for idx, row in enumerate(sheet.iter_rows(min_row=1, max_row=10, values_only=True), start=1):
+    for idx, row in enumerate(
+        sheet.iter_rows(min_row=1, max_row=10, values_only=True), start=1
+    ):
         row_vals = [str(v or "").strip() for v in row]
         if "Số cont" in row_vals or "Xác nhận KH" in row_vals:
             header_row_idx = idx
@@ -33,7 +35,9 @@ async def parse_customer_response_excel(file_content: bytes) -> list[dict]:
 
     if header_row_idx is None:
         workbook.close()
-        raise ValueError("Không tìm thấy header. File phải có cột 'Số cont' hoặc 'Xác nhận KH'.")
+        raise ValueError(
+            "Không tìm thấy header. File phải có cột 'Số cont' hoặc 'Xác nhận KH'."
+        )
 
     # Map header names to column indices
     col_map: dict[str, int] = {}
@@ -43,9 +47,14 @@ async def parse_customer_response_excel(file_content: bytes) -> list[dict]:
 
     # Vietnamese status normalization
     _VI_STATUS = {
-        "OK": "MATCHED", "KHỚP": "MATCHED", "KHOP": "MATCHED",
-        "SỬA": "MATCHED", "SỬA_SỐ_TIỀN": "MATCHED",
-        "TỪ CHỐI": "REJECTED", "TỪ_CHỐI": "REJECTED", "TỪCHỐI": "REJECTED",
+        "OK": "MATCHED",
+        "KHỚP": "MATCHED",
+        "KHOP": "MATCHED",
+        "SỬA": "MATCHED",
+        "SỬA_SỐ_TIỀN": "MATCHED",
+        "TỪ CHỐI": "REJECTED",
+        "TỪ_CHỐI": "REJECTED",
+        "TỪCHỐI": "REJECTED",
         "KHÔNG": "REJECTED",
     }
 
@@ -100,13 +109,15 @@ async def parse_customer_response_excel(file_content: bytes) -> list[dict]:
             except ValueError:
                 pass
 
-        results.append({
-            "container_number": container,
-            "trip_date": trip_date,
-            "customer_status": customer_status,
-            "customer_note": note,
-            "customer_amount": customer_amount,
-        })
+        results.append(
+            {
+                "container_number": container,
+                "trip_date": trip_date,
+                "customer_status": customer_status,
+                "customer_note": note,
+                "customer_amount": customer_amount,
+            }
+        )
 
     workbook.close()
     return results

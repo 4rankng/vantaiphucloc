@@ -58,13 +58,14 @@ async def load_driver_summaries(
     res = await db.execute(sa_select(User).where(User.id.in_(ids)))
     users = {u.id: u for u in res.scalars().all()}
     # Resolve active PRIMARY vehicles via VehicleDriver (source of truth).
-    vd_rows = (await db.execute(
-        sa_select(VehicleDriver.driver_id, VehicleDriver.vehicle_id)
-        .where(
-            VehicleDriver.driver_id.in_(ids),
-            VehicleDriver.is_active == True,  # noqa: E712
+    vd_rows = (
+        await db.execute(
+            sa_select(VehicleDriver.driver_id, VehicleDriver.vehicle_id).where(
+                VehicleDriver.driver_id.in_(ids),
+                VehicleDriver.is_active == True,  # noqa: E712
+            )
         )
-    )).all()
+    ).all()
     vehicle_ids = {vid for _, vid in vd_rows}
     vehicles = {}
     if vehicle_ids:
@@ -79,7 +80,9 @@ async def load_driver_summaries(
             id=uid,
             name=(u.full_name or u.username),
             phone=u.phone,
-            vehicle=VehicleSummaryOut(id=v.id, plate=v.plate) if (v := vehicle_by_driver.get(uid)) else None,
+            vehicle=VehicleSummaryOut(id=v.id, plate=v.plate)
+            if (v := vehicle_by_driver.get(uid))
+            else None,
         )
         for uid, u in users.items()
     }
@@ -110,8 +113,7 @@ async def load_vehicle_summaries(
         return {}
     res = await db.execute(sa_select(Vehicle).where(Vehicle.id.in_(ids)))
     return {
-        v.id: VehicleSummaryOut(id=v.id, plate=v.plate)
-        for v in res.scalars().all()
+        v.id: VehicleSummaryOut(id=v.id, plate=v.plate) for v in res.scalars().all()
     }
 
 
@@ -129,13 +131,15 @@ def get_driver_summary(
     if driver_id is None:
         return None
     return summaries.get(
-        driver_id, DriverSummaryOut(id=driver_id, name="(không rõ)", phone=None, vehicle=None)
+        driver_id,
+        DriverSummaryOut(id=driver_id, name="(không rõ)", phone=None, vehicle=None),
     )
 
 
 # ── Deprecated aliases ──
 
 # ── Vendor summaries ──
+
 
 async def load_vendor_summaries(
     db: AsyncSession, vendor_ids: set[int | None] | list[int | None]
@@ -144,10 +148,7 @@ async def load_vendor_summaries(
     if not ids:
         return {}
     res = await db.execute(sa_select(Vendor).where(Vendor.id.in_(ids)))
-    return {
-        v.id: VendorSummaryOut(id=v.id, name=v.name)
-        for v in res.scalars().all()
-    }
+    return {v.id: VendorSummaryOut(id=v.id, name=v.name) for v in res.scalars().all()}
 
 
 def get_vendor_summary(

@@ -5,9 +5,11 @@ from typing import Optional
 
 from fastapi import Request
 
-_audit_user_id: ContextVar[Optional[int]] = ContextVar('_audit_user_id', default=None)
-_audit_request: ContextVar[Optional[Request]] = ContextVar('_audit_request', default=None)
-_audit_reason: ContextVar[Optional[str]] = ContextVar('_audit_reason', default=None)
+_audit_user_id: ContextVar[Optional[int]] = ContextVar("_audit_user_id", default=None)
+_audit_request: ContextVar[Optional[Request]] = ContextVar(
+    "_audit_request", default=None
+)
+_audit_reason: ContextVar[Optional[str]] = ContextVar("_audit_reason", default=None)
 
 
 def set_audit_context(user_id: int, request: Optional[Request] = None) -> None:

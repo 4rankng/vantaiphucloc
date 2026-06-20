@@ -19,6 +19,7 @@ from app.models.domain import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _col(model, name):
     return model.__table__.columns[name]
 
@@ -27,8 +28,8 @@ def _col(model, name):
 # 1. Monetary fields are Integer columns
 # ---------------------------------------------------------------------------
 
-class TestMonetaryFieldsAreInteger:
 
+class TestMonetaryFieldsAreInteger:
     @pytest.mark.parametrize("field", ["revenue", "driver_salary"])
     def test_delivered_trip_monetary_fields(self, field):
         col = _col(DeliveredTrip, field)
@@ -39,8 +40,8 @@ class TestMonetaryFieldsAreInteger:
 # 2. Non-nullable constraints
 # ---------------------------------------------------------------------------
 
-class TestColumnNullability:
 
+class TestColumnNullability:
     def test_delivered_trip_revenue_not_nullable(self):
         assert _col(DeliveredTrip, "revenue").nullable is False
 
@@ -52,8 +53,8 @@ class TestColumnNullability:
 # 3. Container fields are flat on trip tables
 # ---------------------------------------------------------------------------
 
-class TestFlatContainerFields:
 
+class TestFlatContainerFields:
     def test_booked_trip_has_cont_number(self):
         assert "cont_number" in BookedTrip.__table__.columns
 

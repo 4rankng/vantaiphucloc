@@ -25,7 +25,9 @@ from app.contexts.operations.infrastructure.import_pipeline.workbook import Shee
 
 
 CONTAINER_NO_RE = re.compile(r"^[A-Z]{4}\d{7}$")
-SIZE_TOKEN_RE = re.compile(r"\b(20|22|40|42|45)(?:DC|GP|HC|RF|RE|G[01]|R[01]|T0|U0)?$", re.IGNORECASE)
+SIZE_TOKEN_RE = re.compile(
+    r"\b(20|22|40|42|45)(?:DC|GP|HC|RF|RE|G[01]|R[01]|T0|U0)?$", re.IGNORECASE
+)
 ERROR_RE = re.compile(r"^#(REF|VALUE|NAME|N/A|DIV/0|NULL)!?")
 
 
@@ -49,8 +51,15 @@ def score_sheets(sheets: list[SheetView]) -> list[SheetScore]:
 
 def _score_one(sheet: SheetView) -> SheetScore:
     if sheet.state == "veryHidden":
-        return SheetScore(sheet, score=-1, container_hits=0, size_hits=0,
-                          header_synonym_hits=0, error_count=0, tabular_rows=0)
+        return SheetScore(
+            sheet,
+            score=-1,
+            container_hits=0,
+            size_hits=0,
+            header_synonym_hits=0,
+            error_count=0,
+            tabular_rows=0,
+        )
 
     # `container_hits` counts containers that appear ALONE in a row —
     # the canonical "tabular list of containers" pattern. Rows with ≥ 2
@@ -92,7 +101,12 @@ def _score_one(sheet: SheetView) -> SheetScore:
                     continue
                 if r_idx < 25 and len(s) <= 60:
                     norm = normalize_header_text(s)
-                    if norm in EXACT_LOOKUP or norm in SKIP_EXACT or synonym_substring_match(norm) or is_skip_header(norm):
+                    if (
+                        norm in EXACT_LOOKUP
+                        or norm in SKIP_EXACT
+                        or synonym_substring_match(norm)
+                        or is_skip_header(norm)
+                    ):
                         row_synonym_hits += 1
                         # Track repeated headers to detect "side-by-side
                         # 3-column-block" layouts (e.g., Glory Shanghai's
@@ -139,8 +153,11 @@ def _score_one(sheet: SheetView) -> SheetScore:
     )
 
     return SheetScore(
-        sheet=sheet, score=score,
-        container_hits=container_hits, size_hits=size_hits,
+        sheet=sheet,
+        score=score,
+        container_hits=container_hits,
+        size_hits=size_hits,
         header_synonym_hits=header_synonym_hits_max,
-        error_count=error_count, tabular_rows=tabular_rows,
+        error_count=error_count,
+        tabular_rows=tabular_rows,
     )

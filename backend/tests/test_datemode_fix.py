@@ -1,9 +1,12 @@
 import xlrd
-from app.contexts.operations.infrastructure.import_pipeline.workbook import _xls_cell_value
+from app.contexts.operations.infrastructure.import_pipeline.workbook import (
+    _xls_cell_value,
+)
 
 
 def test_xls_1904_mode_date_normalized_to_1900():
     """A 1904-mode xls cell with serial 0 should normalize to 1900-01-01, not 1904-01-01."""
+
     class MockCell:
         ctype = xlrd.XL_CELL_DATE
         value = 0  # serial 0 in 1904 mode = 1904-01-01
@@ -21,6 +24,7 @@ def test_xls_1904_mode_date_normalized_to_1900():
 
 def test_xls_1900_mode_date_unchanged():
     """A 1900-mode xls cell should pass through unchanged."""
+
     class MockCell:
         ctype = xlrd.XL_CELL_DATE
         value = 0  # serial 0 in 1900 mode = 1899-12-30 (with Excel's leap-year bug, 1900-01-00)

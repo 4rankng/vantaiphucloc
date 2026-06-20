@@ -4,6 +4,7 @@ Uses Gemini to propose column -> canonical_field mappings when heuristic
 methods fail.  Caches results by header signature (sha256 of normalised
 headers).  Returns empty dict on any failure — never raises.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -46,7 +47,9 @@ def _build_prompt(
     field_descriptions: dict[str, str],
 ) -> str:
     """Build the Gemini prompt with headers + samples + canonical schema."""
-    field_list = "\n".join(f"- {name}: {desc}" for name, desc in field_descriptions.items())
+    field_list = "\n".join(
+        f"- {name}: {desc}" for name, desc in field_descriptions.items()
+    )
     header_line = " | ".join(f"[{i}] {h}" for i, h in enumerate(headers))
     sample_lines = "\n".join(
         " | ".join(str(cell) for cell in row) for row in sample_rows[:5]
@@ -158,7 +161,9 @@ async def infer_schema_with_ai(
     Returns: {col_index: InferredColumn(canonical_field, confidence)}
     Returns empty dict on failure (never raises).
     """
-    from app.contexts.operations.infrastructure.import_pipeline.canonical import CANONICAL_FIELDS
+    from app.contexts.operations.infrastructure.import_pipeline.canonical import (
+        CANONICAL_FIELDS,
+    )
 
     # Build {field_name: description} from CanonicalField tuples
     field_descriptions = {f.name: f.description or f.label for f in CANONICAL_FIELDS}
@@ -167,7 +172,9 @@ async def infer_schema_with_ai(
 
     def _to_inferred(raw: dict) -> dict[int, InferredColumn]:
         return {
-            int(idx): InferredColumn(canonical_field=d["field"], confidence=d.get("confidence", 0.0))
+            int(idx): InferredColumn(
+                canonical_field=d["field"], confidence=d.get("confidence", 0.0)
+            )
             for idx, d in raw.items()
             if d.get("field")
         }

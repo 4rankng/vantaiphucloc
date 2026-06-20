@@ -29,6 +29,7 @@ ULTIMA = DOCS / "templates" / "ultima02.06.xlsx"
 # import_preview_job_id — deterministic hash
 # ---------------------------------------------------------------------------
 
+
 def test_import_preview_job_id_is_deterministic():
     a = import_preview_job_id("abc123", "2026-06-02")
     b = import_preview_job_id("abc123", "2026-06-02")
@@ -54,6 +55,7 @@ def test_import_preview_job_id_has_expected_length():
 # ---------------------------------------------------------------------------
 # import_excel_preview_task — runs the full preview pipeline
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_import_excel_preview_task_returns_preview_result(monkeypatch):
@@ -103,6 +105,7 @@ async def test_import_excel_preview_task_returns_preview_result(monkeypatch):
 # Router integration: enqueue + poll
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_preview_async_endpoint_enqueues_and_returns_job_id(monkeypatch):
     """POST /imports/customer-excel/preview-async enqueues and returns job_id."""
@@ -128,7 +131,13 @@ async def test_preview_async_endpoint_enqueues_and_returns_job_id(monkeypatch):
             with open(ULTIMA, "rb") as f:
                 resp = await client.post(
                     "/imports/customer-excel/preview-async",
-                    files={"file": (ULTIMA.name, f, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+                    files={
+                        "file": (
+                            ULTIMA.name,
+                            f,
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        )
+                    },
                     data={"default_trip_date": "2026-06-02"},
                 )
         except Exception as exc:

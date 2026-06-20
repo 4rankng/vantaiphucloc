@@ -16,13 +16,14 @@ from dataclasses import dataclass
 
 # Default thresholds per criterion
 DEFAULT_CONTAINER_THRESHOLD = 1  # Container check digits — be strict
-DEFAULT_NAME_THRESHOLD = 2       # Names can have more variation
-DEFAULT_ROUTE_THRESHOLD = 2      # Route names can have more variation
+DEFAULT_NAME_THRESHOLD = 2  # Names can have more variation
+DEFAULT_ROUTE_THRESHOLD = 2  # Route names can have more variation
 
 
 @dataclass
 class FuzzyThresholds:
     """Fuzzy matching thresholds for a specific customer or defaults."""
+
     container: int = DEFAULT_CONTAINER_THRESHOLD
     name: int = DEFAULT_NAME_THRESHOLD
     route: int = DEFAULT_ROUTE_THRESHOLD

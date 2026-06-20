@@ -32,8 +32,6 @@ from app.contexts.operations.domain.value_objects import (
 )
 
 
-
-
 # ── Reads ────────────────────────────────────────────────────────
 
 
@@ -109,9 +107,7 @@ class UpdateBookedTrip:
         self.repo = repo
         self.session = session
 
-    async def __call__(
-        self, tid: int, data: BookedTripUpdateInput
-    ) -> BookedTrip:
+    async def __call__(self, tid: int, data: BookedTripUpdateInput) -> BookedTrip:
         t = await self.repo.get_by_id(BookedTripId(tid))
         if t is None:
             raise NotFound("BookedTrip", tid)
@@ -215,7 +211,9 @@ class CreateBookedTripFromImport:
         work_type_values = {r.work_type for r in data.rows if r.work_type}
         for wt_name in work_type_values:
             await wt_resolver.resolve_or_create(
-                wt_name, source="import", user_id=data.user_id,
+                wt_name,
+                source="import",
+                user_id=data.user_id,
             )
 
         updated = 0
@@ -238,7 +236,9 @@ class CreateBookedTripFromImport:
 
                 pickup = r.pickup_location or ""
                 dropoff = r.dropoff_location or ""
-                cont_type = r.cont_type or f"{r.freight_kind}{r.container_size}" or "E20"
+                cont_type = (
+                    r.cont_type or f"{r.freight_kind}{r.container_size}" or "E20"
+                )
                 work_type_val = r.work_type if r.work_type else "CHUYỂN BÃI"
 
                 pickup_loc = None
@@ -246,7 +246,8 @@ class CreateBookedTripFromImport:
                 review_needed = False
                 if pickup:
                     p = await resolver.resolve_or_create(
-                        pickup, source=ResolverSource.IMPORT,
+                        pickup,
+                        source=ResolverSource.IMPORT,
                         user_id=data.user_id,
                     )
                     pickup_loc = p.location
@@ -254,7 +255,8 @@ class CreateBookedTripFromImport:
                         review_needed = True
                 if dropoff:
                     d = await resolver.resolve_or_create(
-                        dropoff, source=ResolverSource.IMPORT,
+                        dropoff,
+                        source=ResolverSource.IMPORT,
                         user_id=data.user_id,
                     )
                     dropoff_loc = d.location

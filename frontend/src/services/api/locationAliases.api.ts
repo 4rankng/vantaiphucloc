@@ -1,5 +1,5 @@
 import { api } from './client'
-import { safeRequest, toCamel, toSnake } from '@/lib/safe-request'
+import { safeRequest, toSnake } from '@/lib/safe-request'
 import type { LocationAlias, MergeLocationsResponse, ApiResponse } from '@/data/domain'
 
 export function listAliases(

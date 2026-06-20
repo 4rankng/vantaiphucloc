@@ -1,4 +1,5 @@
 """Domain entity for the Route Pricing context."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -13,8 +14,6 @@ from app.contexts.route_pricing.domain.value_objects import (
     WorkType,
     validate_work_type,
 )
-
-
 
 
 @dataclass

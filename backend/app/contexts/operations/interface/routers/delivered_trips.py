@@ -425,9 +425,7 @@ async def list_duplicate_containers(
 async def check_delivered_trip_duplicate(
     body: DeliveredTripDuplicateCheck,
     current_user: User = Depends(require_permission("create", "DeliveredTrip")),
-    use_case: CheckDeliveredTripDuplicate = Depends(
-        get_check_delivered_trip_duplicate
-    ),
+    use_case: CheckDeliveredTripDuplicate = Depends(get_check_delivered_trip_duplicate),
 ):
     """Warn a driver if the trip they are about to submit likely already exists.
 

@@ -17,9 +17,7 @@ from app.models.domain import (
 
 
 async def fetch_client(session: AsyncSession, client_id: int) -> Client | None:
-    res = await session.execute(
-        select(Client).where(Client.id == client_id)
-    )
+    res = await session.execute(select(Client).where(Client.id == client_id))
     return res.scalar_one_or_none()
 
 
@@ -67,15 +65,21 @@ async def find_near_duplicate_trip(
     if not norm:
         return None
 
-    candidates = (await session.execute(
-        select(BookedTripORM).where(
-            and_(
-                BookedTripORM.client_id == client_id,
-                BookedTripORM.trip_date == trip_date,
-                BookedTripORM.cont_number.isnot(None),
+    candidates = (
+        (
+            await session.execute(
+                select(BookedTripORM).where(
+                    and_(
+                        BookedTripORM.client_id == client_id,
+                        BookedTripORM.trip_date == trip_date,
+                        BookedTripORM.cont_number.isnot(None),
+                    )
+                )
             )
         )
-    )).scalars().all()
+        .scalars()
+        .all()
+    )
 
     for trip in candidates:
         cn = (trip.cont_number or "").upper().strip()

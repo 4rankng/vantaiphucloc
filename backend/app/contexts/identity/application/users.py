@@ -133,7 +133,9 @@ class DeleteUser:
         if actor_role is UserRole.DIRECTOR and user.is_superadmin:
             raise PermissionDenied("Directors cannot delete superadmin users")
         if user.is_driver:
-            blocked = await self._users.has_active_unmatched_delivered_trips(UserId(user_id))
+            blocked = await self._users.has_active_unmatched_delivered_trips(
+                UserId(user_id)
+            )
             if blocked:
                 raise PermissionDenied(
                     "Cannot deactivate driver with active (unmatched) work orders"
@@ -186,9 +188,7 @@ class ListUsers:
     def __init__(self, users: UserRepository) -> None:
         self._users = users
 
-    async def execute(
-        self, filter: UserListFilter
-    ) -> tuple[Sequence[User], int]:
+    async def execute(self, filter: UserListFilter) -> tuple[Sequence[User], int]:
         offset = (filter.page - 1) * filter.page_size
         return await self._users.list(
             offset=offset,

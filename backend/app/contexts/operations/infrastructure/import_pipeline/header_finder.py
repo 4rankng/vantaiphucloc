@@ -24,14 +24,16 @@ HEADER_SCAN_DEPTH = 25
 
 @dataclass
 class HeaderHit:
-    row_index: int          # 0-based row index of the header
+    row_index: int  # 0-based row index of the header
     score: float
     synonym_hits: int
     non_empty_cells: int
-    data_richness: float    # avg non-empty cells in next 5 rows
+    data_richness: float  # avg non-empty cells in next 5 rows
 
 
-def find_header_row(sheet: SheetView, scan_depth: int = HEADER_SCAN_DEPTH) -> HeaderHit | None:
+def find_header_row(
+    sheet: SheetView, scan_depth: int = HEADER_SCAN_DEPTH
+) -> HeaderHit | None:
     if not sheet.rows:
         return None
     best: HeaderHit | None = None
@@ -54,7 +56,11 @@ def find_header_row(sheet: SheetView, scan_depth: int = HEADER_SCAN_DEPTH) -> He
             norm = normalize_header_text(s)
             if not norm:
                 continue
-            if norm in EXACT_LOOKUP or is_skip_header(norm) or synonym_substring_match(norm):
+            if (
+                norm in EXACT_LOOKUP
+                or is_skip_header(norm)
+                or synonym_substring_match(norm)
+            ):
                 synonym_hits += 1
 
         # Look ahead 5 rows for data richness
@@ -77,10 +83,7 @@ def find_header_row(sheet: SheetView, scan_depth: int = HEADER_SCAN_DEPTH) -> He
         type_diversity = 1 if len(types_seen) >= 2 else 0
 
         score = (
-            synonym_hits * 4
-            + non_empty * 0.6
-            + below_avg * 0.5
-            + type_diversity * 2
+            synonym_hits * 4 + non_empty * 0.6 + below_avg * 0.5 + type_diversity * 2
         )
         # Hard requirement: at least 2 synonym hits — pure title rows
         # often have 4–5 short strings but no synonyms.
@@ -88,8 +91,11 @@ def find_header_row(sheet: SheetView, scan_depth: int = HEADER_SCAN_DEPTH) -> He
             score *= 0.3
 
         hit = HeaderHit(
-            row_index=r, score=score, synonym_hits=synonym_hits,
-            non_empty_cells=non_empty, data_richness=below_avg,
+            row_index=r,
+            score=score,
+            synonym_hits=synonym_hits,
+            non_empty_cells=non_empty,
+            data_richness=below_avg,
         )
         if best is None or hit.score > best.score:
             best = hit

@@ -1,4 +1,5 @@
 """Repository ABC for the Vendor Route Pricing context."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -15,7 +16,9 @@ from app.contexts.vendor_route_pricing.domain.value_objects import (
 
 class VendorRoutePricingRepository(ABC):
     @abstractmethod
-    async def get_by_id(self, pid: VendorRoutePricingId) -> VendorRoutePricing | None: ...
+    async def get_by_id(
+        self, pid: VendorRoutePricingId
+    ) -> VendorRoutePricing | None: ...
 
     @abstractmethod
     async def find_by_lane(

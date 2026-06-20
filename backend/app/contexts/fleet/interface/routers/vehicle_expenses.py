@@ -23,7 +23,11 @@ from app.database import get_db
 from app.models.base import User
 from app.models.domain import Vehicle, VehicleExpense
 from app.schemas.base import PaginatedResponse
-from app.schemas.domain import VehicleExpenseCreate, VehicleExpenseOut, VehicleExpenseUpdate
+from app.schemas.domain import (
+    VehicleExpenseCreate,
+    VehicleExpenseOut,
+    VehicleExpenseUpdate,
+)
 
 router = APIRouter(prefix="/vehicle-expenses", tags=["vehicle-expenses"])
 

@@ -16,7 +16,6 @@ interface AIScanningOverlayProps {
 const CYAN = '#00f0ff'
 const CYAN_DIM = `${CYAN}40`
 const GOLD = '#ffb800'
-const BRAND = 'var(--theme-brand-primary)'
 
 export function AIScanningOverlay({
   visible,

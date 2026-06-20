@@ -22,7 +22,9 @@ async def generate_monthly_report_task(
         end = date(year, month + 1, 1) - timedelta(days=1)
 
     start_dt = datetime(start.year, start.month, start.day, tzinfo=timezone.utc)
-    end_dt = datetime(end.year, end.month, end.day, tzinfo=timezone.utc) + timedelta(days=1)
+    end_dt = datetime(end.year, end.month, end.day, tzinfo=timezone.utc) + timedelta(
+        days=1
+    )
 
     async with get_session() as db:
         result = await db.execute(

@@ -44,7 +44,9 @@ from app.models.domain import (
 from app.models.operation_type import OperationType, OperationTypeAlias
 from app.utils.iso6346 import normalize_container_number
 from app.utils.fuzzy import container_edit_distance, levenshtein_distance
-from app.contexts.operations.infrastructure.operation_type_resolver import normalize_operation_type
+from app.contexts.operations.infrastructure.operation_type_resolver import (
+    normalize_operation_type,
+)
 
 
 WEIGHTS = {
@@ -92,9 +94,11 @@ def _effective_weights(
 
 
 async def _load_alias_groups(db: AsyncSession) -> dict[int, set[int]]:
-    rows = (await db.execute(
-        select(LocationAlias.location_id, LocationAlias.alias_normalized)
-    )).all()
+    rows = (
+        await db.execute(
+            select(LocationAlias.location_id, LocationAlias.alias_normalized)
+        )
+    ).all()
     alias_to_locs: dict[str, set[int]] = {}
     for loc_id, alias_norm in rows:
         alias_to_locs.setdefault(alias_norm, set()).add(loc_id)
@@ -113,11 +117,19 @@ async def _load_alias_groups(db: AsyncSession) -> dict[int, set[int]]:
 
 async def _load_operation_type_aliases(db: AsyncSession) -> dict[str, str]:
     """Map any normalized work_type (alias or canonical) → normalized canonical name."""
-    from app.contexts.operations.infrastructure.operation_type_resolver import normalize_operation_type
+    from app.contexts.operations.infrastructure.operation_type_resolver import (
+        normalize_operation_type,
+    )
+
     types = (await db.execute(select(OperationType))).scalars().all()
-    alias_rows = (await db.execute(
-        select(OperationTypeAlias.alias_normalized, OperationTypeAlias.operation_type_id)
-    )).all()
+    alias_rows = (
+        await db.execute(
+            select(
+                OperationTypeAlias.alias_normalized,
+                OperationTypeAlias.operation_type_id,
+            )
+        )
+    ).all()
 
     # type_id → normalized canonical name
     type_names = {t.id: normalize_operation_type(t.name) for t in types}
@@ -170,7 +182,9 @@ def _score_pair(
 
     vessel_missing = not (to.vessel or wo.vessel)
     vehicle_missing = not (to.vehicle_plate or wo.vehicle_plate)
-    work_type_missing = not (normalize_operation_type(to.work_type) or normalize_operation_type(wo.work_type))
+    work_type_missing = not (
+        normalize_operation_type(to.work_type) or normalize_operation_type(wo.work_type)
+    )
 
     w = _effective_weights(
         vessel_missing=vessel_missing,
@@ -196,8 +210,8 @@ def _score_pair(
                     matched_fields.append("container_number_fuzzy")
                     score += w.get("container_number", 0) * _CONTAINER_2CHAR
                 else:
-                    wo_digits = re.sub(r'[^0-9]', '', wo_cn)
-                    to_digits = re.sub(r'[^0-9]', '', to_cn)
+                    wo_digits = re.sub(r"[^0-9]", "", wo_cn)
+                    to_digits = re.sub(r"[^0-9]", "", to_cn)
                     if wo_digits and to_digits and wo_digits == to_digits:
                         matched_fields.append("container_number_partial")
                         score += w.get("container_number", 0) * _CONTAINER_DIGITS_ONLY
@@ -264,7 +278,7 @@ def _score_pair(
             if to_plate == wo_plate:
                 matched_fields.append("vehicle_plate")
                 score += w.get("vehicle_plate", 0)
-            elif re.sub(r'[^0-9]', '', to_plate) == re.sub(r'[^0-9]', '', wo_plate):
+            elif re.sub(r"[^0-9]", "", to_plate) == re.sub(r"[^0-9]", "", wo_plate):
                 matched_fields.append("vehicle_plate")
                 score += w.get("vehicle_plate", 0) * 0.6
             else:
@@ -300,14 +314,16 @@ async def auto_match_preview(
         wo_query = wo_query.where(
             or_(
                 DeliveredTripORM.trip_date >= date_from,
-                (DeliveredTripORM.trip_date == None) & (DeliveredTripORM.created_at >= date_from),  # noqa: E711
+                (DeliveredTripORM.trip_date == None)  # noqa: E711
+                & (DeliveredTripORM.created_at >= date_from),
             )
         )
     if date_to:
         wo_query = wo_query.where(
             or_(
                 DeliveredTripORM.trip_date <= date_to,
-                (DeliveredTripORM.trip_date == None) & (DeliveredTripORM.created_at <= date_to),  # noqa: E711
+                (DeliveredTripORM.trip_date == None)  # noqa: E711
+                & (DeliveredTripORM.created_at <= date_to),
             )
         )
     delivered_trips = list((await db.execute(wo_query)).scalars().all())
@@ -325,9 +341,13 @@ async def auto_match_preview(
     )
     to_query = select(BookedTripORM).where(BookedTripORM.id.notin_(matched_bt_subq))
     if date_from:
-        to_query = to_query.where(BookedTripORM.trip_date >= date_from - timedelta(days=30))
+        to_query = to_query.where(
+            BookedTripORM.trip_date >= date_from - timedelta(days=30)
+        )
     if date_to:
-        to_query = to_query.where(BookedTripORM.trip_date <= date_to + timedelta(days=30))
+        to_query = to_query.where(
+            BookedTripORM.trip_date <= date_to + timedelta(days=30)
+        )
     booked_trips = list((await db.execute(to_query)).scalars().all())
 
     alias_groups = await _load_alias_groups(db)
@@ -341,7 +361,7 @@ async def auto_match_preview(
             cn = normalize_container_number(wo.cont_number)
             if cn:
                 wo_by_container[cn].append(wo)
-                digits = re.sub(r'[^0-9]', '', cn)
+                digits = re.sub(r"[^0-9]", "", cn)
                 if digits:
                     wo_by_digits[digits].append(wo)
 
@@ -361,7 +381,7 @@ async def auto_match_preview(
         if to_cn in wo_by_container:
             candidate_wos.extend(wo_by_container[to_cn])
         else:
-            to_digits = re.sub(r'[^0-9]', '', to_cn)
+            to_digits = re.sub(r"[^0-9]", "", to_cn)
             if to_digits and to_digits in wo_by_digits:
                 candidate_wos.extend(wo_by_digits[to_digits])
 
@@ -372,33 +392,35 @@ async def auto_match_preview(
             if score < MIN_MATCH_THRESHOLD:
                 continue
 
-            candidates.append({
-                "delivered_trip_id": wo.id,
-                "booked_trip_id": to.id,
-                "score": round(score, 4),
-                "confidence": _confidence(score),
-                "matched_fields": matched_fields,
-                "delivered": {
-                    "trip_date": wo.trip_date.isoformat() if wo.trip_date else None,
-                    "cont_number": wo.cont_number,
-                    "client_id": wo.client_id,
-                    "pickup_location_id": wo.pickup_location_id,
-                    "dropoff_location_id": wo.dropoff_location_id,
-                    "work_type": wo.work_type,
-                    "vessel": wo.vessel,
-                    "vehicle_plate": wo.vehicle_plate,
-                },
-                "booked": {
-                    "trip_date": to.trip_date.isoformat() if to.trip_date else None,
-                    "cont_number": to.cont_number,
-                    "client_id": to.client_id,
-                    "pickup_location_id": to.pickup_location_id,
-                    "dropoff_location_id": to.dropoff_location_id,
-                    "work_type": to.work_type,
-                    "vessel": to.vessel,
-                    "vehicle_plate": to.vehicle_plate,
-                },
-            })
+            candidates.append(
+                {
+                    "delivered_trip_id": wo.id,
+                    "booked_trip_id": to.id,
+                    "score": round(score, 4),
+                    "confidence": _confidence(score),
+                    "matched_fields": matched_fields,
+                    "delivered": {
+                        "trip_date": wo.trip_date.isoformat() if wo.trip_date else None,
+                        "cont_number": wo.cont_number,
+                        "client_id": wo.client_id,
+                        "pickup_location_id": wo.pickup_location_id,
+                        "dropoff_location_id": wo.dropoff_location_id,
+                        "work_type": wo.work_type,
+                        "vessel": wo.vessel,
+                        "vehicle_plate": wo.vehicle_plate,
+                    },
+                    "booked": {
+                        "trip_date": to.trip_date.isoformat() if to.trip_date else None,
+                        "cont_number": to.cont_number,
+                        "client_id": to.client_id,
+                        "pickup_location_id": to.pickup_location_id,
+                        "dropoff_location_id": to.dropoff_location_id,
+                        "work_type": to.work_type,
+                        "vessel": to.vessel,
+                        "vehicle_plate": to.vehicle_plate,
+                    },
+                }
+            )
 
             if score >= FULL_MATCH_THRESHOLD:
                 matched_wo_ids.add(wo.id)
@@ -458,19 +480,27 @@ async def confirm_matches(
     requested_to_ids = {to_id for _, to_id, _, _, _ in pairs if to_id is not None}
     db_matched_to_ids: set[int] = set()
     if requested_to_ids:
-        matched_to_rows = (await db.execute(
-            select(WO.booked_trip_id).where(
-                WO.booked_trip_id.in_(requested_to_ids),
-                WO.booked_trip_id.isnot(None),
-            ).distinct()
-        )).scalars().all()
+        matched_to_rows = (
+            (
+                await db.execute(
+                    select(WO.booked_trip_id)
+                    .where(
+                        WO.booked_trip_id.in_(requested_to_ids),
+                        WO.booked_trip_id.isnot(None),
+                    )
+                    .distinct()
+                )
+            )
+            .scalars()
+            .all()
+        )
         db_matched_to_ids = {tid for tid in matched_to_rows if tid is not None}
 
     # Sort by score desc so the highest-scoring claim for each BookedTrip
     # is processed first. Pairs without a score get 0.0 (lose all ties).
     sorted_pairs = sorted(
         pairs,
-        key=lambda p: (p[4] if p[4] is not None else 0.0),
+        key=lambda p: p[4] if p[4] is not None else 0.0,
         reverse=True,
     )
 
@@ -480,12 +510,8 @@ async def confirm_matches(
     claimed_to_ids: set[int] = set()
 
     for wo_id, to_id, sync_source, field_choices, _score in sorted_pairs:
-        wo = (await db.execute(
-            select(WO).where(WO.id == wo_id)
-        )).scalar_one_or_none()
-        to = (await db.execute(
-            select(TO).where(TO.id == to_id)
-        )).scalar_one_or_none()
+        wo = (await db.execute(select(WO).where(WO.id == wo_id))).scalar_one_or_none()
+        to = (await db.execute(select(TO).where(TO.id == to_id))).scalar_one_or_none()
 
         if not wo:
             errors.append(f"DeliveredTrip#{wo_id} not found")
@@ -696,14 +722,11 @@ async def sync_matched_trips_pricing(
     if isinstance(date_to, str):
         date_to = date.fromisoformat(date_to)
 
-    stmt = (
-        select(WO)
-        .where(
-            and_(
-                WO.booked_trip_id.isnot(None),
-                WO.trip_date >= date_from,
-                WO.trip_date <= date_to,
-            )
+    stmt = select(WO).where(
+        and_(
+            WO.booked_trip_id.isnot(None),
+            WO.trip_date >= date_from,
+            WO.trip_date <= date_to,
         )
     )
     wos = (await db.execute(stmt)).scalars().all()
@@ -749,7 +772,9 @@ async def sync_matched_trips_pricing(
         for wo in wos
         if not wo.vendor_id
     ]
-    driver_salaries = await lookup_driver_salaries(db, driver_infos) if driver_infos else {}
+    driver_salaries = (
+        await lookup_driver_salaries(db, driver_infos) if driver_infos else {}
+    )
 
     updated_count = 0
     for wo in wos:
@@ -779,4 +804,3 @@ async def sync_matched_trips_pricing(
         await db.commit()
 
     return updated_count
-

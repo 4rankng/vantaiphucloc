@@ -1,4 +1,5 @@
 """FastAPI dependency wiring for the Vendor Route Pricing context."""
+
 from __future__ import annotations
 
 from fastapi import Depends

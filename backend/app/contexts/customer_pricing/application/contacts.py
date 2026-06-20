@@ -46,7 +46,7 @@ class ListPartners:
         active_only: bool = True,
         search: str | None = None,
         sort_by: str | None = None,
-        sort_order: str = 'asc',
+        sort_order: str = "asc",
     ) -> tuple[list[Partner], int]:
         offset = (page - 1) * page_size
         items, total = await self.repo.list(
@@ -91,9 +91,7 @@ class UpdatePartner:
         self.repo = repo
         self.session = session
 
-    async def __call__(
-        self, pid: PartnerId, data: PartnerUpdateInput
-    ) -> Partner:
+    async def __call__(self, pid: PartnerId, data: PartnerUpdateInput) -> Partner:
         p = await self.repo.get_by_id(pid)
         if p is None:
             raise NotFound("Partner", int(pid))

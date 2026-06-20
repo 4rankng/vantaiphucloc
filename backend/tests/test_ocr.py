@@ -28,6 +28,7 @@ def _make_test_image(width: int = 800, height: int = 600, color: str = "red") ->
 # extract_container_numbers — success
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_extract_container_numbers_success():
     """Mock single-shot returns valid numbers."""
@@ -50,6 +51,7 @@ async def test_extract_container_numbers_success():
 # extract_container_numbers — fail
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_extract_container_numbers_fail():
     """Mock call fails, verify error response."""
@@ -71,6 +73,7 @@ async def test_extract_container_numbers_fail():
 # ---------------------------------------------------------------------------
 # _parse_numbers_from_response
 # ---------------------------------------------------------------------------
+
 
 def test_parse_json_with_container_numbers():
     text = '{"container_numbers": ["MSKU1234565", "TCLU9876543"]}'
@@ -109,6 +112,7 @@ def test_parse_regex_deduplicates():
 # ---------------------------------------------------------------------------
 # _auto_correct_numbers
 # ---------------------------------------------------------------------------
+
 
 def test_auto_correct_valid_pass_through():
     numbers = ["MSKU1234565", "TCLU9876543"]

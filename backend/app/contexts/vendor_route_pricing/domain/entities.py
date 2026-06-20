@@ -1,4 +1,5 @@
 """Domain entity for the Vendor Route Pricing context."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -14,8 +15,6 @@ from app.contexts.vendor_route_pricing.domain.value_objects import (
     VendorId,
     VendorRoutePricingId,
 )
-
-
 
 
 @dataclass

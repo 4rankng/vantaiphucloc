@@ -83,9 +83,7 @@ class SqlSettlementDataLoader(SettlementDataLoader):
         )
         partner = partner_res.scalar_one_or_none()
         if partner is None:
-            raise SettlementClientNotFound(
-                f"Khách hàng id={client_id} không tồn tại"
-            )
+            raise SettlementClientNotFound(f"Khách hàng id={client_id} không tồn tại")
 
         client_ref = SettlementClientRef(
             id=partner.id,
@@ -106,8 +104,8 @@ class SqlSettlementDataLoader(SettlementDataLoader):
             .order_by(DeliveredTrip.trip_date.asc(), DeliveredTrip.id.asc())
         )
         trips: list[DeliveredTrip] = (
-            await self.session.execute(trip_query)
-        ).scalars().all()
+            (await self.session.execute(trip_query)).scalars().all()
+        )
 
         if not trips:
             return SettlementStatement(client=client_ref, period=period)
@@ -141,12 +139,8 @@ class SqlSettlementDataLoader(SettlementDataLoader):
                     work_type=(trip.work_type or "").upper(),
                     vehicle_plate=trip.vehicle_plate or "",
                     vessel=trip.vessel or "",
-                    pickup_location=name_by_loc_id.get(
-                        trip.pickup_location_id, ""
-                    ),
-                    dropoff_location=name_by_loc_id.get(
-                        trip.dropoff_location_id, ""
-                    ),
+                    pickup_location=name_by_loc_id.get(trip.pickup_location_id, ""),
+                    dropoff_location=name_by_loc_id.get(trip.dropoff_location_id, ""),
                     unit_price=unit_price,
                 )
             )

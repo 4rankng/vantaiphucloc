@@ -112,16 +112,18 @@ class OperationTypeResolverService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self._cache: dict[str, OperationTypeResolveResult] = {}
-        self._types_by_norm: dict[str, str] | None = None  # normalized_name → canonical name
-        self._aliases_by_norm: dict[str, str] | None = None  # normalized_alias → canonical name
+        self._types_by_norm: dict[str, str] | None = (
+            None  # normalized_name → canonical name
+        )
+        self._aliases_by_norm: dict[str, str] | None = (
+            None  # normalized_alias → canonical name
+        )
 
     async def _load_types(self) -> dict[str, str]:
         """Load all active OperationType names (normalized → canonical)."""
         if self._types_by_norm is not None:
             return self._types_by_norm
-        rows = (await self.db.execute(
-            select(OperationType.name)
-        )).scalars().all()
+        rows = (await self.db.execute(select(OperationType.name))).scalars().all()
         self._types_by_norm = {normalize_operation_type(n): n for n in rows}
         return self._types_by_norm
 
@@ -129,10 +131,14 @@ class OperationTypeResolverService:
         """Load all aliases (normalized → canonical OperationType name)."""
         if self._aliases_by_norm is not None:
             return self._aliases_by_norm
-        rows = (await self.db.execute(
-            select(OperationTypeAlias.alias_normalized, OperationType.name)
-            .join(OperationType, OperationTypeAlias.operation_type_id == OperationType.id)
-        )).all()
+        rows = (
+            await self.db.execute(
+                select(OperationTypeAlias.alias_normalized, OperationType.name).join(
+                    OperationType,
+                    OperationTypeAlias.operation_type_id == OperationType.id,
+                )
+            )
+        ).all()
         self._aliases_by_norm = {norm: name for norm, name in rows}
         return self._aliases_by_norm
 
@@ -158,7 +164,9 @@ class OperationTypeResolverService:
         canonical = types.get(norm)
         if canonical is not None:
             self._cache[norm] = OperationTypeResolveResult(
-                canonical_name=canonical, was_alias=False, created=False,
+                canonical_name=canonical,
+                was_alias=False,
+                created=False,
             )
             return canonical
 
@@ -167,7 +175,9 @@ class OperationTypeResolverService:
         canonical = aliases.get(norm)
         if canonical is not None:
             self._cache[norm] = OperationTypeResolveResult(
-                canonical_name=canonical, was_alias=True, created=False,
+                canonical_name=canonical,
+                was_alias=True,
+                created=False,
             )
             return canonical
 
@@ -227,7 +237,9 @@ class OperationTypeResolverService:
         if self._aliases_by_norm is not None and alias_norm:
             self._aliases_by_norm[alias_norm] = canonical
         self._cache[norm] = OperationTypeResolveResult(
-            canonical_name=canonical, was_alias=False, created=True,
+            canonical_name=canonical,
+            was_alias=False,
+            created=True,
         )
 
         # Refresh module-level validation cache
@@ -237,9 +249,17 @@ class OperationTypeResolverService:
 
     async def _refresh_work_types_cache(self) -> None:
         """Push current active work types into the module-level cache."""
-        from app.contexts.route_pricing.domain.value_objects import refresh_work_types_from_async
+        from app.contexts.route_pricing.domain.value_objects import (
+            refresh_work_types_from_async,
+        )
 
-        rows = (await self.db.execute(
-            select(OperationType.name).where(OperationType.is_active == True)  # noqa: E712
-        )).scalars().all()
+        rows = (
+            (
+                await self.db.execute(
+                    select(OperationType.name).where(OperationType.is_active == True)  # noqa: E712
+                )
+            )
+            .scalars()
+            .all()
+        )
         refresh_work_types_from_async(frozenset(rows))

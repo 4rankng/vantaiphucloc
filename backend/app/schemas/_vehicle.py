@@ -60,7 +60,9 @@ class VehicleExpenseCreate(BaseModel):
 
 class VehicleExpenseUpdate(BaseModel):
     vehicle_id: int | None = None
-    category: str | None = Field(default=None, pattern="^(XANG_DAU|SUA_CHUA|TIEN_LUAT|KHAC)$")
+    category: str | None = Field(
+        default=None, pattern="^(XANG_DAU|SUA_CHUA|TIEN_LUAT|KHAC)$"
+    )
     amount: int | None = Field(default=None, gt=0)
     expense_date: date | None = None
     description: str | None = Field(default=None, max_length=500)

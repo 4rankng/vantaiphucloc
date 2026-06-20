@@ -24,12 +24,27 @@ from app.contexts.operations.infrastructure.import_pipeline.workbook import Shee
 # ---------------------------------------------------------------------------
 
 _CONTAINER_SYNONYMS = {
-    "CONTAINER", "CONTAINER NO", "CONTAINERNO", "CONTNO",
-    "CONT NO", "CONTAINER ID", "CTR NO", "CTNR", "CONTAINER#",
-    "SỐ CONTAINER", "SO CONTAINER", "SỐ CONT", "SO CONT",
-    "SỐCONTAINER", "SOCONTAINER",  # no-space variant from SL sheets
-    "MÃ CONT", "MA CONT", "MÃ CONTAINER", "MA CONTAINER",
-    "หมายเลขตู้", "CONT",
+    "CONTAINER",
+    "CONTAINER NO",
+    "CONTAINERNO",
+    "CONTNO",
+    "CONT NO",
+    "CONTAINER ID",
+    "CTR NO",
+    "CTNR",
+    "CONTAINER#",
+    "SỐ CONTAINER",
+    "SO CONTAINER",
+    "SỐ CONT",
+    "SO CONT",
+    "SỐCONTAINER",
+    "SOCONTAINER",  # no-space variant from SL sheets
+    "MÃ CONT",
+    "MA CONT",
+    "MÃ CONTAINER",
+    "MA CONTAINER",
+    "หมายเลขตู้",
+    "CONT",
 }
 
 
@@ -43,8 +58,13 @@ def is_container_header(cell) -> bool:
     t = cell_upper(cell)
     if t in _CONTAINER_SYNONYMS:
         return True
-    return (t.startswith("CONTAINER") or t.startswith("SỐ CONT") or t.startswith("SO CONT")
-            or t.startswith("SỐCONT") or t.startswith("SOCONT"))
+    return (
+        t.startswith("CONTAINER")
+        or t.startswith("SỐ CONT")
+        or t.startswith("SO CONT")
+        or t.startswith("SỐCONT")
+        or t.startswith("SOCONT")
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -60,6 +80,7 @@ _SETTLEMENT_WT_HEADERS = {"F20", "F40", "E20", "E40"}
 # Cell text helpers (canonical home — deduplicated from pattern_detector.py)
 # ---------------------------------------------------------------------------
 
+
 def cell_text(cell) -> str:
     if cell is None:
         return ""
@@ -74,27 +95,31 @@ def cell_upper(cell) -> str:
 # ExtractedRow — shared data model for all pattern extractors
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ExtractedRow:
     container_number: str
-    cont_type: str              # E20, E40, F20, F40 (container type code)
+    cont_type: str  # E20, E40, F20, F40 (container type code)
     pickup: str
     dropoff: str
     vessel_name: str
-    source_row_index: int       # 0-based row in the sheet
+    source_row_index: int  # 0-based row in the sheet
     work_type: str = "CHUYỂN BÃI"  # Operation type: CHUYỂN BÃI, XUẤT/NHẬP TÀU, etc.
     consignee: str = ""
     vehicle_plate: str = ""
     freight_charge: float | None = None
-    freight_kind_unknown: bool = False  # True if container E/F kind was not explicitly found
-    trip_date: date | None = None      # Parsed from NGÀY ĐI column (settlement list)
-    confidence: float = 1.0            # Mapping quality per row (0.0 – 1.0)
-    source: str = "pattern"            # one of: pattern, synonym, fuzzy, value_pattern, ai, profile, unmapped
+    freight_kind_unknown: bool = (
+        False  # True if container E/F kind was not explicitly found
+    )
+    trip_date: date | None = None  # Parsed from NGÀY ĐI column (settlement list)
+    confidence: float = 1.0  # Mapping quality per row (0.0 – 1.0)
+    source: str = "pattern"  # one of: pattern, synonym, fuzzy, value_pattern, ai, profile, unmapped
 
 
 # ---------------------------------------------------------------------------
 # Shared helpers (used by bay_plan and stacking_plan)
 # ---------------------------------------------------------------------------
+
 
 def vessel_from_filename(filename: str) -> str:
     """Try to extract a vessel name from the filename."""
@@ -133,9 +158,18 @@ def build_fe_lookup(system_export: SheetView | None) -> dict[str, str]:
         t = cell_upper(cell)
         if cont_col is None and ("CONTAINER" in t or "หมายเลขตู้" in t):
             cont_col = c
-        if fe_col is None and t in ("F/E", "FE", "F E", "RỖNG/HÀNG", "RONG/HANG",
-                                     "HÀNG/RỖNG", "HANG/RONG", "LÕ/HÀNG",
-                                     "空/重(E/F)", "空/重"):
+        if fe_col is None and t in (
+            "F/E",
+            "FE",
+            "F E",
+            "RỖNG/HÀNG",
+            "RONG/HANG",
+            "HÀNG/RỖNG",
+            "HANG/RONG",
+            "LÕ/HÀNG",
+            "空/重(E/F)",
+            "空/重",
+        ):
             fe_col = c
 
     if cont_col is None or fe_col is None:

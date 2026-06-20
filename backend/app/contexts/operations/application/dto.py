@@ -196,4 +196,3 @@ class DuplicateCheckCandidate:
     created_at: datetime
     reason: str
     photo_match: bool
-

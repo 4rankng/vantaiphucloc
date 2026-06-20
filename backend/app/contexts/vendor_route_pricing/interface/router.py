@@ -1,9 +1,18 @@
 """Vendor Route Pricing HTTP endpoints."""
+
 from __future__ import annotations
 
 import math
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, File as FastAPIFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+    File as FastAPIFile,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.vendor_route_pricing.application.dto import (
@@ -45,7 +54,9 @@ from app.schemas.base import PaginatedResponse
 router = APIRouter()
 
 
-async def _to_out(db: AsyncSession, items: list[VendorRoutePricing]) -> list[VendorRoutePricingOut]:
+async def _to_out(
+    db: AsyncSession, items: list[VendorRoutePricing]
+) -> list[VendorRoutePricingOut]:
     if not items:
         return []
     vendors = await load_vendor_summaries(db, {int(rp.vendor_id) for rp in items})
@@ -75,7 +86,9 @@ async def _to_out(db: AsyncSession, items: list[VendorRoutePricing]) -> list[Ven
     ]
 
 
-@router.get("/vendor-route-pricings", response_model=PaginatedResponse[VendorRoutePricingOut])
+@router.get(
+    "/vendor-route-pricings", response_model=PaginatedResponse[VendorRoutePricingOut]
+)
 async def list_vendor_route_pricings(
     vendor_id: int | None = None,
     work_type: str | None = None,
@@ -102,7 +115,9 @@ async def list_vendor_route_pricings(
     )
 
 
-@router.post("/vendor-route-pricings", response_model=VendorRoutePricingOut, status_code=201)
+@router.post(
+    "/vendor-route-pricings", response_model=VendorRoutePricingOut, status_code=201
+)
 async def create_vendor_route_pricing(
     body: VendorRoutePricingCreate,
     _current_user: User = Depends(require_permission("update", "VendorRoutePricing")),
@@ -179,7 +194,10 @@ async def import_preview_vendor_route_pricings(
     return await preview_with_matching(db, content)
 
 
-@router.post("/vendor-route-pricings/import-commit", response_model=VendorRoutePricingImportResult)
+@router.post(
+    "/vendor-route-pricings/import-commit",
+    response_model=VendorRoutePricingImportResult,
+)
 async def import_commit_vendor_route_pricings(
     body: VendorRoutePricingImportCommit,
     _current_user: User = Depends(require_permission("update", "VendorRoutePricing")),

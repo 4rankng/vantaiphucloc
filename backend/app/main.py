@@ -62,10 +62,7 @@ class RequestSizeLimitMiddleware:
             await self.app(scope, receive, send)
             return
 
-        headers = dict(
-            (k.decode(), v.decode())
-            for k, v in scope.get("headers", [])
-        )
+        headers = dict((k.decode(), v.decode()) for k, v in scope.get("headers", []))
         if scope["method"] in ("POST", "PUT", "PATCH"):
             content_length = headers.get("content-length")
             if content_length and int(content_length) > MAX_REQUEST_BODY_BYTES:
@@ -86,6 +83,7 @@ async def lifespan(_app: FastAPI):
     await init_arq_pool()
     # Register auto-audit session events
     from app.core.audit import register_audit_events
+
     register_audit_events()
     yield
     await close_arq_pool()

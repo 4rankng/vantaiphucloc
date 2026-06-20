@@ -11,11 +11,15 @@ __all__ = [
 
 
 class CancelRequest(BaseModel):
-    reason: str = Field(..., min_length=1, description="Required reason for cancellation")
+    reason: str = Field(
+        ..., min_length=1, description="Required reason for cancellation"
+    )
 
 
 class SoftDeleteRequest(BaseModel):
-    reason: str = Field(..., min_length=1, description="Required reason for soft deletion")
+    reason: str = Field(
+        ..., min_length=1, description="Required reason for soft deletion"
+    )
 
 
 class BulkImportResult(BaseModel):

@@ -18,13 +18,18 @@ async def seed_locations(db: AsyncSession) -> dict[str, Location]:
     print("\n=== Seeding Locations ===")
     loc_map: dict[str, Location] = {}
     for loc_data in SEED_LOCATIONS:
-        result = await db.execute(select(Location).where(Location.name == loc_data["name"]))
+        result = await db.execute(
+            select(Location).where(Location.name == loc_data["name"])
+        )
         loc = result.scalars().first()
         if loc is None:
             loc = Location(
-                name=loc_data["name"], is_active=True,
-                lat=loc_data.get("lat"), lng=loc_data.get("lng"),
-                pending_geocode=False, created_via="real_seed",
+                name=loc_data["name"],
+                is_active=True,
+                lat=loc_data.get("lat"),
+                lng=loc_data.get("lng"),
+                pending_geocode=False,
+                created_via="real_seed",
                 location_review_needed=False,
             )
             db.add(loc)

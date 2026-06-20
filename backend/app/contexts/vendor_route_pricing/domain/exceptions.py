@@ -1,4 +1,5 @@
 """Domain exceptions for the Vendor Route Pricing context."""
+
 from __future__ import annotations
 
 

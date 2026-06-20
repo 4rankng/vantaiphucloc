@@ -58,6 +58,8 @@ async def import_excel_preview_task(
     payload["location_resolutions"] = location_resolutions
     logger.info(
         "Import preview task finished: %s — accepted=%d rejected=%d",
-        job_id, result.stats.get("accepted_count", 0), result.stats.get("rejected_count", 0),
+        job_id,
+        result.stats.get("accepted_count", 0),
+        result.stats.get("rejected_count", 0),
     )
     return payload

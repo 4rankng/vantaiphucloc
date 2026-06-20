@@ -33,7 +33,9 @@ def get_cached_mapping(source_id: str | None, file_hash: str) -> dict[str, Any] 
     return entry
 
 
-def save_mapping(source_id: str | None, file_hash: str, mapping: dict[str, Any]) -> None:
+def save_mapping(
+    source_id: str | None, file_hash: str, mapping: dict[str, Any]
+) -> None:
     """Save a column mapping to cache."""
     key = _cache_key(source_id, file_hash)
     _cache[key] = mapping

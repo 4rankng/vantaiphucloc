@@ -11,7 +11,6 @@ import { parsePrice } from '@/lib/parse-price'
 import { usePricingManager } from '@/lib/pricing-manager'
 import type { WorkType } from '@/data/domain'
 import type {
-  RoutePricingCreatePayload,
   RoutePricingUpdatePayload,
 } from '@/services/api/routePricings.api'
 

@@ -51,6 +51,7 @@ class LocationUpdateInput:
 @dataclass
 class LocationPinInput:
     """Driver pins their current location."""
+
     name: str
     lat: float
     lng: float

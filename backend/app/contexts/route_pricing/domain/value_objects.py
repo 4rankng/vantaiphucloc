@@ -57,8 +57,7 @@ def validate_work_type(value: str) -> str:
     valid = get_valid_work_types()
     if norm not in valid:
         raise ValueError(
-            f"Invalid work_type '{norm}'. "
-            f"Valid: {', '.join(sorted(valid))}"
+            f"Invalid work_type '{norm}'. Valid: {', '.join(sorted(valid))}"
         )
     return norm
 

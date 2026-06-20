@@ -23,8 +23,6 @@ from sqlalchemy import (
 from app.database import Base
 
 
-
-
 class UserORM(Base):
     __tablename__ = "users"
 
@@ -37,9 +35,7 @@ class UserORM(Base):
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(20), default="driver", nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), default=utcnow, nullable=False
-    )
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True),
         default=utcnow,
@@ -59,9 +55,7 @@ class PushSubscriptionORM(Base):
     p256dh = Column(String(200), nullable=False)
     auth = Column(String(100), nullable=False)
     user_agent = Column(String(500), nullable=True)
-    created_at = Column(
-        DateTime(timezone=True), default=utcnow, nullable=False
-    )
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True),
         default=utcnow,

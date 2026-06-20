@@ -54,15 +54,19 @@ from app.schemas.domain import SoftDeleteRequest
 router = APIRouter()
 
 
-_VALID_CLIENT_SORT = {'name', 'code', 'created_at'}
+_VALID_CLIENT_SORT = {"name", "code", "created_at"}
 
 
 @router.get("/clients", response_model=PaginatedResponse[PartnerOutBody])
 async def list_clients(
     type: str | None = Query(None, alias="type"),
-    search: str | None = Query(None, description="Search by name, code, phone, tax code"),
-    sort_by: str | None = Query(None, description="Sort column: name | code | type | created_at"),
-    sort_order: str = Query('asc', pattern='^(asc|desc)$'),
+    search: str | None = Query(
+        None, description="Search by name, code, phone, tax code"
+    ),
+    sort_by: str | None = Query(
+        None, description="Sort column: name | code | type | created_at"
+    ),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=1000),
     current_user: User = Depends(require_permission("read", "Partner")),
@@ -124,15 +128,17 @@ async def create_client(
     redis: Redis = Depends(get_redis),
 ):
     try:
-        p = await use_case(PartnerCreateInput(
-            name=body.name,
-            partner_type=body.partner_type,
-            code=body.code,
-            phone=body.phone,
-            tax_code=body.tax_code,
-            address=body.address,
-            contact_person=body.contact_person,
-        ))
+        p = await use_case(
+            PartnerCreateInput(
+                name=body.name,
+                partner_type=body.partner_type,
+                code=body.code,
+                phone=body.phone,
+                tax_code=body.tax_code,
+                address=body.address,
+                contact_person=body.contact_person,
+            )
+        )
     except AlreadyExists as e:
         raise translate(e)
     except ValueError as e:
@@ -150,16 +156,19 @@ async def update_client(
     redis: Redis = Depends(get_redis),
 ):
     try:
-        p = await use_case(PartnerId(partner_id), PartnerUpdateInput(
-            name=body.name,
-            partner_type=body.partner_type,
-            code=body.code,
-            phone=body.phone,
-            tax_code=body.tax_code,
-            address=body.address,
-            contact_person=body.contact_person,
-            is_active=body.is_active,
-        ))
+        p = await use_case(
+            PartnerId(partner_id),
+            PartnerUpdateInput(
+                name=body.name,
+                partner_type=body.partner_type,
+                code=body.code,
+                phone=body.phone,
+                tax_code=body.tax_code,
+                address=body.address,
+                contact_person=body.contact_person,
+                is_active=body.is_active,
+            ),
+        )
     except NotFound as e:
         raise translate(e)
     except AlreadyExists as e:
@@ -180,20 +189,25 @@ async def delete_client(
     redis: Redis = Depends(get_redis),
 ):
     from sqlalchemy import text
+
     db = use_case.session
-    has_wo = (await db.execute(
-        text("SELECT 1 FROM delivered_trips WHERE client_id = :pid LIMIT 1"),
-        {"pid": partner_id},
-    )).scalar()
+    has_wo = (
+        await db.execute(
+            text("SELECT 1 FROM delivered_trips WHERE client_id = :pid LIMIT 1"),
+            {"pid": partner_id},
+        )
+    ).scalar()
     if has_wo:
         raise HTTPException(
             status_code=409,
             detail="Cannot delete client with associated work orders",
         )
-    has_to = (await db.execute(
-        text("SELECT 1 FROM booked_trips WHERE client_id = :pid LIMIT 1"),
-        {"pid": partner_id},
-    )).scalar()
+    has_to = (
+        await db.execute(
+            text("SELECT 1 FROM booked_trips WHERE client_id = :pid LIMIT 1"),
+            {"pid": partner_id},
+        )
+    ).scalar()
     if has_to:
         raise HTTPException(
             status_code=409,

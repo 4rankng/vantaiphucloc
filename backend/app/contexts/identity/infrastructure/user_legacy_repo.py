@@ -22,7 +22,9 @@ class UserRepository(BaseRepository[User]):
         """Look up user by phone, email, or username."""
         result = await self.session.execute(
             select(User).where(
-                (User.phone == identifier) | (User.email == identifier) | (User.username == identifier)
+                (User.phone == identifier)
+                | (User.email == identifier)
+                | (User.username == identifier)
             )
         )
         return result.scalar_one_or_none()

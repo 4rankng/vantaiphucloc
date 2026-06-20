@@ -8,6 +8,7 @@ Adds an optional column for storing a driver's note on a delivered trip.
 Used by drivers to annotate special circumstances (e.g. running a single
 20ft container instead of a paired load) for accurate salary/freight review.
 """
+
 from typing import Sequence, Union
 
 from alembic import op

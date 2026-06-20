@@ -10,7 +10,9 @@ class RateLimiter:
     def __init__(self, redis: Redis):
         self._redis = redis
 
-    async def is_limited(self, key: str, max_requests: int, window_seconds: int) -> bool:
+    async def is_limited(
+        self, key: str, max_requests: int, window_seconds: int
+    ) -> bool:
         now = time.time()
         window_start = now - window_seconds
         pipe = self._redis.pipeline()

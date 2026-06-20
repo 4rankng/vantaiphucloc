@@ -1,4 +1,5 @@
 """Tests for route pricing Excel import parser."""
+
 from __future__ import annotations
 
 from io import BytesIO
@@ -29,17 +30,53 @@ def _make_xlsx(sheet_name: str, rows: list[list]) -> bytes:
 
 
 def test_find_header_row_standard():
-    rows = [["STT", "CHỦ HÀNG", "ĐIỂM ĐI", "ĐIỂM ĐẾN", "F20", "F40", "E20", "E40", "TÁC NGHIỆP"]]
+    rows = [
+        [
+            "STT",
+            "CHỦ HÀNG",
+            "ĐIỂM ĐI",
+            "ĐIỂM ĐẾN",
+            "F20",
+            "F40",
+            "E20",
+            "E40",
+            "TÁC NGHIỆP",
+        ]
+    ]
     assert _find_header_row(rows) == 0
 
 
 def test_find_header_row_case_insensitive():
-    rows = [["stt", "chủ hàng", "điểm đi", "điểm đến", "f20", "f40", "e20", "e40", "tác nghiệp"]]
+    rows = [
+        [
+            "stt",
+            "chủ hàng",
+            "điểm đi",
+            "điểm đến",
+            "f20",
+            "f40",
+            "e20",
+            "e40",
+            "tác nghiệp",
+        ]
+    ]
     assert _find_header_row(rows) == 0
 
 
 def test_find_header_row_whitespace_tolerant():
-    rows = [[" STT ", " CHỦ HÀNG ", " ĐIỂM ĐI ", " ĐIỂM ĐẾN ", " F20 ", " F40 ", " E20 ", " E40 ", " TÁC NGHIỆP "]]
+    rows = [
+        [
+            " STT ",
+            " CHỦ HÀNG ",
+            " ĐIỂM ĐI ",
+            " ĐIỂM ĐẾN ",
+            " F20 ",
+            " F40 ",
+            " E20 ",
+            " E40 ",
+            " TÁC NGHIỆP ",
+        ]
+    ]
     assert _find_header_row(rows) == 0
 
 
@@ -83,6 +120,7 @@ def test_normalize_wt_empty():
 
 def test_normalize_wt_all_valid():
     from app.contexts.route_pricing.domain.value_objects import VALID_WORK_TYPES
+
     for wt in VALID_WORK_TYPES:
         assert _normalize_work_type(wt) == wt
 
@@ -118,11 +156,34 @@ def test_price_invalid():
 
 
 def test_parse_basic():
-    xlsx = _make_xlsx("Sheet1", [
-        ["STT", "CHỦ HÀNG", "ĐIỂM ĐI", "ĐIỂM ĐẾN", "F20", "F40", "E20", "E40", "TÁC NGHIỆP"],
-        [1, "HPH", "HECHUN", "HẢI AN", 400000, 400000, None, None, "XUẤT/ NHẬP TÀU"],
-        [2, "VNB", "VIMC", "VIMC", 67500, 135000, 67500, 135000, "XUẤT/ NHẬP TÀU"],
-    ])
+    xlsx = _make_xlsx(
+        "Sheet1",
+        [
+            [
+                "STT",
+                "CHỦ HÀNG",
+                "ĐIỂM ĐI",
+                "ĐIỂM ĐẾN",
+                "F20",
+                "F40",
+                "E20",
+                "E40",
+                "TÁC NGHIỆP",
+            ],
+            [
+                1,
+                "HPH",
+                "HECHUN",
+                "HẢI AN",
+                400000,
+                400000,
+                None,
+                None,
+                "XUẤT/ NHẬP TÀU",
+            ],
+            [2, "VNB", "VIMC", "VIMC", 67500, 135000, 67500, 135000, "XUẤT/ NHẬP TÀU"],
+        ],
+    )
     result = parse_route_pricing_bytes(xlsx)
     assert result["sheet_name"] == "Sheet1"
     assert len(result["rows"]) == 2
@@ -134,22 +195,48 @@ def test_parse_basic():
 
 
 def test_parse_skips_empty_rows():
-    xlsx = _make_xlsx("Sheet1", [
-        ["STT", "CHỦ HÀNG", "ĐIỂM ĐI", "ĐIỂM ĐẾN", "F20", "F40", "E20", "E40", "TÁC NGHIỆP"],
-        [1, "HPH", "HECHUN", "HẢI AN", 400000, None, None, None, "XUẤT/ NHẬP TÀU"],
-        [None, None, None, None, None, None, None, None, None],
-        [3, "VNB", "VIMC", "VIMC", 67500, 135000, None, None, "XUẤT/ NHẬP TÀU"],
-    ])
+    xlsx = _make_xlsx(
+        "Sheet1",
+        [
+            [
+                "STT",
+                "CHỦ HÀNG",
+                "ĐIỂM ĐI",
+                "ĐIỂM ĐẾN",
+                "F20",
+                "F40",
+                "E20",
+                "E40",
+                "TÁC NGHIỆP",
+            ],
+            [1, "HPH", "HECHUN", "HẢI AN", 400000, None, None, None, "XUẤT/ NHẬP TÀU"],
+            [None, None, None, None, None, None, None, None, None],
+            [3, "VNB", "VIMC", "VIMC", 67500, 135000, None, None, "XUẤT/ NHẬP TÀU"],
+        ],
+    )
     result = parse_route_pricing_bytes(xlsx)
     assert len(result["rows"]) == 2
 
 
 def test_parse_skips_aggregate_rows():
-    xlsx = _make_xlsx("Sheet1", [
-        ["STT", "CHỦ HÀNG", "ĐIỂM ĐI", "ĐIỂM ĐẾN", "F20", "F40", "E20", "E40", "TÁC NGHIỆP"],
-        [1, "HPH", "HECHUN", "HẢI AN", 400000, None, None, None, "XUẤT/ NHẬP TÀU"],
-        [None, "TỔNG CỘNG", None, None, 999999, None, None, None, None],
-    ])
+    xlsx = _make_xlsx(
+        "Sheet1",
+        [
+            [
+                "STT",
+                "CHỦ HÀNG",
+                "ĐIỂM ĐI",
+                "ĐIỂM ĐẾN",
+                "F20",
+                "F40",
+                "E20",
+                "E40",
+                "TÁC NGHIỆP",
+            ],
+            [1, "HPH", "HECHUN", "HẢI AN", 400000, None, None, None, "XUẤT/ NHẬP TÀU"],
+            [None, "TỔNG CỘNG", None, None, 999999, None, None, None, None],
+        ],
+    )
     result = parse_route_pricing_bytes(xlsx)
     assert len(result["rows"]) == 1
 
@@ -162,12 +249,35 @@ def test_parse_no_matching_sheet():
 
 
 def test_parse_header_not_first_row():
-    xlsx = _make_xlsx("Data", [
-        ["BẢNG CƯỚC TUYẾN"],
-        ["Ngày cập nhật"],
-        ["STT", "CHỦ HÀNG", "ĐIỂM ĐI", "ĐIỂM ĐẾN", "F20", "F40", "E20", "E40", "TÁC NGHIỆP"],
-        [1, "PAN", "PAN", "NAM ĐÌNH VŨ", 454158, 489065, 218352, 436705, "XUẤT/ NHẬP TÀU"],
-    ])
+    xlsx = _make_xlsx(
+        "Data",
+        [
+            ["BẢNG CƯỚC TUYẾN"],
+            ["Ngày cập nhật"],
+            [
+                "STT",
+                "CHỦ HÀNG",
+                "ĐIỂM ĐI",
+                "ĐIỂM ĐẾN",
+                "F20",
+                "F40",
+                "E20",
+                "E40",
+                "TÁC NGHIỆP",
+            ],
+            [
+                1,
+                "PAN",
+                "PAN",
+                "NAM ĐÌNH VŨ",
+                454158,
+                489065,
+                218352,
+                436705,
+                "XUẤT/ NHẬP TÀU",
+            ],
+        ],
+    )
     result = parse_route_pricing_bytes(xlsx)
     assert len(result["rows"]) == 1
     assert result["rows"][0]["client_raw"] == "PAN"
@@ -179,8 +289,22 @@ def test_parse_multiple_sheets():
     ws1.title = "Other"
     ws1.append(["A", "B"])
     ws2 = wb.create_sheet("CƯỚC TUYẾN")
-    ws2.append(["STT", "CHỦ HÀNG", "ĐIỂM ĐI", "ĐIỂM ĐẾN", "F20", "F40", "E20", "E40", "TÁC NGHIỆP"])
-    ws2.append([1, "HPH", "HECHUN", "HẢI AN", 400000, None, None, None, "XUẤT/ NHẬP TÀU"])
+    ws2.append(
+        [
+            "STT",
+            "CHỦ HÀNG",
+            "ĐIỂM ĐI",
+            "ĐIỂM ĐẾN",
+            "F20",
+            "F40",
+            "E20",
+            "E40",
+            "TÁC NGHIỆP",
+        ]
+    )
+    ws2.append(
+        [1, "HPH", "HECHUN", "HẢI AN", 400000, None, None, None, "XUẤT/ NHẬP TÀU"]
+    )
     buf = BytesIO()
     wb.save(buf)
     buf.seek(0)
@@ -190,9 +314,32 @@ def test_parse_multiple_sheets():
 
 
 def test_parse_price_rounding():
-    xlsx = _make_xlsx("Sheet1", [
-        ["STT", "CHỦ HÀNG", "ĐIỂM ĐI", "ĐIỂM ĐẾN", "F20", "F40", "E20", "E40", "TÁC NGHIỆP"],
-        [1, "PAN", "PAN", "NAM ĐÌNH VŨ", 218352.5, None, None, None, "XUẤT/ NHẬP TÀU"],
-    ])
+    xlsx = _make_xlsx(
+        "Sheet1",
+        [
+            [
+                "STT",
+                "CHỦ HÀNG",
+                "ĐIỂM ĐI",
+                "ĐIỂM ĐẾN",
+                "F20",
+                "F40",
+                "E20",
+                "E40",
+                "TÁC NGHIỆP",
+            ],
+            [
+                1,
+                "PAN",
+                "PAN",
+                "NAM ĐÌNH VŨ",
+                218352.5,
+                None,
+                None,
+                None,
+                "XUẤT/ NHẬP TÀU",
+            ],
+        ],
+    )
     result = parse_route_pricing_bytes(xlsx)
     assert result["rows"][0]["f20_price"] == 218352  # banker's rounding

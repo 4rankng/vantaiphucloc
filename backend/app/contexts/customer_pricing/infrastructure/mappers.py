@@ -68,7 +68,9 @@ def alias_to_domain(orm: LocationAliasORM) -> LocationAlias:
     )
 
 
-def alias_to_orm(a: LocationAlias, orm: LocationAliasORM | None = None) -> LocationAliasORM:
+def alias_to_orm(
+    a: LocationAlias, orm: LocationAliasORM | None = None
+) -> LocationAliasORM:
     if orm is None:
         orm = LocationAliasORM()
     if a.id is not None:
@@ -81,7 +83,9 @@ def alias_to_orm(a: LocationAlias, orm: LocationAliasORM | None = None) -> Locat
     return orm
 
 
-def location_to_domain(orm: LocationORM, aliases: list[LocationAliasORM] | None = None) -> Location:
+def location_to_domain(
+    orm: LocationORM, aliases: list[LocationAliasORM] | None = None
+) -> Location:
     return Location(
         id=LocationId(orm.id) if orm.id is not None else None,
         name=orm.name,

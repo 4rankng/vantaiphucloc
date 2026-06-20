@@ -1,4 +1,5 @@
 """Route Pricing use cases (CRUD)."""
+
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession

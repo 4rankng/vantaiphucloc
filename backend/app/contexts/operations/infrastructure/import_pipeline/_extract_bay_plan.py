@@ -20,7 +20,9 @@ from app.contexts.operations.infrastructure.import_pipeline.value_parsers import
 from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView
 
 
-def extract_bay_plan(sheets: list[SheetView], filename: str = "") -> tuple[list[ExtractedRow], list[dict]]:
+def extract_bay_plan(
+    sheets: list[SheetView], filename: str = ""
+) -> tuple[list[ExtractedRow], list[dict]]:
     """Extract from GLORY/CONSCIENCE style files.
 
     Returns (accepted_rows, rejected_rows).
@@ -51,7 +53,11 @@ def extract_bay_plan(sheets: list[SheetView], filename: str = "") -> tuple[list[
     # Vessel name from row 1 cell A1 or from filename
     vessel_name = ""
     if bay_plan_sheet.rows:
-        vessel_name = parse_string(bay_plan_sheet.rows[0][0], max_len=255) if bay_plan_sheet.rows[0] else ""
+        vessel_name = (
+            parse_string(bay_plan_sheet.rows[0][0], max_len=255)
+            if bay_plan_sheet.rows[0]
+            else ""
+        )
     if not vessel_name:
         vessel_name = vessel_from_filename(filename)
 
@@ -86,23 +92,35 @@ def extract_bay_plan(sheets: list[SheetView], filename: str = "") -> tuple[list[
             try:
                 cont_no = parse_container_no(cont_val)
             except ValueError:
-                rejected.append({"source_row_index": r, "reason": "bad_container_no", "raw": cont_val})
+                rejected.append(
+                    {
+                        "source_row_index": r,
+                        "reason": "bad_container_no",
+                        "raw": cont_val,
+                    }
+                )
                 continue
 
-            size_val = cell_text(row[size_col]) if size_col is not None and size_col < len(row) else ""
+            size_val = (
+                cell_text(row[size_col])
+                if size_col is not None and size_col < len(row)
+                else ""
+            )
             fe_unknown = cont_no not in fe_lookup
             fe = fe_lookup.get(cont_no, "E")
             work_type = build_cont_type(fe, size_val)
 
-            accepted.append(ExtractedRow(
-                container_number=cont_no,
-                cont_type=work_type,
-                pickup="HAIPHONG",
-                dropoff=port or "",
-                vessel_name=vessel_name,
-                source_row_index=r,
-                freight_kind_unknown=fe_unknown,
-            ))
+            accepted.append(
+                ExtractedRow(
+                    container_number=cont_no,
+                    cont_type=work_type,
+                    pickup="HAIPHONG",
+                    dropoff=port or "",
+                    vessel_name=vessel_name,
+                    source_row_index=r,
+                    freight_kind_unknown=fe_unknown,
+                )
+            )
 
     return accepted, rejected
 
@@ -110,6 +128,7 @@ def extract_bay_plan(sheets: list[SheetView], filename: str = "") -> tuple[list[
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
 
 def _find_port_sections(sheet: SheetView, header_row: int) -> dict[int, str]:
     """Find port codes in any row above the header."""

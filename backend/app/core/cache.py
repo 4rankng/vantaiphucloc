@@ -41,7 +41,9 @@ class CacheManager:
         try:
             return json.loads(raw)
         except json.JSONDecodeError:
-            logger.warning("Invalid JSON in cache key %s", self._key(namespace, identifier))
+            logger.warning(
+                "Invalid JSON in cache key %s", self._key(namespace, identifier)
+            )
             return None
 
     async def set_json(

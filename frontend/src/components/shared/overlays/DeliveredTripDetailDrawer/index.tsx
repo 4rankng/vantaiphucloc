@@ -47,7 +47,7 @@ export function DeliveredTripDetailDrawer({
     if (fullTrip?.contPhotoUrl && !trip.contPhotoUrl) {
       setTrip(prev => ({ ...prev, contPhotoUrl: fullTrip.contPhotoUrl }))
     }
-  }, [fullTrip?.contPhotoUrl])
+  }, [fullTrip?.contPhotoUrl, trip.contPhotoUrl])
 
   const updateTrip = {
     ...(_updateTrip),

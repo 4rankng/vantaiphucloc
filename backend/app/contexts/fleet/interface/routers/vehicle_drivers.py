@@ -23,10 +23,14 @@ router = APIRouter(prefix="/vehicle-drivers", tags=["vehicle-drivers"])
 async def _enrich(db: AsyncSession, vd: VehicleDriver) -> VehicleDriverOut:
     plate = None
     driver_name = None
-    v = (await db.execute(select(Vehicle).where(Vehicle.id == vd.vehicle_id))).scalar_one_or_none()
+    v = (
+        await db.execute(select(Vehicle).where(Vehicle.id == vd.vehicle_id))
+    ).scalar_one_or_none()
     if v:
         plate = v.plate
-    u = (await db.execute(select(User).where(User.id == vd.driver_id))).scalar_one_or_none()
+    u = (
+        await db.execute(select(User).where(User.id == vd.driver_id))
+    ).scalar_one_or_none()
     if u:
         driver_name = u.full_name or u.username
     return VehicleDriverOut(
@@ -67,10 +71,16 @@ async def create_vehicle_driver(
     _current_user: User = Depends(require_permission("update", "Driver")),
     db: AsyncSession = Depends(get_db),
 ):
-    v = (await db.execute(select(Vehicle).where(Vehicle.id == body.vehicle_id))).scalar_one_or_none()
+    v = (
+        await db.execute(select(Vehicle).where(Vehicle.id == body.vehicle_id))
+    ).scalar_one_or_none()
     if v is None:
         raise HTTPException(status_code=404, detail="Vehicle not found")
-    u = (await db.execute(select(User).where(User.id == body.driver_id, User.role == "driver"))).scalar_one_or_none()
+    u = (
+        await db.execute(
+            select(User).where(User.id == body.driver_id, User.role == "driver")
+        )
+    ).scalar_one_or_none()
     if u is None:
         raise HTTPException(status_code=404, detail="Driver not found")
 
@@ -93,12 +103,20 @@ async def deactivate_vehicle_driver(
     _current_user: User = Depends(require_permission("update", "Driver")),
     db: AsyncSession = Depends(get_db),
 ):
-    vd = (await db.execute(select(VehicleDriver).where(VehicleDriver.id == vehicle_driver_id))).scalar_one_or_none()
+    vd = (
+        await db.execute(
+            select(VehicleDriver).where(VehicleDriver.id == vehicle_driver_id)
+        )
+    ).scalar_one_or_none()
     if vd is None:
-        raise HTTPException(status_code=404, detail="Vehicle-driver assignment not found")
+        raise HTTPException(
+            status_code=404, detail="Vehicle-driver assignment not found"
+        )
     vd.is_active = False
     vd.effective_to = date.today()
     await db.execute(
-        update(Vehicle).where(Vehicle.id == vd.vehicle_id, Vehicle.driver_id == vd.driver_id).values(driver_id=None)
+        update(Vehicle)
+        .where(Vehicle.id == vd.vehicle_id, Vehicle.driver_id == vd.driver_id)
+        .values(driver_id=None)
     )
     await db.commit()

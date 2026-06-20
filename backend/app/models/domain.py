@@ -32,8 +32,6 @@ from app.models.mixins import AuditableMixin
 JSON_TYPE = JSON().with_variant(JSONB(), "postgresql")
 
 
-
-
 # ---------------------------------------------------------------------------
 # Vehicle
 # ---------------------------------------------------------------------------
@@ -45,8 +43,15 @@ class Vehicle(AuditableMixin, Base):
 
     id = Column(Integer, primary_key=True, index=True)
     plate = Column(String(20), nullable=False, unique=True, index=True)
-    driver_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-    vendor_id = Column(Integer, ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True, index=True)
+    driver_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    vendor_id = Column(
+        Integer,
+        ForeignKey("vendors.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
@@ -118,7 +123,9 @@ class VehicleExpense(AuditableMixin, Base):
     expense_date = Column(Date, nullable=False, index=True)
     description = Column(String(500), nullable=True)
     receipt_url = Column(String(1000), nullable=True)
-    created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_by = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
@@ -195,7 +202,9 @@ class Location(AuditableMixin, Base):
     geocode_source = Column(String(20), nullable=True)
     pending_geocode = Column(Boolean, default=True, nullable=False)
     created_via = Column(String(30), nullable=True)
-    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_by_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     location_review_needed = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
@@ -219,7 +228,9 @@ class LocationAlias(Base):
     alias_normalized = Column(String(255), nullable=False, unique=True)
     source = Column(String(30), nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
-    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_by_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -229,7 +240,12 @@ class LocationAlias(Base):
 
 class RoutePricing(AuditableMixin, Base):
     __tablename__ = "route_pricings"
-    __audit_context_fields__ = {"client_id", "work_type", "pickup_location_id", "dropoff_location_id"}
+    __audit_context_fields__ = {
+        "client_id",
+        "work_type",
+        "pickup_location_id",
+        "dropoff_location_id",
+    }
 
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
@@ -267,7 +283,12 @@ class RoutePricing(AuditableMixin, Base):
 
 class VendorRoutePricing(AuditableMixin, Base):
     __tablename__ = "vendor_route_pricings"
-    __audit_context_fields__ = {"vendor_id", "work_type", "pickup_location_id", "dropoff_location_id"}
+    __audit_context_fields__ = {
+        "vendor_id",
+        "work_type",
+        "pickup_location_id",
+        "dropoff_location_id",
+    }
 
     id = Column(Integer, primary_key=True, index=True)
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False, index=True)
@@ -316,8 +337,15 @@ class DeliveredTrip(AuditableMixin, Base):
     dropoff_location_id = Column(
         Integer, ForeignKey("locations.id"), nullable=False, index=True
     )
-    driver_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-    vendor_id = Column(Integer, ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True, index=True)
+    driver_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    vendor_id = Column(
+        Integer,
+        ForeignKey("vendors.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     vessel = Column(String(100), nullable=True)
     work_type = Column(String(30), nullable=False)
     cont_number = Column(String(50), nullable=True, index=True)
@@ -325,7 +353,9 @@ class DeliveredTrip(AuditableMixin, Base):
     cont_photo_url = Column(String(500), nullable=True)
     cont_photo_hash = Column(String(64), nullable=True, index=True)
     vehicle_plate = Column(String(20), nullable=True)
-    booked_trip_id = Column(Integer, ForeignKey("booked_trips.id"), nullable=True, index=True)
+    booked_trip_id = Column(
+        Integer, ForeignKey("booked_trips.id"), nullable=True, index=True
+    )
     revenue = Column(Integer, nullable=False, default=0)
     driver_salary = Column(Integer, nullable=False, default=0)
     trip_date = Column(Date, nullable=True)
@@ -336,14 +366,16 @@ class DeliveredTrip(AuditableMixin, Base):
     )
 
     client = relationship("Client", lazy="noload")
-    pickup_location = relationship("Location", foreign_keys=[pickup_location_id], lazy="noload")
-    dropoff_location = relationship("Location", foreign_keys=[dropoff_location_id], lazy="noload")
+    pickup_location = relationship(
+        "Location", foreign_keys=[pickup_location_id], lazy="noload"
+    )
+    dropoff_location = relationship(
+        "Location", foreign_keys=[dropoff_location_id], lazy="noload"
+    )
     driver = relationship("UserORM", foreign_keys=[driver_id], lazy="noload")
     vendor = relationship("Vendor", lazy="noload")
 
-    __table_args__ = (
-        Index("ix_delivered_trips_created_at", "created_at"),
-    )
+    __table_args__ = (Index("ix_delivered_trips_created_at", "created_at"),)
 
 
 # ---------------------------------------------------------------------------
@@ -353,7 +385,12 @@ class DeliveredTrip(AuditableMixin, Base):
 
 class BookedTrip(AuditableMixin, Base):
     __tablename__ = "booked_trips"
-    __audit_context_fields__ = {"client_id", "work_type", "pickup_location_id", "dropoff_location_id"}
+    __audit_context_fields__ = {
+        "client_id",
+        "work_type",
+        "pickup_location_id",
+        "dropoff_location_id",
+    }
 
     id = Column(Integer, primary_key=True, index=True)
     trip_date = Column(Date, nullable=False)
@@ -422,7 +459,9 @@ class DriverSalaryConfig(AuditableMixin, Base):
     effective_from = Column(Date, nullable=False)
     note = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
-    created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_by = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
     __table_args__ = (
         UniqueConstraint(
@@ -467,7 +506,9 @@ class DriverSalary(AuditableMixin, Base):
     bonus_salary = Column(Integer, nullable=False, default=0)  # VND
     allowance = Column(Integer, nullable=False, default=0)  # VND
     note = Column(String(500), nullable=True)
-    created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_by = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
@@ -510,7 +551,9 @@ class MappingProfile(Base):
     header_signature = Column(String(64), nullable=False, index=True)
     column_mapping_json = Column(String, nullable=False)
     pivot_columns_json = Column(String, nullable=False, default="[]")
-    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_by_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     last_used_at = Column(DateTime(timezone=True), nullable=True)
     use_count = Column(Integer, nullable=False, default=0)

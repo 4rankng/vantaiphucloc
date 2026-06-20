@@ -8,15 +8,13 @@ REFRESH_TOKEN_TYPE = "refresh"
 
 
 def hash_password(password: str) -> str:
-    return bcrypt.hashpw(
-        password.encode("utf-8"), bcrypt.gensalt(rounds=12)
-    ).decode("utf-8")
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode(
+        "utf-8"
+    )
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return bcrypt.checkpw(
-        plain.encode("utf-8"), hashed.encode("utf-8")
-    )
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
 def _create_token(data: dict, token_type: str, expires_delta: timedelta) -> str:
@@ -45,7 +43,9 @@ def create_refresh_token(data: dict) -> str:
 
 def decode_access_token(token: str) -> dict | None:
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
         if payload.get("type") != ACCESS_TOKEN_TYPE:
             return None
         return payload
@@ -55,7 +55,9 @@ def decode_access_token(token: str) -> dict | None:
 
 def decode_refresh_token(token: str) -> dict | None:
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
         if payload.get("type") != REFRESH_TOKEN_TYPE:
             return None
         return payload

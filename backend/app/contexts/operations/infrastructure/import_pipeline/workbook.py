@@ -17,10 +17,10 @@ from typing import Any
 @dataclass
 class SheetView:
     name: str
-    state: str           # "visible" | "hidden" | "veryHidden"
+    state: str  # "visible" | "hidden" | "veryHidden"
     n_rows: int
     n_cols: int
-    rows: list[list[Any]]   # rows[r][c]; r,c are 0-indexed
+    rows: list[list[Any]]  # rows[r][c]; r,c are 0-indexed
 
 
 def load_workbook(content: bytes, filename: str) -> list[SheetView]:
@@ -34,6 +34,7 @@ def load_workbook(content: bytes, filename: str) -> list[SheetView]:
 # ---------------------------------------------------------------------------
 # .xlsx via openpyxl
 # ---------------------------------------------------------------------------
+
 
 def _load_xlsx(content: bytes) -> list[SheetView]:
     import openpyxl
@@ -60,16 +61,25 @@ def _load_xlsx(content: bytes) -> list[SheetView]:
             cap_rows = min(n_rows, 5000)
             rows: list[list[Any]] = []
             if cap_rows > 0 and n_cols > 0:
-                for row in ws.iter_rows(min_row=1, max_row=cap_rows, max_col=n_cols, values_only=True):
+                for row in ws.iter_rows(
+                    min_row=1, max_row=cap_rows, max_col=n_cols, values_only=True
+                ):
                     if hidden_cols:
-                        rows.append([v for i, v in enumerate(row) if i not in hidden_cols])
+                        rows.append(
+                            [v for i, v in enumerate(row) if i not in hidden_cols]
+                        )
                     else:
                         rows.append(list(row))
             visible_cols = n_cols - len(hidden_cols)
-            out.append(SheetView(
-                name=sheet_name, state=state,
-                n_rows=cap_rows, n_cols=visible_cols, rows=rows,
-            ))
+            out.append(
+                SheetView(
+                    name=sheet_name,
+                    state=state,
+                    n_rows=cap_rows,
+                    n_cols=visible_cols,
+                    rows=rows,
+                )
+            )
     finally:
         wb.close()
     return out
@@ -78,6 +88,7 @@ def _load_xlsx(content: bytes) -> list[SheetView]:
 # ---------------------------------------------------------------------------
 # .xls via xlrd
 # ---------------------------------------------------------------------------
+
 
 def _load_xls(content: bytes) -> list[SheetView]:
     import xlrd
@@ -94,9 +105,9 @@ def _load_xls(content: bytes) -> list[SheetView]:
         n_cols = ws.ncols
         # Detect hidden columns from colinfo_map
         hidden_cols: set[int] = set()
-        if hasattr(ws, 'colinfo_map') and ws.colinfo_map:
+        if hasattr(ws, "colinfo_map") and ws.colinfo_map:
             for col_idx, info in ws.colinfo_map.items():
-                if getattr(info, 'is_hidden', False):
+                if getattr(info, "is_hidden", False):
                     hidden_cols.add(col_idx)
         cap_rows = min(n_rows, 5000)
         rows: list[list[Any]] = []
@@ -109,10 +120,15 @@ def _load_xls(content: bytes) -> list[SheetView]:
                 row.append(_xls_cell_value(cell, wb))
             rows.append(row)
         visible_cols = n_cols - len(hidden_cols)
-        out.append(SheetView(
-            name=ws.name, state="visible",
-            n_rows=cap_rows, n_cols=visible_cols, rows=rows,
-        ))
+        out.append(
+            SheetView(
+                name=ws.name,
+                state="visible",
+                n_rows=cap_rows,
+                n_cols=visible_cols,
+                rows=rows,
+            )
+        )
     return out
 
 

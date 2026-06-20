@@ -51,7 +51,9 @@ async def send_push_to_user(user_id: int, title: str, body: str) -> int:
                 logger.error("Unexpected push error for sub %s: %s", sub.id, e)
 
         if expired_ids:
-            await db.execute(sa_delete(PushSubscription).where(PushSubscription.id.in_(expired_ids)))
+            await db.execute(
+                sa_delete(PushSubscription).where(PushSubscription.id.in_(expired_ids))
+            )
             await db.commit()
 
     return sent

@@ -19,6 +19,11 @@ async def calculate_salary_task(
     """No-op: salary periods removed. Earnings are calculated on-the-fly."""
     logger.info(
         "calculate_salary_task called (no-op) for driver=%s range=%s..%s",
-        driver_id, start_date, end_date,
+        driver_id,
+        start_date,
+        end_date,
     )
-    return {"status": "NOOP", "message": "SalaryPeriod removed; earnings calculated on-the-fly"}
+    return {
+        "status": "NOOP",
+        "message": "SalaryPeriod removed; earnings calculated on-the-fly",
+    }

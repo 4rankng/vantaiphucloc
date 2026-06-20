@@ -51,6 +51,7 @@ def _normalize_trip_import_header(header: str) -> str:
     if not header:
         return ""
     from app.utils.text import slugify_vi
+
     normalized = slugify_vi(header)
     return _TRIP_IMPORT_COLUMNS.get(normalized, normalized)
 
@@ -129,7 +130,9 @@ async def import_booked_trips(
                 try:
                     trip_date = dt.strptime(trip_date, "%d/%m/%Y").date()
                 except ValueError:
-                    errors.append(f"Dòng {i + 2}: định dạng ngày không hợp lệ '{trip_date}'")
+                    errors.append(
+                        f"Dòng {i + 2}: định dạng ngày không hợp lệ '{trip_date}'"
+                    )
                     continue
         elif hasattr(trip_date, "date"):
             pass  # already a date
@@ -152,19 +155,25 @@ async def import_booked_trips(
         first_row = group_rows[0]
         pickup = first_row.get("pickup_location")
         dropoff = first_row.get("dropoff_location")
-        first_row.get("route") or (f"{pickup} - {dropoff}" if pickup and dropoff else "")
+        first_row.get("route") or (
+            f"{pickup} - {dropoff}" if pickup and dropoff else ""
+        )
 
         # Build containers (normalize numbers — strip hyphens, uppercase)
         containers_data = []
         for row in group_rows:
-            cn = normalize_container_number(str(row.get("container_number", "")).strip())
+            cn = normalize_container_number(
+                str(row.get("container_number", "")).strip()
+            )
             ct = str(row.get("work_type", "")).strip().upper()
             if cn:
                 valid, err = validate_container_number(cn)
                 if not valid:
                     errors.append(f"Nhóm {key}: Container {cn} không hợp lệ — {err}")
                     continue
-                containers_data.append({"container_number": cn, "cont_type": ct or "E20"})
+                containers_data.append(
+                    {"container_number": cn, "cont_type": ct or "E20"}
+                )
 
         if not containers_data:
             errors.append(f"Nhóm {key}: không có số container")
@@ -180,19 +189,27 @@ async def import_booked_trips(
             LocationResolverService,
             ResolverSource,
         )
+
         resolver = LocationResolverService(db)
         pickup_id = None
         dropoff_id = None
         if pickup:
-            r = await resolver.resolve_or_create(pickup, source=ResolverSource.MANUAL, user_id=user_id)
+            r = await resolver.resolve_or_create(
+                pickup, source=ResolverSource.MANUAL, user_id=user_id
+            )
             pickup_id = r.location.id if r.location else None
         if dropoff:
-            r = await resolver.resolve_or_create(dropoff, source=ResolverSource.MANUAL, user_id=user_id)
+            r = await resolver.resolve_or_create(
+                dropoff, source=ResolverSource.MANUAL, user_id=user_id
+            )
             dropoff_id = r.location.id if r.location else None
         if not revenue:
             tiered = await find_tiered_pricing(
-                db, client_id=client.id, work_type=work_type,
-                pickup_location_id=pickup_id, dropoff_location_id=dropoff_id,
+                db,
+                client_id=client.id,
+                work_type=work_type,
+                pickup_location_id=pickup_id,
+                dropoff_location_id=dropoff_id,
                 cont_type=containers_data[0]["cont_type"] if containers_data else None,
             )
             if tiered:
@@ -221,13 +238,25 @@ def generate_booked_trip_template() -> bytes:
     import openpyxl
 
     headers = [
-        "Ngày", "Mã KH", "Điểm lấy", "Điểm trả",
-        "Cung đường", "Số cont", "Loại cont", "Đơn giá",
+        "Ngày",
+        "Mã KH",
+        "Điểm lấy",
+        "Điểm trả",
+        "Cung đường",
+        "Số cont",
+        "Loại cont",
+        "Đơn giá",
         "Lương TX",
     ]
     examples = [
-        "01/05/2026", "KH001", "Cát lái", "KC Bình Dương",
-        "Cát lái - KC Bình Dương", "TCLU1234567", "E20", "1500000",
+        "01/05/2026",
+        "KH001",
+        "Cát lái",
+        "KC Bình Dương",
+        "Cát lái - KC Bình Dương",
+        "TCLU1234567",
+        "E20",
+        "1500000",
         "500000",
     ]
     workbook = openpyxl.Workbook()

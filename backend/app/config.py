@@ -1,4 +1,3 @@
-
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 
 
@@ -6,10 +5,14 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/vantaihanghoa"
     SECRET_KEY: str = "change-me-to-a-random-secret-key"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200  # 30 days — long-lived for driver mobile devices (Oppo kills background)
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = (
+        43200  # 30 days — long-lived for driver mobile devices (Oppo kills background)
+    )
     REFRESH_TOKEN_EXPIRE_DAYS: int = 365  # 1 year
     DEFAULT_DRIVER_PASSWORD: str = "Phucloc@123"
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5174,http://localhost:3000"
+    CORS_ORIGINS: str = (
+        "http://localhost:5173,http://localhost:5174,http://localhost:3000"
+    )
     ENVIRONMENT: str = "development"
 
     # Redis

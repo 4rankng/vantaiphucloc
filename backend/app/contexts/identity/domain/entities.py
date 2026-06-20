@@ -25,8 +25,6 @@ from app.contexts.identity.domain.value_objects import (
 )
 
 
-
-
 @dataclass
 class User:
     """User aggregate root.
@@ -60,7 +58,10 @@ class User:
             raise InactiveUser("Account is deactivated")
 
     def change_password(
-        self, current: str, new: str, hasher: "PasswordHasher"  # type: ignore[name-defined]
+        self,
+        current: str,
+        new: str,
+        hasher: "PasswordHasher",  # type: ignore[name-defined]
     ) -> None:
         if not hasher.verify(current, self.hashed_password):
             raise WrongCurrentPassword("Current password is incorrect")

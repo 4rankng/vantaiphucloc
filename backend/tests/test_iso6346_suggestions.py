@@ -106,7 +106,9 @@ GOLDEN_PATHS = [
 ]
 
 
-@pytest.mark.parametrize("prefix,expected", GOLDEN_PATHS, ids=[p for p, _ in GOLDEN_PATHS])
+@pytest.mark.parametrize(
+    "prefix,expected", GOLDEN_PATHS, ids=[p for p, _ in GOLDEN_PATHS]
+)
 def test_calculate_check_digit_known_values(prefix: str, expected: int):
     """Check digit must match independently calculated ISO 6346 reference."""
     assert calculate_check_digit(prefix) == expected

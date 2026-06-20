@@ -4,10 +4,13 @@ from app.models.domain import Client, Location, DeliveredTrip, RoutePricing
 from app.models.base import User
 from app.core.security import hash_password
 
+
 async def _seed_test_data(db_session):
     client = Client(
-        code="PAN", name="PAN CFS",
-        phone="0901", is_active=True,
+        code="PAN",
+        name="PAN CFS",
+        phone="0901",
+        is_active=True,
     )
     pickup = Location(name="PAN", is_active=True)
     dropoff = Location(name="HICT", is_active=True)
@@ -36,6 +39,7 @@ async def _seed_test_data(db_session):
     await db_session.commit()
     return client, pickup, dropoff, driver
 
+
 async def _accountant_headers(db_session, async_client):
     phone = "09000000001"
     user = User(
@@ -53,6 +57,7 @@ async def _accountant_headers(db_session, async_client):
     )
     assert res.status_code == 200
     return {"Authorization": f"Bearer {res.json()['access_token']}"}
+
 
 @pytest.mark.asyncio
 async def test_sync_matched_trips_pricing(db_session, async_client):
@@ -72,7 +77,7 @@ async def test_sync_matched_trips_pricing(db_session, async_client):
         work_type="ĐÓNG KHO",
         cont_type="F20",
     )
-    
+
     # 2. Unmatched trip - should NOT be updated
     t2 = DeliveredTrip(
         client_id=client.id,

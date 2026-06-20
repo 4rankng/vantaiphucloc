@@ -30,23 +30,19 @@ _EVENTS_REGISTERED = False
 
 
 def _is_auditable(obj: object) -> bool:
-    return getattr(obj, '__auditable__', False) is True
+    return getattr(obj, "__auditable__", False) is True
 
 
 def _serialize(obj: object) -> dict:
-    exclude = getattr(obj, '__audit_exclude_fields__', set())
+    exclude = getattr(obj, "__audit_exclude_fields__", set())
     mapper = obj.__class__.__mapper__
-    return {
-        c.key: getattr(obj, c.key)
-        for c in mapper.columns
-        if c.key not in exclude
-    }
+    return {c.key: getattr(obj, c.key) for c in mapper.columns if c.key not in exclude}
 
 
 def _capture_dirty(obj: object) -> tuple[dict | None, dict | None]:
     """Return (old, new) dicts of changed fields for a dirty object."""
-    exclude = getattr(obj, '__audit_exclude_fields__', set())
-    context = getattr(obj, '__audit_context_fields__', set())
+    exclude = getattr(obj, "__audit_exclude_fields__", set())
+    context = getattr(obj, "__audit_context_fields__", set())
     mapper = obj.__class__.__mapper__
     old: dict = {}
     new: dict = {}
@@ -78,32 +74,36 @@ def register_audit_events() -> None:
 
     @event.listens_for(Session, "before_flush")
     def _capture_changes(session, flush_context, instances):
-        seen: set[int] = session.info.setdefault('_audit_seen', set())
-        pending: list[dict] = session.info.setdefault('_audit_pending', [])
+        seen: set[int] = session.info.setdefault("_audit_seen", set())
+        pending: list[dict] = session.info.setdefault("_audit_pending", [])
 
         for obj in session.new:
             if _is_auditable(obj) and id(obj) not in seen:
                 seen.add(id(obj))
-                pending.append({'action': 'CREATE', 'obj': obj})
+                pending.append({"action": "CREATE", "obj": obj})
 
         for obj in session.dirty:
             if _is_auditable(obj) and id(obj) not in seen:
                 old_val, new_val = _capture_dirty(obj)
                 if old_val is not None:
                     seen.add(id(obj))
-                    pending.append({
-                        'action': 'UPDATE', 'obj': obj,
-                        'old': old_val, 'new': new_val,
-                    })
+                    pending.append(
+                        {
+                            "action": "UPDATE",
+                            "obj": obj,
+                            "old": old_val,
+                            "new": new_val,
+                        }
+                    )
 
         for obj in session.deleted:
             if _is_auditable(obj) and id(obj) not in seen:
                 seen.add(id(obj))
-                pending.append({'action': 'DELETE', 'obj': obj})
+                pending.append({"action": "DELETE", "obj": obj})
 
     @event.listens_for(Session, "after_flush")
     def _write_entries(session, flush_context):
-        pending: list[dict] = session.info.get('_audit_pending', [])
+        pending: list[dict] = session.info.get("_audit_pending", [])
         if not pending:
             return
 
@@ -115,15 +115,15 @@ def register_audit_events() -> None:
         reason = get_audit_reason()
 
         for item in pending:
-            obj = item['obj']
-            action = item['action']
+            obj = item["obj"]
+            action = item["action"]
 
-            if action == 'CREATE':
+            if action == "CREATE":
                 old_value = None
                 new_value = _serialize(obj)
-            elif action == 'UPDATE':
-                old_value = item['old']
-                new_value = item['new']
+            elif action == "UPDATE":
+                old_value = item["old"]
+                new_value = item["new"]
             else:  # DELETE
                 old_value = _serialize(obj)
                 new_value = None
@@ -139,7 +139,7 @@ def register_audit_events() -> None:
             )
             session.add(entry)
 
-        session.info['_audit_pending'] = []
+        session.info["_audit_pending"] = []
         _log.info("AUDIT: %d entries queued for user=%s", len(pending), user_id)
 
 
@@ -149,8 +149,16 @@ REQUIRES_REASON = {"CANCEL", "UNMATCH"}
 
 
 async def log_action(
-    db, *, user_id, action, table_name, record_id,
-    old_value=None, new_value=None, reason=None, request=None,
+    db,
+    *,
+    user_id,
+    action,
+    table_name,
+    record_id,
+    old_value=None,
+    new_value=None,
+    reason=None,
+    request=None,
 ):
     """Manual audit log entry — prefer set_audit_reason() + auto-capture."""
     from app.core.audit_context import set_audit_reason
@@ -169,5 +177,12 @@ async def log_action(
     )
     db.add(entry)
     await db.flush()
-    _log.info("AUDIT: %s %s#%d by user=%s reason=%s", action, table_name, record_id, user_id, reason)
+    _log.info(
+        "AUDIT: %s %s#%d by user=%s reason=%s",
+        action,
+        table_name,
+        record_id,
+        user_id,
+        reason,
+    )
     return entry

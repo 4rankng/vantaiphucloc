@@ -6,10 +6,11 @@ import { KpiHeroCard } from '@/components/shared/data-display/KpiHeroCard'
 import { DashboardSectionHeader } from '@/components/shared/data-display/DashboardSectionHeader'
 import {
   TrendingUp, TrendingDown, ChevronLeft, ChevronRight,
-  Activity, Users, Truck, Coins, BarChart3,
+  Activity, Users, Truck, Coins, BarChart3, X,
 } from 'lucide-react'
-import { useDirectorDashboard } from '@/hooks/queries/pnl'
-import type { VehiclePnLRow } from '@/services/api/pnl.api'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet'
+import { useDirectorDashboard, useDirectorDashboardDrilldown } from '@/hooks/queries/pnl'
+import type { DirectorDashboardDrilldown, DirectorDashboardDrilldownClient, VehiclePnLRow } from '@/services/api/pnl.api'
 import type { AuditLogEntry } from '@/services/api/audit.api'
 import { getAuditLogs } from '@/services/api/audit.api'
 import { formatActivityEntry, formatFinancialChange, SUBJECT_PREFIX } from '@/lib/activity-utils'
@@ -35,6 +36,33 @@ const fmtCompact = (n: number): string => {
   if (Math.abs(n) >= 1e6) return `${(n / 1e6).toFixed(1)} tr`
   if (Math.abs(n) >= 1e3) return `${(n / 1e3).toFixed(0)}K`
   return n.toLocaleString('vi-VN')
+}
+
+type KpiMetric = 'trips' | 'revenue' | 'cost' | 'profit'
+
+const METRIC_LABELS: Record<KpiMetric, string> = {
+  trips: 'Tổng chuyến',
+  revenue: 'Doanh thu',
+  cost: 'Chi phí',
+  profit: 'Lợi nhuận',
+}
+
+function metricValue(client: DirectorDashboardDrilldownClient, metric: KpiMetric) {
+  if (metric === 'trips') return client.tripCount
+  if (metric === 'revenue') return client.revenue
+  if (metric === 'cost') return client.cost
+  return client.profit
+}
+
+function metricVehicleValue(vehicle: DirectorDashboardDrilldownClient['vehicles'][number], metric: KpiMetric) {
+  if (metric === 'trips') return vehicle.tripCount
+  if (metric === 'revenue') return vehicle.revenue
+  if (metric === 'cost') return vehicle.cost
+  return vehicle.profit
+}
+
+function formatMetricValue(value: number, metric: KpiMetric) {
+  return metric === 'trips' ? `${value.toLocaleString('vi-VN')} chuyến` : fmtCompact(value)
 }
 
 // ─── Activity feed ──────────────────────────────────────────────────────────
@@ -177,6 +205,129 @@ function VehicleBarList({ rows }: { rows: VehiclePnLRow[] }) {
   )
 }
 
+function DirectorKpiDrilldownSheet({
+  open,
+  metric,
+  data,
+  loading,
+  onClose,
+}: {
+  open: boolean
+  metric: KpiMetric
+  data: DirectorDashboardDrilldown | null | undefined
+  loading: boolean
+  onClose: () => void
+}) {
+  const clients = data?.clients ?? []
+  const totals = data?.totals
+  const metricLabel = METRIC_LABELS[metric]
+
+  return (
+    <Sheet open={open} onOpenChange={v => { if (!v) onClose() }}>
+      <SheetContent
+        side="bottom"
+        className="max-h-[86vh] overflow-hidden px-4 pb-4 pt-3 sm:max-w-3xl sm:mx-auto"
+      >
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full" style={{ background: 'var(--theme-border-default)' }} />
+        <SheetHeader className="space-y-1 text-left">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <SheetTitle className="text-lg leading-tight">{metricLabel} theo chủ hàng</SheetTitle>
+              <p className="text-xs leading-snug" style={{ color: 'var(--theme-text-muted)' }}>
+                Bao gồm tuyến đã ghép và chưa ghép
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
+              aria-label="Đóng"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </SheetHeader>
+
+        {totals && (
+          <div
+            className="mt-4 grid grid-cols-3 gap-2 rounded-xl border p-3"
+            style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-primary)' }}
+          >
+            <div>
+              <p className="text-[10px] font-semibold uppercase leading-tight" style={{ color: 'var(--theme-text-muted)' }}>Tổng chuyến</p>
+              <p className="mt-1 font-mono text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{totals.total.toLocaleString('vi-VN')}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase leading-tight" style={{ color: 'var(--theme-text-muted)' }}>Đã ghép</p>
+              <p className="mt-1 font-mono text-sm font-bold" style={{ color: 'var(--theme-status-success)' }}>{totals.matched.toLocaleString('vi-VN')}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase leading-tight" style={{ color: 'var(--theme-text-muted)' }}>Chưa ghép</p>
+              <p className="mt-1 font-mono text-sm font-bold" style={{ color: 'var(--theme-status-warning)' }}>{totals.pending.toLocaleString('vi-VN')}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-4 max-h-[58vh] overflow-y-auto pr-1 custom-scrollbar">
+          {loading && (
+            <p className="py-8 text-center text-sm" style={{ color: 'var(--theme-text-muted)' }}>Đang tải…</p>
+          )}
+          {!loading && clients.length === 0 && (
+            <p className="py-8 text-center text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu</p>
+          )}
+          <div className="space-y-3">
+            {clients.map(client => (
+              <section
+                key={client.clientId}
+                className="rounded-xl border p-3"
+                style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-primary)' }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold leading-snug" style={{ color: 'var(--theme-text-primary)' }}>{client.clientName}</h3>
+                    <p className="mt-0.5 text-[11px] leading-tight" style={{ color: 'var(--theme-text-muted)' }}>
+                      {client.matched} đã ghép · {client.pending} chưa ghép
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="font-mono text-sm font-bold tabular-nums" style={{ color: metric === 'profit' && metricValue(client, metric) < 0 ? 'var(--theme-status-error)' : 'var(--theme-text-primary)' }}>
+                      {formatMetricValue(metricValue(client, metric), metric)}
+                    </p>
+                    <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{metricLabel}</p>
+                  </div>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {client.vehicles.map(vehicle => (
+                    <div
+                      key={`${client.clientId}-${vehicle.vehiclePlate}`}
+                      className="grid items-center gap-2 rounded-lg px-2 py-2"
+                      style={{ gridTemplateColumns: 'minmax(0, 1fr) auto', background: 'var(--theme-bg-secondary)' }}
+                    >
+                      <div className="min-w-0">
+                        <p className="font-mono text-xs font-semibold leading-tight break-words" style={{ color: 'var(--theme-text-primary)' }}>
+                          {vehicle.vehiclePlate}
+                        </p>
+                        <p className="mt-0.5 text-[10px] leading-tight" style={{ color: 'var(--theme-text-muted)' }}>
+                          {vehicle.tripCount} chuyến · {vehicle.matched} ghép · {vehicle.pending} chưa ghép
+                        </p>
+                      </div>
+                      <p className="font-mono text-xs font-bold tabular-nums text-right" style={{ color: metric === 'profit' && metricVehicleValue(vehicle, metric) < 0 ? 'var(--theme-status-error)' : 'var(--theme-text-primary)' }}>
+                        {formatMetricValue(metricVehicleValue(vehicle, metric), metric)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
 // ─── Main component ────────────────────────────────────────────────────────
 
 export function DirectorDashboard() {
@@ -186,6 +337,8 @@ export function DirectorDashboard() {
   const { data: profile } = useProfile()
 
   const { data: stats } = useDirectorDashboard(dateFrom, dateTo)
+  const { data: drilldown, isFetching: drilldownLoading } = useDirectorDashboardDrilldown(dateFrom, dateTo)
+  const [activeMetric, setActiveMetric] = useState<KpiMetric | null>(null)
 
   const total       = stats?.total       ?? 0
   const matched     = stats?.matched     ?? 0
@@ -316,37 +469,53 @@ export function DirectorDashboard() {
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
         <KpiHeroCard
           label={`Tổng chuyến · ${pad(month)}/${year}`}
+          value={total}
           formattedValue={<span>{total.toLocaleString('vi-VN')}</span>}
           icon={Activity}
           color="emerald"
           sublabel={`${pending} chờ ghép · ${matched} đã ghép`}
           trend={totalDelta != null ? { value: `${Math.abs(totalDelta)}%`, positive: totalDelta >= 0 } : undefined}
+          onClick={() => setActiveMetric('trips')}
         />
         <KpiHeroCard
           label="Doanh thu"
+          value={revenue}
           formattedValue={<span>{fmtCompact(revenue)}</span>}
           icon={TrendingUp}
           color="blue"
           sublabel={avgRev > 0 ? `TB ${fmtCompact(avgRev)}/chuyến` : 'Chưa có doanh thu'}
           trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta >= 0 } : undefined}
+          onClick={() => setActiveMetric('revenue')}
         />
         <KpiHeroCard
           label="Chi phí"
+          value={totalCost}
           formattedValue={<span>{fmtCompact(totalCost)}</span>}
           icon={TrendingDown}
           color="rose"
           sublabel={revenue > 0 ? `${Math.round((totalCost / revenue) * 100)}% doanh thu` : 'Chưa có dữ liệu'}
           trend={costDelta != null ? { value: `${Math.abs(costDelta)}%`, positive: costDelta <= 0 } : undefined}
+          onClick={() => setActiveMetric('cost')}
         />
         <KpiHeroCard
           label="Lợi nhuận"
+          value={profit}
           formattedValue={<span>{fmtCompact(profit)}</span>}
           icon={Coins}
           color="amber"
           sublabel={revenue > 0 ? `Biên ${Math.round((profit / revenue) * 100)}%` : 'Chưa có dữ liệu'}
           trend={profitDelta != null ? { value: `${Math.abs(profitDelta)}%`, positive: profitDelta >= 0 } : undefined}
+          onClick={() => setActiveMetric('profit')}
         />
       </div>
+
+      <DirectorKpiDrilldownSheet
+        open={activeMetric != null}
+        metric={activeMetric ?? 'revenue'}
+        data={drilldown}
+        loading={drilldownLoading}
+        onClose={() => setActiveMetric(null)}
+      />
 
       {/* ── Main grid ── */}
       <div className="bento-grid">

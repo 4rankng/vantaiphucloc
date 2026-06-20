@@ -16,14 +16,12 @@ _REFRESH_TOKEN_TYPE = "refresh"
 
 class BcryptPasswordHasher(PasswordHasher):
     def hash(self, plain: str) -> str:
-        return bcrypt.hashpw(
-            plain.encode("utf-8"), bcrypt.gensalt(rounds=12)
-        ).decode("utf-8")
+        return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode(
+            "utf-8"
+        )
 
     def verify(self, plain: str, hashed: str) -> bool:
-        return bcrypt.checkpw(
-            plain.encode("utf-8"), hashed.encode("utf-8")
-        )
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
 class JwtTokenIssuer(TokenIssuer):
@@ -63,9 +61,7 @@ class JwtTokenIssuer(TokenIssuer):
         )
 
     def refresh_token(self, *, user_id: int) -> str:
-        return self._encode(
-            {"id": user_id}, _REFRESH_TOKEN_TYPE, self._refresh_delta
-        )
+        return self._encode({"id": user_id}, _REFRESH_TOKEN_TYPE, self._refresh_delta)
 
     def _decode(self, token: str, expected_type: str) -> dict | None:
         try:

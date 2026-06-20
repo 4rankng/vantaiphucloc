@@ -40,6 +40,7 @@ class PartnerCreateBody(BaseModel):
             raise ValueError("Mã số thuế phải 10 hoặc 13 chữ số")
         return v
 
+
 class PartnerUpdateBody(BaseModel):
     name: str | None = None
     code: str | None = None
@@ -67,6 +68,7 @@ class PartnerUpdateBody(BaseModel):
         if v and len(v) not in (10, 13):
             raise ValueError("Mã số thuế phải 10 hoặc 13 chữ số")
         return v
+
 
 class PartnerOutBody(BaseModel):
     id: int

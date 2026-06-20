@@ -26,9 +26,11 @@ router = APIRouter(prefix="/drivers", tags=["drivers"])
 # Response schema
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class _RouteRow:
     """Internal representation of a suggested route."""
+
     client_id: int
     client_code: str | None
     client_name: str
@@ -72,6 +74,7 @@ class SuggestedRouteItem:
 # Scoring helpers
 # ---------------------------------------------------------------------------
 
+
 def _recency_weight(last_used: datetime) -> float:
     """Exponential decay: full weight for today, halves every ~14 days."""
     age_hours = (datetime.now(timezone.utc) - last_used).total_seconds() / 3600
@@ -82,7 +85,12 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     R = 6371.0
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dlon / 2) ** 2
+    )
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
@@ -146,9 +154,11 @@ async def _compute_suggestions(
     """Return up to *limit* suggested routes for *driver_id*."""
 
     # 1. Driver's own history
-    rows = (await session.execute(
-        _DRIVER_ROUTES_SQL, {"driver_id": driver_id, "limit": limit * 3}
-    )).fetchall()
+    rows = (
+        await session.execute(
+            _DRIVER_ROUTES_SQL, {"driver_id": driver_id, "limit": limit * 3}
+        )
+    ).fetchall()
 
     results: list[_RouteRow] = []
     for r in rows:
@@ -168,19 +178,21 @@ async def _compute_suggestions(
                 score *= 1.05
 
         source = "frequent" if freq >= 3 else "recent"
-        results.append(_RouteRow(
-            client_id=r.client_id,
-            client_code=r.client_code,
-            client_name=r.client_name,
-            pickup_location_id=r.pickup_location_id,
-            pickup_location_name=r.pickup_location_name,
-            dropoff_location_id=r.dropoff_location_id,
-            dropoff_location_name=r.dropoff_location_name,
-            frequency=freq,
-            last_used=r.last_used,
-            score=score,
-            source=source,
-        ))
+        results.append(
+            _RouteRow(
+                client_id=r.client_id,
+                client_code=r.client_code,
+                client_name=r.client_name,
+                pickup_location_id=r.pickup_location_id,
+                pickup_location_name=r.pickup_location_name,
+                dropoff_location_id=r.dropoff_location_id,
+                dropoff_location_name=r.dropoff_location_name,
+                frequency=freq,
+                last_used=r.last_used,
+                score=score,
+                source=source,
+            )
+        )
 
     # Sort by score descending
     results.sort(key=lambda x: x.score, reverse=True)
@@ -194,9 +206,9 @@ async def _compute_suggestions(
         (r.client_id, r.pickup_location_id, r.dropoff_location_id)
         for r in driver_results
     }
-    global_rows = (await session.execute(
-        _GLOBAL_POPULAR_SQL, {"limit": limit * 2}
-    )).fetchall()
+    global_rows = (
+        await session.execute(_GLOBAL_POPULAR_SQL, {"limit": limit * 2})
+    ).fetchall()
 
     for r in global_rows:
         key = (r.client_id, r.pickup_location_id, r.dropoff_location_id)
@@ -215,19 +227,21 @@ async def _compute_suggestions(
             elif dist < 15:
                 score *= 1.05
 
-        driver_results.append(_RouteRow(
-            client_id=r.client_id,
-            client_code=r.client_code,
-            client_name=r.client_name,
-            pickup_location_id=r.pickup_location_id,
-            pickup_location_name=r.pickup_location_name,
-            dropoff_location_id=r.dropoff_location_id,
-            dropoff_location_name=r.dropoff_location_name,
-            frequency=freq,
-            last_used=r.last_used,
-            score=score,
-            source="popular",
-        ))
+        driver_results.append(
+            _RouteRow(
+                client_id=r.client_id,
+                client_code=r.client_code,
+                client_name=r.client_name,
+                pickup_location_id=r.pickup_location_id,
+                pickup_location_name=r.pickup_location_name,
+                dropoff_location_id=r.dropoff_location_id,
+                dropoff_location_name=r.dropoff_location_name,
+                frequency=freq,
+                last_used=r.last_used,
+                score=score,
+                source="popular",
+            )
+        )
         if len(driver_results) >= limit:
             break
 
@@ -237,6 +251,7 @@ async def _compute_suggestions(
 # ---------------------------------------------------------------------------
 # Endpoint
 # ---------------------------------------------------------------------------
+
 
 @router.get("/me/suggested-routes")
 async def suggested_routes(

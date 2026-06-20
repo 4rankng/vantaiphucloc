@@ -69,8 +69,14 @@ class GetDriverEarnings:
                 ).where(
                     DeliveredTrip.driver_id == driver_id,
                     DeliveredTrip.booked_trip_id.isnot(None),
-                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= start_date,
-                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= end_date,
+                    func.coalesce(
+                        DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                    )
+                    >= start_date,
+                    func.coalesce(
+                        DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                    )
+                    <= end_date,
                 )
             )
         ).one()
@@ -86,8 +92,14 @@ class GetDriverEarnings:
                 ).where(
                     DeliveredTrip.driver_id == driver_id,
                     DeliveredTrip.booked_trip_id.is_(None),
-                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= start_date,
-                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= end_date,
+                    func.coalesce(
+                        DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                    )
+                    >= start_date,
+                    func.coalesce(
+                        DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                    )
+                    <= end_date,
                 )
             )
         ).one()
@@ -96,7 +108,9 @@ class GetDriverEarnings:
         # Look up driver name and phone
         user_row = (
             await self.session.execute(
-                select(User.full_name, User.username, User.phone).where(User.id == driver_id)
+                select(User.full_name, User.username, User.phone).where(
+                    User.id == driver_id
+                )
             )
         ).one_or_none()
         driver_name = None
@@ -162,9 +176,7 @@ class UpdateSalaryConfig:
     def __init__(self, repo: SettingsRepository) -> None:
         self.repo = repo
 
-    async def __call__(
-        self, payload: UpdateSalaryConfigInput
-    ) -> dict[str, str]:
+    async def __call__(self, payload: UpdateSalaryConfigInput) -> dict[str, str]:
         if payload.from_day is not None:
             await self.repo.set("salary_from_day", str(payload.from_day))
         if payload.to_day is not None:
@@ -251,11 +263,11 @@ class MonthlyPnLDTO:
     end_date: date
     revenue: int
     total_productivity_salary: int  # Σ DeliveredTrip.driver_salary
-    total_allowance: int            # Σ driver_salaries.allowance
-    total_base_salary: int          # Σ effective base salary per driver
-    total_vehicle_expenses: int     # Fuel + Repairs + Law + Other
-    total_vendor_cost: int          # Σ vendor route pricing for xe ngoài
-    profit: int                     # revenue − all costs
+    total_allowance: int  # Σ driver_salaries.allowance
+    total_base_salary: int  # Σ effective base salary per driver
+    total_vehicle_expenses: int  # Fuel + Repairs + Law + Other
+    total_vendor_cost: int  # Σ vendor route pricing for xe ngoài
+    profit: int  # revenue − all costs
     matched_trip_count: int
     client_breakdown: list[ClientRevenueBreakdownDTO]
 
@@ -284,9 +296,7 @@ class GetMonthlyPnL:
         self.base_salary_repo = base_salary_repo
         self.driver_salary_repo = driver_salary_repo
 
-    async def __call__(
-        self, *, start_date: date, end_date: date
-    ) -> MonthlyPnLDTO:
+    async def __call__(self, *, start_date: date, end_date: date) -> MonthlyPnLDTO:
         # ---- Revenue: sum DeliveredTrip.revenue for MATCHED trips in period ----
         from app.models.domain import Client
 
@@ -299,9 +309,13 @@ class GetMonthlyPnL:
                 )
                 .where(
                     DeliveredTrip.booked_trip_id.isnot(None),
-                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+                    func.coalesce(
+                        DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                    )
                     >= start_date,
-                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+                    func.coalesce(
+                        DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                    )
                     <= end_date,
                 )
                 .group_by(DeliveredTrip.client_id)
@@ -352,9 +366,13 @@ class GetMonthlyPnL:
                 ).where(
                     DeliveredTrip.booked_trip_id.isnot(None),
                     DeliveredTrip.vendor_id.is_(None),
-                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+                    func.coalesce(
+                        DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                    )
                     >= start_date,
-                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+                    func.coalesce(
+                        DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                    )
                     <= end_date,
                 )
             )
@@ -379,20 +397,30 @@ class GetMonthlyPnL:
             total_allowance = 0
 
             driver_id_rows = (
-                await self.session.execute(
-                    select(DeliveredTrip.driver_id)
-                    .where(
-                        DeliveredTrip.booked_trip_id.isnot(None),
-                        DeliveredTrip.vendor_id.is_(None),
-                        DeliveredTrip.driver_id.is_not(None),
-                        func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
-                        >= start_date,
-                        func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
-                        <= end_date,
+                (
+                    await self.session.execute(
+                        select(DeliveredTrip.driver_id)
+                        .where(
+                            DeliveredTrip.booked_trip_id.isnot(None),
+                            DeliveredTrip.vendor_id.is_(None),
+                            DeliveredTrip.driver_id.is_not(None),
+                            func.coalesce(
+                                DeliveredTrip.trip_date,
+                                func.date(DeliveredTrip.created_at),
+                            )
+                            >= start_date,
+                            func.coalesce(
+                                DeliveredTrip.trip_date,
+                                func.date(DeliveredTrip.created_at),
+                            )
+                            <= end_date,
+                        )
+                        .distinct()
                     )
-                    .distinct()
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             driver_ids = [d for d in driver_id_rows if d is not None]
 
             history_by_driver = await self.base_salary_repo.list_history_for_drivers(
@@ -428,19 +456,23 @@ class GetMonthlyPnL:
                     DeliveredTrip.dropoff_location_id,
                     DeliveredTrip.work_type,
                     DeliveredTrip.cont_type,
-                )
-                .where(
+                ).where(
                     DeliveredTrip.booked_trip_id.isnot(None),
                     DeliveredTrip.vendor_id.isnot(None),
-                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+                    func.coalesce(
+                        DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                    )
                     >= start_date,
-                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+                    func.coalesce(
+                        DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                    )
                     <= end_date,
                 )
             )
         ).all()
 
         from app.core.pricing_lookup import lookup_vendor_prices
+
         vendor_trips = [
             TripPriceInfo(
                 id=r[0],
@@ -456,8 +488,11 @@ class GetMonthlyPnL:
         total_vendor_cost = sum(vendor_prices.values())
 
         profit = revenue - (
-            total_productivity + total_allowance + total_base_salary
-            + total_vehicle_expenses + total_vendor_cost
+            total_productivity
+            + total_allowance
+            + total_base_salary
+            + total_vehicle_expenses
+            + total_vendor_cost
         )
 
         return MonthlyPnLDTO(

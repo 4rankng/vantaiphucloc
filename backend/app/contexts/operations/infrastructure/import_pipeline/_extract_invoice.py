@@ -14,7 +14,9 @@ from app.contexts.operations.infrastructure.import_pipeline.value_parsers import
 from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView
 
 
-def extract_invoice(sheets: list[SheetView], filename: str = "") -> tuple[list[ExtractedRow], list[dict]]:
+def extract_invoice(
+    sheets: list[SheetView], filename: str = ""
+) -> tuple[list[ExtractedRow], list[dict]]:
     """Extract from Phúc Lộc Shipside Invoice."""
     sheet = _find_invoice_sheet(sheets)
     if sheet is None:
@@ -50,7 +52,9 @@ def extract_invoice(sheets: list[SheetView], filename: str = "") -> tuple[list[E
         try:
             cont_no = parse_container_no(cont_val)
         except ValueError:
-            rejected.append({"source_row_index": r, "reason": "bad_container_no", "raw": cont_val})
+            rejected.append(
+                {"source_row_index": r, "reason": "bad_container_no", "raw": cont_val}
+            )
             continue
 
         size_col = col_map.get("size", 2)
@@ -61,29 +65,47 @@ def extract_invoice(sheets: list[SheetView], filename: str = "") -> tuple[list[E
         fe = "F" if hr_val.upper() in ("H", "HÀNG", "HANG") else "E"
 
         vessel_col = col_map.get("vessel", 4)
-        vessel_val = cell_text(row[vessel_col]) if vessel_col is not None and vessel_col < len(row) else ""
+        vessel_val = (
+            cell_text(row[vessel_col])
+            if vessel_col is not None and vessel_col < len(row)
+            else ""
+        )
 
         voyage_col = col_map.get("voyage")
-        voyage_val = cell_text(row[voyage_col]) if voyage_col is not None and voyage_col < len(row) else ""
+        voyage_val = (
+            cell_text(row[voyage_col])
+            if voyage_col is not None and voyage_col < len(row)
+            else ""
+        )
         if vessel_val and voyage_val:
             vessel_val = f"{vessel_val} {voyage_val}".strip()
 
         pickup_col = col_map.get("pickup")
-        pickup = cell_text(row[pickup_col]) if pickup_col is not None and pickup_col < len(row) else ""
+        pickup = (
+            cell_text(row[pickup_col])
+            if pickup_col is not None and pickup_col < len(row)
+            else ""
+        )
 
         dropoff_col = col_map.get("dropoff")
-        dropoff = cell_text(row[dropoff_col]) if dropoff_col is not None and dropoff_col < len(row) else ""
+        dropoff = (
+            cell_text(row[dropoff_col])
+            if dropoff_col is not None and dropoff_col < len(row)
+            else ""
+        )
 
         work_type = build_cont_type(fe, size_val)
 
-        accepted.append(ExtractedRow(
-            container_number=cont_no,
-            cont_type=work_type,
-            pickup=pickup,
-            dropoff=dropoff,
-            vessel_name=vessel_val,
-            source_row_index=r,
-        ))
+        accepted.append(
+            ExtractedRow(
+                container_number=cont_no,
+                cont_type=work_type,
+                pickup=pickup,
+                dropoff=dropoff,
+                vessel_name=vessel_val,
+                source_row_index=r,
+            )
+        )
 
     return accepted, rejected
 
@@ -91,6 +113,7 @@ def extract_invoice(sheets: list[SheetView], filename: str = "") -> tuple[list[E
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
 
 def _find_invoice_sheet(sheets: list[SheetView]) -> SheetView | None:
     for sheet in sheets:

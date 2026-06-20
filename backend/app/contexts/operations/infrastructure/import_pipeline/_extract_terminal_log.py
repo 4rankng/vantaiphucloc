@@ -61,7 +61,9 @@ def extract_terminal_log(rows: list[list]) -> tuple[list[ExtractedRow], list[dic
         try:
             cont_no = parse_container_no(cont_val)
         except ValueError:
-            rejected.append({"source_row_index": r, "reason": "bad_container_no", "raw": cont_val})
+            rejected.append(
+                {"source_row_index": r, "reason": "bad_container_no", "raw": cont_val}
+            )
             continue
 
         # Parse shipping line -> vessel_name proxy (col 2)
@@ -96,23 +98,27 @@ def extract_terminal_log(rows: list[list]) -> tuple[list[ExtractedRow], list[dic
 
         # 4. Skip rows without container_number or trip_date
         if not cont_no or trip_date is None:
-            rejected.append({
-                "source_row_index": r,
-                "reason": "missing_container_or_date",
-                "raw": cont_val,
-            })
+            rejected.append(
+                {
+                    "source_row_index": r,
+                    "reason": "missing_container_or_date",
+                    "raw": cont_val,
+                }
+            )
             continue
 
-        accepted.append(ExtractedRow(
-            container_number=cont_no,
-            cont_type=cont_type,
-            pickup="",
-            dropoff="",
-            vessel_name=shipping_line,
-            source_row_index=r,
-            work_type=work_type,
-            trip_date=trip_date,
-        ))
+        accepted.append(
+            ExtractedRow(
+                container_number=cont_no,
+                cont_type=cont_type,
+                pickup="",
+                dropoff="",
+                vessel_name=shipping_line,
+                source_row_index=r,
+                work_type=work_type,
+                trip_date=trip_date,
+            )
+        )
 
     return accepted, rejected
 
@@ -120,6 +126,7 @@ def extract_terminal_log(rows: list[list]) -> tuple[list[ExtractedRow], list[dic
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
 
 def _fallback_iso_size(iso_code: str) -> str | None:
     """Fallback size parser for non-standard ISO codes like L5G0."""

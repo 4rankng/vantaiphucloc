@@ -32,4 +32,3 @@ class AlreadyMatched(OperationsError):
         super().__init__(f"{kind} {ident!r} is already matched")
         self.kind = kind
         self.ident = ident
-

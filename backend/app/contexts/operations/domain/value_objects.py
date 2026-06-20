@@ -20,9 +20,16 @@ Money = int
 # autocomplete in the UI.
 KNOWN_WORK_TYPES = {
     # Container types
-    "E20", "E40", "F20", "F40",
+    "E20",
+    "E40",
+    "F20",
+    "F40",
     # Operation types (Tác nghiệp)
-    "XUẤT/NHẬP TÀU", "CHUYỂN BÃI", "LẤY VỎ HẠ HÀNG", "CHẠY SÀ LAN", "ĐÓNG KHO",
+    "XUẤT/NHẬP TÀU",
+    "CHUYỂN BÃI",
+    "LẤY VỎ HẠ HÀNG",
+    "CHẠY SÀ LAN",
+    "ĐÓNG KHO",
 }
 
 

@@ -1,4 +1,5 @@
 """Concrete repository implementation for the Route Pricing context."""
+
 from __future__ import annotations
 
 from typing import Sequence

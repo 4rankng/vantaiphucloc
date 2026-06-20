@@ -27,7 +27,9 @@ class BaseRepository(Generic[ModelType]):
     async def get_by_id_or_404(self, id: int) -> ModelType:
         obj = await self.get_by_id(id)
         if obj is None:
-            raise HTTPException(status_code=404, detail=f"{self.model.__name__} not found")
+            raise HTTPException(
+                status_code=404, detail=f"{self.model.__name__} not found"
+            )
         return obj
 
     async def list_all(

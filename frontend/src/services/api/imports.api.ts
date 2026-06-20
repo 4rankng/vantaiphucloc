@@ -1,5 +1,5 @@
 import { api } from './client'
-import { safeRequest, toCamel, toSnake } from '@/lib/safe-request'
+import { safeRequest } from '@/lib/safe-request'
 import type { ApiResponse } from '@/data/domain'
 
 // ──────────────────────────────────────────────────────────────────────────

@@ -60,9 +60,7 @@ class DeliveredTripCreate(BaseModel):
         has_driver = self.driver_id is not None
         has_vendor = self.vendor_id is not None
         if has_driver == has_vendor:
-            raise ValueError(
-                "Exactly one of driver_id or vendor_id must be provided."
-            )
+            raise ValueError("Exactly one of driver_id or vendor_id must be provided.")
         return self
 
 

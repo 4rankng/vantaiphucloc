@@ -40,8 +40,10 @@ _DEFAULT_CONT_TYPE = "F20"
 
 
 def _pricing_cache_key(
-    client_id: int, work_type: str,
-    pickup_location_id: int, dropoff_location_id: int,
+    client_id: int,
+    work_type: str,
+    pickup_location_id: int,
+    dropoff_location_id: int,
 ) -> str:
     raw = f"{client_id}:{work_type}:{pickup_location_id}:{dropoff_location_id}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
@@ -52,7 +54,8 @@ async def _resolve_location_id(db: AsyncSession, name: str | None) -> int | None
         return None
     res = await db.execute(
         select(LocationORM.id).where(
-            LocationORM.name == name, LocationORM.is_active == True  # noqa: E712
+            LocationORM.name == name,
+            LocationORM.is_active == True,  # noqa: E712
         )
     )
     return res.scalar_one_or_none()
@@ -66,13 +69,15 @@ async def _exact_pricing_query(
     dropoff_location_id: int,
 ) -> RoutePricingORM | None:
     res = await db.execute(
-        select(RoutePricingORM).where(
+        select(RoutePricingORM)
+        .where(
             RoutePricingORM.client_id == client_id,
             RoutePricingORM.work_type == work_type,
             RoutePricingORM.pickup_location_id == pickup_location_id,
             RoutePricingORM.dropoff_location_id == dropoff_location_id,
             RoutePricingORM.is_active == True,  # noqa: E712
-        ).limit(1)
+        )
+        .limit(1)
     )
     return res.scalar_one_or_none()
 
@@ -100,24 +105,31 @@ async def find_pricing(
         return None
 
     cache_key = _pricing_cache_key(
-        client_id, work_type, pickup_location_id, dropoff_location_id,
+        client_id,
+        work_type,
+        pickup_location_id,
+        dropoff_location_id,
     )
     if cache:
         cached = await cache.get_json("pricing_lookup", cache_key)
         if cached is not None:
             res = await db.execute(
-                select(RoutePricingORM).where(RoutePricingORM.id == cached["id"]).limit(1)
+                select(RoutePricingORM)
+                .where(RoutePricingORM.id == cached["id"])
+                .limit(1)
             )
             return res.scalar_one_or_none()
 
     pricing = await _exact_pricing_query(
-        db, client_id, work_type, pickup_location_id, dropoff_location_id,
+        db,
+        client_id,
+        work_type,
+        pickup_location_id,
+        dropoff_location_id,
     )
 
     if pricing and cache:
-        await cache.set_json(
-            "pricing_lookup", cache_key, {"id": pricing.id}, ttl=600
-        )
+        await cache.set_json("pricing_lookup", cache_key, {"id": pricing.id}, ttl=600)
     return pricing
 
 
@@ -156,7 +168,9 @@ async def find_tiered_pricing(
     columns instead of quantity tiers.
     """
     pricing = await find_pricing(
-        db, client_id, work_type,
+        db,
+        client_id,
+        work_type,
         pickup_location_id=pickup_location_id,
         dropoff_location_id=dropoff_location_id,
         pickup_location=pickup_location,

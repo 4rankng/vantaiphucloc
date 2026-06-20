@@ -21,7 +21,9 @@ from app.contexts.operations.infrastructure.import_pipeline.value_parsers import
 from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView
 
 
-def extract_settlement_list(sheets: list[SheetView], filename: str = "") -> tuple[list[ExtractedRow], list[dict]]:
+def extract_settlement_list(
+    sheets: list[SheetView], filename: str = ""
+) -> tuple[list[ExtractedRow], list[dict]]:
     """Extract from BẢNG KÊ QUYẾT TOÁN format with pivoted work-type columns.
 
     Each data row has 1 in one of the F20'/F40'/E20'/E40' columns and None in
@@ -67,7 +69,9 @@ def extract_settlement_list(sheets: list[SheetView], filename: str = "") -> tupl
         try:
             cont_no = parse_container_no(cont_val)
         except ValueError:
-            rejected.append({"source_row_index": r, "reason": "bad_container_no", "raw": cont_val})
+            rejected.append(
+                {"source_row_index": r, "reason": "bad_container_no", "raw": cont_val}
+            )
             continue
 
         # Determine container type from pivoted columns
@@ -110,19 +114,21 @@ def extract_settlement_list(sheets: list[SheetView], filename: str = "") -> tupl
         if col_map.get("vessel") is not None and col_map["vessel"] < len(row):
             vessel_name = parse_string(row[col_map["vessel"]], max_len=255)
 
-        accepted.append(ExtractedRow(
-            container_number=cont_no,
-            cont_type=work_type,
-            pickup=pickup,
-            dropoff=dropoff,
-            vessel_name=vessel_name,
-            source_row_index=r,
-            work_type=work_type_val,
-            consignee=consignee,
-            vehicle_plate=plate,
-            freight_charge=amount,
-            trip_date=trip_date,
-        ))
+        accepted.append(
+            ExtractedRow(
+                container_number=cont_no,
+                cont_type=work_type,
+                pickup=pickup,
+                dropoff=dropoff,
+                vessel_name=vessel_name,
+                source_row_index=r,
+                work_type=work_type_val,
+                consignee=consignee,
+                vehicle_plate=plate,
+                freight_charge=amount,
+                trip_date=trip_date,
+            )
+        )
 
     return accepted, rejected
 
@@ -130,6 +136,7 @@ def extract_settlement_list(sheets: list[SheetView], filename: str = "") -> tupl
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
 
 def _find_settlement_list_sheet(sheets: list[SheetView]) -> SheetView | None:
     """Find the sheet with SỐCONTAINER header + F20/F40/E20/E40 columns."""
@@ -166,10 +173,19 @@ def _find_settlement_header(sheet: SheetView) -> int | None:
 def _map_settlement_cols(header: list) -> dict[str, int | None]:
     """Map column positions from the header row."""
     col_map: dict[str, int | None] = {
-        "container": None, "date": None, "consignee": None,
-        "f20": None, "f40": None, "e20": None, "e40": None,
-        "plate": None, "pickup": None, "dropoff": None,
-        "amount": None, "notes": None, "operation": None,
+        "container": None,
+        "date": None,
+        "consignee": None,
+        "f20": None,
+        "f40": None,
+        "e20": None,
+        "e40": None,
+        "plate": None,
+        "pickup": None,
+        "dropoff": None,
+        "amount": None,
+        "notes": None,
+        "operation": None,
         "vessel": None,
     }
 
@@ -203,9 +219,16 @@ def _map_settlement_cols(header: list) -> dict[str, int | None]:
             col_map["operation"] = c
         elif "GHI" in t and ("CHÚ" in t or "CHU" in t):
             col_map["notes"] = c
-        elif ("TÊN TÀU" in t or "TEN TAU" in t or "TÊN TẦU" in t
-              or "SỐ TÀU" in t or "SO TAU" in t
-              or "HÃNG KHAI THÁC" in t or "HANG KHAITHAC" in t or "HANG KHAI THAC" in t):
+        elif (
+            "TÊN TÀU" in t
+            or "TEN TAU" in t
+            or "TÊN TẦU" in t
+            or "SỐ TÀU" in t
+            or "SO TAU" in t
+            or "HÃNG KHAI THÁC" in t
+            or "HANG KHAITHAC" in t
+            or "HANG KHAI THAC" in t
+        ):
             col_map["vessel"] = c
 
     return col_map

@@ -1,4 +1,6 @@
-from app.contexts.operations.infrastructure.import_pipeline._extractor_common import ExtractedRow
+from app.contexts.operations.infrastructure.import_pipeline._extractor_common import (
+    ExtractedRow,
+)
 
 
 def _make_row(**overrides):

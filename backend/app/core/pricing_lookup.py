@@ -3,6 +3,7 @@
 Given a set of trips, looks up the price from either the client route pricing
 table (revenue) or the vendor route pricing table (cost for xe ngoài).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -56,7 +57,10 @@ def _salary_for_cont_type(row, cont_type: str | None) -> int:
 
 def _normalize_work_type(wt: str | None) -> str:
     """Normalize work_type for pricing lookup — uses centralized normalization."""
-    from app.contexts.operations.infrastructure.operation_type_resolver import normalize_operation_type
+    from app.contexts.operations.infrastructure.operation_type_resolver import (
+        normalize_operation_type,
+    )
+
     folded = normalize_operation_type(wt, default="CHUYEN BAI")
     # Keyword-based canonical mapping for pricing lookup
     if "CHUYEN BAI" in folded:
@@ -101,13 +105,35 @@ def _fuzzy_match_lane(
         pickup_name = loc_map.get(p_pickup_id, "")
         dropoff_name = loc_map.get(p_dropoff_id, "")
 
-        score_p = _ratio(target_partner_name, p_name) if target_partner_name and p_name else 1.0 if p_id == target_partner_id else 0.0
-        score_pu = _ratio(target_pickup_name, pickup_name) if target_pickup_name and pickup_name else 1.0 if p_pickup_id == target_pickup_id else 0.0
-        score_do = _ratio(target_dropoff_name, dropoff_name) if target_dropoff_name and dropoff_name else 1.0 if p_dropoff_id == target_dropoff_id else 0.0
+        score_p = (
+            _ratio(target_partner_name, p_name)
+            if target_partner_name and p_name
+            else 1.0
+            if p_id == target_partner_id
+            else 0.0
+        )
+        score_pu = (
+            _ratio(target_pickup_name, pickup_name)
+            if target_pickup_name and pickup_name
+            else 1.0
+            if p_pickup_id == target_pickup_id
+            else 0.0
+        )
+        score_do = (
+            _ratio(target_dropoff_name, dropoff_name)
+            if target_dropoff_name and dropoff_name
+            else 1.0
+            if p_dropoff_id == target_dropoff_id
+            else 0.0
+        )
         score_wt = _ratio(target_wt, wt or "")
 
         # If it's an exact match on IDs but only work_type is fuzzy, it will have a very high score
-        if p_id == target_partner_id and p_pickup_id == target_pickup_id and p_dropoff_id == target_dropoff_id:
+        if (
+            p_id == target_partner_id
+            and p_pickup_id == target_pickup_id
+            and p_dropoff_id == target_dropoff_id
+        ):
             total_score = 0.8 + (score_wt * 0.2)
         else:
             total_score = (score_p + score_pu + score_do + score_wt) / 4.0
@@ -119,7 +145,9 @@ def _fuzzy_match_lane(
     return best_pricing
 
 
-async def _load_maps_for_fuzzy(session: AsyncSession) -> tuple[dict[int, str], dict[int, str], dict[int, str]]:
+async def _load_maps_for_fuzzy(
+    session: AsyncSession,
+) -> tuple[dict[int, str], dict[int, str], dict[int, str]]:
     from app.models.domain import Location as LocationORM
     from app.models.domain import Client as ClientORM
     from app.models.domain import Vendor as VendorORM
@@ -147,15 +175,26 @@ async def lookup_client_prices(
     if not trips:
         return {}
 
-    rows = (await session.execute(
-        select(ClientRoutePricingORM).where(
-            ClientRoutePricingORM.is_active.is_(True),
+    rows = (
+        (
+            await session.execute(
+                select(ClientRoutePricingORM).where(
+                    ClientRoutePricingORM.is_active.is_(True),
+                )
+            )
         )
-    )).scalars().all()
+        .scalars()
+        .all()
+    )
 
     lane_map: dict[tuple, object] = {}
     for r in rows:
-        key = (r.client_id, r.pickup_location_id, r.dropoff_location_id, _normalize_work_type(r.work_type))
+        key = (
+            r.client_id,
+            r.pickup_location_id,
+            r.dropoff_location_id,
+            _normalize_work_type(r.work_type),
+        )
         lane_map[key] = r
 
     loc_map, client_map, _ = await _load_maps_for_fuzzy(session)
@@ -164,11 +203,16 @@ async def lookup_client_prices(
         norm_wt = _normalize_work_type(t.work_type)
         key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id, norm_wt)
         pricing = lane_map.get(key)
-        
+
         if not pricing:
             pricing = _fuzzy_match_lane(
-                t.partner_id, t.pickup_location_id, t.dropoff_location_id, norm_wt,
-                lane_map, client_map, loc_map
+                t.partner_id,
+                t.pickup_location_id,
+                t.dropoff_location_id,
+                norm_wt,
+                lane_map,
+                client_map,
+                loc_map,
             )
 
         result[t.id] = _price_for_cont_type(pricing, t.cont_type) if pricing else 0
@@ -187,15 +231,26 @@ async def lookup_vendor_prices(
     if not trips:
         return {}
 
-    rows = (await session.execute(
-        select(VendorRoutePricingORM).where(
-            VendorRoutePricingORM.is_active.is_(True),
+    rows = (
+        (
+            await session.execute(
+                select(VendorRoutePricingORM).where(
+                    VendorRoutePricingORM.is_active.is_(True),
+                )
+            )
         )
-    )).scalars().all()
+        .scalars()
+        .all()
+    )
 
     lane_map: dict[tuple, object] = {}
     for r in rows:
-        key = (r.vendor_id, r.pickup_location_id, r.dropoff_location_id, _normalize_work_type(r.work_type))
+        key = (
+            r.vendor_id,
+            r.pickup_location_id,
+            r.dropoff_location_id,
+            _normalize_work_type(r.work_type),
+        )
         lane_map[key] = r
 
     loc_map, _, vendor_map = await _load_maps_for_fuzzy(session)
@@ -204,11 +259,16 @@ async def lookup_vendor_prices(
         norm_wt = _normalize_work_type(t.work_type)
         key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id, norm_wt)
         pricing = lane_map.get(key)
-        
+
         if not pricing:
             pricing = _fuzzy_match_lane(
-                t.partner_id, t.pickup_location_id, t.dropoff_location_id, norm_wt,
-                lane_map, vendor_map, loc_map
+                t.partner_id,
+                t.pickup_location_id,
+                t.dropoff_location_id,
+                norm_wt,
+                lane_map,
+                vendor_map,
+                loc_map,
             )
 
         result[t.id] = _price_for_cont_type(pricing, t.cont_type) if pricing else 0
@@ -227,15 +287,26 @@ async def lookup_driver_salaries(
     if not trips:
         return {}
 
-    rows = (await session.execute(
-        select(ClientRoutePricingORM).where(
-            ClientRoutePricingORM.is_active.is_(True),
+    rows = (
+        (
+            await session.execute(
+                select(ClientRoutePricingORM).where(
+                    ClientRoutePricingORM.is_active.is_(True),
+                )
+            )
         )
-    )).scalars().all()
+        .scalars()
+        .all()
+    )
 
     lane_map: dict[tuple, object] = {}
     for r in rows:
-        key = (r.client_id, r.pickup_location_id, r.dropoff_location_id, _normalize_work_type(r.work_type))
+        key = (
+            r.client_id,
+            r.pickup_location_id,
+            r.dropoff_location_id,
+            _normalize_work_type(r.work_type),
+        )
         lane_map[key] = r
 
     loc_map, client_map, _ = await _load_maps_for_fuzzy(session)
@@ -244,11 +315,16 @@ async def lookup_driver_salaries(
         norm_wt = _normalize_work_type(t.work_type)
         key = (t.partner_id, t.pickup_location_id, t.dropoff_location_id, norm_wt)
         pricing = lane_map.get(key)
-        
+
         if not pricing:
             pricing = _fuzzy_match_lane(
-                t.partner_id, t.pickup_location_id, t.dropoff_location_id, norm_wt,
-                lane_map, client_map, loc_map
+                t.partner_id,
+                t.pickup_location_id,
+                t.dropoff_location_id,
+                norm_wt,
+                lane_map,
+                client_map,
+                loc_map,
             )
 
         result[t.id] = _salary_for_cont_type(pricing, t.cont_type) if pricing else 0
@@ -271,27 +347,37 @@ async def sync_unmatched_trip_pricing(
     Returns the number of trips updated.
     """
     norm_wt = _normalize_work_type(work_type)
-    pricing = (await session.execute(
-        select(ClientRoutePricingORM).where(
-            ClientRoutePricingORM.client_id == client_id,
-            ClientRoutePricingORM.pickup_location_id == pickup_location_id,
-            ClientRoutePricingORM.dropoff_location_id == dropoff_location_id,
-            ClientRoutePricingORM.work_type == norm_wt,
-            ClientRoutePricingORM.is_active.is_(True),
-        ).limit(1)
-    )).scalar_one_or_none()
+    pricing = (
+        await session.execute(
+            select(ClientRoutePricingORM)
+            .where(
+                ClientRoutePricingORM.client_id == client_id,
+                ClientRoutePricingORM.pickup_location_id == pickup_location_id,
+                ClientRoutePricingORM.dropoff_location_id == dropoff_location_id,
+                ClientRoutePricingORM.work_type == norm_wt,
+                ClientRoutePricingORM.is_active.is_(True),
+            )
+            .limit(1)
+        )
+    ).scalar_one_or_none()
 
     if not pricing:
         return 0
 
-    trips = (await session.execute(
-        select(DeliveredTripORM).where(
-            DeliveredTripORM.booked_trip_id.is_(None),
-            DeliveredTripORM.client_id == client_id,
-            DeliveredTripORM.pickup_location_id == pickup_location_id,
-            DeliveredTripORM.dropoff_location_id == dropoff_location_id,
+    trips = (
+        (
+            await session.execute(
+                select(DeliveredTripORM).where(
+                    DeliveredTripORM.booked_trip_id.is_(None),
+                    DeliveredTripORM.client_id == client_id,
+                    DeliveredTripORM.pickup_location_id == pickup_location_id,
+                    DeliveredTripORM.dropoff_location_id == dropoff_location_id,
+                )
+            )
         )
-    )).scalars().all()
+        .scalars()
+        .all()
+    )
     # We filter trips manually since work_type might not match exactly before normalization
     trips = [t for t in trips if _normalize_work_type(t.work_type) == norm_wt]
 
@@ -302,12 +388,12 @@ async def sync_unmatched_trip_pricing(
         if salary != trip.driver_salary:
             trip.driver_salary = salary
             changed = True
-            
+
         rev = _price_for_cont_type(pricing, trip.cont_type)
         if rev != trip.revenue:
             trip.revenue = rev
             changed = True
-            
+
         if changed:
             updated += 1
 
@@ -331,36 +417,50 @@ async def sync_all_trip_pricing(session: AsyncSession) -> int:
 
     client_infos = [
         TripPriceInfo(
-            id=t.id, partner_id=t.client_id,
+            id=t.id,
+            partner_id=t.client_id,
             pickup_location_id=t.pickup_location_id,
             dropoff_location_id=t.dropoff_location_id,
-            work_type=t.work_type, cont_type=t.cont_type,
+            work_type=t.work_type,
+            cont_type=t.cont_type,
         )
         for t in all_trips
     ]
-    client_prices = await lookup_client_prices(session, client_infos) if client_infos else {}
+    client_prices = (
+        await lookup_client_prices(session, client_infos) if client_infos else {}
+    )
 
     driver_infos = [
         TripPriceInfo(
-            id=t.id, partner_id=t.client_id,
+            id=t.id,
+            partner_id=t.client_id,
             pickup_location_id=t.pickup_location_id,
             dropoff_location_id=t.dropoff_location_id,
-            work_type=t.work_type, cont_type=t.cont_type,
+            work_type=t.work_type,
+            cont_type=t.cont_type,
         )
-        for t in all_trips if not t.vendor_id
+        for t in all_trips
+        if not t.vendor_id
     ]
-    driver_salaries = await lookup_driver_salaries(session, driver_infos) if driver_infos else {}
+    driver_salaries = (
+        await lookup_driver_salaries(session, driver_infos) if driver_infos else {}
+    )
 
     vendor_infos = [
         TripPriceInfo(
-            id=t.id, partner_id=t.vendor_id,
+            id=t.id,
+            partner_id=t.vendor_id,
             pickup_location_id=t.pickup_location_id,
             dropoff_location_id=t.dropoff_location_id,
-            work_type=t.work_type, cont_type=t.cont_type,
+            work_type=t.work_type,
+            cont_type=t.cont_type,
         )
-        for t in all_trips if t.vendor_id
+        for t in all_trips
+        if t.vendor_id
     ]
-    vendor_prices = await lookup_vendor_prices(session, vendor_infos) if vendor_infos else {}
+    vendor_prices = (
+        await lookup_vendor_prices(session, vendor_infos) if vendor_infos else {}
+    )
 
     for t in all_trips:
         changed = False

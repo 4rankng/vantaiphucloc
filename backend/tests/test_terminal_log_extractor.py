@@ -24,10 +24,7 @@ CONTAINER_RE = __import__("re").compile(r"^[A-Z]{4}\d{7}$")
 def _rows_from_xls(path: str) -> list[list]:
     wb = xlrd.open_workbook(path)
     sh = wb.sheet_by_index(0)
-    return [
-        [sh.cell_value(r, c) for c in range(sh.ncols)]
-        for r in range(sh.nrows)
-    ]
+    return [[sh.cell_value(r, c) for c in range(sh.ncols)] for r in range(sh.nrows)]
 
 
 # ---------------------------------------------------------------------------
@@ -56,9 +53,7 @@ class TestExtractTerminalLogBDST:
     def test_bdst_rows_have_trip_date(self, bdst_result):
         accepted, _ = bdst_result
         without_date = [r for r in accepted if r.trip_date is None]
-        assert len(without_date) == 0, (
-            f"{len(without_date)} rows missing trip_date"
-        )
+        assert len(without_date) == 0, f"{len(without_date)} rows missing trip_date"
 
     def test_bdst_rows_have_cont_type(self, bdst_result):
         accepted, _ = bdst_result
@@ -83,9 +78,7 @@ class TestExtractTerminalLogBDST:
     def test_bdst_rejected_count_reasonable(self, bdst_result):
         _, rejected = bdst_result
         # Should have very few rejections (maybe none)
-        assert len(rejected) < 10, (
-            f"Too many rejections: {len(rejected)}"
-        )
+        assert len(rejected) < 10, f"Too many rejections: {len(rejected)}"
 
 
 # ---------------------------------------------------------------------------
@@ -114,9 +107,7 @@ class TestExtractTerminalLogVIPI:
     def test_vipi_rows_have_trip_date(self, vipi_result):
         accepted, _ = vipi_result
         without_date = [r for r in accepted if r.trip_date is None]
-        assert len(without_date) == 0, (
-            f"{len(without_date)} rows missing trip_date"
-        )
+        assert len(without_date) == 0, f"{len(without_date)} rows missing trip_date"
 
     def test_vipi_rows_have_cont_type(self, vipi_result):
         accepted, _ = vipi_result
@@ -139,9 +130,7 @@ class TestExtractTerminalLogVIPI:
 
     def test_vipi_rejected_count_reasonable(self, vipi_result):
         _, rejected = vipi_result
-        assert len(rejected) < 10, (
-            f"Too many rejections: {len(rejected)}"
-        )
+        assert len(rejected) < 10, f"Too many rejections: {len(rejected)}"
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +145,17 @@ class TestExtractTerminalLogEdgeCases:
         assert rejected == []
 
     def test_header_only(self):
-        rows = [["", "So Container", "Hang khai thac", "Kich co ISO", "F/E", "Nhap/xuat", "Loai cong vieu"]]
+        rows = [
+            [
+                "",
+                "So Container",
+                "Hang khai thac",
+                "Kich co ISO",
+                "F/E",
+                "Nhap/xuat",
+                "Loai cong vieu",
+            ]
+        ]
         accepted, rejected = extract_terminal_log(rows)
         assert accepted == []
         assert rejected == []

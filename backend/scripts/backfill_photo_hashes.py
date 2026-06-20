@@ -42,7 +42,7 @@ def url_to_path(photo_url: str) -> Path:
     """Map a served photo URL (/photos/YYYY/MM/DD/<uuid>.jpg) to its file
     on disk under PHOTO_STORAGE_ROOT."""
     if photo_url.startswith(PHOTOS_URL_PREFIX):
-        rel = photo_url[len(PHOTOS_URL_PREFIX):]
+        rel = photo_url[len(PHOTOS_URL_PREFIX) :]
     else:
         rel = photo_url.lstrip("/")
     return Path(settings.PHOTO_STORAGE_ROOT) / rel
@@ -55,7 +55,9 @@ def sha256_file(path: Path) -> str:
 async def backfill(*, dry_run: bool, limit: int | None, batch: int) -> None:
     storage_root = Path(settings.PHOTO_STORAGE_ROOT)
     log.info("PHOTO_STORAGE_ROOT=%s resolved=%s", storage_root, storage_root.resolve())
-    log.info("mode=%s limit=%s batch=%d", "DRY-RUN" if dry_run else "LIVE", limit, batch)
+    log.info(
+        "mode=%s limit=%s batch=%d", "DRY-RUN" if dry_run else "LIVE", limit, batch
+    )
 
     async with get_session() as db:
         q = (
@@ -80,13 +82,21 @@ async def backfill(*, dry_run: bool, limit: int | None, batch: int) -> None:
             path = url_to_path(photo_url)
             if not path.is_file():
                 missing += 1
-                log.warning("missing file trip=%s url=%s -> %s", trip_id, photo_url, path)
+                log.warning(
+                    "missing file trip=%s url=%s -> %s", trip_id, photo_url, path
+                )
                 continue
             try:
                 digest = sha256_file(path)
             except OSError as exc:
                 missing += 1
-                log.warning("unreadable file trip=%s path=%s: %s: %s", trip_id, path, type(exc).__name__, exc)
+                log.warning(
+                    "unreadable file trip=%s path=%s: %s: %s",
+                    trip_id,
+                    path,
+                    type(exc).__name__,
+                    exc,
+                )
                 continue
 
             if not dry_run:
@@ -103,14 +113,19 @@ async def backfill(*, dry_run: bool, limit: int | None, batch: int) -> None:
                 hashed += 1
 
             if i % 500 == 0:
-                log.info("  scanned %d/%d (hashed=%d missing=%d)", i, total, hashed, missing)
+                log.info(
+                    "  scanned %d/%d (hashed=%d missing=%d)", i, total, hashed, missing
+                )
 
         if not dry_run:
             await db.commit()
 
         log.info(
             "done: hashed=%d missing=%d total=%d mode=%s",
-            hashed, missing, total, "DRY-RUN" if dry_run else "LIVE",
+            hashed,
+            missing,
+            total,
+            "DRY-RUN" if dry_run else "LIVE",
         )
 
 
@@ -119,9 +134,15 @@ def main() -> None:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    ap.add_argument("--dry-run", action="store_true", help="report counts only, write nothing")
-    ap.add_argument("--limit", type=int, default=None, help="max rows to process (default: all)")
-    ap.add_argument("--batch", type=int, default=200, help="commit every N writes (default: 200)")
+    ap.add_argument(
+        "--dry-run", action="store_true", help="report counts only, write nothing"
+    )
+    ap.add_argument(
+        "--limit", type=int, default=None, help="max rows to process (default: all)"
+    )
+    ap.add_argument(
+        "--batch", type=int, default=200, help="commit every N writes (default: 200)"
+    )
     args = ap.parse_args()
     asyncio.run(backfill(dry_run=args.dry_run, limit=args.limit, batch=args.batch))
 

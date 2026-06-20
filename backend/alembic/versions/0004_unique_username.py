@@ -5,6 +5,7 @@ Revises: 0003_driver_salaries
 Create Date: 2026-05-30
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op

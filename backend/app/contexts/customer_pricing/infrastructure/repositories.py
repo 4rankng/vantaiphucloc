@@ -45,21 +45,23 @@ class SqlClientRepository(PartnerRepository):
         self.session = session
 
     async def get_by_id(self, pid: PartnerId) -> Partner | None:
-        orm = (await self.session.execute(
-            select(ClientORM).where(ClientORM.id == int(pid))
-        )).scalar_one_or_none()
+        orm = (
+            await self.session.execute(
+                select(ClientORM).where(ClientORM.id == int(pid))
+            )
+        ).scalar_one_or_none()
         return client_to_domain(orm) if orm else None
 
     async def find_by_code(self, code: str) -> Partner | None:
-        orm = (await self.session.execute(
-            select(ClientORM).where(ClientORM.code == code)
-        )).scalar_one_or_none()
+        orm = (
+            await self.session.execute(select(ClientORM).where(ClientORM.code == code))
+        ).scalar_one_or_none()
         return client_to_domain(orm) if orm else None
 
     async def find_by_name(self, name: str) -> Partner | None:
-        orm = (await self.session.execute(
-            select(ClientORM).where(ClientORM.name == name)
-        )).scalar_one_or_none()
+        orm = (
+            await self.session.execute(select(ClientORM).where(ClientORM.name == name))
+        ).scalar_one_or_none()
         return client_to_domain(orm) if orm else None
 
     async def list(
@@ -71,33 +73,38 @@ class SqlClientRepository(PartnerRepository):
         active_only: bool = True,
         search: str | None = None,
         sort_by: str | None = None,
-        sort_order: str = 'asc',
+        sort_order: str = "asc",
     ) -> tuple[Sequence[Partner], int]:
         from sqlalchemy import or_
+
         q = select(ClientORM)
         if active_only:
             q = q.where(ClientORM.is_active.is_(True))
         if search:
             from app.core.vi_search import vi_ilike
-            q = q.where(or_(
-                vi_ilike(ClientORM.name, search),
-                vi_ilike(ClientORM.code, search),
-                vi_ilike(ClientORM.phone, search),
-                vi_ilike(ClientORM.tax_code, search),
-                vi_ilike(ClientORM.address, search),
-                vi_ilike(ClientORM.contact_person, search),
-            ))
-        total = await self.session.scalar(
-            select(func.count()).select_from(q.subquery())
-        ) or 0
+
+            q = q.where(
+                or_(
+                    vi_ilike(ClientORM.name, search),
+                    vi_ilike(ClientORM.code, search),
+                    vi_ilike(ClientORM.phone, search),
+                    vi_ilike(ClientORM.tax_code, search),
+                    vi_ilike(ClientORM.address, search),
+                    vi_ilike(ClientORM.contact_person, search),
+                )
+            )
+        total = (
+            await self.session.scalar(select(func.count()).select_from(q.subquery()))
+            or 0
+        )
         _SORTABLE = {
-            'name': ClientORM.name,
-            'code': ClientORM.code,
-            'created_at': ClientORM.id,  # proxy; no created_at column on clients
+            "name": ClientORM.name,
+            "code": ClientORM.code,
+            "created_at": ClientORM.id,  # proxy; no created_at column on clients
         }
-        sort_col = _SORTABLE.get(sort_by or '')
+        sort_col = _SORTABLE.get(sort_by or "")
         if sort_col is not None:
-            order_expr = sort_col.asc() if sort_order == 'asc' else sort_col.desc()
+            order_expr = sort_col.asc() if sort_order == "asc" else sort_col.desc()
             q = q.order_by(order_expr, ClientORM.id.asc())
         else:
             q = q.order_by(ClientORM.name.asc())
@@ -112,9 +119,11 @@ class SqlClientRepository(PartnerRepository):
         return client_to_domain(orm)
 
     async def save(self, p: Partner) -> Partner:
-        existing = (await self.session.execute(
-            select(ClientORM).where(ClientORM.id == int(p.id))
-        )).scalar_one()
+        existing = (
+            await self.session.execute(
+                select(ClientORM).where(ClientORM.id == int(p.id))
+            )
+        ).scalar_one()
         client_to_orm(p, existing)
         await self.session.flush()
         return client_to_domain(existing)
@@ -139,36 +148,52 @@ class SqlLocationRepository(LocationRepository):
         self.session = session
 
     async def _aliases_for(self, lid: int) -> list[LocationAliasORM]:
-        rows = (await self.session.execute(
-            select(LocationAliasORM).where(LocationAliasORM.location_id == lid)
-        )).scalars().all()
+        rows = (
+            (
+                await self.session.execute(
+                    select(LocationAliasORM).where(LocationAliasORM.location_id == lid)
+                )
+            )
+            .scalars()
+            .all()
+        )
         return list(rows)
 
     async def get_by_id(self, lid: LocationId) -> Location | None:
-        orm = (await self.session.execute(
-            select(LocationORM).where(LocationORM.id == int(lid))
-        )).scalar_one_or_none()
+        orm = (
+            await self.session.execute(
+                select(LocationORM).where(LocationORM.id == int(lid))
+            )
+        ).scalar_one_or_none()
         if orm is None:
             return None
         aliases = await self._aliases_for(orm.id)
         return location_to_domain(orm, aliases)
 
     async def find_by_name(self, name: str) -> Location | None:
-        orm = (await self.session.execute(
-            select(LocationORM).where(LocationORM.name == name)
-        )).scalar_one_or_none()
+        orm = (
+            await self.session.execute(
+                select(LocationORM).where(LocationORM.name == name)
+            )
+        ).scalar_one_or_none()
         if orm is None:
             return None
         aliases = await self._aliases_for(orm.id)
         return location_to_domain(orm, aliases)
 
     async def list_active(self, *, limit: int = 10000) -> Sequence[Location]:
-        rows = list((await self.session.execute(
-            select(LocationORM)
-            .where(LocationORM.is_active.is_(True))
-            .order_by(LocationORM.name.asc())
-            .limit(limit)
-        )).scalars().all())
+        rows = list(
+            (
+                await self.session.execute(
+                    select(LocationORM)
+                    .where(LocationORM.is_active.is_(True))
+                    .order_by(LocationORM.name.asc())
+                    .limit(limit)
+                )
+            )
+            .scalars()
+            .all()
+        )
         return [location_to_domain(r) for r in rows]
 
     async def list(
@@ -177,9 +202,10 @@ class SqlLocationRepository(LocationRepository):
         q = select(LocationORM)
         if active_only:
             q = q.where(LocationORM.is_active.is_(True))
-        total = await self.session.scalar(
-            select(func.count()).select_from(q.subquery())
-        ) or 0
+        total = (
+            await self.session.scalar(select(func.count()).select_from(q.subquery()))
+            or 0
+        )
         q = q.order_by(LocationORM.name.asc()).offset(offset).limit(limit)
         rows = list((await self.session.execute(q)).scalars().all())
         return [location_to_domain(r) for r in rows], int(total)
@@ -200,9 +226,11 @@ class SqlLocationRepository(LocationRepository):
         return location_to_domain(orm, new_aliases)
 
     async def save(self, loc: Location) -> Location:
-        existing = (await self.session.execute(
-            select(LocationORM).where(LocationORM.id == int(loc.id))
-        )).scalar_one()
+        existing = (
+            await self.session.execute(
+                select(LocationORM).where(LocationORM.id == int(loc.id))
+            )
+        ).scalar_one()
         location_to_orm(loc, existing)
         # Reconcile aliases by alias_normalized
         existing_aliases = await self._aliases_for(existing.id)

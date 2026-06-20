@@ -1,5 +1,5 @@
 import { api } from './client'
-import { safeRequest, toCamel } from '@/lib/safe-request'
+import { safeRequest } from '@/lib/safe-request'
 import type { ApiResponse } from '@/data/domain'
 
 export type VehicleExpenseCategory = 'XANG_DAU' | 'SUA_CHUA' | 'TIEN_LUAT' | 'KHAC'

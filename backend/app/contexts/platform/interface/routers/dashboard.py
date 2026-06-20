@@ -11,7 +11,15 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import Vehicle, VehicleDriver, VehicleExpense, DeliveredTrip, Vendor, Location
+from app.models.domain import (
+    Client,
+    Vehicle,
+    VehicleDriver,
+    VehicleExpense,
+    DeliveredTrip,
+    Vendor,
+    Location,
+)
 from app.models.base import User
 from app.core.deps import get_current_user, require_permission
 from app.core.worker import get_arq_pool
@@ -26,6 +34,10 @@ from app.schemas.domain import (
     VehiclePnLRow,
     VehiclePnLGroup,
     DirectorDashboardOut,
+    DirectorDashboardDrilldownOut,
+    DirectorDashboardDrilldownTotals,
+    DirectorDashboardDrilldownClient,
+    DirectorDashboardDrilldownVehicle,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,11 +71,13 @@ async def get_dashboard_summary(
     )
     if parsed_from:
         revenue_query = revenue_query.where(
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= parsed_from
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+            >= parsed_from
         )
     if parsed_to:
         revenue_query = revenue_query.where(
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) < parsed_to + timedelta(days=1)
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+            < parsed_to + timedelta(days=1)
         )
     revenue_q = await db.execute(revenue_query)
     total_revenue = revenue_q.scalar() or 0
@@ -73,17 +87,23 @@ async def get_dashboard_summary(
     if parsed_from:
         expense_query = expense_query.where(DeliveredTrip.created_at >= parsed_from)
     if parsed_to:
-        expense_query = expense_query.where(DeliveredTrip.created_at < parsed_to + timedelta(days=1))
+        expense_query = expense_query.where(
+            DeliveredTrip.created_at < parsed_to + timedelta(days=1)
+        )
     expense_q = await db.execute(expense_query)
     total_expense = expense_q.scalar() or 0
 
-    _wo_day = func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+    _wo_day = func.coalesce(
+        DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+    )
 
     trip_count_query = select(func.count(DeliveredTrip.id))
     if parsed_from:
         trip_count_query = trip_count_query.where(_wo_day >= parsed_from)
     if parsed_to:
-        trip_count_query = trip_count_query.where(_wo_day < parsed_to + timedelta(days=1))
+        trip_count_query = trip_count_query.where(
+            _wo_day < parsed_to + timedelta(days=1)
+        )
     trip_count_q = await db.execute(trip_count_query)
     trip_count = trip_count_q.scalar() or 0
 
@@ -103,11 +123,13 @@ async def get_dashboard_summary(
     )
     if parsed_from:
         debt_query = debt_query.where(
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= parsed_from
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+            >= parsed_from
         )
     if parsed_to:
         debt_query = debt_query.where(
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) < parsed_to + timedelta(days=1)
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
+            < parsed_to + timedelta(days=1)
         )
     outstanding_debt = (await db.execute(debt_query)).scalar() or 0
 
@@ -120,7 +142,9 @@ async def get_dashboard_summary(
             User.username.label("driver_name"),
             Vehicle.plate.label("vehicle_plate"),
             func.count(DeliveredTrip.id).label("total_jobs"),
-            func.coalesce(func.sum(DeliveredTrip.driver_salary), 0).label("total_salary"),
+            func.coalesce(func.sum(DeliveredTrip.driver_salary), 0).label(
+                "total_salary"
+            ),
         )
         .join(
             VehicleDriver,
@@ -171,8 +195,12 @@ async def get_dashboard_summary(
 
 @router.get("/kpi-trends", response_model=KpiTrendsOut)
 async def get_kpi_trends(
-    days: int = Query(12, ge=2, le=90, description="Number of trailing days, including end_date"),
-    end_date: Optional[str] = Query(None, description="YYYY-MM-DD; defaults to today (UTC)"),
+    days: int = Query(
+        12, ge=2, le=90, description="Number of trailing days, including end_date"
+    ),
+    end_date: Optional[str] = Query(
+        None, description="YYYY-MM-DD; defaults to today (UTC)"
+    ),
     _current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -190,7 +218,9 @@ async def get_kpi_trends(
         try:
             parsed_end = datetime.strptime(end_date, "%Y-%m-%d").date()
         except ValueError:
-            raise HTTPException(status_code=422, detail="Invalid end_date. Use YYYY-MM-DD.")
+            raise HTTPException(
+                status_code=422, detail="Invalid end_date. Use YYYY-MM-DD."
+            )
     else:
         parsed_end = datetime.now(_tz.utc).date()
 
@@ -215,59 +245,77 @@ async def get_kpi_trends(
     wo_day = func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
 
     # ── 3. Unmatched work orders (PENDING, dated in window) ──────────────────
-    wo_pending_rows = (await db.execute(
-        select(wo_day.label("d"), func.count(DeliveredTrip.id))
-        .where(
-            wo_day >= start_date,
-            wo_day <= parsed_end,
-            DeliveredTrip.booked_trip_id.is_(None),
+    wo_pending_rows = (
+        await db.execute(
+            select(wo_day.label("d"), func.count(DeliveredTrip.id))
+            .where(
+                wo_day >= start_date,
+                wo_day <= parsed_end,
+                DeliveredTrip.booked_trip_id.is_(None),
+            )
+            .group_by(wo_day)
         )
-        .group_by(wo_day)
-    )).all()
+    ).all()
     wo_pending_map: dict = {_normalize(r[0]): int(r[1]) for r in wo_pending_rows}
 
     # ── 4. Pending trips (UNMATCHED DeliveredTrips in window) ──────────────────
-    trip_pending_rows = (await db.execute(
-        select(wo_day.label("d"), func.count(DeliveredTrip.id))
-        .where(
-            wo_day >= start_date,
-            wo_day <= parsed_end,
-            DeliveredTrip.booked_trip_id.is_(None),
+    trip_pending_rows = (
+        await db.execute(
+            select(wo_day.label("d"), func.count(DeliveredTrip.id))
+            .where(
+                wo_day >= start_date,
+                wo_day <= parsed_end,
+                DeliveredTrip.booked_trip_id.is_(None),
+            )
+            .group_by(wo_day)
         )
-        .group_by(wo_day)
-    )).all()
+    ).all()
     trip_pending_map: dict = {_normalize(r[0]): int(r[1]) for r in trip_pending_rows}
 
     # ── 5. Driver salary per day (MATCHED WOs) ───────────────────────────────
-    salary_rows = (await db.execute(
-        select(
-            wo_day.label("d"),
-            func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
+    salary_rows = (
+        await db.execute(
+            select(
+                wo_day.label("d"),
+                func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
+            )
+            .where(
+                wo_day >= start_date,
+                wo_day <= parsed_end,
+                DeliveredTrip.booked_trip_id.isnot(None),
+            )
+            .group_by(wo_day)
         )
-        .where(
-            wo_day >= start_date,
-            wo_day <= parsed_end,
-            DeliveredTrip.booked_trip_id.isnot(None),
-        )
-        .group_by(wo_day)
-    )).all()
+    ).all()
     salary_map: dict = {_normalize(r[0]): int(r[1] or 0) for r in salary_rows}
 
     # ── 6. Revenue per day (matched DeliveredTrips dated in window) ───────────
-    revenue_rows = (await db.execute(
-        select(
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)).label("d"),
-            func.coalesce(func.sum(DeliveredTrip.revenue), 0),
+    revenue_rows = (
+        await db.execute(
+            select(
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                ).label("d"),
+                func.coalesce(func.sum(DeliveredTrip.revenue), 0),
+            )
+            .where(
+                DeliveredTrip.booked_trip_id.isnot(None),  # noqa: E712
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                >= start_date,
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                <= parsed_end,
+            )
+            .group_by(
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+            )
         )
-        .where(
-            DeliveredTrip.booked_trip_id.isnot(None),  # noqa: E712
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= start_date,
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= parsed_end,
-        )
-        .group_by(
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
-        )
-    )).all()
+    ).all()
     revenue_map: dict = {_normalize(r[0]): int(r[1] or 0) for r in revenue_rows}
 
     def _fill(m: dict) -> list[int]:
@@ -328,7 +376,9 @@ async def get_vehicle_pnl(
         this vehicle via vehicle_drivers.
     """
     from datetime import datetime as _dt
-    from app.contexts.payroll.infrastructure.repositories import SqlDriverSalaryConfigRepository
+    from app.contexts.payroll.infrastructure.repositories import (
+        SqlDriverSalaryConfigRepository,
+    )
     from app.contexts.payroll.domain.base_salary import effective_base_salary
 
     try:
@@ -336,10 +386,15 @@ async def get_vehicle_pnl(
         dt = _dt.strptime(date_to, "%Y-%m-%d").date()
     except ValueError:
         from fastapi import HTTPException
-        raise HTTPException(status_code=422, detail="Invalid date format. Use YYYY-MM-DD.")
+
+        raise HTTPException(
+            status_code=422, detail="Invalid date format. Use YYYY-MM-DD."
+        )
 
     # ── 1. Build vehicle set ─────────────────────────────────────────────────
-    veh_q = select(Vehicle.id, Vehicle.plate, Vehicle.vendor_id).where(Vehicle.is_active == True)  # noqa: E712
+    veh_q = select(Vehicle.id, Vehicle.plate, Vehicle.vendor_id).where(
+        Vehicle.is_active == True  # noqa: E712
+    )
     if vehicle_id is not None:
         veh_q = veh_q.where(Vehicle.id == vehicle_id)
     veh_rows = (await db.execute(veh_q)).all()
@@ -350,37 +405,55 @@ async def get_vehicle_pnl(
     all_vendor_ids = list({r[2] for r in veh_rows if r[2] is not None})
     vendor_name_by_id: dict[int, str] = {}
     if all_vendor_ids:
-        vnd_rows = (await db.execute(
-            select(Vendor.id, Vendor.name).where(Vendor.id.in_(all_vendor_ids))
-        )).all()
+        vnd_rows = (
+            await db.execute(
+                select(Vendor.id, Vendor.name).where(Vendor.id.in_(all_vendor_ids))
+            )
+        ).all()
         vendor_name_by_id = {r[0]: r[1] for r in vnd_rows}
 
     # ── 2. Revenue per vehicle from DeliveredTrip.revenue (matched trips) ────
     from app.core.pricing_lookup import TripPriceInfo, lookup_vendor_prices
 
-    trip_detail_rows = (await db.execute(
-        select(
-            DeliveredTrip.id,
-            DeliveredTrip.vendor_id,
-            DeliveredTrip.pickup_location_id,
-            DeliveredTrip.dropoff_location_id,
-            DeliveredTrip.work_type,
-            DeliveredTrip.cont_type,
-            DeliveredTrip.revenue,
-            Vehicle.id,
+    trip_detail_rows = (
+        await db.execute(
+            select(
+                DeliveredTrip.id,
+                DeliveredTrip.vendor_id,
+                DeliveredTrip.pickup_location_id,
+                DeliveredTrip.dropoff_location_id,
+                DeliveredTrip.work_type,
+                DeliveredTrip.cont_type,
+                DeliveredTrip.revenue,
+                Vehicle.id,
+            )
+            .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
+            .where(
+                DeliveredTrip.booked_trip_id.isnot(None),
+                Vehicle.id.in_(list(vehicles.keys())),
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                >= df,
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                <= dt,
+            )
         )
-        .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
-        .where(
-            DeliveredTrip.booked_trip_id.isnot(None),
-            Vehicle.id.in_(list(vehicles.keys())),
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
-        )
-    )).all()
+    ).all()
 
     vendor_trips = [
-        TripPriceInfo(id=r[0], partner_id=r[1], pickup_location_id=r[2], dropoff_location_id=r[3], work_type=r[4], cont_type=r[5])
-        for r in trip_detail_rows if r[1] is not None
+        TripPriceInfo(
+            id=r[0],
+            partner_id=r[1],
+            pickup_location_id=r[2],
+            dropoff_location_id=r[3],
+            work_type=r[4],
+            cont_type=r[5],
+        )
+        for r in trip_detail_rows
+        if r[1] is not None
     ]
 
     vendor_prices = await lookup_vendor_prices(db, vendor_trips)
@@ -391,25 +464,35 @@ async def get_vehicle_pnl(
         trip_id, vid, trip_rev = r[0], r[7], int(r[6] or 0)
         if vid:
             revenue_by_vehicle[vid] = revenue_by_vehicle.get(vid, 0) + trip_rev
-            vendor_cost_by_vehicle[vid] = vendor_cost_by_vehicle.get(vid, 0) + vendor_prices.get(trip_id, 0)
+            vendor_cost_by_vehicle[vid] = vendor_cost_by_vehicle.get(
+                vid, 0
+            ) + vendor_prices.get(trip_id, 0)
 
     # ── 3. CP Lương sản lượng per vehicle ───────────────────────────────────
     # vehicle_id FK removed; join via vehicle_plate
     {plate: vid for vid, plate in vehicles.items()}
-    wo_salary_rows = (await db.execute(
-        select(
-            Vehicle.id,
-            func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
+    wo_salary_rows = (
+        await db.execute(
+            select(
+                Vehicle.id,
+                func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
+            )
+            .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
+            .where(
+                DeliveredTrip.booked_trip_id.isnot(None),
+                Vehicle.id.in_(list(vehicles.keys())),
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                >= df,
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                <= dt,
+            )
+            .group_by(Vehicle.id)
         )
-        .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
-        .where(
-            DeliveredTrip.booked_trip_id.isnot(None),
-            Vehicle.id.in_(list(vehicles.keys())),
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
-        )
-        .group_by(Vehicle.id)
-    )).all()
+    ).all()
 
     salary_by_vehicle: dict[int, int] = {}
     for vid, sal in wo_salary_rows:
@@ -417,20 +500,28 @@ async def get_vehicle_pnl(
             salary_by_vehicle[vid] = int(sal or 0)
 
     # ── 3b. Trip count per vehicle for CP Chung allocation ─────────
-    wo_count_rows = (await db.execute(
-        select(
-            Vehicle.id,
-            func.count(DeliveredTrip.id),
+    wo_count_rows = (
+        await db.execute(
+            select(
+                Vehicle.id,
+                func.count(DeliveredTrip.id),
+            )
+            .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
+            .where(
+                DeliveredTrip.booked_trip_id.isnot(None),
+                Vehicle.id.in_(list(vehicles.keys())),
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                >= df,
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                <= dt,
+            )
+            .group_by(Vehicle.id)
         )
-        .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
-        .where(
-            DeliveredTrip.booked_trip_id.isnot(None),
-            Vehicle.id.in_(list(vehicles.keys())),
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
-        )
-        .group_by(Vehicle.id)
-    )).all()
+    ).all()
 
     trip_count_by_vehicle: dict[int, int] = {}
     total_trips = 0
@@ -440,44 +531,57 @@ async def get_vehicle_pnl(
             total_trips += int(cnt)
 
     # ── 4. CP Xe (vehicle expenses) per vehicle ──────────────────────────────
-    expense_rows = (await db.execute(
-        select(
-            VehicleExpense.vehicle_id,
-            VehicleExpense.category,
-            func.coalesce(func.sum(VehicleExpense.amount), 0),
+    expense_rows = (
+        await db.execute(
+            select(
+                VehicleExpense.vehicle_id,
+                VehicleExpense.category,
+                func.coalesce(func.sum(VehicleExpense.amount), 0),
+            )
+            .where(
+                VehicleExpense.expense_date >= df,
+                VehicleExpense.expense_date <= dt,
+                VehicleExpense.category.in_(
+                    ["XANG_DAU", "SUA_CHUA", "TIEN_LUAT", "KHAC"]
+                ),
+            )
+            .group_by(VehicleExpense.vehicle_id, VehicleExpense.category)
         )
-        .where(
-            VehicleExpense.expense_date >= df,
-            VehicleExpense.expense_date <= dt,
-            VehicleExpense.category.in_(["XANG_DAU", "SUA_CHUA", "TIEN_LUAT", "KHAC"]),
-        )
-        .group_by(VehicleExpense.vehicle_id, VehicleExpense.category)
-    )).all()
+    ).all()
 
     cp_xe_by_vehicle: dict[int, dict[str, int]] = {}
     for vid, cat, total_amt in expense_rows:
         amt = int(total_amt or 0)
         if vid and vid in vehicles:
-            slot = cp_xe_by_vehicle.setdefault(vid, {"XANG_DAU": 0, "SUA_CHUA": 0, "TIEN_LUAT": 0, "KHAC": 0})
+            slot = cp_xe_by_vehicle.setdefault(
+                vid, {"XANG_DAU": 0, "SUA_CHUA": 0, "TIEN_LUAT": 0, "KHAC": 0}
+            )
             slot[cat] = slot.get(cat, 0) + amt
 
     # ── 5. CP Lương cơ bản: drivers attached to each vehicle via vehicle_drivers
-    vd_rows = (await db.execute(
-        select(VehicleDriver.vehicle_id, VehicleDriver.driver_id)
-        .where(
-            VehicleDriver.vehicle_id.in_(list(vehicles.keys())),
-            VehicleDriver.is_active == True,  # noqa: E712
-            VehicleDriver.effective_from <= dt,
+    vd_rows = (
+        await db.execute(
+            select(VehicleDriver.vehicle_id, VehicleDriver.driver_id).where(
+                VehicleDriver.vehicle_id.in_(list(vehicles.keys())),
+                VehicleDriver.is_active == True,  # noqa: E712
+                VehicleDriver.effective_from <= dt,
+            )
         )
-    )).all()
+    ).all()
 
     vehicle_driver_map: dict[int, list[int]] = {}
     for vid, did in vd_rows:
         vehicle_driver_map.setdefault(vid, []).append(did)
 
-    all_driver_ids = list({d for drivers in vehicle_driver_map.values() for d in drivers})
+    all_driver_ids = list(
+        {d for drivers in vehicle_driver_map.values() for d in drivers}
+    )
     base_salary_repo = SqlDriverSalaryConfigRepository(db)
-    history_by_driver = await base_salary_repo.list_history_for_drivers(all_driver_ids) if all_driver_ids else {}
+    history_by_driver = (
+        await base_salary_repo.list_history_for_drivers(all_driver_ids)
+        if all_driver_ids
+        else {}
+    )
 
     base_salary_by_vehicle: dict[int, int] = {}
     for vid, driver_ids in vehicle_driver_map.items():
@@ -507,18 +611,22 @@ async def get_vehicle_pnl(
         )
         loi_nhuan = rev - (xe_summary.total + sal + base + vcost)
         vnd_id = vendor_id_by_vehicle.get(vid)
-        rows.append(VehiclePnLRow(
-            vehicle_id=vid,
-            plate=plate,
-            is_vendor=vnd_id is not None,
-            vendor_name=vendor_name_by_id.get(vnd_id) if vnd_id is not None else None,
-            revenue=rev,
-            cp_xe=xe_summary,
-            cp_luong_san_luong=sal,
-            cp_luong_co_ban=base,
-            cp_vendor=vcost,
-            loi_nhuan=loi_nhuan,
-        ))
+        rows.append(
+            VehiclePnLRow(
+                vehicle_id=vid,
+                plate=plate,
+                is_vendor=vnd_id is not None,
+                vendor_name=vendor_name_by_id.get(vnd_id)
+                if vnd_id is not None
+                else None,
+                revenue=rev,
+                cp_xe=xe_summary,
+                cp_luong_san_luong=sal,
+                cp_luong_co_ban=base,
+                cp_vendor=vcost,
+                loi_nhuan=loi_nhuan,
+            )
+        )
         total_revenue += rev
         sum_row_profits += loi_nhuan
 
@@ -549,7 +657,9 @@ async def export_vehicle_pnl(
     from openpyxl.utils import get_column_letter
     from datetime import datetime as _dt
 
-    from app.contexts.payroll.infrastructure.repositories import SqlDriverSalaryConfigRepository
+    from app.contexts.payroll.infrastructure.repositories import (
+        SqlDriverSalaryConfigRepository,
+    )
     from app.contexts.payroll.domain.base_salary import effective_base_salary
     from app.core.pricing_lookup import TripPriceInfo, lookup_vendor_prices
     from app.utils.excel_utils import workbook_to_bytes
@@ -558,7 +668,9 @@ async def export_vehicle_pnl(
         df = _dt.strptime(date_from, "%Y-%m-%d").date()
         dt = _dt.strptime(date_to, "%Y-%m-%d").date()
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid date format. Use YYYY-MM-DD.")
+        raise HTTPException(
+            status_code=422, detail="Invalid date format. Use YYYY-MM-DD."
+        )
 
     # ── Re-use the same data logic as vehicle-pnl ────────────────────────────
     veh_q = select(Vehicle.id, Vehicle.plate).where(Vehicle.is_active == True)  # noqa: E712
@@ -567,29 +679,45 @@ async def export_vehicle_pnl(
     veh_rows = (await db.execute(veh_q)).all()
     vehicles: dict[int, str] = {r[0]: r[1] for r in veh_rows}
 
-    trip_detail_rows = (await db.execute(
-        select(
-            DeliveredTrip.id,
-            DeliveredTrip.vendor_id,
-            DeliveredTrip.pickup_location_id,
-            DeliveredTrip.dropoff_location_id,
-            DeliveredTrip.work_type,
-            DeliveredTrip.cont_type,
-            DeliveredTrip.revenue,
-            Vehicle.id,
+    trip_detail_rows = (
+        await db.execute(
+            select(
+                DeliveredTrip.id,
+                DeliveredTrip.vendor_id,
+                DeliveredTrip.pickup_location_id,
+                DeliveredTrip.dropoff_location_id,
+                DeliveredTrip.work_type,
+                DeliveredTrip.cont_type,
+                DeliveredTrip.revenue,
+                Vehicle.id,
+            )
+            .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
+            .where(
+                DeliveredTrip.booked_trip_id.isnot(None),
+                Vehicle.id.in_(list(vehicles.keys())),
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                >= df,
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                <= dt,
+            )
         )
-        .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
-        .where(
-            DeliveredTrip.booked_trip_id.isnot(None),
-            Vehicle.id.in_(list(vehicles.keys())),
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
-        )
-    )).all()
+    ).all()
 
     vendor_trips = [
-        TripPriceInfo(id=r[0], partner_id=r[1], pickup_location_id=r[2], dropoff_location_id=r[3], work_type=r[4], cont_type=r[5])
-        for r in trip_detail_rows if r[1] is not None
+        TripPriceInfo(
+            id=r[0],
+            partner_id=r[1],
+            pickup_location_id=r[2],
+            dropoff_location_id=r[3],
+            work_type=r[4],
+            cont_type=r[5],
+        )
+        for r in trip_detail_rows
+        if r[1] is not None
     ]
     vendor_prices = await lookup_vendor_prices(db, vendor_trips)
 
@@ -599,62 +727,90 @@ async def export_vehicle_pnl(
         trip_id, vid, trip_rev = r[0], r[7], int(r[6] or 0)
         if vid:
             revenue_by_vehicle[vid] = revenue_by_vehicle.get(vid, 0) + trip_rev
-            vendor_cost_by_vehicle[vid] = vendor_cost_by_vehicle.get(vid, 0) + vendor_prices.get(trip_id, 0)
+            vendor_cost_by_vehicle[vid] = vendor_cost_by_vehicle.get(
+                vid, 0
+            ) + vendor_prices.get(trip_id, 0)
 
-    wo_salary_rows = (await db.execute(
-        select(
-            Vehicle.id,
-            func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
+    wo_salary_rows = (
+        await db.execute(
+            select(
+                Vehicle.id,
+                func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
+            )
+            .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
+            .where(
+                DeliveredTrip.booked_trip_id.isnot(None),
+                Vehicle.id.in_(list(vehicles.keys())),
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                >= df,
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                <= dt,
+            )
+            .group_by(Vehicle.id)
         )
-        .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
-        .where(
-            DeliveredTrip.booked_trip_id.isnot(None),
-            Vehicle.id.in_(list(vehicles.keys())),
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
-        )
-        .group_by(Vehicle.id)
-    )).all()
-    salary_by_vehicle: dict[int, int] = {vid: int(sal or 0) for vid, sal in wo_salary_rows if vid}
+    ).all()
+    salary_by_vehicle: dict[int, int] = {
+        vid: int(sal or 0) for vid, sal in wo_salary_rows if vid
+    }
 
-    expense_rows = (await db.execute(
-        select(
-            VehicleExpense.vehicle_id,
-            VehicleExpense.category,
-            func.coalesce(func.sum(VehicleExpense.amount), 0),
+    expense_rows = (
+        await db.execute(
+            select(
+                VehicleExpense.vehicle_id,
+                VehicleExpense.category,
+                func.coalesce(func.sum(VehicleExpense.amount), 0),
+            )
+            .where(
+                VehicleExpense.expense_date >= df,
+                VehicleExpense.expense_date <= dt,
+                VehicleExpense.category.in_(
+                    ["XANG_DAU", "SUA_CHUA", "TIEN_LUAT", "KHAC"]
+                ),
+            )
+            .group_by(VehicleExpense.vehicle_id, VehicleExpense.category)
         )
-        .where(
-            VehicleExpense.expense_date >= df,
-            VehicleExpense.expense_date <= dt,
-            VehicleExpense.category.in_(["XANG_DAU", "SUA_CHUA", "TIEN_LUAT", "KHAC"]),
-        )
-        .group_by(VehicleExpense.vehicle_id, VehicleExpense.category)
-    )).all()
+    ).all()
 
     cp_xe_by_vehicle: dict[int, dict[str, int]] = {}
     for vid, cat, total_amt in expense_rows:
         if vid and vid in vehicles:
-            slot = cp_xe_by_vehicle.setdefault(vid, {"XANG_DAU": 0, "SUA_CHUA": 0, "TIEN_LUAT": 0, "KHAC": 0})
+            slot = cp_xe_by_vehicle.setdefault(
+                vid, {"XANG_DAU": 0, "SUA_CHUA": 0, "TIEN_LUAT": 0, "KHAC": 0}
+            )
             slot[cat] = slot.get(cat, 0) + int(total_amt or 0)
 
-    vd_rows = (await db.execute(
-        select(VehicleDriver.vehicle_id, VehicleDriver.driver_id)
-        .where(
-            VehicleDriver.vehicle_id.in_(list(vehicles.keys())),
-            VehicleDriver.is_active == True,  # noqa: E712
-            VehicleDriver.effective_from <= dt,
+    vd_rows = (
+        await db.execute(
+            select(VehicleDriver.vehicle_id, VehicleDriver.driver_id).where(
+                VehicleDriver.vehicle_id.in_(list(vehicles.keys())),
+                VehicleDriver.is_active == True,  # noqa: E712
+                VehicleDriver.effective_from <= dt,
+            )
         )
-    )).all()
+    ).all()
     vehicle_driver_map: dict[int, list[int]] = {}
     for vid, did in vd_rows:
         vehicle_driver_map.setdefault(vid, []).append(did)
 
-    all_driver_ids = list({d for drivers in vehicle_driver_map.values() for d in drivers})
+    all_driver_ids = list(
+        {d for drivers in vehicle_driver_map.values() for d in drivers}
+    )
     base_salary_repo = SqlDriverSalaryConfigRepository(db)
-    history_by_driver = await base_salary_repo.list_history_for_drivers(all_driver_ids) if all_driver_ids else {}
+    history_by_driver = (
+        await base_salary_repo.list_history_for_drivers(all_driver_ids)
+        if all_driver_ids
+        else {}
+    )
 
     base_salary_by_vehicle: dict[int, int] = {
-        vid: sum(effective_base_salary(history_by_driver.get(did, []), dt) for did in driver_ids)
+        vid: sum(
+            effective_base_salary(history_by_driver.get(did, []), dt)
+            for did in driver_ids
+        )
         for vid, driver_ids in vehicle_driver_map.items()
     }
 
@@ -711,7 +867,7 @@ async def export_vehicle_pnl(
     ws.row_dimensions[3].height = 22
 
     # Number format: thousand-separator, no decimals, ₫ suffix
-    VND_FMT = '#,##0\\ [$₫-vi-VN]'
+    VND_FMT = "#,##0\\ [$₫-vi-VN]"
 
     def set_num(cell, value: int) -> None:
         """Write a real integer and apply VND display format."""
@@ -721,7 +877,9 @@ async def export_vehicle_pnl(
 
     # Data rows
     data_start_row = 4
-    total_rev = total_luong = total_xang = total_sua = total_luat = total_khac = total_xe = total_profit = 0
+    total_rev = total_luong = total_xang = total_sua = total_luat = total_khac = (
+        total_xe
+    ) = total_profit = 0
 
     sorted_vehicles = sorted(vehicles.items(), key=lambda x: x[1])
     for row_idx, (vid, plate) in enumerate(sorted_vehicles, start=data_start_row):
@@ -775,7 +933,16 @@ async def export_vehicle_pnl(
     total_row_idx = data_start_row + len(sorted_vehicles)
     total_cp_all = total_xe + total_luong
     ws.append(["TỔNG"])
-    total_num_values = [total_rev, total_xang, total_sua, total_luat, total_khac, total_luong, total_cp_all, total_profit]
+    total_num_values = [
+        total_rev,
+        total_xang,
+        total_sua,
+        total_luat,
+        total_khac,
+        total_luong,
+        total_cp_all,
+        total_profit,
+    ]
     for col_offset, val in enumerate(total_num_values, start=2):
         set_num(ws.cell(row=total_row_idx, column=col_offset), val)
 
@@ -794,7 +961,9 @@ async def export_vehicle_pnl(
 
     # Footer
     footer_row = total_row_idx + 2
-    ws.cell(row=footer_row, column=1).value = f"Xuất ngày: {_dt.now().strftime('%d/%m/%Y %H:%M')}"
+    ws.cell(
+        row=footer_row, column=1
+    ).value = f"Xuất ngày: {_dt.now().strftime('%d/%m/%Y %H:%M')}"
     ws.cell(row=footer_row, column=1).font = Font(italic=True, color="888888", size=9)
 
     # Stream response
@@ -829,7 +998,10 @@ async def get_trip_daily_stats(
         dt = datetime.strptime(date_to, "%Y-%m-%d").date()
     except ValueError:
         from fastapi import HTTPException
-        raise HTTPException(status_code=422, detail="Invalid date format. Use YYYY-MM-DD.")
+
+        raise HTTPException(
+            status_code=422, detail="Invalid date format. Use YYYY-MM-DD."
+        )
 
     stmt = select(
         DeliveredTrip.trip_date,
@@ -846,11 +1018,17 @@ async def get_trip_daily_stats(
     if driver_id is not None:
         stmt = stmt.where(DeliveredTrip.driver_id == driver_id)
     if matched is not None:
-        stmt = stmt.where(DeliveredTrip.booked_trip_id.isnot(None) if matched else DeliveredTrip.booked_trip_id.is_(None))
+        stmt = stmt.where(
+            DeliveredTrip.booked_trip_id.isnot(None)
+            if matched
+            else DeliveredTrip.booked_trip_id.is_(None)
+        )
 
-    rows = (await db.execute(
-        stmt.group_by(DeliveredTrip.trip_date, DeliveredTrip.booked_trip_id)
-    )).all()
+    rows = (
+        await db.execute(
+            stmt.group_by(DeliveredTrip.trip_date, DeliveredTrip.booked_trip_id)
+        )
+    ).all()
 
     date_map: dict[str, dict[str, int]] = {}
     total = 0
@@ -860,7 +1038,11 @@ async def get_trip_daily_stats(
     vendor_count = 0
     total_revenue = 0
     for trip_date, booked_id, cnt, rev in rows:
-        ds = str(trip_date) if not hasattr(trip_date, 'isoformat') else trip_date.isoformat()
+        ds = (
+            str(trip_date)
+            if not hasattr(trip_date, "isoformat")
+            else trip_date.isoformat()
+        )
         bucket = date_map.setdefault(ds, {"matched": 0, "pending": 0})
         total += cnt
         if booked_id is not None:
@@ -874,18 +1056,21 @@ async def get_trip_daily_stats(
 
     # Build one bucket per day across the full date range
     from datetime import timedelta as _td
+
     buckets = []
     cur = df
     idx = 0
     while cur <= dt:
         ds = cur.isoformat()
         b = date_map.get(ds, {"matched": 0, "pending": 0})
-        buckets.append({
-            "day": idx + 1,
-            "date": ds,
-            "matched": b["matched"],
-            "pending": b["pending"],
-        })
+        buckets.append(
+            {
+                "day": idx + 1,
+                "date": ds,
+                "matched": b["matched"],
+                "pending": b["pending"],
+            }
+        )
         cur += _td(days=1)
         idx += 1
 
@@ -899,17 +1084,29 @@ async def get_trip_daily_stats(
     if driver_id is not None:
         base_where.append(DeliveredTrip.driver_id == driver_id)
     if matched is not None:
-        base_where.append(DeliveredTrip.booked_trip_id.isnot(None) if matched else DeliveredTrip.booked_trip_id.is_(None))
+        base_where.append(
+            DeliveredTrip.booked_trip_id.isnot(None)
+            if matched
+            else DeliveredTrip.booked_trip_id.is_(None)
+        )
 
-    internal_count = (await db.execute(
-        select(func.count(func.distinct(DeliveredTrip.driver_id)))
-        .where(DeliveredTrip.vendor_id.is_(None), DeliveredTrip.driver_id.isnot(None), *base_where)
-    )).scalar() or 0
+    internal_count = (
+        await db.execute(
+            select(func.count(func.distinct(DeliveredTrip.driver_id))).where(
+                DeliveredTrip.vendor_id.is_(None),
+                DeliveredTrip.driver_id.isnot(None),
+                *base_where,
+            )
+        )
+    ).scalar() or 0
 
-    vendor_count = (await db.execute(
-        select(func.count(func.distinct(DeliveredTrip.vendor_id)))
-        .where(DeliveredTrip.vendor_id.isnot(None), *base_where)
-    )).scalar() or 0
+    vendor_count = (
+        await db.execute(
+            select(func.count(func.distinct(DeliveredTrip.vendor_id))).where(
+                DeliveredTrip.vendor_id.isnot(None), *base_where
+            )
+        )
+    ).scalar() or 0
 
     return TripDailyStatsOut(
         date_from=df,
@@ -932,50 +1129,74 @@ async def _compute_vehicle_pnl_rows(db: AsyncSession, df, dt) -> list[VehiclePnL
     two stay in sync. Mirrors the logic in get_vehicle_pnl (rev, cp_xe, salary,
     base salary, vendor cost) but without HTTP plumbing.
     """
-    from app.contexts.payroll.infrastructure.repositories import SqlDriverSalaryConfigRepository
+    from app.contexts.payroll.infrastructure.repositories import (
+        SqlDriverSalaryConfigRepository,
+    )
     from app.contexts.payroll.domain.base_salary import effective_base_salary
     from app.core.pricing_lookup import TripPriceInfo, lookup_vendor_prices
 
-    veh_rows = (await db.execute(
-        select(Vehicle.id, Vehicle.plate, Vehicle.vendor_id).where(Vehicle.is_active == True)  # noqa: E712
-    )).all()
+    veh_rows = (
+        await db.execute(
+            select(Vehicle.id, Vehicle.plate, Vehicle.vendor_id).where(
+                Vehicle.is_active == True  # noqa: E712
+            )
+        )
+    ).all()
     vehicles: dict[int, str] = {r[0]: r[1] for r in veh_rows}
     vendor_id_by_vehicle: dict[int, int | None] = {r[0]: r[2] for r in veh_rows}
 
     all_vendor_ids = list({r[2] for r in veh_rows if r[2] is not None})
     vendor_name_by_id: dict[int, str] = {}
     if all_vendor_ids:
-        vnd_rows = (await db.execute(
-            select(Vendor.id, Vendor.name).where(Vendor.id.in_(all_vendor_ids))
-        )).all()
+        vnd_rows = (
+            await db.execute(
+                select(Vendor.id, Vendor.name).where(Vendor.id.in_(all_vendor_ids))
+            )
+        ).all()
         vendor_name_by_id = {r[0]: r[1] for r in vnd_rows}
 
     if not vehicles:
         return []
 
-    trip_detail_rows = (await db.execute(
-        select(
-            DeliveredTrip.id,
-            DeliveredTrip.vendor_id,
-            DeliveredTrip.pickup_location_id,
-            DeliveredTrip.dropoff_location_id,
-            DeliveredTrip.work_type,
-            DeliveredTrip.cont_type,
-            DeliveredTrip.revenue,
-            Vehicle.id,
+    trip_detail_rows = (
+        await db.execute(
+            select(
+                DeliveredTrip.id,
+                DeliveredTrip.vendor_id,
+                DeliveredTrip.pickup_location_id,
+                DeliveredTrip.dropoff_location_id,
+                DeliveredTrip.work_type,
+                DeliveredTrip.cont_type,
+                DeliveredTrip.revenue,
+                Vehicle.id,
+            )
+            .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
+            .where(
+                DeliveredTrip.booked_trip_id.isnot(None),
+                Vehicle.id.in_(list(vehicles.keys())),
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                >= df,
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                <= dt,
+            )
         )
-        .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
-        .where(
-            DeliveredTrip.booked_trip_id.isnot(None),
-            Vehicle.id.in_(list(vehicles.keys())),
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
-        )
-    )).all()
+    ).all()
 
     vendor_trips = [
-        TripPriceInfo(id=r[0], partner_id=r[1], pickup_location_id=r[2], dropoff_location_id=r[3], work_type=r[4], cont_type=r[5])
-        for r in trip_detail_rows if r[1] is not None
+        TripPriceInfo(
+            id=r[0],
+            partner_id=r[1],
+            pickup_location_id=r[2],
+            dropoff_location_id=r[3],
+            work_type=r[4],
+            cont_type=r[5],
+        )
+        for r in trip_detail_rows
+        if r[1] is not None
     ]
     vendor_prices = await lookup_vendor_prices(db, vendor_trips)
 
@@ -985,75 +1206,111 @@ async def _compute_vehicle_pnl_rows(db: AsyncSession, df, dt) -> list[VehiclePnL
         trip_id, vid, trip_rev = r[0], r[7], int(r[6] or 0)
         if vid:
             revenue_by_vehicle[vid] = revenue_by_vehicle.get(vid, 0) + trip_rev
-            vendor_cost_by_vehicle[vid] = vendor_cost_by_vehicle.get(vid, 0) + vendor_prices.get(trip_id, 0)
+            vendor_cost_by_vehicle[vid] = vendor_cost_by_vehicle.get(
+                vid, 0
+            ) + vendor_prices.get(trip_id, 0)
 
-    wo_salary_rows = (await db.execute(
-        select(
-            Vehicle.id,
-            func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
+    wo_salary_rows = (
+        await db.execute(
+            select(
+                Vehicle.id,
+                func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
+            )
+            .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
+            .where(
+                DeliveredTrip.booked_trip_id.isnot(None),
+                Vehicle.id.in_(list(vehicles.keys())),
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                >= df,
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                <= dt,
+            )
+            .group_by(Vehicle.id)
         )
-        .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
-        .where(
-            DeliveredTrip.booked_trip_id.isnot(None),
-            Vehicle.id.in_(list(vehicles.keys())),
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
-        )
-        .group_by(Vehicle.id)
-    )).all()
-    salary_by_vehicle: dict[int, int] = {vid: int(sal or 0) for vid, sal in wo_salary_rows if vid}
+    ).all()
+    salary_by_vehicle: dict[int, int] = {
+        vid: int(sal or 0) for vid, sal in wo_salary_rows if vid
+    }
 
     # Trip count per vehicle for ordering / context
-    wo_count_rows = (await db.execute(
-        select(Vehicle.id, func.count(DeliveredTrip.id))
-        .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
-        .where(
-            DeliveredTrip.booked_trip_id.isnot(None),
-            Vehicle.id.in_(list(vehicles.keys())),
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
-            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
+    wo_count_rows = (
+        await db.execute(
+            select(Vehicle.id, func.count(DeliveredTrip.id))
+            .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
+            .where(
+                DeliveredTrip.booked_trip_id.isnot(None),
+                Vehicle.id.in_(list(vehicles.keys())),
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                >= df,
+                func.coalesce(
+                    DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)
+                )
+                <= dt,
+            )
+            .group_by(Vehicle.id)
         )
-        .group_by(Vehicle.id)
-    )).all()
+    ).all()
     {vid: int(cnt) for vid, cnt in wo_count_rows if vid}
 
-    expense_rows = (await db.execute(
-        select(
-            VehicleExpense.vehicle_id,
-            VehicleExpense.category,
-            func.coalesce(func.sum(VehicleExpense.amount), 0),
+    expense_rows = (
+        await db.execute(
+            select(
+                VehicleExpense.vehicle_id,
+                VehicleExpense.category,
+                func.coalesce(func.sum(VehicleExpense.amount), 0),
+            )
+            .where(
+                VehicleExpense.expense_date >= df,
+                VehicleExpense.expense_date <= dt,
+                VehicleExpense.category.in_(
+                    ["XANG_DAU", "SUA_CHUA", "TIEN_LUAT", "KHAC"]
+                ),
+            )
+            .group_by(VehicleExpense.vehicle_id, VehicleExpense.category)
         )
-        .where(
-            VehicleExpense.expense_date >= df,
-            VehicleExpense.expense_date <= dt,
-            VehicleExpense.category.in_(["XANG_DAU", "SUA_CHUA", "TIEN_LUAT", "KHAC"]),
-        )
-        .group_by(VehicleExpense.vehicle_id, VehicleExpense.category)
-    )).all()
+    ).all()
     cp_xe_by_vehicle: dict[int, dict[str, int]] = {}
     for vid, cat, total_amt in expense_rows:
         if vid and vid in vehicles:
-            slot = cp_xe_by_vehicle.setdefault(vid, {"XANG_DAU": 0, "SUA_CHUA": 0, "TIEN_LUAT": 0, "KHAC": 0})
+            slot = cp_xe_by_vehicle.setdefault(
+                vid, {"XANG_DAU": 0, "SUA_CHUA": 0, "TIEN_LUAT": 0, "KHAC": 0}
+            )
             slot[cat] = slot.get(cat, 0) + int(total_amt or 0)
 
-    vd_rows = (await db.execute(
-        select(VehicleDriver.vehicle_id, VehicleDriver.driver_id)
-        .where(
-            VehicleDriver.vehicle_id.in_(list(vehicles.keys())),
-            VehicleDriver.is_active == True,  # noqa: E712
-            VehicleDriver.effective_from <= dt,
+    vd_rows = (
+        await db.execute(
+            select(VehicleDriver.vehicle_id, VehicleDriver.driver_id).where(
+                VehicleDriver.vehicle_id.in_(list(vehicles.keys())),
+                VehicleDriver.is_active == True,  # noqa: E712
+                VehicleDriver.effective_from <= dt,
+            )
         )
-    )).all()
+    ).all()
     vehicle_driver_map: dict[int, list[int]] = {}
     for vid, did in vd_rows:
         vehicle_driver_map.setdefault(vid, []).append(did)
 
-    all_driver_ids = list({d for drivers in vehicle_driver_map.values() for d in drivers})
+    all_driver_ids = list(
+        {d for drivers in vehicle_driver_map.values() for d in drivers}
+    )
     base_salary_repo = SqlDriverSalaryConfigRepository(db)
-    history_by_driver = await base_salary_repo.list_history_for_drivers(all_driver_ids) if all_driver_ids else {}
+    history_by_driver = (
+        await base_salary_repo.list_history_for_drivers(all_driver_ids)
+        if all_driver_ids
+        else {}
+    )
 
     base_salary_by_vehicle: dict[int, int] = {
-        vid: sum(effective_base_salary(history_by_driver.get(did, []), dt) for did in driver_ids)
+        vid: sum(
+            effective_base_salary(history_by_driver.get(did, []), dt)
+            for did in driver_ids
+        )
         for vid, driver_ids in vehicle_driver_map.items()
     }
 
@@ -1073,23 +1330,166 @@ async def _compute_vehicle_pnl_rows(db: AsyncSession, df, dt) -> list[VehiclePnL
         )
         loi_nhuan = rev - (xe_summary.total + sal + base + vcost)
         vnd_id = vendor_id_by_vehicle.get(vid)
-        rows.append(VehiclePnLRow(
-            vehicle_id=vid,
-            plate=plate,
-            is_vendor=vnd_id is not None,
-            vendor_name=vendor_name_by_id.get(vnd_id) if vnd_id is not None else None,
-            revenue=rev,
-            cp_xe=xe_summary,
-            cp_luong_san_luong=sal,
-            cp_luong_co_ban=base,
-            cp_vendor=vcost,
-            loi_nhuan=loi_nhuan,
-        ))
+        rows.append(
+            VehiclePnLRow(
+                vehicle_id=vid,
+                plate=plate,
+                is_vendor=vnd_id is not None,
+                vendor_name=vendor_name_by_id.get(vnd_id)
+                if vnd_id is not None
+                else None,
+                revenue=rev,
+                cp_xe=xe_summary,
+                cp_luong_san_luong=sal,
+                cp_luong_co_ban=base,
+                cp_vendor=vcost,
+                loi_nhuan=loi_nhuan,
+            )
+        )
     return rows
 
 
 def _row_cost(row: VehiclePnLRow) -> int:
-    return int(row.cp_xe.total + row.cp_luong_san_luong + row.cp_luong_co_ban + row.cp_vendor)
+    return int(
+        row.cp_xe.total + row.cp_luong_san_luong + row.cp_luong_co_ban + row.cp_vendor
+    )
+
+
+@router.get("/director/drilldown", response_model=DirectorDashboardDrilldownOut)
+async def get_director_dashboard_drilldown(
+    date_from: str = Query(..., description="YYYY-MM-DD"),
+    date_to: str = Query(..., description="YYYY-MM-DD"),
+    _current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Director KPI drill-down grouped by client and vehicle."""
+    try:
+        df = datetime.strptime(date_from, "%Y-%m-%d").date()
+        dt = datetime.strptime(date_to, "%Y-%m-%d").date()
+    except ValueError:
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=422, detail="Invalid date format. Use YYYY-MM-DD."
+        )
+
+    vehicle_plate_expr = func.coalesce(DeliveredTrip.vehicle_plate, "")
+
+    rows = (
+        await db.execute(
+            select(
+                DeliveredTrip.client_id,
+                Client.name,
+                vehicle_plate_expr,
+                DeliveredTrip.booked_trip_id,
+                func.count(DeliveredTrip.id),
+                func.coalesce(func.sum(DeliveredTrip.revenue), 0),
+                func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
+            )
+            .join(Client, Client.id == DeliveredTrip.client_id)
+            .where(DeliveredTrip.trip_date >= df, DeliveredTrip.trip_date <= dt)
+            .group_by(
+                DeliveredTrip.client_id,
+                Client.name,
+                vehicle_plate_expr,
+                DeliveredTrip.booked_trip_id,
+            )
+        )
+    ).all()
+
+    clients: dict[int, dict] = {}
+    totals = {
+        "total": 0,
+        "matched": 0,
+        "pending": 0,
+        "revenue": 0,
+        "cost": 0,
+        "profit": 0,
+    }
+
+    for (
+        client_id,
+        client_name,
+        vehicle_plate,
+        booked_trip_id,
+        trip_count,
+        revenue,
+        cost,
+    ) in rows:
+        trip_count = int(trip_count or 0)
+        revenue = int(revenue or 0)
+        cost = int(cost or 0)
+        matched = trip_count if booked_trip_id is not None else 0
+        pending = trip_count if booked_trip_id is None else 0
+        profit = revenue - cost
+        plate = vehicle_plate or "Chưa có biển số"
+
+        client_bucket = clients.setdefault(
+            client_id,
+            {
+                "client_id": client_id,
+                "client_name": client_name,
+                "trip_count": 0,
+                "matched": 0,
+                "pending": 0,
+                "revenue": 0,
+                "cost": 0,
+                "profit": 0,
+                "vehicles": {},
+            },
+        )
+        vehicle_bucket = client_bucket["vehicles"].setdefault(
+            plate,
+            {
+                "vehicle_plate": plate,
+                "trip_count": 0,
+                "matched": 0,
+                "pending": 0,
+                "revenue": 0,
+                "cost": 0,
+                "profit": 0,
+            },
+        )
+
+        for bucket in (totals, client_bucket, vehicle_bucket):
+            bucket["total" if bucket is totals else "trip_count"] += trip_count
+            bucket["matched"] += matched
+            bucket["pending"] += pending
+            bucket["revenue"] += revenue
+            bucket["cost"] += cost
+            bucket["profit"] += profit
+
+    client_items = []
+    for client in clients.values():
+        vehicles = [
+            DirectorDashboardDrilldownVehicle(**vehicle)
+            for vehicle in sorted(
+                client["vehicles"].values(),
+                key=lambda item: (-item["revenue"], item["vehicle_plate"]),
+            )
+        ]
+        client_items.append(
+            DirectorDashboardDrilldownClient(
+                client_id=client["client_id"],
+                client_name=client["client_name"],
+                trip_count=client["trip_count"],
+                matched=client["matched"],
+                pending=client["pending"],
+                revenue=client["revenue"],
+                cost=client["cost"],
+                profit=client["profit"],
+                vehicles=vehicles,
+            )
+        )
+
+    return DirectorDashboardDrilldownOut(
+        date_from=df,
+        date_to=dt,
+        totals=DirectorDashboardDrilldownTotals(**totals),
+        clients=sorted(
+            client_items, key=lambda item: (-item.revenue, item.client_name)
+        ),
+    )
 
 
 @router.get("/director", response_model=DirectorDashboardOut)
@@ -1109,7 +1509,10 @@ async def get_director_dashboard(
         dt = datetime.strptime(date_to, "%Y-%m-%d").date()
     except ValueError:
         from fastapi import HTTPException
-        raise HTTPException(status_code=422, detail="Invalid date format. Use YYYY-MM-DD.")
+
+        raise HTTPException(
+            status_code=422, detail="Invalid date format. Use YYYY-MM-DD."
+        )
 
     # Previous period: same-length window ending the day before df
     span = (dt - df).days + 1
@@ -1118,16 +1521,18 @@ async def get_director_dashboard(
 
     async def _period_stats(start, end):
         """Return (total, matched, pending, revenue, buckets, top_routes, top_drivers)."""
-        rows = (await db.execute(
-            select(
-                DeliveredTrip.trip_date,
-                DeliveredTrip.booked_trip_id,
-                func.count(DeliveredTrip.id),
-                func.coalesce(func.sum(DeliveredTrip.revenue), 0),
+        rows = (
+            await db.execute(
+                select(
+                    DeliveredTrip.trip_date,
+                    DeliveredTrip.booked_trip_id,
+                    func.count(DeliveredTrip.id),
+                    func.coalesce(func.sum(DeliveredTrip.revenue), 0),
+                )
+                .where(DeliveredTrip.trip_date >= start, DeliveredTrip.trip_date <= end)
+                .group_by(DeliveredTrip.trip_date, DeliveredTrip.booked_trip_id)
             )
-            .where(DeliveredTrip.trip_date >= start, DeliveredTrip.trip_date <= end)
-            .group_by(DeliveredTrip.trip_date, DeliveredTrip.booked_trip_id)
-        )).all()
+        ).all()
 
         date_map = {}
         total = matched = pending = revenue = 0
@@ -1138,57 +1543,82 @@ async def get_director_dashboard(
             if booked_id is not None:
                 bucket["matched"] += cnt
                 matched += cnt
-                revenue += int(rev)
             else:
                 bucket["pending"] += cnt
                 pending += cnt
+            revenue += int(rev)
 
         buckets = []
         cur, idx = start, 0
         while cur <= end:
             ds = cur.isoformat()
             b = date_map.get(ds, {"matched": 0, "pending": 0})
-            buckets.append({"day": idx + 1, "date": ds, "matched": b["matched"], "pending": b["pending"]})
+            buckets.append(
+                {
+                    "day": idx + 1,
+                    "date": ds,
+                    "matched": b["matched"],
+                    "pending": b["pending"],
+                }
+            )
             cur += timedelta(days=1)
             idx += 1
 
         # Top routes
         from sqlalchemy.orm import aliased
+
         PickupLoc = aliased(Location)
         DropLoc = aliased(Location)
-        route_rows = (await db.execute(
-            select(
-                func.concat(PickupLoc.name, " → ", DropLoc.name).label("route"),
-                func.count(DeliveredTrip.id).label("cnt"),
+        route_rows = (
+            await db.execute(
+                select(
+                    func.concat(PickupLoc.name, " → ", DropLoc.name).label("route"),
+                    func.count(DeliveredTrip.id).label("cnt"),
+                )
+                .join(PickupLoc, PickupLoc.id == DeliveredTrip.pickup_location_id)
+                .join(DropLoc, DropLoc.id == DeliveredTrip.dropoff_location_id)
+                .where(DeliveredTrip.trip_date >= start, DeliveredTrip.trip_date <= end)
+                .group_by(PickupLoc.name, DropLoc.name)
+                .order_by(func.count(DeliveredTrip.id).desc())
+                .limit(5)
             )
-            .join(PickupLoc, PickupLoc.id == DeliveredTrip.pickup_location_id)
-            .join(DropLoc, DropLoc.id == DeliveredTrip.dropoff_location_id)
-            .where(DeliveredTrip.trip_date >= start, DeliveredTrip.trip_date <= end)
-            .group_by(PickupLoc.name, DropLoc.name)
-            .order_by(func.count(DeliveredTrip.id).desc())
-            .limit(5)
-        )).all()
+        ).all()
         top_routes = [{"name": r.route, "count": r.cnt} for r in route_rows]
 
         # Top drivers
-        driver_rows = (await db.execute(
-            select(
-                User.full_name.label("name"),
-                DeliveredTrip.vehicle_plate.label("plate"),
-                func.count(DeliveredTrip.id).label("cnt"),
+        driver_rows = (
+            await db.execute(
+                select(
+                    User.full_name.label("name"),
+                    DeliveredTrip.vehicle_plate.label("plate"),
+                    func.count(DeliveredTrip.id).label("cnt"),
+                )
+                .join(User, User.id == DeliveredTrip.driver_id)
+                .where(DeliveredTrip.trip_date >= start, DeliveredTrip.trip_date <= end)
+                .group_by(User.full_name, DeliveredTrip.vehicle_plate)
+                .order_by(func.count(DeliveredTrip.id).desc())
+                .limit(5)
             )
-            .join(User, User.id == DeliveredTrip.driver_id)
-            .where(DeliveredTrip.trip_date >= start, DeliveredTrip.trip_date <= end)
-            .group_by(User.full_name, DeliveredTrip.vehicle_plate)
-            .order_by(func.count(DeliveredTrip.id).desc())
-            .limit(5)
-        )).all()
-        top_drivers = [{"name": r.name, "plate": r.plate or "", "trip_count": r.cnt} for r in driver_rows]
+        ).all()
+        top_drivers = [
+            {"name": r.name, "plate": r.plate or "", "trip_count": r.cnt}
+            for r in driver_rows
+        ]
 
         return total, matched, pending, revenue, buckets, top_routes, top_drivers
 
-    total, matched, pending, revenue, buckets, top_routes, top_drivers = await _period_stats(df, dt)
-    prev_total, prev_matched, prev_pending, prev_revenue, _, _, _ = await _period_stats(prev_df, prev_dt)
+    (
+        total,
+        matched,
+        pending,
+        revenue,
+        buckets,
+        top_routes,
+        top_drivers,
+    ) = await _period_stats(df, dt)
+    prev_total, prev_matched, prev_pending, prev_revenue, _, _, _ = await _period_stats(
+        prev_df, prev_dt
+    )
 
     # ── Per-vehicle PnL, split own-fleet vs vendor ──────────────────────────
     pnl_rows = await _compute_vehicle_pnl_rows(db, df, dt)
@@ -1209,15 +1639,10 @@ async def get_director_dashboard(
     own_group = _group(own_rows)
     vendor_group = _group(vendor_rows)
 
-    # Aggregate totals — revenue, cost & profit all derived from PnL rows
-    # (matched DeliveredTrips) so the KPI cards stay consistent with the
-    # per-vehicle breakdown tables below them.
-    pnl_revenue = sum(r.revenue for r in pnl_rows)
     total_cost = sum(_row_cost(r) for r in pnl_rows)
-    profit = sum(r.loi_nhuan for r in pnl_rows)
-    prev_pnl_revenue = sum(r.revenue for r in prev_pnl_rows)
+    profit = revenue - total_cost
     prev_total_cost = sum(_row_cost(r) for r in prev_pnl_rows)
-    prev_profit = sum(r.loi_nhuan for r in prev_pnl_rows)
+    prev_profit = prev_revenue - prev_total_cost
 
     def delta(curr, prev):
         if not prev:
@@ -1229,14 +1654,14 @@ async def get_director_dashboard(
         matched=matched,
         pending=pending,
         match_rate=round(matched / total * 100) if total > 0 else None,
-        revenue=pnl_revenue,
-        avg_revenue_per_trip=round(pnl_revenue / matched) if matched > 0 else 0,
+        revenue=revenue,
+        avg_revenue_per_trip=round(revenue / total) if total > 0 else 0,
         total_cost=total_cost,
         profit=profit,
         total_delta=delta(total, prev_total),
         matched_delta=delta(matched, prev_matched),
         pending_delta=delta(pending, prev_pending),
-        revenue_delta=delta(pnl_revenue, prev_pnl_revenue),
+        revenue_delta=delta(revenue, prev_revenue),
         cost_delta=delta(total_cost, prev_total_cost),
         profit_delta=delta(profit, prev_profit),
         buckets=buckets,
@@ -1259,16 +1684,20 @@ async def get_notifications(
         for i, raw in enumerate(raw_items):
             try:
                 data = json.loads(raw)
-                notifications.append({
-                    "id": str(i),
-                    "type": data.get("channel", "general"),
-                    "title": data.get("title", ""),
-                    "message": data.get("message", ""),
-                    "time": data.get("created_at", ""),
-                    "read": data.get("read", False),
-                })
+                notifications.append(
+                    {
+                        "id": str(i),
+                        "type": data.get("channel", "general"),
+                        "title": data.get("title", ""),
+                        "message": data.get("message", ""),
+                        "time": data.get("created_at", ""),
+                        "read": data.get("read", False),
+                    }
+                )
             except (json.JSONDecodeError, KeyError):
-                logger.warning("Malformed notification entry for user %s", current_user.id)
+                logger.warning(
+                    "Malformed notification entry for user %s", current_user.id
+                )
                 continue
         return notifications
     except RuntimeError:

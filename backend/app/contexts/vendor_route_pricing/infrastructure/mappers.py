@@ -1,4 +1,5 @@
 """ORM <-> domain entity mappers for the Vendor Route Pricing context."""
+
 from __future__ import annotations
 
 from app.contexts.vendor_route_pricing.domain.entities import VendorRoutePricing

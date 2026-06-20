@@ -11,7 +11,9 @@ import json
 import logging
 import re
 
-from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import ExtractedRow
+from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import (
+    ExtractedRow,
+)
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
     parse_container_no,
 )
@@ -56,13 +58,16 @@ RULES:
 """
 
 
-async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[ExtractedRow]:
+async def extract_with_ai(
+    sheets: list[SheetView], filename: str = ""
+) -> list[ExtractedRow]:
     """Send sheet data to Gemini and parse the response.
 
     Returns an empty list on any failure — never raises.
     """
     try:
         from app.config import GEMINI_MODELS, settings
+
         api_key = getattr(settings, "GEMINI_API_KEY", None)
     except Exception:
         return []
@@ -80,7 +85,9 @@ async def extract_with_ai(sheets: list[SheetView], filename: str = "") -> list[E
     if not text_data.strip():
         return []
 
-    prompt = _EXTRACT_PROMPT + "\n\n--- DATA START ---\n" + text_data + "\n--- DATA END ---"
+    prompt = (
+        _EXTRACT_PROMPT + "\n\n--- DATA START ---\n" + text_data + "\n--- DATA END ---"
+    )
 
     import httpx
 
@@ -178,17 +185,19 @@ def _parse_extracted_items(items: list[dict]) -> list[ExtractedRow]:
             except (ValueError, TypeError):
                 freight_charge = None
 
-        rows.append(ExtractedRow(
-            container_number=cont_no,
-            cont_type=cont_type,
-            pickup=pickup,
-            dropoff=dropoff,
-            vessel_name=vessel_name,
-            consignee=consignee,
-            vehicle_plate=vehicle_plate,
-            freight_charge=freight_charge,
-            source_row_index=item.get("source_row", 0),
-        ))
+        rows.append(
+            ExtractedRow(
+                container_number=cont_no,
+                cont_type=cont_type,
+                pickup=pickup,
+                dropoff=dropoff,
+                vessel_name=vessel_name,
+                consignee=consignee,
+                vehicle_plate=vehicle_plate,
+                freight_charge=freight_charge,
+                source_row_index=item.get("source_row", 0),
+            )
+        )
     return rows
 
 
@@ -199,7 +208,12 @@ def _pick_richest_sheet(sheets: list[SheetView]) -> SheetView | None:
     for sheet in sheets:
         if sheet.state == "veryHidden":
             continue
-        count = sum(1 for row in sheet.rows[:200] for cell in row if cell is not None and str(cell).strip())
+        count = sum(
+            1
+            for row in sheet.rows[:200]
+            for cell in row
+            if cell is not None and str(cell).strip()
+        )
         if count > best_count:
             best_count = count
             best = sheet

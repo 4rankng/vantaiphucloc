@@ -13,12 +13,15 @@ from typing import Any
 
 # ── Rule representation ────────────────────────────────────────────────────────
 
+
 class _Rule:
     """A single ``allow(user, action, resource)`` rule."""
 
     __slots__ = ("action", "resource", "min_role", "owner_check")
 
-    def __init__(self, action: str, resource: str, min_role: str, owner_check: str | None = None):
+    def __init__(
+        self, action: str, resource: str, min_role: str, owner_check: str | None = None
+    ):
         self.action = action
         self.resource = resource
         self.min_role = min_role
@@ -49,9 +52,7 @@ _ALLOW_OWNER_RE = re.compile(
     r'allow\(\s*user\s*,\s*"([^"]+)"\s*,\s*\w+:\s*\w+\s*\)\s*if\s*'
     r'role_allow\(\s*user\s*,\s*"([^"]+)"\s*\)\s+and\s+(user\.\w+)\s*=\s*(\w+\.\w+)'
 )
-_ALLOW_ANY_RE = re.compile(
-    r'allow\(\s*_user\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)'
-)
+_ALLOW_ANY_RE = re.compile(r'allow\(\s*_user\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)')
 
 
 class Policy:
@@ -59,7 +60,9 @@ class Policy:
 
     def __init__(self, rules: list[_Rule], any_rules: list[tuple[str, str]]):
         self._rules = rules
-        self._any_rules = any_rules  # (action, resource) pairs that allow any authenticated user
+        self._any_rules = (
+            any_rules  # (action, resource) pairs that allow any authenticated user
+        )
 
     @classmethod
     def from_file(cls, path: Path) -> Policy:
@@ -78,23 +81,29 @@ class Policy:
             # allow(user, "action", "Resource") if role_allow(user, "role");
             m = _ALLOW_RE.match(line)
             if m:
-                rules.append(_Rule(action=m.group(2), resource=m.group(3), min_role=m.group(4)))
+                rules.append(
+                    _Rule(action=m.group(2), resource=m.group(3), min_role=m.group(4))
+                )
                 continue
             # allow(user, "update", delivered_trip: DeliveredTrip) if role_allow(...) and user.id = delivered_trip.driver_id
             m = _ALLOW_OWNER_RE.match(line)
             if m:
-                rules.append(_Rule(
-                    action=m.group(1),
-                    resource="DeliveredTrip",
-                    min_role=m.group(2),
-                    owner_check=f"{m.group(3)}={m.group(4)}",
-                ))
+                rules.append(
+                    _Rule(
+                        action=m.group(1),
+                        resource="DeliveredTrip",
+                        min_role=m.group(2),
+                        owner_check=f"{m.group(3)}={m.group(4)}",
+                    )
+                )
                 continue
         return cls(rules, any_rules)
 
     def is_allowed(self, user: Any, action: str, resource: Any) -> bool:
         user_role = getattr(user, "role", "")
-        resource_name = resource if isinstance(resource, str) else type(resource).__name__
+        resource_name = (
+            resource if isinstance(resource, str) else type(resource).__name__
+        )
 
         # Check wildcard rules (any authenticated user)
         for a, r in self._any_rules:
@@ -113,7 +122,9 @@ class Policy:
                 if len(parts) == 2:
                     user_attr = parts[0].split(".")[1].strip()
                     res_attr = parts[1].split(".")[1].strip()
-                    if getattr(user, user_attr, None) == getattr(resource, res_attr, None):
+                    if getattr(user, user_attr, None) == getattr(
+                        resource, res_attr, None
+                    ):
                         return True
         return False
 

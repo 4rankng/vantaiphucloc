@@ -17,7 +17,10 @@ import json
 import logging
 import re
 
-from app.contexts.operations.infrastructure.ai import analyze_image_with_fallback, preprocess_image
+from app.contexts.operations.infrastructure.ai import (
+    analyze_image_with_fallback,
+    preprocess_image,
+)
 from app.utils.iso6346 import validate_check_digit, suggest_corrections
 
 
@@ -60,7 +63,6 @@ Common Errors: Pay close attention to characters that look similar (e.g., distin
 Output: Return ONLY a clean JSON array containing the recognized container numbers. Do not include any conversational text. Example: {"container_numbers": ["ALLU5216535", "LSQU1077376"]}"""
 
 
-
 # Pre-compiled container-number pattern — used across multiple functions
 _CONTAINER_RE = re.compile(r"[A-Z]{4}\d{7}")
 
@@ -73,7 +75,12 @@ def _parse_numbers_from_response(text: str) -> list[str]:
         if isinstance(data, dict) and "container_numbers" in data:
             nums = data["container_numbers"]
             if isinstance(nums, list):
-                return [str(n).upper().strip() for n in nums if isinstance(n, (str, int)) and _CONTAINER_RE.fullmatch(str(n).upper())]
+                return [
+                    str(n).upper().strip()
+                    for n in nums
+                    if isinstance(n, (str, int))
+                    and _CONTAINER_RE.fullmatch(str(n).upper())
+                ]
     except (json.JSONDecodeError, TypeError):
         pass
 
@@ -82,8 +89,6 @@ def _parse_numbers_from_response(text: str) -> list[str]:
     if cleaned == "NONE":
         return []
     return list(dict.fromkeys(_CONTAINER_RE.findall(cleaned)))
-
-
 
 
 async def _single_ocr_call(
@@ -173,7 +178,8 @@ async def extract_container_numbers(
 
     _logger.info(
         "[OCR] multi-cont success: %d numbers (%s)",
-        len(valid), ", ".join(valid),
+        len(valid),
+        ", ".join(valid),
     )
     return {
         "success": True,

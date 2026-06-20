@@ -1,6 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from app.contexts.operations.infrastructure.import_pipeline.column_mapper import MappingProfilePicker
+from app.contexts.operations.infrastructure.import_pipeline.column_mapper import (
+    MappingProfilePicker,
+)
 
 
 @pytest.mark.asyncio

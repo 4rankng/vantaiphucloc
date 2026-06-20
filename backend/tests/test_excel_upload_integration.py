@@ -42,14 +42,19 @@ def sample_files():
 
 @pytest.fixture
 async def seeded_partner(db_session):
-    partner = Client(name="Test Shipping", )
+    partner = Client(
+        name="Test Shipping",
+    )
     db_session.add(partner)
     await db_session.flush()
     return partner
 
 
 async def _upload_preview(
-    async_client, headers, filepath: Path, trip_date: str = "2026-03-31",
+    async_client,
+    headers,
+    filepath: Path,
+    trip_date: str = "2026-03-31",
 ):
     """Helper: POST a file to the preview endpoint and return the response."""
     content = filepath.read_bytes()
@@ -84,7 +89,9 @@ def _assert_preview_ok(resp, *, min_accepted: int = 1):
 
 @pytest.mark.asyncio
 async def test_preview_glory_shanghai_upload(
-    sample_files, async_client, make_auth_headers,
+    sample_files,
+    async_client,
+    make_auth_headers,
 ):
     headers = await make_auth_headers("accountant")
     resp = await _upload_preview(async_client, headers, GLORY)
@@ -97,7 +104,9 @@ async def test_preview_glory_shanghai_upload(
 
 @pytest.mark.asyncio
 async def test_preview_conscience_upload(
-    sample_files, async_client, make_auth_headers,
+    sample_files,
+    async_client,
+    make_auth_headers,
 ):
     headers = await make_auth_headers("accountant")
     resp = await _upload_preview(async_client, headers, CONSCIENCE)
@@ -106,10 +115,14 @@ async def test_preview_conscience_upload(
 
 @pytest.mark.asyncio
 async def test_preview_haian_beta_upload(
-    sample_files, async_client, make_auth_headers,
+    sample_files,
+    async_client,
+    make_auth_headers,
 ):
     headers = await make_auth_headers("accountant")
-    resp = await _upload_preview(async_client, headers, HAIAN_BETA, trip_date="2026-04-19")
+    resp = await _upload_preview(
+        async_client, headers, HAIAN_BETA, trip_date="2026-04-19"
+    )
     body = _assert_preview_ok(resp, min_accepted=5)
     first = body["accepted"][0]["values"]
     assert first["pickup_location"] != ""
@@ -117,10 +130,14 @@ async def test_preview_haian_beta_upload(
 
 @pytest.mark.asyncio
 async def test_preview_phuc_loc_upload(
-    sample_files, async_client, make_auth_headers,
+    sample_files,
+    async_client,
+    make_auth_headers,
 ):
     headers = await make_auth_headers("accountant")
-    resp = await _upload_preview(async_client, headers, PHUC_LOC, trip_date="2026-04-26")
+    resp = await _upload_preview(
+        async_client, headers, PHUC_LOC, trip_date="2026-04-26"
+    )
     body = _assert_preview_ok(resp, min_accepted=5)
     first = body["accepted"][0]["values"]
     assert first["pickup_location"] != ""
@@ -134,7 +151,9 @@ async def test_preview_phuc_loc_upload(
 
 @pytest.mark.asyncio
 async def test_preview_requires_accountant_role(
-    sample_files, async_client, make_auth_headers,
+    sample_files,
+    async_client,
+    make_auth_headers,
 ):
     headers = await make_auth_headers("driver")
     resp = await _upload_preview(async_client, headers, GLORY)
@@ -143,7 +162,8 @@ async def test_preview_requires_accountant_role(
 
 @pytest.mark.asyncio
 async def test_preview_empty_file_rejected(
-    async_client, make_auth_headers,
+    async_client,
+    make_auth_headers,
 ):
     headers = await make_auth_headers("accountant")
     resp = await async_client.post(
@@ -161,7 +181,11 @@ async def test_preview_empty_file_rejected(
 
 @pytest.mark.asyncio
 async def test_commit_after_preview(
-    sample_files, async_client, make_auth_headers, db_session, seeded_partner,
+    sample_files,
+    async_client,
+    make_auth_headers,
+    db_session,
+    seeded_partner,
 ):
     headers = await make_auth_headers("accountant")
 
@@ -173,25 +197,27 @@ async def test_commit_after_preview(
     commit_rows = []
     for row in body["accepted"][:3]:
         v = row["values"]
-        commit_rows.append({
-            "container_no": v["container_no"],
-            "container_size": v["container_size"],
-            "freight_kind": v["freight_kind"],
-            "work_type": v["work_type"],
-            "container_type_iso": v.get("container_type_iso", ""),
-            "gross_weight_kg": v.get("gross_weight_kg"),
-            "seal_no": v.get("seal_no", ""),
-            "pickup_location": v.get("pickup_location", ""),
-            "dropoff_location": v.get("dropoff_location", ""),
-            "pickup_date": v.get("pickup_date"),
-            "dropoff_date": v.get("dropoff_date"),
-            "trip_date": v["trip_date"],
-            "customer_ref": v.get("customer_ref", ""),
-            "consignee": v.get("consignee", ""),
-            "commodity": v.get("commodity", ""),
-            "driver_name": v.get("driver_name", ""),
-            "remarks": v.get("remarks", ""),
-        })
+        commit_rows.append(
+            {
+                "container_no": v["container_no"],
+                "container_size": v["container_size"],
+                "freight_kind": v["freight_kind"],
+                "work_type": v["work_type"],
+                "container_type_iso": v.get("container_type_iso", ""),
+                "gross_weight_kg": v.get("gross_weight_kg"),
+                "seal_no": v.get("seal_no", ""),
+                "pickup_location": v.get("pickup_location", ""),
+                "dropoff_location": v.get("dropoff_location", ""),
+                "pickup_date": v.get("pickup_date"),
+                "dropoff_date": v.get("dropoff_date"),
+                "trip_date": v["trip_date"],
+                "customer_ref": v.get("customer_ref", ""),
+                "consignee": v.get("consignee", ""),
+                "commodity": v.get("commodity", ""),
+                "driver_name": v.get("driver_name", ""),
+                "remarks": v.get("remarks", ""),
+            }
+        )
 
     # 3. Commit
     resp = await async_client.post(
@@ -212,20 +238,25 @@ async def test_commit_after_preview(
 
 @pytest.mark.asyncio
 async def test_commit_requires_accountant_role(
-    async_client, make_auth_headers, db_session, seeded_partner,
+    async_client,
+    make_auth_headers,
+    db_session,
+    seeded_partner,
 ):
     headers = await make_auth_headers("driver")
     resp = await async_client.post(
         COMMIT_URL,
         json={
             "partner_id": seeded_partner.id,
-            "rows": [{
-                "container_no": "ABCD1234567",
-                "container_size": "20",
-                "freight_kind": "F",
-                "work_type": "F20",
-                "trip_date": "2026-04-15",
-            }],
+            "rows": [
+                {
+                    "container_no": "ABCD1234567",
+                    "container_size": "20",
+                    "freight_kind": "F",
+                    "work_type": "F20",
+                    "trip_date": "2026-04-15",
+                }
+            ],
         },
         headers=headers,
     )
@@ -234,27 +265,32 @@ async def test_commit_requires_accountant_role(
 
 @pytest.mark.asyncio
 async def test_commit_rejects_unresolved_freight_kind(
-    async_client, make_auth_headers, db_session, seeded_partner,
+    async_client,
+    make_auth_headers,
+    db_session,
+    seeded_partner,
 ):
     """Test that commit endpoint rejects rows with unresolved freight_kind."""
     headers = await make_auth_headers("accountant")
-    
+
     # Try to commit a row with freight_kind_unknown=True (unresolved)
     resp = await async_client.post(
-       COMMIT_URL,
-       json={
-           "client_id": seeded_partner.id,
-           "rows": [{
-               "container_no": "ABCD1234567",
-               "container_size": "20",
-               "freight_kind": "F",  # Defaulted, not explicitly provided
-               "cont_type": "F20",
-               "work_type": "CHUYỂN BÃI",
-               "trip_date": "2026-04-15",
-               "freight_kind_unknown": True,  # Mark as unresolved
-           }],
-       },
-       headers=headers,
+        COMMIT_URL,
+        json={
+            "client_id": seeded_partner.id,
+            "rows": [
+                {
+                    "container_no": "ABCD1234567",
+                    "container_size": "20",
+                    "freight_kind": "F",  # Defaulted, not explicitly provided
+                    "cont_type": "F20",
+                    "work_type": "CHUYỂN BÃI",
+                    "trip_date": "2026-04-15",
+                    "freight_kind_unknown": True,  # Mark as unresolved
+                }
+            ],
+        },
+        headers=headers,
     )
     # Should reject with 400 error
     assert resp.status_code == 400, f"Expected 400, got {resp.status_code}: {resp.text}"

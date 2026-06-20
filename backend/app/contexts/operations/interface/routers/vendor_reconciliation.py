@@ -83,9 +83,11 @@ async def preview_vendor_excel(
     _user: User = Depends(require_roles("accountant", "superadmin")),
 ):
     """Parse vendor Excel file and return preview. No data saved to DB."""
-    vendor = (await db.execute(
-        select(Vendor).where(Vendor.id == vendor_id, Vendor.is_active == True)  # noqa: E712
-    )).scalar_one_or_none()
+    vendor = (
+        await db.execute(
+            select(Vendor).where(Vendor.id == vendor_id, Vendor.is_active == True)  # noqa: E712
+        )
+    ).scalar_one_or_none()
     if vendor is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy nhà xe.")
 
@@ -161,9 +163,11 @@ async def upload_vendor_excel(
     _user: User = Depends(require_roles("accountant", "superadmin")),
 ):
     """Upload vendor Excel file, create DeliveredTrips, auto-match against BookedTrips."""
-    vendor = (await db.execute(
-        select(Vendor).where(Vendor.id == vendor_id, Vendor.is_active == True)  # noqa: E712
-    )).scalar_one_or_none()
+    vendor = (
+        await db.execute(
+            select(Vendor).where(Vendor.id == vendor_id, Vendor.is_active == True)  # noqa: E712
+        )
+    ).scalar_one_or_none()
     if vendor is None:
         raise HTTPException(status_code=404, detail="Khong tim thay nha xe.")
 
@@ -179,7 +183,9 @@ async def upload_vendor_excel(
     )
 
     service = ReconciliationImportService(db)
-    result = await service.import_reconciliation_excel(content, file.filename, vendor_id=vendor_id)
+    result = await service.import_reconciliation_excel(
+        content, file.filename, vendor_id=vendor_id
+    )
 
     if result.total_rows == 0:
         raise HTTPException(

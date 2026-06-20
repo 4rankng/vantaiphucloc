@@ -71,10 +71,12 @@ _TEMPLATE_HEADER_MAP: dict[str, str | None] = {
 
 def _clean_value(val: str) -> str:
     """Strip leading/trailing whitespace, dots, commas, semicolons."""
-    return re.sub(r'^[\s,.;:]+|[\s,.;:]+$', '', val)
+    return re.sub(r"^[\s,.;:]+|[\s,.;:]+$", "", val)
 
 
-def _detect_duplicates(rows: list[dict[str, Any]], cont_key: str = "Số Cont") -> tuple[list[DuplicateGroup], list[str]]:
+def _detect_duplicates(
+    rows: list[dict[str, Any]], cont_key: str = "Số Cont"
+) -> tuple[list[DuplicateGroup], list[str]]:
     """Detect exact duplicate containers in parsed rows.
 
     "Exact" means ALL column values match across rows, not just the container number.
@@ -87,7 +89,13 @@ def _detect_duplicates(rows: list[dict[str, Any]], cont_key: str = "Số Cont") 
 
     indexed: list[tuple[int, str]] = []
     for i, row in enumerate(rows):
-        cn = str(row.get(cont_key) or "").strip().upper().replace(" ", "").replace("-", "")
+        cn = (
+            str(row.get(cont_key) or "")
+            .strip()
+            .upper()
+            .replace(" ", "")
+            .replace("-", "")
+        )
         if cn:
             indexed.append((i, cn))
 
@@ -98,7 +106,11 @@ def _detect_duplicates(rows: list[dict[str, Any]], cont_key: str = "Số Cont") 
         """Normalized string of all cell values for full-row comparison."""
         parts = []
         for k, v in row.items():
-            s = str(v).strip().upper().replace(" ", "").replace("-", "") if v is not None else ""
+            s = (
+                str(v).strip().upper().replace(" ", "").replace("-", "")
+                if v is not None
+                else ""
+            )
             parts.append(f"{k}={s}")
         return "|".join(parts)
 
@@ -109,12 +121,14 @@ def _detect_duplicates(rows: list[dict[str, Any]], cont_key: str = "Số Cont") 
 
     for (cn, sig), indices in sig_groups.items():
         if len(indices) > 1:
-            groups.append(DuplicateGroup(
-                type="exact",
-                row_indices=indices,
-                containers=[cn],
-                message=f"Cont {cn} xuất hiện {len(indices)} lần (dòng {', '.join(str(j + 1) for j in indices)})",
-            ))
+            groups.append(
+                DuplicateGroup(
+                    type="exact",
+                    row_indices=indices,
+                    containers=[cn],
+                    message=f"Cont {cn} xuất hiện {len(indices)} lần (dòng {', '.join(str(j + 1) for j in indices)})",
+                )
+            )
 
     exact_count = len(groups)
     if exact_count:
@@ -130,6 +144,7 @@ def _normalise_header(raw: str) -> str:
 @dataclass
 class DuplicateGroup:
     """A cluster of rows with similar container numbers."""
+
     type: str  # "exact"
     row_indices: list[int]  # 0-based index into rows list
     containers: list[str]
@@ -153,8 +168,15 @@ def _find_template_sheet(wb) -> tuple[Any, int, dict[int, str]] | None:
     Returns (worksheet, header_idx, col_map) or None if no match.
     """
     # Key headers that MUST be present to identify the template
-    REQUIRED_HEADERS = {"NGÀY ĐI", "SỐCONTAINER", "SỐ CONTAINER", "SỐ CONT",
-                        "ĐIỂM ĐI", "ĐIỂM ĐẾN", "CƯỚC CHUYẾN"}
+    REQUIRED_HEADERS = {
+        "NGÀY ĐI",
+        "SỐCONTAINER",
+        "SỐ CONTAINER",
+        "SỐ CONT",
+        "ĐIỂM ĐI",
+        "ĐIỂM ĐẾN",
+        "CƯỚC CHUYẾN",
+    }
 
     for name in wb.sheetnames:
         ws = wb[name]
@@ -163,7 +185,10 @@ def _find_template_sheet(wb) -> tuple[Any, int, dict[int, str]] | None:
             rows.append(list(row))
 
         for header_idx in range(min(len(rows), 20)):
-            raw_headers = [_normalise_header(str(c)) if c is not None else "" for c in rows[header_idx]]
+            raw_headers = [
+                _normalise_header(str(c)) if c is not None else ""
+                for c in rows[header_idx]
+            ]
             # Check if enough required headers are present
             matched_required = sum(1 for h in REQUIRED_HEADERS if h in raw_headers)
             if matched_required < 3:
@@ -209,7 +234,11 @@ def parse_template_excel(file: BinaryIO, filename: str) -> TemplateParseResult:
     for row in all_rows[data_start:]:
         # Stop at summary/end
         first_val = row[0] if row else None
-        if first_val is None or str(first_val).strip() == "" or str(first_val).strip().upper().startswith("CỘNG"):
+        if (
+            first_val is None
+            or str(first_val).strip() == ""
+            or str(first_val).strip().upper().startswith("CỘNG")
+        ):
             break
 
         record: dict[str, Any] = {}
@@ -296,13 +325,16 @@ async def parse_file(
 
     if cached:
         from app.ai.parser import TableRegion
+
         tables = []
         for t in cached.get("tables", []):
-            tables.append(TableRegion(
-                start_column=t.get("start_column"),
-                end_column=t.get("end_column"),
-                mapping={int(k): v for k, v in t.get("mapping", {}).items()}
-            ))
+            tables.append(
+                TableRegion(
+                    start_column=t.get("start_column"),
+                    end_column=t.get("end_column"),
+                    mapping={int(k): v for k, v in t.get("mapping", {}).items()},
+                )
+            )
         mapping = ColumnMapping(
             header_row=cached.get("header_row", 0),
             tables=tables,
@@ -317,17 +349,22 @@ async def parse_file(
         )
         # Stage 2: Cache the mapping
         if mapping.confidence > 0.3 and mapping.tables:
-            save_mapping(source_id, file_hash, {
-                "header_row": mapping.header_row,
-                "tables": [
-                    {
-                        "start_column": t.start_column,
-                        "end_column": t.end_column,
-                        "mapping": t.mapping,
-                    } for t in mapping.tables
-                ],
-                "confidence": mapping.confidence,
-            })
+            save_mapping(
+                source_id,
+                file_hash,
+                {
+                    "header_row": mapping.header_row,
+                    "tables": [
+                        {
+                            "start_column": t.start_column,
+                            "end_column": t.end_column,
+                            "mapping": t.mapping,
+                        }
+                        for t in mapping.tables
+                    ],
+                    "confidence": mapping.confidence,
+                },
+            )
 
     if not mapping.tables:
         raise ValueError(
@@ -338,29 +375,31 @@ async def parse_file(
 
     # Stage 3: Apply mapping (programmatic, fast)
     data_start = mapping.header_row + 1
-    data_rows = all_rows[data_start:data_start + max_rows]
+    data_rows = all_rows[data_start : data_start + max_rows]
 
     parsed_rows: list[ParsedRow] = []
     rows_needing_cleanup: list[tuple[int, ParsedRow, list[str]]] = []
 
     for i, raw_row in enumerate(data_rows):
         row_num = data_start + i + 1  # 1-indexed
-        
+
         for table in mapping.tables:
             cells: dict[str, ParsedCell] = {}
             issues: list[str] = []
-            
+
             # Skip if this table region is completely out of bounds for this row
             if table.start_column is not None and table.start_column >= len(raw_row):
                 continue
-                
+
             has_data = False
             for col_idx, field_name in table.mapping.items():
                 if col_idx >= len(raw_row):
                     continue
 
                 raw_value = raw_row[col_idx]
-                cleaned_value, confidence, was_cleaned = _apply_programmatic(field_name, raw_value)
+                cleaned_value, confidence, was_cleaned = _apply_programmatic(
+                    field_name, raw_value
+                )
 
                 if raw_value is not None and str(raw_value).strip() != "":
                     has_data = True
@@ -401,7 +440,11 @@ async def parse_file(
     MAX_CLEANUP_ROWS = 10  # Cost control
     for idx, parsed_row, issues in rows_needing_cleanup[:MAX_CLEANUP_ROWS]:
         try:
-            row_data = {k: str(v.value) for k, v in parsed_row.cells.items() if k != "source_row_ref"}
+            row_data = {
+                k: str(v.value)
+                for k, v in parsed_row.cells.items()
+                if k != "source_row_ref"
+            }
             cleaned = await call_gemini_row_cleanup(row_data, issues)
 
             for field_name, cleaned_value in cleaned.items():
@@ -414,7 +457,9 @@ async def parse_file(
 
     # Fallback to Strategy 2 if Strategy 1 found no rows
     if not parsed_rows:
-        _logger.warning("Strategy 1 (Sniffing) returned no rows. Falling back to Strategy 2 (Whole-file extraction).")
+        _logger.warning(
+            "Strategy 1 (Sniffing) returned no rows. Falling back to Strategy 2 (Whole-file extraction)."
+        )
         return await parse_whole_file_gemini(all_rows, filename, max_rows)
 
     # Calculate total cost
@@ -437,17 +482,19 @@ async def parse_file(
     )
 
 
-async def parse_whole_file_gemini(all_rows: list[list[Any]], filename: str, max_rows: int = 1000) -> ParseResult:
+async def parse_whole_file_gemini(
+    all_rows: list[list[Any]], filename: str, max_rows: int = 1000
+) -> ParseResult:
     """Strategy 2: Send the entire spreadsheet to Gemini 3.1 Pro to extract rows natively."""
     import csv
     import io
-    
+
     # Convert first max_rows to CSV string
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerows(all_rows[:max_rows])
     csv_text = output.getvalue()
-    
+
     prompt = f"""You are a data parsing assistant. Extract ALL container trip records from this messy spreadsheet (provided as CSV).
 The spreadsheet may contain side-by-side tables, missing headers, or scattered data.
 
@@ -476,7 +523,7 @@ Return ONLY raw JSON, matching this schema exactly:
 CSV Data:
 {csv_text}
 """
-    
+
     schema = {
         "type": "OBJECT",
         "properties": {
@@ -496,45 +543,53 @@ CSV Data:
                         "driver_name": {"type": "STRING"},
                         "vehicle_plate": {"type": "STRING"},
                         "notes": {"type": "STRING"},
-                        "source_row_ref": {"type": "STRING"}
-                    }
-                }
+                        "source_row_ref": {"type": "STRING"},
+                    },
+                },
             }
         },
-        "required": ["rows"]
+        "required": ["rows"],
     }
 
     # Using Gemini 3.1 Pro for the large context window
-    response = await call_gemini(prompt, model="gemini-3.1-pro", max_tokens=8192, response_schema=schema)
-    
+    response = await call_gemini(
+        prompt, model="gemini-3.1-pro", max_tokens=8192, response_schema=schema
+    )
+
     parsed_rows = []
     total_cost = estimate_cost(len(prompt) // 4, 8192)  # rough estimate
-    
+
     try:
         data = json.loads(response)
         rows_data = data.get("rows", [])
-        
+
         for i, row_dict in enumerate(rows_data):
             cells = {}
             for k, v in row_dict.items():
                 if k == "source_row_ref":
                     continue
                 cells[k] = ParsedCell(value=v, confidence=0.9, cleaned=True)
-                
+
             source_ref = str(row_dict.get("source_row_ref", f"unknown_{i}"))
-            cells["source_row_ref"] = ParsedCell(value=f"{filename}:R{source_ref}", confidence=1.0)
-            
+            cells["source_row_ref"] = ParsedCell(
+                value=f"{filename}:R{source_ref}", confidence=1.0
+            )
+
             row_idx = int(source_ref) + 1 if source_ref.isdigit() else i + 1
-            parsed_rows.append(ParsedRow(
-                row_number=row_idx,
-                cells=cells,
-                source_row_ref=f"{filename}:R{source_ref}"
-            ))
-            
+            parsed_rows.append(
+                ParsedRow(
+                    row_number=row_idx,
+                    cells=cells,
+                    source_row_ref=f"{filename}:R{source_ref}",
+                )
+            )
+
     except Exception as e:
         _logger.error(f"Fallback parsing failed: {e}\nResponse: {response[:200]}")
 
-    _logger.info(f"Fallback Strategy 2 extracted {len(parsed_rows)} rows. Cost estimate: ${total_cost:.4f}")
+    _logger.info(
+        f"Fallback Strategy 2 extracted {len(parsed_rows)} rows. Cost estimate: ${total_cost:.4f}"
+    )
 
     return ParseResult(
         column_mapping=None,

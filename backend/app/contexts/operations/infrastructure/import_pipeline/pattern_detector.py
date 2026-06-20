@@ -28,12 +28,14 @@ DETECTION_THRESHOLD = 0.5
 
 @dataclass
 class DetectedPattern:
-    pattern_name: str   # "bay_plan" | "loading_list" | "invoice" | "settlement_list"
+    pattern_name: str  # "bay_plan" | "loading_list" | "invoice" | "settlement_list"
     confidence: float
     sheet_index: int
 
 
-def detect_pattern(sheets: list[SheetView], filename: str = "") -> DetectedPattern | None:
+def detect_pattern(
+    sheets: list[SheetView], filename: str = ""
+) -> DetectedPattern | None:
     """Score every visible sheet and return the best match above threshold."""
     best: DetectedPattern | None = None
     for idx, sheet in enumerate(sheets):
@@ -52,7 +54,9 @@ def detect_pattern(sheets: list[SheetView], filename: str = "") -> DetectedPatte
             if score >= DETECTION_THRESHOLD:
                 if best is None or score > best.confidence:
                     best = DetectedPattern(
-                        pattern_name=name, confidence=score, sheet_index=idx,
+                        pattern_name=name,
+                        confidence=score,
+                        sheet_index=idx,
                     )
     return best
 
@@ -68,14 +72,18 @@ def _score_bay_plan(sheet: SheetView) -> float:
         if len(container_cols) < 3:
             continue
         # Check spacing: columns should be roughly equally spaced
-        diffs = [container_cols[i + 1] - container_cols[i] for i in range(len(container_cols) - 1)]
+        diffs = [
+            container_cols[i + 1] - container_cols[i]
+            for i in range(len(container_cols) - 1)
+        ]
         if diffs and max(diffs) - min(diffs) <= 2:
             # Check any row above the header for port codes
             port_boost = 0.0
             for r2 in range(r):
                 prev = sheet.rows[r2]
                 port_count = sum(
-                    1 for c in range(min(sheet.n_cols, max(container_cols) + 1))
+                    1
+                    for c in range(min(sheet.n_cols, max(container_cols) + 1))
                     if c < len(prev) and _PORT_CODE_RE.match(_cell_text(prev[c]))
                 )
                 if port_count >= 2:
@@ -93,7 +101,9 @@ _SIZE_SYNONYMS = {"KÍCH THƯỚC", "KICH THUOC", "SIZE", "SZ"}
 _POSITION_SYNONYMS = {"VỊ TRÍ", "VỊ TRỊ", "VI TRI", "VITRI"}
 # Precomputed normalized forms (spaces stripped) for fast cell matching
 _SIZE_NORM = frozenset(s.replace(" ", "").replace("​", "") for s in _SIZE_SYNONYMS)
-_POSITION_NORM = frozenset(s.replace(" ", "").replace("​", "") for s in _POSITION_SYNONYMS)
+_POSITION_NORM = frozenset(
+    s.replace(" ", "").replace("​", "") for s in _POSITION_SYNONYMS
+)
 
 
 def _score_stacking_plan(sheet: SheetView) -> float:
@@ -284,6 +294,7 @@ def _score_invoice(sheet: SheetView) -> float:
 # Settlement List  (BẢNG KÊ QUYẾT TOÁN — Vietnamese reconciliation)
 # ---------------------------------------------------------------------------
 
+
 def _score_settlement_list(sheet: SheetView) -> float:
     """Settlement List (BẢNG KÊ QUYẾT TOÁN): pivoted F20'/F40'/E20'/E40' columns.
 
@@ -331,13 +342,14 @@ def _score_settlement_list(sheet: SheetView) -> float:
 # ---------------------------------------------------------------------------
 
 _TERMINAL_LOG_HEADERS = {
-    "socontainer", "socont",        # Số Container
-    "hangkhaithac",                  # Hãng khai thác
-    "loaicongviec",                  # Loại công việc
-    "nhapxuat",                      # Nhập/xuất
-    "phuongthucra",                  # Phương thức ra
-    "loaihang",                      # Loại hàng
-    "hangnoingoai",                  # Hàng nội/ngoại
+    "socontainer",
+    "socont",  # Số Container
+    "hangkhaithac",  # Hãng khai thác
+    "loaicongviec",  # Loại công việc
+    "nhapxuat",  # Nhập/xuất
+    "phuongthucra",  # Phương thức ra
+    "loaihang",  # Loại hàng
+    "hangnoingoai",  # Hàng nội/ngoại
 }
 
 

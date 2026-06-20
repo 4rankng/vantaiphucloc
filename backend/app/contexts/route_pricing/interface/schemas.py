@@ -1,4 +1,5 @@
 """Pydantic schemas for the Route Pricing interface layer."""
+
 from __future__ import annotations
 
 from datetime import datetime

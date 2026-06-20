@@ -29,8 +29,11 @@ class GenerateCustomerSettlement:
         filename = settlement_filename(data)
         _logger.info(
             "Customer settlement exported: client_id=%s period=%s→%s lines=%d total=%s",
-            client_id, period.start, period.end,
-            len(data.trip_lines), data.total_with_vat,
+            client_id,
+            period.start,
+            period.end,
+            len(data.trip_lines),
+            data.total_with_vat,
         )
         return SettlementExportDTO(
             workbook_bytes=workbook_bytes,

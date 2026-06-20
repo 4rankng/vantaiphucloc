@@ -39,10 +39,19 @@ from app.contexts.operations.infrastructure.import_pipeline.header_finder import
     find_header_row,
     header_row_text,
 )
-from app.contexts.operations.infrastructure.import_pipeline.llm import BatchHeaderClassifier
-from app.contexts.operations.infrastructure.import_pipeline.pattern_detector import DetectedPattern, detect_pattern
-from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import ExtractedRow
-from app.contexts.operations.infrastructure.import_pipeline.sheet_picker import score_sheets
+from app.contexts.operations.infrastructure.import_pipeline.llm import (
+    BatchHeaderClassifier,
+)
+from app.contexts.operations.infrastructure.import_pipeline.pattern_detector import (
+    DetectedPattern,
+    detect_pattern,
+)
+from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import (
+    ExtractedRow,
+)
+from app.contexts.operations.infrastructure.import_pipeline.sheet_picker import (
+    score_sheets,
+)
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
     parse_container_no,
     parse_container_size,
@@ -53,16 +62,21 @@ from app.contexts.operations.infrastructure.import_pipeline.value_parsers import
     parse_string,
     parse_weight_kg,
 )
-from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView, load_workbook
+from app.contexts.operations.infrastructure.import_pipeline.workbook import (
+    SheetView,
+    load_workbook,
+)
 
 
 # ---------------------------------------------------------------------------
 # Result types
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ParsedRow:
     """One row that passed validation. `values` is keyed by canonical field name."""
+
     source_row_index: int
     values: dict[str, Any]
 
@@ -78,9 +92,9 @@ class RejectedRow:
 class PreviewResult:
     filename: str
     sheet_name: str
-    sheet_alternatives: list[dict[str, Any]]   # other sheets the user could pick
-    header_row_index: int                       # 0-based
-    structure_hash: str                         # sha256 of (sheet_name, normalized header texts)
+    sheet_alternatives: list[dict[str, Any]]  # other sheets the user could pick
+    header_row_index: int  # 0-based
+    structure_hash: str  # sha256 of (sheet_name, normalized header texts)
     column_mappings: list[dict[str, Any]]
     accepted: list[dict[str, Any]]
     rejected: list[dict[str, Any]]
@@ -94,6 +108,7 @@ class PreviewResult:
 # ---------------------------------------------------------------------------
 # Public entry-points
 # ---------------------------------------------------------------------------
+
 
 async def run_preview(
     content: bytes,
@@ -113,27 +128,38 @@ async def run_preview(
 
     # Step 2: Existing generic pipeline
     try:
-        return await _run_generic_preview(sheets, filename, default_trip_date, classifier, cached_mapping)
+        return await _run_generic_preview(
+            sheets, filename, default_trip_date, classifier, cached_mapping
+        )
     except ValueError:
         pass
 
     # Step 3: Full AI extraction fallback (always on when a key is set)
     from app.config import settings
+
     if getattr(settings, "GEMINI_API_KEY", None):
         try:
-            from app.contexts.operations.infrastructure.import_pipeline.ai_extractor import extract_with_ai
+            from app.contexts.operations.infrastructure.import_pipeline.ai_extractor import (
+                extract_with_ai,
+            )
+
             ai_rows = await extract_with_ai(sheets, filename)
             if ai_rows:
                 return _build_preview_from_extracted(
-                    ai_rows, [], filename,
-                    sheets[0].name, "ai_extraction",
+                    ai_rows,
+                    [],
+                    filename,
+                    sheets[0].name,
+                    "ai_extraction",
                     default_trip_date,
                 )
         except Exception as e:
             _logger.warning("AI extraction fallback failed: %s", e)
 
     # Step 4: Complete failure
-    raise ValueError("Không thể đọc tệp Excel. Vui lòng kiểm tra lại cấu trúc cột hoặc nhập thủ công.")
+    raise ValueError(
+        "Không thể đọc tệp Excel. Vui lòng kiểm tra lại cấu trúc cột hoặc nhập thủ công."
+    )
 
 
 _ROUTE_SEPARATORS = (" - ", " – ", " — ", " → ", " -> ", " ⇒ ")
@@ -159,7 +185,12 @@ def _split_route_cell(cell) -> tuple[str, str] | None:
         if sep in s:
             left, _, right = s.partition(sep)
             left, right = left.strip(), right.strip()
-            if left and right and not _looks_like_number(left) and not _looks_like_number(right):
+            if (
+                left
+                and right
+                and not _looks_like_number(left)
+                and not _looks_like_number(right)
+            ):
                 return left, right
     return None
 
@@ -209,7 +240,10 @@ def _find_route_column(sheet, header_row: int) -> int | None:
         hl = str(h).strip().upper()
         # Vietnamese route words are matched as substrings; "LINE" is matched
         # exactly so it doesn't false-positive on "SHIPPING LINE" / "LINE NO".
-        if any(k in hl for k in ("TUYẾN", "ROUTE", "LỘ TRÌNH", "LO TRINH")) or hl == "LINE":
+        if (
+            any(k in hl for k in ("TUYẾN", "ROUTE", "LỘ TRÌNH", "LO TRINH"))
+            or hl == "LINE"
+        ):
             return idx
     return None
 
@@ -269,10 +303,14 @@ def apply_mapping(
     empty_streak = 0
     EMPTY_TAIL_LIMIT = 50
 
-    def finalize(r: int, raw_dict: dict[str, Any], parsed: dict[str, Any] | list[str]) -> None:
+    def finalize(
+        r: int, raw_dict: dict[str, Any], parsed: dict[str, Any] | list[str]
+    ) -> None:
         """Accept a parsed row (deduped) or record it as rejected."""
         if isinstance(parsed, list):
-            rejected.append(RejectedRow(source_row_index=r, reasons=parsed, raw=raw_dict))
+            rejected.append(
+                RejectedRow(source_row_index=r, reasons=parsed, raw=raw_dict)
+            )
             return
         row_key = (
             parsed.get("container_no", ""),
@@ -312,7 +350,11 @@ def apply_mapping(
                     row_overrides["freight_kind"] = pivot.freight_kind
 
         # Split a combined route cell into pickup/dropoff when needed.
-        if (route_need_pickup or route_need_dropoff) and route_idx is not None and route_idx < len(raw_row):
+        if (
+            (route_need_pickup or route_need_dropoff)
+            and route_idx is not None
+            and route_idx < len(raw_row)
+        ):
             split = _split_route_cell(raw_row[route_idx])
             if split is not None:
                 if route_need_pickup:
@@ -330,14 +372,19 @@ def apply_mapping(
         if cont_splits:
             for part in cont_splits:
                 raw_dict, parsed = _parse_row(
-                    raw_row, by_field, default_trip_date,
+                    raw_row,
+                    by_field,
+                    default_trip_date,
                     row_overrides={**row_overrides, "container_no": part},
                 )
                 finalize(r, raw_dict, parsed)
             continue
 
         raw_dict, parsed = _parse_row(
-            raw_row, by_field, default_trip_date, row_overrides=row_overrides,
+            raw_row,
+            by_field,
+            default_trip_date,
+            row_overrides=row_overrides,
         )
         finalize(r, raw_dict, parsed)
 
@@ -347,6 +394,7 @@ def apply_mapping(
 # ---------------------------------------------------------------------------
 # Row parsing
 # ---------------------------------------------------------------------------
+
 
 def _parse_row(
     row: list[Any],
@@ -397,23 +445,69 @@ def _parse_row(
 
     # Optional fields
     weight = parse_weight_kg(raw_dict.get("gross_weight_kg"))
-    seal = parse_string(raw_dict.get("seal_no"), max_len=80) if "seal_no" in raw_dict else ""
-    pickup_loc = parse_string(raw_dict.get("pickup_location"), max_len=255) if "pickup_location" in raw_dict else ""
-    dropoff_loc = parse_string(raw_dict.get("dropoff_location"), max_len=255) if "dropoff_location" in raw_dict else ""
+    seal = (
+        parse_string(raw_dict.get("seal_no"), max_len=80)
+        if "seal_no" in raw_dict
+        else ""
+    )
+    pickup_loc = (
+        parse_string(raw_dict.get("pickup_location"), max_len=255)
+        if "pickup_location" in raw_dict
+        else ""
+    )
+    dropoff_loc = (
+        parse_string(raw_dict.get("dropoff_location"), max_len=255)
+        if "dropoff_location" in raw_dict
+        else ""
+    )
 
-    pickup_date = parse_date(raw_dict.get("pickup_date")) if "pickup_date" in raw_dict else None
-    dropoff_date = parse_date(raw_dict.get("dropoff_date")) if "dropoff_date" in raw_dict else None
-    trip_date = parse_date(raw_dict.get("trip_date")) if "trip_date" in raw_dict else None
+    pickup_date = (
+        parse_date(raw_dict.get("pickup_date")) if "pickup_date" in raw_dict else None
+    )
+    dropoff_date = (
+        parse_date(raw_dict.get("dropoff_date")) if "dropoff_date" in raw_dict else None
+    )
+    trip_date = (
+        parse_date(raw_dict.get("trip_date")) if "trip_date" in raw_dict else None
+    )
     if trip_date is None:
         trip_date = pickup_date or dropoff_date or default_trip_date
 
-    customer_ref = parse_string(raw_dict.get("customer_ref"), max_len=100) if "customer_ref" in raw_dict else ""
-    consignee = parse_string(raw_dict.get("consignee"), max_len=255) if "consignee" in raw_dict else ""
-    commodity = parse_string(raw_dict.get("commodity"), max_len=500) if "commodity" in raw_dict else ""
-    driver_name = parse_string(raw_dict.get("driver_name"), max_len=255) if "driver_name" in raw_dict else ""
-    plate = parse_plate(raw_dict.get("vehicle_plate")) if "vehicle_plate" in raw_dict else ""
-    vessel = parse_string(raw_dict.get("vessel"), max_len=255) if "vessel" in raw_dict else ""
-    remarks = parse_string(raw_dict.get("remarks"), max_len=500) if "remarks" in raw_dict else ""
+    customer_ref = (
+        parse_string(raw_dict.get("customer_ref"), max_len=100)
+        if "customer_ref" in raw_dict
+        else ""
+    )
+    consignee = (
+        parse_string(raw_dict.get("consignee"), max_len=255)
+        if "consignee" in raw_dict
+        else ""
+    )
+    commodity = (
+        parse_string(raw_dict.get("commodity"), max_len=500)
+        if "commodity" in raw_dict
+        else ""
+    )
+    driver_name = (
+        parse_string(raw_dict.get("driver_name"), max_len=255)
+        if "driver_name" in raw_dict
+        else ""
+    )
+    plate = (
+        parse_plate(raw_dict.get("vehicle_plate"))
+        if "vehicle_plate" in raw_dict
+        else ""
+    )
+    vessel = (
+        parse_string(raw_dict.get("vessel"), max_len=255)
+        if "vessel" in raw_dict
+        else ""
+    )
+    remarks = (
+        parse_string(raw_dict.get("remarks"), max_len=500)
+        if "remarks" in raw_dict
+        else ""
+    )
 
     # Parse money for freight charge
     freight_charge = parse_money(raw_dict.get("freight_charge"))
@@ -426,7 +520,9 @@ def _parse_row(
         "freight_kind": kind,
         "cont_type": cont_type,
         "work_type": _read_work_type(raw_dict),
-        "container_type_iso": parse_string(raw_dict.get("container_type_iso"), max_len=20),
+        "container_type_iso": parse_string(
+            raw_dict.get("container_type_iso"), max_len=20
+        ),
         "gross_weight_kg": weight,
         "seal_no": seal,
         "pickup_location": pickup_loc,
@@ -478,6 +574,7 @@ def _row_has_any_content(row: list[Any]) -> bool:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def compute_structure_hash(sheet_name: str, header_row_cells: list[str]) -> str:
     """Hash the layout signature so we can cache mappings per customer.
 
@@ -519,21 +616,24 @@ def column_mappings_from_dicts(items: list[dict[str, Any]]) -> list[ColumnMappin
     """Round-trip helper used by `commit` to rehydrate a mapping from JSON."""
     out: list[ColumnMapping] = []
     for it in items:
-        out.append(ColumnMapping(
-            column_index=int(it["column_index"]),
-            header_text=str(it.get("header_text", "")),
-            canonical_field=it.get("canonical_field"),
-            confidence=float(it.get("confidence", 0.0)),
-            source=str(it.get("source", "manual")),
-            reason=str(it.get("reason", "")),
-            sample_values=list(it.get("sample_values", [])),
-        ))
+        out.append(
+            ColumnMapping(
+                column_index=int(it["column_index"]),
+                header_text=str(it.get("header_text", "")),
+                canonical_field=it.get("canonical_field"),
+                confidence=float(it.get("confidence", 0.0)),
+                source=str(it.get("source", "manual")),
+                reason=str(it.get("reason", "")),
+                sample_values=list(it.get("sample_values", [])),
+            )
+        )
     return out
 
 
 # ---------------------------------------------------------------------------
 # Generic pipeline (extracted from original run_preview)
 # ---------------------------------------------------------------------------
+
 
 async def _run_generic_preview(
     sheets: list[SheetView],
@@ -565,7 +665,9 @@ async def _run_generic_preview(
             f"Không nhận diện được dòng tiêu đề trong sheet '{chosen.sheet.name}'."
         )
 
-    structure_hash = compute_structure_hash(chosen.sheet.name, header_row_text(chosen.sheet, hit.row_index))
+    structure_hash = compute_structure_hash(
+        chosen.sheet.name, header_row_text(chosen.sheet, hit.row_index)
+    )
 
     if cached_mapping is not None:
         mappings = cached_mapping
@@ -574,46 +676,79 @@ async def _run_generic_preview(
 
     # Layer 3: AI fallback — if required fields are missing or confidence is low,
     # try Gemini header inference and merge into mappings.
-    mapped_fields = {m.canonical_field for m in mappings if m.canonical_field and m.canonical_field != SKIP_FIELD}
+    mapped_fields = {
+        m.canonical_field
+        for m in mappings
+        if m.canonical_field and m.canonical_field != SKIP_FIELD
+    }
     required_fields = {f.name for f in CANONICAL_FIELDS if f.required}
     missing = required_fields - mapped_fields
-    low_conf = any(m.confidence < 0.6 for m in mappings if m.canonical_field and m.canonical_field != SKIP_FIELD)
+    low_conf = any(
+        m.confidence < 0.6
+        for m in mappings
+        if m.canonical_field and m.canonical_field != SKIP_FIELD
+    )
 
     if missing or low_conf:
         try:
-            from app.contexts.operations.infrastructure.import_pipeline.ai_inference import infer_schema_with_ai
-            headers = [chosen.sheet.rows[hit.row_index][c] if c < len(chosen.sheet.rows[hit.row_index]) else ""
-                       for c in range(chosen.sheet.n_cols)]
-            sample_rows = [chosen.sheet.rows[r] for r in range(hit.row_index + 1, min(hit.row_index + 6, len(chosen.sheet.rows)))]
+            from app.contexts.operations.infrastructure.import_pipeline.ai_inference import (
+                infer_schema_with_ai,
+            )
+
+            headers = [
+                chosen.sheet.rows[hit.row_index][c]
+                if c < len(chosen.sheet.rows[hit.row_index])
+                else ""
+                for c in range(chosen.sheet.n_cols)
+            ]
+            sample_rows = [
+                chosen.sheet.rows[r]
+                for r in range(
+                    hit.row_index + 1, min(hit.row_index + 6, len(chosen.sheet.rows))
+                )
+            ]
             inferred = await infer_schema_with_ai(headers, sample_rows)
             if inferred:
                 for col_idx, inf in inferred.items():
                     if inf.canonical_field and inf.confidence > 0.5:
                         # Only override if AI confidence beats existing or field is missing
-                        existing = next((m for m in mappings if m.column_index == col_idx), None)
+                        existing = next(
+                            (m for m in mappings if m.column_index == col_idx), None
+                        )
                         if existing is None or existing.confidence < inf.confidence:
                             # Update or add mapping
                             if existing:
                                 existing.canonical_field = inf.canonical_field
                                 existing.confidence = inf.confidence
                                 existing.source = "ai"
-                _logger.info("AI inference merged %d columns for %s", len(inferred), filename)
+                _logger.info(
+                    "AI inference merged %d columns for %s", len(inferred), filename
+                )
         except Exception as e:
             _logger.warning("AI fallback failed for %s: %s", filename, e)
 
     pivots = detect_pivot_columns(
-        chosen.sheet.rows[hit.row_index] if 0 <= hit.row_index < len(chosen.sheet.rows) else []
+        chosen.sheet.rows[hit.row_index]
+        if 0 <= hit.row_index < len(chosen.sheet.rows)
+        else []
     )
 
     accepted, rejected = apply_mapping(
-        chosen.sheet, hit.row_index, mappings, default_trip_date,
+        chosen.sheet,
+        hit.row_index,
+        mappings,
+        default_trip_date,
         pivots=pivots,
     )
 
     warnings: list[str] = []
 
     required_fields = {f.name for f in CANONICAL_FIELDS if f.required}
-    mapped_fields = {m.canonical_field for m in mappings if m.canonical_field and m.canonical_field != SKIP_FIELD}
+    mapped_fields = {
+        m.canonical_field
+        for m in mappings
+        if m.canonical_field and m.canonical_field != SKIP_FIELD
+    }
     missing = required_fields - mapped_fields
     if missing:
         warnings.append("Thiếu cột bắt buộc: " + ", ".join(sorted(missing)))
@@ -646,6 +781,7 @@ async def _run_generic_preview(
 # Pattern-based + AI-based preview
 # ---------------------------------------------------------------------------
 
+
 def _run_pattern_preview(
     pattern: DetectedPattern,
     sheets: list[SheetView],
@@ -665,7 +801,11 @@ def _run_pattern_preview(
 
     # terminal_log takes rows (list[list]) instead of (sheets, filename)
     if pattern.pattern_name == "terminal_log":
-        sheet = sheets[pattern.sheet_index] if pattern.sheet_index < len(sheets) else sheets[0]
+        sheet = (
+            sheets[pattern.sheet_index]
+            if pattern.sheet_index < len(sheets)
+            else sheets[0]
+        )
         accepted_rows, rejected_rows = extract_terminal_log(sheet.rows)
     else:
         extractors = {
@@ -681,11 +821,17 @@ def _run_pattern_preview(
             raise ValueError(f"Unknown pattern: {pattern.pattern_name}")
 
         accepted_rows, rejected_rows = extractor(sheets, filename)
-    sheet_name = sheets[pattern.sheet_index].name if pattern.sheet_index < len(sheets) else ""
+    sheet_name = (
+        sheets[pattern.sheet_index].name if pattern.sheet_index < len(sheets) else ""
+    )
 
     return _build_preview_from_extracted(
-        accepted_rows, rejected_rows, filename, sheet_name,
-        pattern.pattern_name, default_trip_date,
+        accepted_rows,
+        rejected_rows,
+        filename,
+        sheet_name,
+        pattern.pattern_name,
+        default_trip_date,
     )
 
 
@@ -701,35 +847,37 @@ def _build_preview_from_extracted(
     accepted: list[dict[str, Any]] = []
     for row in accepted_rows:
         # Deduplicate by container number
-        accepted.append({
-            "source_row_index": row.source_row_index,
-            "values": {
-                "container_no": row.container_number,
-                "container_size": row.cont_type[1:],  # "20" or "40"
-                "freight_kind": row.cont_type[0],      # "E" or "F"
-                "cont_type": row.cont_type,             # E20/F20/E40/F40
-                "work_type": row.work_type,             # CHUYỂN BÃI, XUẤT/NHẬP TÀU, etc.
-                "pickup_location": row.pickup,
-                "dropoff_location": row.dropoff,
-                "vessel": row.vessel_name,
-                "trip_date": (row.trip_date or default_trip_date).isoformat(),
-                "container_type_iso": "",
-                "gross_weight_kg": None,
-                "seal_no": "",
-                "pickup_date": None,
-                "dropoff_date": None,
-                "customer_ref": "",
-                "consignee": row.consignee,
-                "commodity": "",
-                "driver_name": "",
-                "vehicle_plate": row.vehicle_plate,
-                "freight_charge": row.freight_charge,
-                "remarks": "",
-                "freight_kind_unknown": row.freight_kind_unknown,
-                "confidence": row.confidence,
-                "source": row.source,
-            },
-        })
+        accepted.append(
+            {
+                "source_row_index": row.source_row_index,
+                "values": {
+                    "container_no": row.container_number,
+                    "container_size": row.cont_type[1:],  # "20" or "40"
+                    "freight_kind": row.cont_type[0],  # "E" or "F"
+                    "cont_type": row.cont_type,  # E20/F20/E40/F40
+                    "work_type": row.work_type,  # CHUYỂN BÃI, XUẤT/NHẬP TÀU, etc.
+                    "pickup_location": row.pickup,
+                    "dropoff_location": row.dropoff,
+                    "vessel": row.vessel_name,
+                    "trip_date": (row.trip_date or default_trip_date).isoformat(),
+                    "container_type_iso": "",
+                    "gross_weight_kg": None,
+                    "seal_no": "",
+                    "pickup_date": None,
+                    "dropoff_date": None,
+                    "customer_ref": "",
+                    "consignee": row.consignee,
+                    "commodity": "",
+                    "driver_name": "",
+                    "vehicle_plate": row.vehicle_plate,
+                    "freight_charge": row.freight_charge,
+                    "remarks": "",
+                    "freight_kind_unknown": row.freight_kind_unknown,
+                    "confidence": row.confidence,
+                    "source": row.source,
+                },
+            }
+        )
 
     # Deduplicate by composite key (container + trip_date + pickup + dropoff)
     seen: set[tuple[str, ...]] = set()
@@ -774,19 +922,21 @@ def _build_preview_from_extracted(
 # Trip grouping — combine rows that obviously belong to one truck-trip
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class TripGroup:
     """A set of `ParsedRow`-like dicts that share a strong grouping signal
     (same tractor plate, same trip date, same dropoff). Becomes one
     `BookedTrip` with N `TripContainer` children.
     """
+
     trip_date: str
     pickup_location: str
     dropoff_location: str
     vehicle_plate: str
     driver_name: str
     customer_ref: str
-    rows: list[dict[str, Any]]            # the underlying ParsedRow.values dicts
+    rows: list[dict[str, Any]]  # the underlying ParsedRow.values dicts
 
 
 def group_rows_into_trips(
@@ -816,20 +966,30 @@ def group_rows_into_trips(
         signal = plate or ref
         if not signal:
             # No grouping signal → singleton trip
-            singletons.append(TripGroup(
-                trip_date=trip_date, pickup_location=pickup, dropoff_location=dropoff,
-                vehicle_plate=plate, driver_name=v.get("driver_name", ""),
-                customer_ref=ref, rows=[v],
-            ))
+            singletons.append(
+                TripGroup(
+                    trip_date=trip_date,
+                    pickup_location=pickup,
+                    dropoff_location=dropoff,
+                    vehicle_plate=plate,
+                    driver_name=v.get("driver_name", ""),
+                    customer_ref=ref,
+                    rows=[v],
+                )
+            )
             continue
 
         key = (trip_date, dropoff, signal)
         existing = groups.get(key)
         if existing is None:
             groups[key] = TripGroup(
-                trip_date=trip_date, pickup_location=pickup, dropoff_location=dropoff,
-                vehicle_plate=plate, driver_name=v.get("driver_name", ""),
-                customer_ref=ref, rows=[v],
+                trip_date=trip_date,
+                pickup_location=pickup,
+                dropoff_location=dropoff,
+                vehicle_plate=plate,
+                driver_name=v.get("driver_name", ""),
+                customer_ref=ref,
+                rows=[v],
             )
         else:
             existing.rows.append(v)

@@ -20,7 +20,9 @@ from app.models.domain import (
 
 _REAL_DATA_PATH = (
     Path(__file__).resolve().parent.parent.parent.parent
-    / "docs" / "real-life-data" / "trips_shipside_t4_26.json"
+    / "docs"
+    / "real-life-data"
+    / "trips_shipside_t4_26.json"
 )
 
 MONTHS = [
@@ -53,78 +55,292 @@ CLIENT_W = list(CLIENT_WEIGHTS.values())
 
 
 VESSELS = [
-    "HAIAN ALFA 073N", "HAIAN LINK V.138S", "HAIAN BETA 062S",
-    "HAIAN EXPRESS 251N", "HAIAN GLOBAL 045S", "HAIAN PIONEER 112N",
-    "GLORY SHANGHAI 2612N", "CONSCIENCE 2615N",
-    "HAIAN ALPHA 085S", "HAIAN NEPTUNE 201N", "GLORY PACIFIC 310S",
+    "HAIAN ALFA 073N",
+    "HAIAN LINK V.138S",
+    "HAIAN BETA 062S",
+    "HAIAN EXPRESS 251N",
+    "HAIAN GLOBAL 045S",
+    "HAIAN PIONEER 112N",
+    "GLORY SHANGHAI 2612N",
+    "CONSCIENCE 2615N",
+    "HAIAN ALPHA 085S",
+    "HAIAN NEPTUNE 201N",
+    "GLORY PACIFIC 310S",
 ]
 
 _CONTAINER_PREFIXES = [
-    "HACU", "NSSU", "FBLU", "MSCU", "CSLU", "TCLU", "EISU", "OOLU",
-    "NYKU", "KKTU", "YMMU", "APLU", "CMAU", "HLXU", "ONEU",
+    "HACU",
+    "NSSU",
+    "FBLU",
+    "MSCU",
+    "CSLU",
+    "TCLU",
+    "EISU",
+    "OOLU",
+    "NYKU",
+    "KKTU",
+    "YMMU",
+    "APLU",
+    "CMAU",
+    "HLXU",
+    "ONEU",
 ]
 
 TIEN_LUAT_DESCRIPTIONS = [
-    "Phí đường bộ", "Tiền luật giao thông",
-    "Phí cầu đường", "Phí trọng lượng",
+    "Phí đường bộ",
+    "Tiền luật giao thông",
+    "Phí cầu đường",
+    "Phí trọng lượng",
 ]
 
 _ALL_PRICING_HAIAN = {
-    ("NHĐV", "HẢI AN", "F20"): {"unit_price": 386100, "driver_salary": 150000, "allowance": 50000},
-    ("NHĐV", "HẢI AN", "F40"): {"unit_price": 448500, "driver_salary": 180000, "allowance": 70000},
-    ("HẢI AN", "NHĐV", "F20"): {"unit_price": 386100, "driver_salary": 150000, "allowance": 50000},
-    ("HẢI AN", "NHĐV", "F40"): {"unit_price": 448500, "driver_salary": 180000, "allowance": 70000},
-    ("NHĐV", "VIP GREEN", "F20"): {"unit_price": 400000, "driver_salary": 155000, "allowance": 50000},
-    ("NHĐV", "VIP GREEN", "F40"): {"unit_price": 465000, "driver_salary": 185000, "allowance": 70000},
-    ("VIP GREEN", "NHĐV", "F20"): {"unit_price": 400000, "driver_salary": 155000, "allowance": 50000},
-    ("VIP GREEN", "NHĐV", "F40"): {"unit_price": 465000, "driver_salary": 185000, "allowance": 70000},
-    ("HẢI AN", "GREEN PORT", "F20"): {"unit_price": 420000, "driver_salary": 160000, "allowance": 55000},
-    ("HẢI AN", "GREEN PORT", "F40"): {"unit_price": 490000, "driver_salary": 190000, "allowance": 75000},
-    ("GREEN PORT", "HẢI AN", "F20"): {"unit_price": 420000, "driver_salary": 160000, "allowance": 55000},
-    ("GREEN PORT", "HẢI AN", "F40"): {"unit_price": 490000, "driver_salary": 190000, "allowance": 75000},
-    ("NHĐV", "ĐÌNH VŨ", "F20"): {"unit_price": 370000, "driver_salary": 145000, "allowance": 45000},
-    ("NHĐV", "ĐÌNH VŨ", "F40"): {"unit_price": 430000, "driver_salary": 175000, "allowance": 65000},
-    ("ĐÌNH VŨ", "NHĐV", "F20"): {"unit_price": 370000, "driver_salary": 145000, "allowance": 45000},
-    ("ĐÌNH VŨ", "NHĐV", "F40"): {"unit_price": 430000, "driver_salary": 175000, "allowance": 65000},
-    ("HẢI AN", "CHU VĂN AN", "F20"): {"unit_price": 395000, "driver_salary": 152000, "allowance": 48000},
-    ("HẢI AN", "CHU VĂN AN", "F40"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
-    ("CHU VĂN AN", "HẢI AN", "F20"): {"unit_price": 395000, "driver_salary": 152000, "allowance": 48000},
-    ("CHU VĂN AN", "HẢI AN", "F40"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
-    ("NHĐV", "NAM ĐỊNH VỤ", "F20"): {"unit_price": 375000, "driver_salary": 148000, "allowance": 46000},
-    ("NHĐV", "NAM ĐỊNH VỤ", "F40"): {"unit_price": 435000, "driver_salary": 178000, "allowance": 66000},
-    ("NAM ĐỊNH VỤ", "NHĐV", "F20"): {"unit_price": 375000, "driver_salary": 148000, "allowance": 46000},
-    ("NAM ĐỊNH VỤ", "NHĐV", "F40"): {"unit_price": 435000, "driver_salary": 178000, "allowance": 66000},
+    ("NHĐV", "HẢI AN", "F20"): {
+        "unit_price": 386100,
+        "driver_salary": 150000,
+        "allowance": 50000,
+    },
+    ("NHĐV", "HẢI AN", "F40"): {
+        "unit_price": 448500,
+        "driver_salary": 180000,
+        "allowance": 70000,
+    },
+    ("HẢI AN", "NHĐV", "F20"): {
+        "unit_price": 386100,
+        "driver_salary": 150000,
+        "allowance": 50000,
+    },
+    ("HẢI AN", "NHĐV", "F40"): {
+        "unit_price": 448500,
+        "driver_salary": 180000,
+        "allowance": 70000,
+    },
+    ("NHĐV", "VIP GREEN", "F20"): {
+        "unit_price": 400000,
+        "driver_salary": 155000,
+        "allowance": 50000,
+    },
+    ("NHĐV", "VIP GREEN", "F40"): {
+        "unit_price": 465000,
+        "driver_salary": 185000,
+        "allowance": 70000,
+    },
+    ("VIP GREEN", "NHĐV", "F20"): {
+        "unit_price": 400000,
+        "driver_salary": 155000,
+        "allowance": 50000,
+    },
+    ("VIP GREEN", "NHĐV", "F40"): {
+        "unit_price": 465000,
+        "driver_salary": 185000,
+        "allowance": 70000,
+    },
+    ("HẢI AN", "GREEN PORT", "F20"): {
+        "unit_price": 420000,
+        "driver_salary": 160000,
+        "allowance": 55000,
+    },
+    ("HẢI AN", "GREEN PORT", "F40"): {
+        "unit_price": 490000,
+        "driver_salary": 190000,
+        "allowance": 75000,
+    },
+    ("GREEN PORT", "HẢI AN", "F20"): {
+        "unit_price": 420000,
+        "driver_salary": 160000,
+        "allowance": 55000,
+    },
+    ("GREEN PORT", "HẢI AN", "F40"): {
+        "unit_price": 490000,
+        "driver_salary": 190000,
+        "allowance": 75000,
+    },
+    ("NHĐV", "ĐÌNH VŨ", "F20"): {
+        "unit_price": 370000,
+        "driver_salary": 145000,
+        "allowance": 45000,
+    },
+    ("NHĐV", "ĐÌNH VŨ", "F40"): {
+        "unit_price": 430000,
+        "driver_salary": 175000,
+        "allowance": 65000,
+    },
+    ("ĐÌNH VŨ", "NHĐV", "F20"): {
+        "unit_price": 370000,
+        "driver_salary": 145000,
+        "allowance": 45000,
+    },
+    ("ĐÌNH VŨ", "NHĐV", "F40"): {
+        "unit_price": 430000,
+        "driver_salary": 175000,
+        "allowance": 65000,
+    },
+    ("HẢI AN", "CHU VĂN AN", "F20"): {
+        "unit_price": 395000,
+        "driver_salary": 152000,
+        "allowance": 48000,
+    },
+    ("HẢI AN", "CHU VĂN AN", "F40"): {
+        "unit_price": 458000,
+        "driver_salary": 182000,
+        "allowance": 68000,
+    },
+    ("CHU VĂN AN", "HẢI AN", "F20"): {
+        "unit_price": 395000,
+        "driver_salary": 152000,
+        "allowance": 48000,
+    },
+    ("CHU VĂN AN", "HẢI AN", "F40"): {
+        "unit_price": 458000,
+        "driver_salary": 182000,
+        "allowance": 68000,
+    },
+    ("NHĐV", "NAM ĐỊNH VỤ", "F20"): {
+        "unit_price": 375000,
+        "driver_salary": 148000,
+        "allowance": 46000,
+    },
+    ("NHĐV", "NAM ĐỊNH VỤ", "F40"): {
+        "unit_price": 435000,
+        "driver_salary": 178000,
+        "allowance": 66000,
+    },
+    ("NAM ĐỊNH VỤ", "NHĐV", "F20"): {
+        "unit_price": 375000,
+        "driver_salary": 148000,
+        "allowance": 46000,
+    },
+    ("NAM ĐỊNH VỤ", "NHĐV", "F40"): {
+        "unit_price": 435000,
+        "driver_salary": 178000,
+        "allowance": 66000,
+    },
 }
 
 _ALL_PRICING_BY_CLIENT = {
     "HAIAN": _ALL_PRICING_HAIAN,
     "GLORY": {
-        ("NHĐV", "HẢI AN", "F20"): {"unit_price": 410000, "driver_salary": 155000, "allowance": 52000},
-        ("NHĐV", "HẢI AN", "F40"): {"unit_price": 475000, "driver_salary": 185000, "allowance": 72000},
-        ("HẢI AN", "NHĐV", "F20"): {"unit_price": 410000, "driver_salary": 155000, "allowance": 52000},
-        ("HẢI AN", "NHĐV", "F40"): {"unit_price": 475000, "driver_salary": 185000, "allowance": 72000},
-        ("NHĐV", "VIP GREEN", "F20"): {"unit_price": 425000, "driver_salary": 160000, "allowance": 52000},
-        ("NHĐV", "VIP GREEN", "F40"): {"unit_price": 495000, "driver_salary": 190000, "allowance": 72000},
-        ("VIP GREEN", "NHĐV", "F20"): {"unit_price": 425000, "driver_salary": 160000, "allowance": 52000},
-        ("VIP GREEN", "NHĐV", "F40"): {"unit_price": 495000, "driver_salary": 190000, "allowance": 72000},
-        ("HẢI AN", "GREEN PORT", "F20"): {"unit_price": 445000, "driver_salary": 165000, "allowance": 57000},
-        ("HẢI AN", "GREEN PORT", "F40"): {"unit_price": 518000, "driver_salary": 195000, "allowance": 77000},
-        ("NHĐV", "ĐÌNH VŨ", "F20"): {"unit_price": 395000, "driver_salary": 150000, "allowance": 47000},
-        ("NHĐV", "ĐÌNH VŨ", "F40"): {"unit_price": 458000, "driver_salary": 180000, "allowance": 67000},
-        ("HẢI AN", "CHU VĂN AN", "F20"): {"unit_price": 420000, "driver_salary": 157000, "allowance": 50000},
-        ("HẢI AN", "CHU VĂN AN", "F40"): {"unit_price": 485000, "driver_salary": 187000, "allowance": 70000},
+        ("NHĐV", "HẢI AN", "F20"): {
+            "unit_price": 410000,
+            "driver_salary": 155000,
+            "allowance": 52000,
+        },
+        ("NHĐV", "HẢI AN", "F40"): {
+            "unit_price": 475000,
+            "driver_salary": 185000,
+            "allowance": 72000,
+        },
+        ("HẢI AN", "NHĐV", "F20"): {
+            "unit_price": 410000,
+            "driver_salary": 155000,
+            "allowance": 52000,
+        },
+        ("HẢI AN", "NHĐV", "F40"): {
+            "unit_price": 475000,
+            "driver_salary": 185000,
+            "allowance": 72000,
+        },
+        ("NHĐV", "VIP GREEN", "F20"): {
+            "unit_price": 425000,
+            "driver_salary": 160000,
+            "allowance": 52000,
+        },
+        ("NHĐV", "VIP GREEN", "F40"): {
+            "unit_price": 495000,
+            "driver_salary": 190000,
+            "allowance": 72000,
+        },
+        ("VIP GREEN", "NHĐV", "F20"): {
+            "unit_price": 425000,
+            "driver_salary": 160000,
+            "allowance": 52000,
+        },
+        ("VIP GREEN", "NHĐV", "F40"): {
+            "unit_price": 495000,
+            "driver_salary": 190000,
+            "allowance": 72000,
+        },
+        ("HẢI AN", "GREEN PORT", "F20"): {
+            "unit_price": 445000,
+            "driver_salary": 165000,
+            "allowance": 57000,
+        },
+        ("HẢI AN", "GREEN PORT", "F40"): {
+            "unit_price": 518000,
+            "driver_salary": 195000,
+            "allowance": 77000,
+        },
+        ("NHĐV", "ĐÌNH VŨ", "F20"): {
+            "unit_price": 395000,
+            "driver_salary": 150000,
+            "allowance": 47000,
+        },
+        ("NHĐV", "ĐÌNH VŨ", "F40"): {
+            "unit_price": 458000,
+            "driver_salary": 180000,
+            "allowance": 67000,
+        },
+        ("HẢI AN", "CHU VĂN AN", "F20"): {
+            "unit_price": 420000,
+            "driver_salary": 157000,
+            "allowance": 50000,
+        },
+        ("HẢI AN", "CHU VĂN AN", "F40"): {
+            "unit_price": 485000,
+            "driver_salary": 187000,
+            "allowance": 70000,
+        },
     },
     "CONSCIENCE": {
-        ("NHĐV", "HẢI AN", "F20"): {"unit_price": 395000, "driver_salary": 152000, "allowance": 48000},
-        ("NHĐV", "HẢI AN", "F40"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
-        ("HẢI AN", "NHĐV", "F20"): {"unit_price": 395000, "driver_salary": 152000, "allowance": 48000},
-        ("HẢI AN", "NHĐV", "F40"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
-        ("NHĐV", "VIP GREEN", "F20"): {"unit_price": 410000, "driver_salary": 157000, "allowance": 48000},
-        ("NHĐV", "VIP GREEN", "F40"): {"unit_price": 478000, "driver_salary": 187000, "allowance": 68000},
-        ("HẢI AN", "GREEN PORT", "F20"): {"unit_price": 430000, "driver_salary": 162000, "allowance": 53000},
-        ("HẢI AN", "GREEN PORT", "F40"): {"unit_price": 500000, "driver_salary": 192000, "allowance": 73000},
-        ("NHĐV", "ĐÌNH VŨ", "F20"): {"unit_price": 380000, "driver_salary": 147000, "allowance": 44000},
-        ("NHĐV", "ĐÌNH VŨ", "F40"): {"unit_price": 442000, "driver_salary": 177000, "allowance": 64000},
+        ("NHĐV", "HẢI AN", "F20"): {
+            "unit_price": 395000,
+            "driver_salary": 152000,
+            "allowance": 48000,
+        },
+        ("NHĐV", "HẢI AN", "F40"): {
+            "unit_price": 458000,
+            "driver_salary": 182000,
+            "allowance": 68000,
+        },
+        ("HẢI AN", "NHĐV", "F20"): {
+            "unit_price": 395000,
+            "driver_salary": 152000,
+            "allowance": 48000,
+        },
+        ("HẢI AN", "NHĐV", "F40"): {
+            "unit_price": 458000,
+            "driver_salary": 182000,
+            "allowance": 68000,
+        },
+        ("NHĐV", "VIP GREEN", "F20"): {
+            "unit_price": 410000,
+            "driver_salary": 157000,
+            "allowance": 48000,
+        },
+        ("NHĐV", "VIP GREEN", "F40"): {
+            "unit_price": 478000,
+            "driver_salary": 187000,
+            "allowance": 68000,
+        },
+        ("HẢI AN", "GREEN PORT", "F20"): {
+            "unit_price": 430000,
+            "driver_salary": 162000,
+            "allowance": 53000,
+        },
+        ("HẢI AN", "GREEN PORT", "F40"): {
+            "unit_price": 500000,
+            "driver_salary": 192000,
+            "allowance": 73000,
+        },
+        ("NHĐV", "ĐÌNH VŨ", "F20"): {
+            "unit_price": 380000,
+            "driver_salary": 147000,
+            "allowance": 44000,
+        },
+        ("NHĐV", "ĐÌNH VŨ", "F40"): {
+            "unit_price": 442000,
+            "driver_salary": 177000,
+            "allowance": 64000,
+        },
     },
 }
 
@@ -151,17 +367,19 @@ def _generate_trips_for_month(year: int, month: int, plates: list[str]) -> list[
         else:
             fallback = _ALL_PRICING_HAIAN.get((pickup, dropoff, wt))
             unit_price = fallback["unit_price"] if fallback else 400000
-        trips.append({
-            "container": _rand_container(),
-            "size": size,
-            "vessel": rng.choice(VESSELS),
-            "pickup": pickup,
-            "dropoff": dropoff,
-            "plate": rng.choice(plates),
-            "unit_price": unit_price,
-            "trip_date": f"{year}-{month:02d}-{day:02d}",
-            "client_code": client_code,
-        })
+        trips.append(
+            {
+                "container": _rand_container(),
+                "size": size,
+                "vessel": rng.choice(VESSELS),
+                "pickup": pickup,
+                "dropoff": dropoff,
+                "plate": rng.choice(plates),
+                "unit_price": unit_price,
+                "trip_date": f"{year}-{month:02d}-{day:02d}",
+                "client_code": client_code,
+            }
+        )
     return trips
 
 
@@ -173,7 +391,9 @@ def _load_all_trips(plates: list[str]) -> list[dict]:
             real_april = json.load(f)
         for t in real_april:
             t["client_code"] = "HAIAN"
-        print(f"  Loaded {len(real_april)} real April trips from {_REAL_DATA_PATH.name}")
+        print(
+            f"  Loaded {len(real_april)} real April trips from {_REAL_DATA_PATH.name}"
+        )
 
     for year, month in MONTHS:
         synthetic = _generate_trips_for_month(year, month, plates)
@@ -221,7 +441,11 @@ async def seed_trips(
         prices = client_pricing.get((pickup, dropoff, wt))
         if not prices:
             prices = _ALL_PRICING_HAIAN.get((pickup, dropoff, wt), {})
-        trip_date = date.fromisoformat(trip["trip_date"]) if trip["trip_date"] else date(2026, 4, 1)
+        trip_date = (
+            date.fromisoformat(trip["trip_date"])
+            if trip["trip_date"]
+            else date(2026, 4, 1)
+        )
 
         drv_plate = plate if plate in driver_map else rng.choice(plates_list)
         drv = driver_map.get(drv_plate)
@@ -304,36 +528,54 @@ async def seed_trips(
     for year, month in MONTHS:
         for plate, veh in vehicle_map.items():
             fuel = rng.randint(3500000, 5000000)
-            db.add(VehicleExpense(
-                vehicle_id=veh.id, category="XANG_DAU",
-                amount=fuel, expense_date=date(year, month, rng.randint(1, 28)),
-                description=f"Xăng dầu T{month}/{year}",
-                created_by=ketoan.id,
-            ))
+            db.add(
+                VehicleExpense(
+                    vehicle_id=veh.id,
+                    category="XANG_DAU",
+                    amount=fuel,
+                    expense_date=date(year, month, rng.randint(1, 28)),
+                    description=f"Xăng dầu T{month}/{year}",
+                    created_by=ketoan.id,
+                )
+            )
             expense_count += 1
 
             if rng.random() < 0.25:
                 repair = rng.randint(500000, 2500000)
-                db.add(VehicleExpense(
-                    vehicle_id=veh.id, category="SUA_CHUA",
-                    amount=repair, expense_date=date(year, month, rng.randint(1, 28)),
-                    description=rng.choice([
-                        "Thay lốp xe", "Sửa chữa phanh",
-                        "Thay nhớt + lọc gió", "Sửa chữa gầm xe",
-                        "Thay ắc quy", "Cán chỉnh lốp",
-                    ]),
-                    created_by=ketoan.id,
-                ))
+                db.add(
+                    VehicleExpense(
+                        vehicle_id=veh.id,
+                        category="SUA_CHUA",
+                        amount=repair,
+                        expense_date=date(year, month, rng.randint(1, 28)),
+                        description=rng.choice(
+                            [
+                                "Thay lốp xe",
+                                "Sửa chữa phanh",
+                                "Thay nhớt + lọc gió",
+                                "Sửa chữa gầm xe",
+                                "Thay ắc quy",
+                                "Cán chỉnh lốp",
+                            ]
+                        ),
+                        created_by=ketoan.id,
+                    )
+                )
                 expense_count += 1
 
             if rng.random() < 0.3:
                 law = rng.randint(300000, 1500000)
-                db.add(VehicleExpense(
-                    vehicle_id=veh.id, category="TIEN_LUAT",
-                    amount=law, expense_date=date(year, month, rng.randint(1, 28)),
-                    description=rng.choice(TIEN_LUAT_DESCRIPTIONS) + f" T{month}/{year}",
-                    created_by=ketoan.id,
-                ))
+                db.add(
+                    VehicleExpense(
+                        vehicle_id=veh.id,
+                        category="TIEN_LUAT",
+                        amount=law,
+                        expense_date=date(year, month, rng.randint(1, 28)),
+                        description=rng.choice(TIEN_LUAT_DESCRIPTIONS)
+                        + f" T{month}/{year}",
+                        created_by=ketoan.id,
+                    )
+                )
                 expense_count += 1
 
     await db.flush()

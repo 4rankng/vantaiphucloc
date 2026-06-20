@@ -20,7 +20,9 @@ from app.contexts.operations.infrastructure.import_pipeline.value_parsers import
 from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView
 
 
-def extract_stacking_plan(sheets: list[SheetView], filename: str = "") -> tuple[list[ExtractedRow], list[dict]]:
+def extract_stacking_plan(
+    sheets: list[SheetView], filename: str = ""
+) -> tuple[list[ExtractedRow], list[dict]]:
     """Extract from Stacking Plan (depot format).
 
     Handles simple stacking plans with a single container column.
@@ -79,31 +81,47 @@ def extract_stacking_plan(sheets: list[SheetView], filename: str = "") -> tuple[
 
     for r in range(header_idx + 1, len(sheet.rows)):
         row = sheet.rows[r]
-        cont_val = cell_text(row[cont_col]) if cont_col is not None and cont_col < len(row) else ""
+        cont_val = (
+            cell_text(row[cont_col])
+            if cont_col is not None and cont_col < len(row)
+            else ""
+        )
         if not cont_val:
             continue
 
         try:
             cont_no = parse_container_no(cont_val)
         except ValueError:
-            rejected.append({"source_row_index": r, "reason": "bad_container_no", "raw": cont_val})
+            rejected.append(
+                {"source_row_index": r, "reason": "bad_container_no", "raw": cont_val}
+            )
             continue
 
-        size_val = cell_text(row[size_col]) if size_col is not None and size_col < len(row) else ""
-        pos_val = cell_text(row[pos_col]) if pos_col is not None and pos_col < len(row) else ""
+        size_val = (
+            cell_text(row[size_col])
+            if size_col is not None and size_col < len(row)
+            else ""
+        )
+        pos_val = (
+            cell_text(row[pos_col])
+            if pos_col is not None and pos_col < len(row)
+            else ""
+        )
 
         fe_unknown = cont_no not in fe_lookup
         fe = fe_lookup.get(cont_no, "E")
         work_type = build_cont_type(fe, size_val)
 
-        accepted.append(ExtractedRow(
-            container_number=cont_no,
-            cont_type=work_type,
-            pickup=pos_val,
-            dropoff="",
-            vessel_name=vessel_name,
-            source_row_index=r,
-            freight_kind_unknown=fe_unknown,
-        ))
+        accepted.append(
+            ExtractedRow(
+                container_number=cont_no,
+                cont_type=work_type,
+                pickup=pos_val,
+                dropoff="",
+                vessel_name=vessel_name,
+                source_row_index=r,
+                freight_kind_unknown=fe_unknown,
+            )
+        )
 
     return accepted, rejected

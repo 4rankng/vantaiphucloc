@@ -40,12 +40,12 @@ _logger = logging.getLogger(__name__)
 LOCAL_THRESHOLD = 0.60
 
 _WORK_TYPE_VI: dict[str, str] = {
-    "CHUYEN_BAI":  "chuyển bãi",
-    "XUAT_TAU":    "xuất tàu",
-    "NHAP_TAU":    "nhập tàu",
-    "CHUYỂN BÃI":  "chuyển bãi",
-    "XUẤT TÀU":    "xuất tàu",
-    "NHẬP TÀU":    "nhập tàu",
+    "CHUYEN_BAI": "chuyển bãi",
+    "XUAT_TAU": "xuất tàu",
+    "NHAP_TAU": "nhập tàu",
+    "CHUYỂN BÃI": "chuyển bãi",
+    "XUẤT TÀU": "xuất tàu",
+    "NHẬP TÀU": "nhập tàu",
 }
 
 
@@ -194,7 +194,11 @@ async def _call_gemini(
     client_map: dict[int, str],
 ) -> dict:
     """Call Gemini and return parsed result dict (or error dict)."""
-    from app.contexts.operations.infrastructure.ai import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_ENDPOINT
+    from app.contexts.operations.infrastructure.ai import (
+        GEMINI_API_KEY,
+        GEMINI_MODEL,
+        GEMINI_ENDPOINT,
+    )
     import re as _re
     import httpx
 
@@ -216,7 +220,9 @@ async def _call_gemini(
 
     prompt = _SUGGESTION_PROMPT.format(
         target_trip=json.dumps(_fmt(wo), ensure_ascii=False, indent=2),
-        candidates=json.dumps([_fmt(t) for t in top_candidates], ensure_ascii=False, indent=2),
+        candidates=json.dumps(
+            [_fmt(t) for t in top_candidates], ensure_ascii=False, indent=2
+        ),
     )
 
     try:
@@ -252,6 +258,7 @@ async def _call_gemini(
 
 # ── Public entry point ──────────────────────────────────────────────────────
 
+
 async def get_ai_match_suggestion(db: AsyncSession, delivered_trip_id: int) -> dict:
     """Return a match suggestion for a delivered trip.
 
@@ -260,18 +267,20 @@ async def get_ai_match_suggestion(db: AsyncSession, delivered_trip_id: int) -> d
     """
 
     # 1. Fetch the unmatched delivered trip
-    wo = (await db.execute(
-        select(DeliveredTripORM)
-        .where(DeliveredTripORM.id == delivered_trip_id)
-        .where(DeliveredTripORM.booked_trip_id.is_(None))
-    )).scalar_one_or_none()
+    wo = (
+        await db.execute(
+            select(DeliveredTripORM)
+            .where(DeliveredTripORM.id == delivered_trip_id)
+            .where(DeliveredTripORM.booked_trip_id.is_(None))
+        )
+    ).scalar_one_or_none()
 
     if not wo:
         return {"error": "Delivered trip not found or already matched."}
 
     # 2. Fetch candidate booked trips within ±30 days
     date_from = wo.trip_date - timedelta(days=30) if wo.trip_date else None
-    date_to   = wo.trip_date + timedelta(days=30) if wo.trip_date else None
+    date_to = wo.trip_date + timedelta(days=30) if wo.trip_date else None
 
     to_query = select(BookedTripORM)
     if date_from:
@@ -300,7 +309,9 @@ async def get_ai_match_suggestion(db: AsyncSession, delivered_trip_id: int) -> d
 
     # 4. Resolve names (needed for both reasoning paths)
     all_trips = [wo] + [s[2] for s in scored[:5]]
-    loc_ids    = {t.pickup_location_id for t in all_trips} | {t.dropoff_location_id for t in all_trips}
+    loc_ids = {t.pickup_location_id for t in all_trips} | {
+        t.dropoff_location_id for t in all_trips
+    }
     client_ids = {t.client_id for t in all_trips}
     loc_ids.discard(None)
     client_ids.discard(None)
@@ -308,13 +319,25 @@ async def get_ai_match_suggestion(db: AsyncSession, delivered_trip_id: int) -> d
     loc_map: dict[int, str] = {}
     client_map: dict[int, str] = {}
     if loc_ids:
-        loc_map = dict((await db.execute(
-            select(LocationORM.id, LocationORM.name).where(LocationORM.id.in_(loc_ids))
-        )).all())
+        loc_map = dict(
+            (
+                await db.execute(
+                    select(LocationORM.id, LocationORM.name).where(
+                        LocationORM.id.in_(loc_ids)
+                    )
+                )
+            ).all()
+        )
     if client_ids:
-        client_map = dict((await db.execute(
-            select(ClientORM.id, ClientORM.name).where(ClientORM.id.in_(client_ids))
-        )).all())
+        client_map = dict(
+            (
+                await db.execute(
+                    select(ClientORM.id, ClientORM.name).where(
+                        ClientORM.id.in_(client_ids)
+                    )
+                )
+            ).all()
+        )
 
     # 5. Local path: strong enough match — skip Gemini
     if scored and scored[0][0] >= LOCAL_THRESHOLD:

@@ -37,7 +37,11 @@ class ListLocations:
         self.repo = repo
 
     async def __call__(
-        self, *, page: int, page_size: int, active_only: bool = True,
+        self,
+        *,
+        page: int,
+        page_size: int,
+        active_only: bool = True,
     ) -> tuple[list[Location], int]:
         offset = (page - 1) * page_size
         items, total = await self.repo.list(
@@ -81,9 +85,7 @@ class UpdateLocation:
         self.repo = repo
         self.session = session
 
-    async def __call__(
-        self, lid: LocationId, data: LocationUpdateInput
-    ) -> Location:
+    async def __call__(self, lid: LocationId, data: LocationUpdateInput) -> Location:
         loc = await self.repo.get_by_id(lid)
         if loc is None:
             raise NotFound("Location", int(lid))

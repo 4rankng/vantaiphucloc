@@ -43,13 +43,13 @@ _logger = logging.getLogger(__name__)
 class MatchKind(str, Enum):
     EXACT_NAME = "exact_name"
     EXACT_ALIAS = "exact_alias"
-    FUZZY_AUTO = "fuzzy_auto"            # auto-linked, but flagged for review
+    FUZZY_AUTO = "fuzzy_auto"  # auto-linked, but flagged for review
     FUZZY_AMBIGUOUS = "fuzzy_ambiguous"  # multiple candidates, needs accountant pick
-    NEW = "new"                          # nothing close enough → create new
+    NEW = "new"  # nothing close enough → create new
 
 
 # Confidence thresholds.
-FUZZY_AUTO_THRESHOLD = 0.92    # very close — link automatically (still flagged)
+FUZZY_AUTO_THRESHOLD = 0.92  # very close — link automatically (still flagged)
 FUZZY_SUGGEST_THRESHOLD = 0.85  # close — suggest, don't auto-link
 TOP_K_SUGGESTIONS = 3
 
@@ -75,8 +75,8 @@ class ResolveResult:
     raw_input: str
     location: Location | None
     match_kind: MatchKind
-    suggestions: list[Suggestion]    # populated for FUZZY_AMBIGUOUS / FUZZY_AUTO
-    review_needed: bool              # set on FUZZY_AUTO and (optionally) NEW
+    suggestions: list[Suggestion]  # populated for FUZZY_AMBIGUOUS / FUZZY_AUTO
+    review_needed: bool  # set on FUZZY_AUTO and (optionally) NEW
 
 
 # ---------------------------------------------------------------------------
@@ -95,7 +95,9 @@ def normalize(s: str | None) -> str:
     folded = folded.replace("đ", "d").replace("Đ", "d")
     folded = folded.lower()
     folded = _WS_RE.sub(" ", folded).strip()
-    folded = folded.replace(".", "").replace(":", "").replace("\n", " ").replace("\r", " ")
+    folded = (
+        folded.replace(".", "").replace(":", "").replace("\n", " ").replace("\r", " ")
+    )
     folded = _WS_RE.sub(" ", folded).strip()
     return folded
 
@@ -103,6 +105,7 @@ def normalize(s: str | None) -> str:
 # ---------------------------------------------------------------------------
 # Public service
 # ---------------------------------------------------------------------------
+
 
 class LocationResolverService:
     """Stateful per-request helper. Caches lookups within a single
@@ -112,8 +115,12 @@ class LocationResolverService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self._cache: dict[str, ResolveResult] = {}
-        self._all_names: list[tuple[int, str, str]] | None = None  # (id, name, normalized)
-        self._all_aliases: list[tuple[int, str, str]] | None = None  # (location_id, alias, normalized)
+        self._all_names: list[tuple[int, str, str]] | None = (
+            None  # (id, name, normalized)
+        )
+        self._all_aliases: list[tuple[int, str, str]] | None = (
+            None  # (location_id, alias, normalized)
+        )
 
     async def find_match(self, raw_name: str) -> ResolveResult:
         """Look up `raw_name` without writing. Returns the resolution
@@ -152,7 +159,9 @@ class LocationResolverService:
         suggestions = await self._fuzzy_candidates(key)
         if suggestions:
             best = suggestions[0]
-            if best.score >= FUZZY_AUTO_THRESHOLD and (len(suggestions) == 1 or suggestions[1].score < FUZZY_SUGGEST_THRESHOLD):
+            if best.score >= FUZZY_AUTO_THRESHOLD and (
+                len(suggestions) == 1 or suggestions[1].score < FUZZY_SUGGEST_THRESHOLD
+            ):
                 # one strong candidate — auto-link with review flag
                 loc = await self.db.get(Location, best.location_id)
                 result = ResolveResult(
@@ -236,13 +245,15 @@ class LocationResolverService:
             already = await self._alias_by_normalized(norm)
             if already is None:
                 alias_source = self._alias_source_for(source, result.match_kind)
-                self.db.add(LocationAlias(
-                    location_id=result.location.id,
-                    alias=raw_name.strip()[:255],
-                    alias_normalized=norm,
-                    source=alias_source,
-                    created_by_id=user_id,
-                ))
+                self.db.add(
+                    LocationAlias(
+                        location_id=result.location.id,
+                        alias=raw_name.strip()[:255],
+                        alias_normalized=norm,
+                        source=alias_source,
+                        created_by_id=user_id,
+                    )
+                )
                 await self.db.flush()
                 self._all_aliases = None
 
@@ -266,7 +277,9 @@ class LocationResolverService:
 
     async def _exact_alias(self, normalized: str) -> Location | None:
         res = await self.db.execute(
-            select(LocationAlias).where(LocationAlias.alias_normalized == normalized).limit(1)
+            select(LocationAlias)
+            .where(LocationAlias.alias_normalized == normalized)
+            .limit(1)
         )
         alias = res.scalar_one_or_none()
         if alias is None:
@@ -275,7 +288,9 @@ class LocationResolverService:
 
     async def _alias_by_normalized(self, normalized: str) -> LocationAlias | None:
         res = await self.db.execute(
-            select(LocationAlias).where(LocationAlias.alias_normalized == normalized).limit(1)
+            select(LocationAlias)
+            .where(LocationAlias.alias_normalized == normalized)
+            .limit(1)
         )
         return res.scalar_one_or_none()
 
@@ -290,7 +305,11 @@ class LocationResolverService:
     async def _load_aliases(self) -> list[tuple[int, str, str]]:
         if self._all_aliases is None:
             res = await self.db.execute(
-                select(LocationAlias.location_id, LocationAlias.alias, LocationAlias.alias_normalized)
+                select(
+                    LocationAlias.location_id,
+                    LocationAlias.alias,
+                    LocationAlias.alias_normalized,
+                )
             )
             self._all_aliases = [(lid, alias, an) for lid, alias, an in res.all()]
         return self._all_aliases
@@ -315,12 +334,16 @@ class LocationResolverService:
                 cur = pool.get(loc_id)
                 if cur is None or score > cur[1]:
                     # Use the location's canonical name for display.
-                    display_name = next((n for lid, n, _ in names if lid == loc_id), alias)
+                    display_name = next(
+                        (n for lid, n, _ in names if lid == loc_id), alias
+                    )
                     pool[loc_id] = (display_name, score)
 
         ranked = sorted(
-            (Suggestion(location_id=lid, name=disp, score=round(score, 4))
-             for lid, (disp, score) in pool.items()),
+            (
+                Suggestion(location_id=lid, name=disp, score=round(score, 4))
+                for lid, (disp, score) in pool.items()
+            ),
             key=lambda s: -s.score,
         )
         return ranked[:TOP_K_SUGGESTIONS]
@@ -337,6 +360,7 @@ class LocationResolverService:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _ratio(a: str, b: str) -> float:
     """SequenceMatcher ratio — gestalt pattern matching. Token-set

@@ -161,7 +161,13 @@ async def call_gemini_vision(
                 _logger.warning("[Gemini] %s: no candidates", m)
                 continue
 
-            text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+            text = (
+                candidates[0]
+                .get("content", {})
+                .get("parts", [{}])[0]
+                .get("text", "")
+                .strip()
+            )
 
             return {
                 "success": True,
@@ -195,8 +201,10 @@ async def analyze_image_with_fallback(
 
     Thin wrapper around call_gemini_vision that adds ``fallback_used``.
     """
-    result = await call_gemini_vision(prompt, image_bytes, mime_type, response_schema=response_schema)
-    result["fallback_used"] = result["success"] and result.get("model") != GEMINI_MODELS[0]
+    result = await call_gemini_vision(
+        prompt, image_bytes, mime_type, response_schema=response_schema
+    )
+    result["fallback_used"] = (
+        result["success"] and result.get("model") != GEMINI_MODELS[0]
+    )
     return result
-
-

@@ -38,7 +38,5 @@ _STATUS_BY_TYPE: dict[type[Exception], tuple[int, str | None]] = {
 def to_http(error: Exception) -> HTTPException:
     for cls, (status, fallback) in _STATUS_BY_TYPE.items():
         if isinstance(error, cls):
-            return HTTPException(
-                status_code=status, detail=fallback or str(error)
-            )
+            return HTTPException(status_code=status, detail=fallback or str(error))
     raise error

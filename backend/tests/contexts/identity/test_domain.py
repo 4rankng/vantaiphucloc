@@ -78,7 +78,9 @@ class TestValidateCccd:
     def test_valid_cccd_passes(self):
         assert validate_cccd("123456789012") == "123456789012"
 
-    @pytest.mark.parametrize("bad", ["1", "12345678901", "12345678901a", "1234567890123"])
+    @pytest.mark.parametrize(
+        "bad", ["1", "12345678901", "12345678901a", "1234567890123"]
+    )
     def test_invalid_cccd_raises(self, bad):
         with pytest.raises(InvalidCccd):
             validate_cccd(bad)

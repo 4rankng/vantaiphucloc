@@ -1,5 +1,5 @@
 import { api } from './client'
-import { safeRequest, toCamel, toSnake, ok, fail } from '@/lib/safe-request'
+import { safeRequest, toSnake } from '@/lib/safe-request'
 import type { Location, LocationAlias, ApiResponse } from '@/data/domain'
 
 export function getLocations(): Promise<ApiResponse<Location[]>> {

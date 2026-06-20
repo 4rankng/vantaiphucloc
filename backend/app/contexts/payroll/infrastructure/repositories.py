@@ -45,10 +45,14 @@ class SqlSettingsRepository(SettingsRepository):
     async def get_many(self, prefix: str) -> dict[str, str]:
         """Return all settings whose key starts with *prefix*."""
         rows = (
-            await self.session.execute(
-                select(SettingORM).where(SettingORM.key.startswith(prefix))
+            (
+                await self.session.execute(
+                    select(SettingORM).where(SettingORM.key.startswith(prefix))
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return {r.key: r.value for r in rows}
 
     async def set(self, key: str, value: str) -> None:
@@ -68,28 +72,36 @@ class SqlDriverSalaryConfigRepository(DriverSalaryConfigRepository):
 
     async def list_for_driver(self, driver_id: int) -> list[DriverSalaryConfig]:
         rows = (
-            await self.session.execute(
-                select(DriverSalaryConfigORM)
-                .where(DriverSalaryConfigORM.driver_id == driver_id)
-                .order_by(DriverSalaryConfigORM.effective_from.desc())
+            (
+                await self.session.execute(
+                    select(DriverSalaryConfigORM)
+                    .where(DriverSalaryConfigORM.driver_id == driver_id)
+                    .order_by(DriverSalaryConfigORM.effective_from.desc())
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [_to_domain(r) for r in rows]
 
     async def latest_at_or_before(
         self, driver_id: int, target_date: date
     ) -> DriverSalaryConfig | None:
         row = (
-            await self.session.execute(
-                select(DriverSalaryConfigORM)
-                .where(
-                    DriverSalaryConfigORM.driver_id == driver_id,
-                    DriverSalaryConfigORM.effective_from <= target_date,
+            (
+                await self.session.execute(
+                    select(DriverSalaryConfigORM)
+                    .where(
+                        DriverSalaryConfigORM.driver_id == driver_id,
+                        DriverSalaryConfigORM.effective_from <= target_date,
+                    )
+                    .order_by(DriverSalaryConfigORM.effective_from.desc())
+                    .limit(1)
                 )
-                .order_by(DriverSalaryConfigORM.effective_from.desc())
-                .limit(1)
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         return _to_domain(row) if row else None
 
     async def add(
@@ -104,13 +116,17 @@ class SqlDriverSalaryConfigRepository(DriverSalaryConfigRepository):
         # Idempotent on (driver_id, effective_from): update the existing row
         # rather than violating the unique constraint.
         existing = (
-            await self.session.execute(
-                select(DriverSalaryConfigORM).where(
-                    DriverSalaryConfigORM.driver_id == driver_id,
-                    DriverSalaryConfigORM.effective_from == effective_from,
+            (
+                await self.session.execute(
+                    select(DriverSalaryConfigORM).where(
+                        DriverSalaryConfigORM.driver_id == driver_id,
+                        DriverSalaryConfigORM.effective_from == effective_from,
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
 
         if existing is not None:
             existing.base_salary = base_salary
@@ -136,15 +152,19 @@ class SqlDriverSalaryConfigRepository(DriverSalaryConfigRepository):
         if not driver_ids:
             return {}
         rows = (
-            await self.session.execute(
-                select(DriverSalaryConfigORM)
-                .where(DriverSalaryConfigORM.driver_id.in_(driver_ids))
-                .order_by(
-                    DriverSalaryConfigORM.driver_id,
-                    DriverSalaryConfigORM.effective_from.desc(),
+            (
+                await self.session.execute(
+                    select(DriverSalaryConfigORM)
+                    .where(DriverSalaryConfigORM.driver_id.in_(driver_ids))
+                    .order_by(
+                        DriverSalaryConfigORM.driver_id,
+                        DriverSalaryConfigORM.effective_from.desc(),
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         out: dict[int, list[DriverSalaryConfig]] = defaultdict(list)
         for r in rows:
             out[r.driver_id].append(_to_domain(r))
@@ -174,41 +194,53 @@ class SqlDriverSalaryRepository(DriverSalaryRepository):
         self, driver_id: int, from_date: date, to_date: date
     ) -> DriverSalaryRecord | None:
         row = (
-            await self.session.execute(
-                select(DriverSalaryORM).where(
-                    DriverSalaryORM.driver_id == driver_id,
-                    DriverSalaryORM.from_date == from_date,
-                    DriverSalaryORM.to_date == to_date,
+            (
+                await self.session.execute(
+                    select(DriverSalaryORM).where(
+                        DriverSalaryORM.driver_id == driver_id,
+                        DriverSalaryORM.from_date == from_date,
+                        DriverSalaryORM.to_date == to_date,
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         return _salary_to_domain(row) if row else None
 
     async def list_for_period(
         self, from_date: date, to_date: date
     ) -> list[DriverSalaryRecord]:
         rows = (
-            await self.session.execute(
-                select(DriverSalaryORM)
-                .where(
-                    DriverSalaryORM.from_date == from_date,
-                    DriverSalaryORM.to_date == to_date,
+            (
+                await self.session.execute(
+                    select(DriverSalaryORM)
+                    .where(
+                        DriverSalaryORM.from_date == from_date,
+                        DriverSalaryORM.to_date == to_date,
+                    )
+                    .order_by(DriverSalaryORM.driver_id)
                 )
-                .order_by(DriverSalaryORM.driver_id)
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [_salary_to_domain(r) for r in rows]
 
     async def upsert(self, record: DriverSalaryRecord) -> DriverSalaryRecord:
         existing = (
-            await self.session.execute(
-                select(DriverSalaryORM).where(
-                    DriverSalaryORM.driver_id == record.driver_id,
-                    DriverSalaryORM.from_date == record.from_date,
-                    DriverSalaryORM.to_date == record.to_date,
+            (
+                await self.session.execute(
+                    select(DriverSalaryORM).where(
+                        DriverSalaryORM.driver_id == record.driver_id,
+                        DriverSalaryORM.from_date == record.from_date,
+                        DriverSalaryORM.to_date == record.to_date,
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
 
         if existing is not None:
             existing.basic_salary = record.basic_salary

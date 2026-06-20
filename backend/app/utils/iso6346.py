@@ -22,9 +22,32 @@ _logger = logging.getLogger(__name__)
 # Letter to number mapping (A=10, B=12, ..., Z=38)
 # Values skip multiples of 11 (11, 22, 33) to avoid zero remainders in mod 11
 LETTER_MAP = {
-    "A": 10, "B": 12, "C": 13, "D": 14, "E": 15, "F": 16, "G": 17, "H": 18, "I": 19,
-    "J": 20, "K": 21, "L": 23, "M": 24, "N": 25, "O": 26, "P": 27, "Q": 28, "R": 29,
-    "S": 30, "T": 31, "U": 32, "V": 34, "W": 35, "X": 36, "Y": 37, "Z": 38,
+    "A": 10,
+    "B": 12,
+    "C": 13,
+    "D": 14,
+    "E": 15,
+    "F": 16,
+    "G": 17,
+    "H": 18,
+    "I": 19,
+    "J": 20,
+    "K": 21,
+    "L": 23,
+    "M": 24,
+    "N": 25,
+    "O": 26,
+    "P": 27,
+    "Q": 28,
+    "R": 29,
+    "S": 30,
+    "T": 31,
+    "U": 32,
+    "V": 34,
+    "W": 35,
+    "X": 36,
+    "Y": 37,
+    "Z": 38,
 }
 
 # Powers of 2 for each position (0-9 for 10 characters)
@@ -46,7 +69,9 @@ def normalize_container_number(container_number: str) -> str:
 def validate_format(container_number: str) -> bool:
     """Validate that the container number matches the format XXXXNNNNNNN (4 letters + 7 digits)."""
     normalized = normalize_container_number(container_number)
-    return len(normalized) == 11 and normalized[:4].isalpha() and normalized[4:].isdigit()
+    return (
+        len(normalized) == 11 and normalized[:4].isalpha() and normalized[4:].isdigit()
+    )
 
 
 def calculate_check_digit(container_number: str) -> int:
@@ -64,7 +89,9 @@ def calculate_check_digit(container_number: str) -> int:
     normalized = normalize_container_number(container_number)
 
     if len(normalized) != 10:
-        raise ValueError(f"Container number must be 10 characters (without check digit): {container_number}")
+        raise ValueError(
+            f"Container number must be 10 characters (without check digit): {container_number}"
+        )
 
     # Calculate sum
     total = 0
@@ -134,7 +161,10 @@ def validate_container_number(container_number: str) -> tuple[bool, str]:
 
     # Check format
     if not validate_format(normalized):
-        return False, "Sai định dạng. Đúng: XXXXNNNNNNN (4 chữ cái + 7 số, vd: MSKU1234567)"
+        return (
+            False,
+            "Sai định dạng. Đúng: XXXXNNNNNNN (4 chữ cái + 7 số, vd: MSKU1234567)",
+        )
 
     # Check check digit
     if not validate_check_digit(normalized):
@@ -203,7 +233,8 @@ def suggest_corrections(container_number: str, max_results: int = 3) -> list[str
         check_digit_only = 1 if edited_positions == (6,) else 0
         # Sum of absolute deltas between original and candidate at edited positions.
         delta_sum = sum(
-            abs(int(candidate_digits[p]) - int(original_digits[p])) for p in edited_positions
+            abs(int(candidate_digits[p]) - int(original_digits[p]))
+            for p in edited_positions
         )
         # Score tuple: (edit_count, NOT check_digit_only, delta_sum).
         # Tuple compare gives natural lexicographic ordering.
@@ -218,7 +249,9 @@ def suggest_corrections(container_number: str, max_results: int = 3) -> list[str
         for new_digit in "0123456789":
             if new_digit == original:
                 continue
-            candidate_digits = original_digits[:pos] + new_digit + original_digits[pos + 1 :]
+            candidate_digits = (
+                original_digits[:pos] + new_digit + original_digits[pos + 1 :]
+            )
             consider(candidate_digits, (pos,))
 
     # ── Pass 2: two-digit substitutions ─────────────────────────────────────

@@ -41,12 +41,69 @@ _logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _HEADER_PATTERNS: dict[str, list[str]] = {
-    "container": ["container", "cont", "số cont", "so cont", "số container", "container no", "công container", "số côn"],
-    "date": ["ngày", "date", "ngày đi", "trip date", "ngày chạy", "ngày vận chuyển", "ngày thực hiện"],
-    "client": ["khách", "customer", "client", "khách hàng", "tên khách", "customer name", "đối tác", "partner"],
-    "pickup": ["điểm lấy", "pickup", "lấy hàng", "nơi lấy", "đi từ", "from", "điểm đi", "nơi đi", "lấy"],
-    "dropoff": ["điểm trả", "dropoff", "trả hàng", "nơi trả", "đến", "to", "điểm đến", "nơi đến", "trả"],
-    "amount": ["tiền", "amount", "cước", "giá", "đơn giá", "unit price", "cước phí", "thành tiền", "tổng tiền", "price"],
+    "container": [
+        "container",
+        "cont",
+        "số cont",
+        "so cont",
+        "số container",
+        "container no",
+        "công container",
+        "số côn",
+    ],
+    "date": [
+        "ngày",
+        "date",
+        "ngày đi",
+        "trip date",
+        "ngày chạy",
+        "ngày vận chuyển",
+        "ngày thực hiện",
+    ],
+    "client": [
+        "khách",
+        "customer",
+        "client",
+        "khách hàng",
+        "tên khách",
+        "customer name",
+        "đối tác",
+        "partner",
+    ],
+    "pickup": [
+        "điểm lấy",
+        "pickup",
+        "lấy hàng",
+        "nơi lấy",
+        "đi từ",
+        "from",
+        "điểm đi",
+        "nơi đi",
+        "lấy",
+    ],
+    "dropoff": [
+        "điểm trả",
+        "dropoff",
+        "trả hàng",
+        "nơi trả",
+        "đến",
+        "to",
+        "điểm đến",
+        "nơi đến",
+        "trả",
+    ],
+    "amount": [
+        "tiền",
+        "amount",
+        "cước",
+        "giá",
+        "đơn giá",
+        "unit price",
+        "cước phí",
+        "thành tiền",
+        "tổng tiền",
+        "price",
+    ],
     "work_type": ["loại", "work type", "type", "loại cont", "loại container", "size"],
     "notes": ["ghi chú", "note", "notes", "remark", "remarks", "mô tả", "description"],
 }
@@ -88,6 +145,7 @@ def _detect_columns(headers: list[str | None]) -> dict[str, int]:
 @dataclass
 class BulkImportResult:
     """Result of the bulk import operation."""
+
     total_rows: int
     created: int
     warnings: int
@@ -117,7 +175,9 @@ class BulkImportService:
         rows = self._parse_excel(content, filename)
         if not rows:
             return BulkImportResult(
-                total_rows=0, created=0, warnings=0,
+                total_rows=0,
+                created=0,
+                warnings=0,
                 errors=["Không tìm thấy dữ liệu hợp lệ trong file"],
             )
 
@@ -126,8 +186,11 @@ class BulkImportService:
 
         if not valid_rows:
             return BulkImportResult(
-                total_rows=len(rows), created=0, warnings=0,
-                errors=[r.parse_error for r in error_rows if r.parse_error] or ["Không có dòng hợp lệ"],
+                total_rows=len(rows),
+                created=0,
+                warnings=0,
+                errors=[r.parse_error for r in error_rows if r.parse_error]
+                or ["Không có dòng hợp lệ"],
             )
 
         # Resolve client_id from file if not provided
@@ -137,8 +200,12 @@ class BulkImportService:
 
         if resolved_client_id is None:
             return BulkImportResult(
-                total_rows=len(rows), created=0, warnings=0,
-                errors=["Không xác định được khách hàng. Vui lòng chọn khách hàng hoặc thêm cột 'khách' trong file."],
+                total_rows=len(rows),
+                created=0,
+                warnings=0,
+                errors=[
+                    "Không xác định được khách hàng. Vui lòng chọn khách hàng hoặc thêm cột 'khách' trong file."
+                ],
             )
 
         # Resolve locations for all rows
@@ -153,25 +220,31 @@ class BulkImportService:
             try:
                 trip_id = await self._create_delivered_trip(row, resolved_client_id)
                 created_ids.append(trip_id)
-                details.append({
-                    "row": row.row_number,
-                    "container": row.container_number,
-                    "delivered_trip_id": trip_id,
-                    "status": "created",
-                })
+                details.append(
+                    {
+                        "row": row.row_number,
+                        "container": row.container_number,
+                        "delivered_trip_id": trip_id,
+                        "status": "created",
+                    }
+                )
             except Exception as exc:
                 msg = f"Dòng {row.row_number}: {exc}"
                 create_errors.append(msg)
-                details.append({
-                    "row": row.row_number,
-                    "container": row.container_number,
-                    "status": "error",
-                    "error": str(exc),
-                })
+                details.append(
+                    {
+                        "row": row.row_number,
+                        "container": row.container_number,
+                        "status": "error",
+                        "error": str(exc),
+                    }
+                )
 
         await self.session.commit()
 
-        all_errors = [r.parse_error for r in error_rows if r.parse_error] + create_errors
+        all_errors = [
+            r.parse_error for r in error_rows if r.parse_error
+        ] + create_errors
         return BulkImportResult(
             total_rows=len(rows),
             created=len(created_ids),
@@ -207,7 +280,9 @@ class BulkImportService:
                     continue
                 col_map = self._detect_columns_from_data(raw_rows, header_idx)
             else:
-                col_map = _detect_columns([str(c) if c is not None else None for c in raw_rows[header_idx]])
+                col_map = _detect_columns(
+                    [str(c) if c is not None else None for c in raw_rows[header_idx]]
+                )
 
             if not col_map:
                 continue
@@ -243,7 +318,9 @@ class BulkImportService:
                 return idx
         return None
 
-    def _detect_columns_from_data(self, rows: list[tuple], start_idx: int) -> dict[str, int]:
+    def _detect_columns_from_data(
+        self, rows: list[tuple], start_idx: int
+    ) -> dict[str, int]:
         if start_idx >= len(rows):
             return {}
         col_map: dict[str, int] = {}
@@ -255,7 +332,9 @@ class BulkImportService:
                 col_map["date"] = idx
         return col_map
 
-    def _parse_row(self, row_num: int, cells: list[Any], col_map: dict[str, int]) -> ImportRow:
+    def _parse_row(
+        self, row_num: int, cells: list[Any], col_map: dict[str, int]
+    ) -> ImportRow:
         def _get(role: str) -> Any:
             idx = col_map.get(role)
             return cells[idx] if idx is not None and idx < len(cells) else None
@@ -277,15 +356,23 @@ class BulkImportService:
                 parse_error="Không tìm thấy số container",
             )
 
-        container_number = normalize_container_number(container_number) or container_number
+        container_number = (
+            normalize_container_number(container_number) or container_number
+        )
 
         trip_date = parse_date(_get("date"))
-        client_name = str(_get("client")).strip() if _get("client") is not None else None
+        client_name = (
+            str(_get("client")).strip() if _get("client") is not None else None
+        )
         pickup = str(_get("pickup")).strip() if _get("pickup") is not None else None
         dropoff = str(_get("dropoff")).strip() if _get("dropoff") is not None else None
         amount = _parse_amount(_get("amount"))
-        cont_type_raw = _get("work_type")  # header says "work_type" but it's really container type
-        cont_type = str(cont_type_raw).strip().upper() if cont_type_raw is not None else None
+        cont_type_raw = _get(
+            "work_type"
+        )  # header says "work_type" but it's really container type
+        cont_type = (
+            str(cont_type_raw).strip().upper() if cont_type_raw is not None else None
+        )
         notes = str(_get("notes")).strip() if _get("notes") is not None else None
 
         valid_cont_types = {"E20", "E40", "F20", "F40"}
@@ -360,7 +447,9 @@ class BulkImportService:
             r._dropoff_location_id = resolved.get(r.dropoff_location or "", None)  # type: ignore[attr-defined]
 
     async def _create_delivered_trip(
-        self, row: ImportRow, client_id: int,
+        self,
+        row: ImportRow,
+        client_id: int,
     ) -> int:
         """Create a DeliveredTrip from an ImportRow."""
         pickup_id = getattr(row, "_pickup_location_id", None)
@@ -382,7 +471,9 @@ class BulkImportService:
             cont_number=row.container_number,
             cont_type=row.cont_type or "E20",
             trip_date=row.trip_date,
-            vessel=row.notes if row.notes and ("tau" in row.notes.lower() or "tàu" in row.notes.lower()) else None,
+            vessel=row.notes
+            if row.notes and ("tau" in row.notes.lower() or "tàu" in row.notes.lower())
+            else None,
         )
         self.session.add(wo)
         await self.session.flush()

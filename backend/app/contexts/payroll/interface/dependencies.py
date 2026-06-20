@@ -61,9 +61,7 @@ def get_driver_earnings(
     base_salary_repo: DriverSalaryConfigRepository = Depends(
         get_driver_salary_config_repository
     ),
-    driver_salary_repo: DriverSalaryRepository = Depends(
-        get_driver_salary_repository
-    ),
+    driver_salary_repo: DriverSalaryRepository = Depends(get_driver_salary_repository),
 ) -> GetDriverEarnings:
     return GetDriverEarnings(
         db,
@@ -89,9 +87,7 @@ def get_monthly_pnl(
     base_salary_repo: DriverSalaryConfigRepository = Depends(
         get_driver_salary_config_repository
     ),
-    driver_salary_repo: DriverSalaryRepository = Depends(
-        get_driver_salary_repository
-    ),
+    driver_salary_repo: DriverSalaryRepository = Depends(get_driver_salary_repository),
 ) -> GetMonthlyPnL:
     return GetMonthlyPnL(
         db,

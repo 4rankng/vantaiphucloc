@@ -16,6 +16,7 @@ from app.core.redis import get_redis
 # for the whole suite so no test ever hits the Gemini network — the import
 # pipeline then degrades to heuristics + NullBatchHeaderClassifier.
 from app.config import settings as _settings
+
 _settings.GEMINI_API_KEY = ""
 
 
@@ -52,6 +53,7 @@ _fake_redis = _FakeRedis()
 
 async def _override_get_redis():
     return _fake_redis
+
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

@@ -5,7 +5,6 @@ from arq.connections import RedisSettings
 from app.config import settings
 
 
-
 from app.workers.tasks.salary import calculate_salary_task
 from app.workers.tasks.notifications import send_notification_task
 from app.workers.tasks.geocoding import geocode_location_task
@@ -30,7 +29,6 @@ class WorkerSettings:
     keep_result = 3600
     cron_jobs = []
 
-
     redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)
     max_tries = settings.WORKER_MAX_TRIES
     timeout = settings.WORKER_TIMEOUT
@@ -42,6 +40,7 @@ class WorkerSettings:
     @staticmethod
     async def on_shutdown(ctx: dict) -> None:
         from app.database import engine
+
         await engine.dispose()
         logger.info("Worker stopped")
 

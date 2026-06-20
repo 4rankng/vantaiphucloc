@@ -1,4 +1,5 @@
 """Concrete repository implementation for the Vendor Route Pricing context."""
+
 from __future__ import annotations
 
 from typing import Sequence
@@ -52,7 +53,8 @@ class SqlVendorRoutePricingRepository(VendorRoutePricingRepository):
                 select(VendorRoutePricingORM).where(
                     VendorRoutePricingORM.vendor_id == int(vendor_id),
                     VendorRoutePricingORM.pickup_location_id == int(pickup_location_id),
-                    VendorRoutePricingORM.dropoff_location_id == int(dropoff_location_id),
+                    VendorRoutePricingORM.dropoff_location_id
+                    == int(dropoff_location_id),
                     VendorRoutePricingORM.work_type == work_type,
                     VendorRoutePricingORM.is_active.is_(True),
                 )
@@ -77,9 +79,7 @@ class SqlVendorRoutePricingRepository(VendorRoutePricingRepository):
         if active_only:
             q = q.where(VendorRoutePricingORM.is_active.is_(True))
         total = (
-            await self.session.scalar(
-                select(func.count()).select_from(q.subquery())
-            )
+            await self.session.scalar(select(func.count()).select_from(q.subquery()))
             or 0
         )
         q = q.order_by(VendorRoutePricingORM.id.desc()).offset(offset).limit(limit)

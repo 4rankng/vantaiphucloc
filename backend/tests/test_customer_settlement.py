@@ -176,7 +176,9 @@ async def test_loader_warns_on_zero_revenue(db_session, caplog):
     loader = SqlSettlementDataLoader(db_session)
     period = SettlementPeriod(start=date(2026, 5, 1), end=date(2026, 5, 31))
 
-    with caplog.at_level(logging.WARNING, logger="app.contexts.billing.infrastructure.settlement_loader"):
+    with caplog.at_level(
+        logging.WARNING, logger="app.contexts.billing.infrastructure.settlement_loader"
+    ):
         await loader.load(client_id=1, period=period)
 
     assert any("revenue=0" in record.message for record in caplog.records)
@@ -220,9 +222,13 @@ def test_aggregate_routes_groups_by_work_type():
     ]
 
     summaries = _aggregate_routes(lines)
-    assert len(summaries) == 2, "Same lane but different work_type must be separate buckets"
+    assert len(summaries) == 2, (
+        "Same lane but different work_type must be separate buckets"
+    )
 
-    by_key = {(s.pickup_location, s.dropoff_location, s.work_type): s for s in summaries}
+    by_key = {
+        (s.pickup_location, s.dropoff_location, s.work_type): s for s in summaries
+    }
     chuyen_bai = by_key[("P1", "D1", "CHUYỂN BÃI")]
     assert chuyen_bai.f20_count == 2
     assert chuyen_bai.total_amount == 300

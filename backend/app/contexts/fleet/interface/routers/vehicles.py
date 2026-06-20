@@ -46,9 +46,9 @@ async def create_vehicle(
     db: AsyncSession = Depends(get_db),
 ):
     plate = body.plate.strip().upper()
-    existing = (await db.execute(
-        select(Vehicle).where(Vehicle.plate == plate)
-    )).scalar_one_or_none()
+    existing = (
+        await db.execute(select(Vehicle).where(Vehicle.plate == plate))
+    ).scalar_one_or_none()
     if existing:
         return existing
     vehicle = Vehicle(plate=plate, is_active=True, vendor_id=body.vendor_id)
@@ -65,17 +65,17 @@ async def update_vehicle(
     _current_user: User = Depends(require_permission("update", "Vehicle")),
     db: AsyncSession = Depends(get_db),
 ):
-    vehicle = (await db.execute(
-        select(Vehicle).where(Vehicle.id == vehicle_id)
-    )).scalar_one_or_none()
+    vehicle = (
+        await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
+    ).scalar_one_or_none()
     if vehicle is None:
         raise HTTPException(status_code=404, detail="Vehicle not found")
 
     plate = body.plate.strip().upper()
     if plate != vehicle.plate:
-        duplicate = (await db.execute(
-            select(Vehicle).where(Vehicle.plate == plate)
-        )).scalar_one_or_none()
+        duplicate = (
+            await db.execute(select(Vehicle).where(Vehicle.plate == plate))
+        ).scalar_one_or_none()
         if duplicate:
             raise HTTPException(status_code=409, detail="Biển số đã tồn tại")
 
@@ -91,9 +91,9 @@ async def delete_vehicle(
     _current_user: User = Depends(require_permission("delete", "Vehicle")),
     db: AsyncSession = Depends(get_db),
 ):
-    vehicle = (await db.execute(
-        select(Vehicle).where(Vehicle.id == vehicle_id)
-    )).scalar_one_or_none()
+    vehicle = (
+        await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
+    ).scalar_one_or_none()
     if vehicle is None:
         raise HTTPException(status_code=404, detail="Vehicle not found")
     # Hard delete — VehicleDriver cascades, VehicleExpense sets vehicle_id NULL

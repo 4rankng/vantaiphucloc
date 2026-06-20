@@ -93,7 +93,7 @@ class SqlUserRepository(UserRepository):
         exclude_role: UserRole | None,
         search: str | None = None,
         sort_by: str | None = None,
-        sort_order: str = 'asc',
+        sort_order: str = "asc",
     ) -> tuple[Sequence[User], int]:
         q = select(UserORM)
         cq = select(func.count(UserORM.id))
@@ -105,6 +105,7 @@ class SqlUserRepository(UserRepository):
             cq = cq.where(UserORM.role != exclude_role.value)
         if search:
             from app.core.vi_search import vi_ilike
+
             search_cond = or_(
                 vi_ilike(UserORM.username, search),
                 vi_ilike(UserORM.full_name, search),
@@ -115,14 +116,14 @@ class SqlUserRepository(UserRepository):
             q = q.where(search_cond)
             cq = cq.where(search_cond)
         _SORTABLE = {
-            'username': UserORM.username,
-            'full_name': UserORM.full_name,
-            'role': UserORM.role,
-            'phone': UserORM.phone,
+            "username": UserORM.username,
+            "full_name": UserORM.full_name,
+            "role": UserORM.role,
+            "phone": UserORM.phone,
         }
-        sort_col = _SORTABLE.get(sort_by or '')
+        sort_col = _SORTABLE.get(sort_by or "")
         if sort_col is not None:
-            order_expr = sort_col.asc() if sort_order == 'asc' else sort_col.desc()
+            order_expr = sort_col.asc() if sort_order == "asc" else sort_col.desc()
             q = q.order_by(order_expr, UserORM.id.asc())
         else:
             q = q.order_by(UserORM.username.asc())
@@ -188,9 +189,7 @@ class SqlPushSubscriptionRepository(PushSubscriptionRepository):
         if sub.id is None:
             return await self.add(sub)
         result = await self._session.execute(
-            select(PushSubscriptionORM).where(
-                PushSubscriptionORM.id == int(sub.id)
-            )
+            select(PushSubscriptionORM).where(PushSubscriptionORM.id == int(sub.id))
         )
         orm = result.scalar_one_or_none()
         if orm is None:

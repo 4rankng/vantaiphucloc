@@ -21,8 +21,10 @@ engine = create_async_engine(
 
 logger.info(
     "DB pool: size=%d overflow=%d timeout=%ds recycle=%ds",
-    settings.DB_POOL_SIZE, settings.DB_MAX_OVERFLOW,
-    settings.DB_POOL_TIMEOUT, settings.DB_POOL_RECYCLE,
+    settings.DB_POOL_SIZE,
+    settings.DB_MAX_OVERFLOW,
+    settings.DB_POOL_TIMEOUT,
+    settings.DB_POOL_RECYCLE,
 )
 
 

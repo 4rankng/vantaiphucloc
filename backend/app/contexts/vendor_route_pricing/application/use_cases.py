@@ -1,4 +1,5 @@
 """Vendor Route Pricing use cases (CRUD)."""
+
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,7 +59,9 @@ class ListVendorRoutePricings:
 
 
 class CreateVendorRoutePricing:
-    def __init__(self, repo: VendorRoutePricingRepository, session: AsyncSession) -> None:
+    def __init__(
+        self, repo: VendorRoutePricingRepository, session: AsyncSession
+    ) -> None:
         self.repo = repo
         self.session = session
 
@@ -96,7 +99,9 @@ class CreateVendorRoutePricing:
 
 
 class UpdateVendorRoutePricing:
-    def __init__(self, repo: VendorRoutePricingRepository, session: AsyncSession) -> None:
+    def __init__(
+        self, repo: VendorRoutePricingRepository, session: AsyncSession
+    ) -> None:
         self.repo = repo
         self.session = session
 
@@ -128,7 +133,9 @@ class UpdateVendorRoutePricing:
 
 
 class DeleteVendorRoutePricing:
-    def __init__(self, repo: VendorRoutePricingRepository, session: AsyncSession) -> None:
+    def __init__(
+        self, repo: VendorRoutePricingRepository, session: AsyncSession
+    ) -> None:
         self.repo = repo
         self.session = session
 

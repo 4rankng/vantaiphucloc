@@ -42,9 +42,11 @@ class SqlBookedTripRepository(BookedTripRepository):
         return booked_trip_to_domain(orm)
 
     async def get_by_id(self, tid: BookedTripId) -> BookedTrip | None:
-        orm = (await self.session.execute(
-            select(BookedTripORM).where(BookedTripORM.id == int(tid))
-        )).scalar_one_or_none()
+        orm = (
+            await self.session.execute(
+                select(BookedTripORM).where(BookedTripORM.id == int(tid))
+            )
+        ).scalar_one_or_none()
         return await self._hydrate(orm) if orm else None
 
     async def list(
@@ -63,9 +65,10 @@ class SqlBookedTripRepository(BookedTripRepository):
             q = q.where(BookedTripORM.trip_date >= trip_date_from)
         if trip_date_to is not None:
             q = q.where(BookedTripORM.trip_date <= trip_date_to)
-        total = await self.session.scalar(
-            select(func.count()).select_from(q.subquery())
-        ) or 0
+        total = (
+            await self.session.scalar(select(func.count()).select_from(q.subquery()))
+            or 0
+        )
         q = q.order_by(BookedTripORM.id.desc()).offset(offset).limit(limit)
         rows = list((await self.session.execute(q)).scalars().all())
         items = [await self._hydrate(r) for r in rows]
@@ -97,17 +100,21 @@ class SqlBookedTripRepository(BookedTripRepository):
         return await self._hydrate(orm)
 
     async def save(self, t: BookedTrip) -> BookedTrip:
-        existing = (await self.session.execute(
-            select(BookedTripORM).where(BookedTripORM.id == int(t.id))
-        )).scalar_one()
+        existing = (
+            await self.session.execute(
+                select(BookedTripORM).where(BookedTripORM.id == int(t.id))
+            )
+        ).scalar_one()
         booked_trip_to_orm(t, existing)
         await self.session.flush()
         return await self._hydrate(existing)
 
     async def delete(self, tid: BookedTripId) -> None:
-        orm = (await self.session.execute(
-            select(BookedTripORM).where(BookedTripORM.id == int(tid))
-        )).scalar_one_or_none()
+        orm = (
+            await self.session.execute(
+                select(BookedTripORM).where(BookedTripORM.id == int(tid))
+            )
+        ).scalar_one_or_none()
         if orm is None:
             return
         await self.session.delete(orm)
@@ -125,9 +132,11 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         return delivered_trip_to_domain(orm)
 
     async def get_by_id(self, wid: DeliveredTripId) -> DeliveredTrip | None:
-        orm = (await self.session.execute(
-            select(DeliveredTripORM).where(DeliveredTripORM.id == int(wid))
-        )).scalar_one_or_none()
+        orm = (
+            await self.session.execute(
+                select(DeliveredTripORM).where(DeliveredTripORM.id == int(wid))
+            )
+        ).scalar_one_or_none()
         return await self._hydrate(orm) if orm else None
 
     async def list(
@@ -142,10 +151,11 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         date_to: date | None = None,
         matched: bool | None = None,
         sort_by: str | None = None,
-        sort_order: str = 'desc',
+        sort_order: str = "desc",
         search: str | None = None,
     ) -> tuple[Sequence[DeliveredTrip], int]:
         from app.models.domain import Client as ClientORM
+
         q = select(DeliveredTripORM).options(
             selectinload(DeliveredTripORM.client),
             selectinload(DeliveredTripORM.pickup_location),
@@ -163,6 +173,7 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
             from sqlalchemy import exists
             from app.core.vi_search import vi_ilike
             from app.models.domain import Location as LocationORM
+
             client_exists = exists().where(
                 ClientORM.id == DeliveredTripORM.client_id,
                 or_(
@@ -178,52 +189,70 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
                 LocationORM.id == DeliveredTripORM.dropoff_location_id,
                 vi_ilike(LocationORM.name, search),
             )
-            q = q.where(or_(
-                vi_ilike(DeliveredTripORM.vessel, search),
-                vi_ilike(DeliveredTripORM.cont_number, search),
-                vi_ilike(DeliveredTripORM.work_type, search),
-                client_exists,
-                pickup_exists,
-                dropoff_exists,
-            ))
+            q = q.where(
+                or_(
+                    vi_ilike(DeliveredTripORM.vessel, search),
+                    vi_ilike(DeliveredTripORM.cont_number, search),
+                    vi_ilike(DeliveredTripORM.work_type, search),
+                    client_exists,
+                    pickup_exists,
+                    dropoff_exists,
+                )
+            )
         if date_from is not None:
             q = q.where(
-                (DeliveredTripORM.trip_date >= date_from) |
-                ((DeliveredTripORM.trip_date == None) & (DeliveredTripORM.created_at >= date_from))  # noqa: E711
+                (DeliveredTripORM.trip_date >= date_from)
+                | (
+                    (DeliveredTripORM.trip_date == None)  # noqa: E711
+                    & (DeliveredTripORM.created_at >= date_from)
+                )
             )
         if date_to is not None:
             q = q.where(
-                (DeliveredTripORM.trip_date <= date_to) |
-                ((DeliveredTripORM.trip_date == None) & (DeliveredTripORM.created_at <= date_to))  # noqa: E711
+                (DeliveredTripORM.trip_date <= date_to)
+                | (
+                    (DeliveredTripORM.trip_date == None)  # noqa: E711
+                    & (DeliveredTripORM.created_at <= date_to)
+                )
             )
         if matched is not None:
             if matched:
                 q = q.where(DeliveredTripORM.booked_trip_id.isnot(None))
             else:
                 q = q.where(DeliveredTripORM.booked_trip_id.is_(None))
-        total = await self.session.scalar(
-            select(func.count()).select_from(q.subquery())
-        ) or 0
+        total = (
+            await self.session.scalar(select(func.count()).select_from(q.subquery()))
+            or 0
+        )
         # Dynamic sort
         _SORTABLE_DIRECT = {
-            'trip_date': DeliveredTripORM.trip_date,
-            'vessel': DeliveredTripORM.vessel,
-            'matched': DeliveredTripORM.booked_trip_id,
-            'revenue': DeliveredTripORM.revenue,
-            'created_at': DeliveredTripORM.created_at,
-            'cont_number': DeliveredTripORM.cont_number,
-            'cont_type': DeliveredTripORM.cont_type,
-            'work_type': DeliveredTripORM.work_type,
+            "trip_date": DeliveredTripORM.trip_date,
+            "vessel": DeliveredTripORM.vessel,
+            "matched": DeliveredTripORM.booked_trip_id,
+            "revenue": DeliveredTripORM.revenue,
+            "created_at": DeliveredTripORM.created_at,
+            "cont_number": DeliveredTripORM.cont_number,
+            "cont_type": DeliveredTripORM.cont_type,
+            "work_type": DeliveredTripORM.work_type,
         }
-        sort_col = _SORTABLE_DIRECT.get(sort_by or '') if sort_by else None
+        sort_col = _SORTABLE_DIRECT.get(sort_by or "") if sort_by else None
 
         if sort_col is None and sort_by:
             from app.models.domain import Client as ClientORM, Location as LocationORM
+
             _JOIN_SORTS = {
-                'client_code': (ClientORM, DeliveredTripORM.client_id, 'code'),
-                'vehicle_plate': (None, DeliveredTripORM.vehicle_plate, None),
-                'pickup_name': (LocationORM, DeliveredTripORM.pickup_location_id, 'name'),
-                'dropoff_name': (LocationORM, DeliveredTripORM.dropoff_location_id, 'name'),
+                "client_code": (ClientORM, DeliveredTripORM.client_id, "code"),
+                "vehicle_plate": (None, DeliveredTripORM.vehicle_plate, None),
+                "pickup_name": (
+                    LocationORM,
+                    DeliveredTripORM.pickup_location_id,
+                    "name",
+                ),
+                "dropoff_name": (
+                    LocationORM,
+                    DeliveredTripORM.dropoff_location_id,
+                    "name",
+                ),
             }
             join_spec = _JOIN_SORTS.get(sort_by)
             if join_spec:
@@ -232,7 +261,7 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
                 sort_col = getattr(model, attr_name)
 
         if sort_col is not None:
-            order_expr = sort_col.asc() if sort_order == 'asc' else sort_col.desc()
+            order_expr = sort_col.asc() if sort_order == "asc" else sort_col.desc()
             q = q.order_by(order_expr, DeliveredTripORM.id.desc())
         else:
             q = q.order_by(DeliveredTripORM.id.desc())
@@ -246,17 +275,23 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
     ) -> Sequence[DeliveredTrip]:
         if not ids:
             return []
-        rows = list((await self.session.execute(
-            select(DeliveredTripORM)
-            .options(
-                selectinload(DeliveredTripORM.client),
-                selectinload(DeliveredTripORM.pickup_location),
-                selectinload(DeliveredTripORM.dropoff_location),
-                selectinload(DeliveredTripORM.driver),
-                selectinload(DeliveredTripORM.vendor),
+        rows = list(
+            (
+                await self.session.execute(
+                    select(DeliveredTripORM)
+                    .options(
+                        selectinload(DeliveredTripORM.client),
+                        selectinload(DeliveredTripORM.pickup_location),
+                        selectinload(DeliveredTripORM.dropoff_location),
+                        selectinload(DeliveredTripORM.driver),
+                        selectinload(DeliveredTripORM.vendor),
+                    )
+                    .where(DeliveredTripORM.id.in_([int(i) for i in ids]))
+                )
             )
-            .where(DeliveredTripORM.id.in_([int(i) for i in ids]))
-        )).scalars().all())
+            .scalars()
+            .all()
+        )
         return [await self._hydrate(r) for r in rows]
 
     async def find_duplicate_containers(
@@ -321,7 +356,9 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
             trips_q = trips_q.where(DeliveredTripORM.driver_id == driver_id)
 
         buckets: dict[str, list[tuple]] = defaultdict(list)
-        for raw, trip_id, trip_date, trip_driver_id in (await self.session.execute(trips_q)).all():
+        for raw, trip_id, trip_date, trip_driver_id in (
+            await self.session.execute(trips_q)
+        ).all():
             key = (raw or "").strip().lower()
             if not key:
                 continue
@@ -338,13 +375,17 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
                 (r.strip() for r, _, _, _ in items if r and r.strip()),
                 key.upper(),
             )
-            groups.append(DuplicateContainerGroup(
-                cont_number=display_cont,
-                count=len(items),
-                trip_ids=[int(i) for _, i, _, _ in items],
-                trip_dates=[d for _, _, d, _ in items],
-                driver_ids=[dr if dr is not None else None for _, _, _, dr in items],
-            ))
+            groups.append(
+                DuplicateContainerGroup(
+                    cont_number=display_cont,
+                    count=len(items),
+                    trip_ids=[int(i) for _, i, _, _ in items],
+                    trip_dates=[d for _, _, d, _ in items],
+                    driver_ids=[
+                        dr if dr is not None else None for _, _, _, dr in items
+                    ],
+                )
+            )
         groups.sort(key=lambda g: (-g.count, g.cont_number))
         return groups
 
@@ -464,17 +505,21 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         return await self._hydrate(orm)
 
     async def save(self, w: DeliveredTrip) -> DeliveredTrip:
-        existing = (await self.session.execute(
-            select(DeliveredTripORM).where(DeliveredTripORM.id == int(w.id))
-        )).scalar_one()
+        existing = (
+            await self.session.execute(
+                select(DeliveredTripORM).where(DeliveredTripORM.id == int(w.id))
+            )
+        ).scalar_one()
         delivered_trip_to_orm(w, existing)
         await self.session.flush()
         return await self._hydrate(existing)
 
     async def delete(self, wid: DeliveredTripId) -> None:
-        orm = (await self.session.execute(
-            select(DeliveredTripORM).where(DeliveredTripORM.id == int(wid))
-        )).scalar_one_or_none()
+        orm = (
+            await self.session.execute(
+                select(DeliveredTripORM).where(DeliveredTripORM.id == int(wid))
+            )
+        ).scalar_one_or_none()
         if orm is None:
             return
         await self.session.delete(orm)
@@ -524,7 +569,9 @@ class MappingProfileRepository:
                 MappingProfile.header_signature == header_signature,
                 MappingProfile.is_active == True,  # noqa: E712
             )
-            .order_by(MappingProfile.use_count.desc(), MappingProfile.last_used_at.desc())
+            .order_by(
+                MappingProfile.use_count.desc(), MappingProfile.last_used_at.desc()
+            )
         )
         result = await self.session.execute(stmt)
         return result.scalars().first()

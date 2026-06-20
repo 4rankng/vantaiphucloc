@@ -31,10 +31,29 @@ def set_request_id(value: str | None) -> None:
 
 
 _RESERVED_RECORD_KEYS = {
-    "name", "msg", "args", "levelname", "levelno", "pathname", "filename",
-    "module", "exc_info", "exc_text", "stack_info", "lineno", "funcName",
-    "created", "msecs", "relativeCreated", "thread", "threadName",
-    "processName", "process", "asctime", "message", "taskName",
+    "name",
+    "msg",
+    "args",
+    "levelname",
+    "levelno",
+    "pathname",
+    "filename",
+    "module",
+    "exc_info",
+    "exc_text",
+    "stack_info",
+    "lineno",
+    "funcName",
+    "created",
+    "msecs",
+    "relativeCreated",
+    "thread",
+    "threadName",
+    "processName",
+    "process",
+    "asctime",
+    "message",
+    "taskName",
 }
 
 
@@ -44,7 +63,7 @@ class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
             "ts": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(record.created))
-                  + f".{int(record.msecs):03d}Z",
+            + f".{int(record.msecs):03d}Z",
             "level": record.levelname,
             "logger": record.name,
             "msg": record.getMessage(),
@@ -56,6 +75,7 @@ class JsonFormatter(logging.Formatter):
 
         try:
             from app.core.audit_context import get_audit_user_id
+
             user_id = get_audit_user_id()
             if user_id is not None:
                 payload["user_id"] = user_id
@@ -83,9 +103,9 @@ def configure_logging() -> None:
     if log_format == "json":
         handler.setFormatter(JsonFormatter())
     else:
-        handler.setFormatter(logging.Formatter(
-            "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-        ))
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+        )
 
     root = logging.getLogger()
     root.handlers = [handler]

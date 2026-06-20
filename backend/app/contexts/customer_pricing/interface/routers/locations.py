@@ -4,7 +4,16 @@ from __future__ import annotations
 
 import math
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, File, UploadFile, Body
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Response,
+    File,
+    UploadFile,
+    Body,
+)
 from pydantic import BaseModel
 from redis.asyncio import Redis
 from sqlalchemy import select
@@ -131,7 +140,9 @@ async def update_location(
     redis: Redis = Depends(get_redis),
 ):
     try:
-        loc = await use_case(LocationId(location_id), LocationUpdateInput(name=body.name))
+        loc = await use_case(
+            LocationId(location_id), LocationUpdateInput(name=body.name)
+        )
     except NotFound as e:
         raise translate(e)
     await CacheManager(redis).invalidate_namespace("locations")
@@ -175,7 +186,8 @@ def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     dlng = math.radians(lng2 - lng1)
     a = (
         math.sin(dlat / 2) ** 2
-        + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
         * math.sin(dlng / 2) ** 2
     )
     return 2 * R * math.asin(math.sqrt(a))
@@ -211,9 +223,9 @@ async def nearby_locations(
     """
     pinned_ids: list[int] = []
     if trip_id is not None:
-        trip = (await db.execute(
-            select(BookedTrip).where(BookedTrip.id == trip_id)
-        )).scalar_one_or_none()
+        trip = (
+            await db.execute(select(BookedTrip).where(BookedTrip.id == trip_id))
+        ).scalar_one_or_none()
         if trip is not None:
             if trip.pickup_location_id:
                 pinned_ids.append(trip.pickup_location_id)
@@ -253,7 +265,12 @@ async def nearby_locations(
     for loc in locations:
         if loc.id in excluded:
             continue
-        if loc.lat is not None and loc.lng is not None and lat is not None and lng is not None:
+        if (
+            loc.lat is not None
+            and loc.lng is not None
+            and lat is not None
+            and lng is not None
+        ):
             d = _haversine_km(lat, lng, float(loc.lat), float(loc.lng))
             if d <= radius_km:
                 coord_rows.append((loc, d))
@@ -274,7 +291,12 @@ async def nearby_locations(
     out: list[LocationNearbyOut] = []
     for loc in pinned_locs:
         d = None
-        if loc.lat is not None and loc.lng is not None and lat is not None and lng is not None:
+        if (
+            loc.lat is not None
+            and loc.lng is not None
+            and lat is not None
+            and lng is not None
+        ):
             d = _haversine_km(lat, lng, float(loc.lat), float(loc.lng))
         out.append(_to_out(loc, d))
     for loc, d in coord_rows:
@@ -294,12 +316,14 @@ async def pin_driver_location(
     `Location` with the driver's GPS coords, marks `geocode_source =
     "driver_pin"` and `pending_geocode = false`. Idempotent on `name`.
     """
-    loc = await use_case(LocationPinInput(
-        name=body.name,
-        lat=body.lat,
-        lng=body.lng,
-        user_id=current_user.id,
-    ))
+    loc = await use_case(
+        LocationPinInput(
+            name=body.name,
+            lat=body.lat,
+            lng=body.lng,
+            user_id=current_user.id,
+        )
+    )
     return location_to_out(loc)
 
 
@@ -364,7 +388,10 @@ async def preview_location_import(
     return LocationImportPreviewResponse(
         filename=result.filename,
         sheet_name=result.sheet_name,
-        rows=[LocationImportPreviewRow(name=r.name, row=r.row, column=r.column) for r in result.rows],
+        rows=[
+            LocationImportPreviewRow(name=r.name, row=r.row, column=r.column)
+            for r in result.rows
+        ],
         total_count=result.total_count,
         duplicate_names=result.duplicate_names,
         already_exist=result.already_exist,

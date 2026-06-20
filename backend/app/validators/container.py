@@ -10,7 +10,9 @@ def validate_container_quantity(work_type: str, quantity: int) -> None:
     - 20ft containers (E20, F20): quantity can be 1 or 2
     """
     if quantity < 1:
-        raise HTTPException(status_code=422, detail="Container quantity must be at least 1")
+        raise HTTPException(
+            status_code=422, detail="Container quantity must be at least 1"
+        )
 
     if work_type.endswith("40") and quantity > 1:
         raise HTTPException(
@@ -31,7 +33,7 @@ def validate_same_work_type(containers: list) -> None:
         return
     types = set()
     for c in containers:
-        wt = c.work_type if hasattr(c, 'work_type') else c.get('work_type', '')
+        wt = c.work_type if hasattr(c, "work_type") else c.get("work_type", "")
         if wt:
             types.add(wt)
     if len(types) > 1:

@@ -19,7 +19,6 @@ import {
   useVehicles,
 } from '@/hooks/use-queries'
 import { useMonthParams } from './use-month-params'
-import { formatCurrency } from '@/data/domain'
 import type { VehicleExpenseCategory } from '@/services/api/vehicleExpenses.api'
 import { EXPENSE_CATEGORY_LABELS } from '@/services/api/vehicleExpenses.api'
 import { fuzzyMatch } from '@/lib/search-utils'

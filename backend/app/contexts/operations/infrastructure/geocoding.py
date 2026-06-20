@@ -24,14 +24,21 @@ async def reverse_geocode(redis, lat: float, lng: float) -> str | None:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
                 NOMINATIM_URL,
-                params={"lat": str(lat), "lon": str(lng), "format": "json", "accept-language": "vi"},
+                params={
+                    "lat": str(lat),
+                    "lon": str(lng),
+                    "format": "json",
+                    "accept-language": "vi",
+                },
                 headers={"User-Agent": "VantaiPhucLoc/1.0"},
                 timeout=10.0,
             )
             resp.raise_for_status()
             address = resp.json().get("display_name")
     except Exception:
-        logger.warning("Nominatim reverse-geocode failed for %.4f,%.4f", lat, lng, exc_info=True)
+        logger.warning(
+            "Nominatim reverse-geocode failed for %.4f,%.4f", lat, lng, exc_info=True
+        )
         return None
 
     if not address:

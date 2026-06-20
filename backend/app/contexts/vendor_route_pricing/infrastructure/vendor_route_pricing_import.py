@@ -4,6 +4,7 @@ Scans any sheet for a header row containing NHÀ THẦU, ĐIỂM ĐI, ĐIỂM Đ
 at least one price column (F20/F40/E20/E40), and optionally TÁC NGHIỆP.
 Returns parsed rows ready for vendor/location matching.
 """
+
 from __future__ import annotations
 
 from io import BytesIO
@@ -24,12 +25,38 @@ from app.models.domain import VendorRoutePricing as VendorRoutePricingORM
 
 
 _VENDOR_HEADER_NAMES = {
-    "nhà thầu", "nha thau", "nhà xe", "nha xe",
-    "nhà xe ngoài", "nha xe ngoai", "nhà thầu/nhà xe",
-    "nhà vận chuyển", "nha van chuyen", "vendor", "nhà tc",
+    "nhà thầu",
+    "nha thau",
+    "nhà xe",
+    "nha xe",
+    "nhà xe ngoài",
+    "nha xe ngoai",
+    "nhà thầu/nhà xe",
+    "nhà vận chuyển",
+    "nha van chuyen",
+    "vendor",
+    "nhà tc",
 }
-_LOCATION_PICKUP_NAMES = {"điểm đi", "diem di", "đi", "nơi đi", "noi di", "from", "bến đi", "ben di"}
-_LOCATION_DROPOFF_NAMES = {"điểm đến", "diem den", "đến", "nơi đến", "noi den", "to", "bến đến", "ben den"}
+_LOCATION_PICKUP_NAMES = {
+    "điểm đi",
+    "diem di",
+    "đi",
+    "nơi đi",
+    "noi di",
+    "from",
+    "bến đi",
+    "ben di",
+}
+_LOCATION_DROPOFF_NAMES = {
+    "điểm đến",
+    "diem den",
+    "đến",
+    "nơi đến",
+    "noi den",
+    "to",
+    "bến đến",
+    "ben den",
+}
 _PRICE_COLS = {"f20", "f40", "e20", "e40", "20ft", "40ft", "cont 20", "cont 40"}
 
 
@@ -74,7 +101,10 @@ def _parse_int_price(val: Any) -> int | None:
 
 
 def _normalize_work_type(raw: str) -> str | None:
-    from app.contexts.operations.infrastructure.operation_type_resolver import normalize_operation_type
+    from app.contexts.operations.infrastructure.operation_type_resolver import (
+        normalize_operation_type,
+    )
+
     cleaned = normalize_operation_type(raw)
     for valid in get_valid_work_types():
         if cleaned == normalize_operation_type(valid):
@@ -154,9 +184,15 @@ def parse_vendor_route_pricing_bytes(content: bytes) -> dict:
             if _is_aggregate_row(row):
                 continue
 
-            vendor_raw = str(row[vendor_col] or "").strip() if vendor_col is not None else ""
-            pickup_raw = str(row[pickup_col] or "").strip() if pickup_col is not None else ""
-            dropoff_raw = str(row[dropoff_col] or "").strip() if dropoff_col is not None else ""
+            vendor_raw = (
+                str(row[vendor_col] or "").strip() if vendor_col is not None else ""
+            )
+            pickup_raw = (
+                str(row[pickup_col] or "").strip() if pickup_col is not None else ""
+            )
+            dropoff_raw = (
+                str(row[dropoff_col] or "").strip() if dropoff_col is not None else ""
+            )
 
             if not vendor_raw or not pickup_raw:
                 continue
@@ -170,17 +206,27 @@ def parse_vendor_route_pricing_bytes(content: bytes) -> dict:
                 else:
                     missing_wt += 1
 
-            parsed.append({
-                "vendor_raw": vendor_raw,
-                "pickup_raw": pickup_raw,
-                "dropoff_raw": dropoff_raw,
-                "work_type": work_type,
-                "f20_price": _parse_int_price(row[f20_col] if f20_col is not None else None),
-                "f40_price": _parse_int_price(row[f40_col] if f40_col is not None else None),
-                "e20_price": _parse_int_price(row[e20_col] if e20_col is not None else None),
-                "e40_price": _parse_int_price(row[e40_col] if e40_col is not None else None),
-                "row_index": ridx,
-            })
+            parsed.append(
+                {
+                    "vendor_raw": vendor_raw,
+                    "pickup_raw": pickup_raw,
+                    "dropoff_raw": dropoff_raw,
+                    "work_type": work_type,
+                    "f20_price": _parse_int_price(
+                        row[f20_col] if f20_col is not None else None
+                    ),
+                    "f40_price": _parse_int_price(
+                        row[f40_col] if f40_col is not None else None
+                    ),
+                    "e20_price": _parse_int_price(
+                        row[e20_col] if e20_col is not None else None
+                    ),
+                    "e40_price": _parse_int_price(
+                        row[e40_col] if e40_col is not None else None
+                    ),
+                    "row_index": ridx,
+                }
+            )
 
         wb.close()
         return {
@@ -198,18 +244,23 @@ def parse_vendor_route_pricing_bytes(content: bytes) -> dict:
     return {
         "sheet_name": "",
         "rows": [],
-        "warnings": ["Không tìm thấy sheet chứa bảng cước trả xe ngoài. Cần có cột: NHÀ THẦU, ĐIỂM ĐI, ĐIỂM ĐẾN, và ít nhất 1 cột giá (F20/F40/E20/E40)."],
+        "warnings": [
+            "Không tìm thấy sheet chứa bảng cước trả xe ngoài. Cần có cột: NHÀ THẦU, ĐIỂM ĐI, ĐIỂM ĐẾN, và ít nhất 1 cột giá (F20/F40/E20/E40)."
+        ],
         "stats": {"total": 0, "has_work_type": 0, "missing_work_type": 0},
     }
 
 
-def _find_vendor(raw_lower: str, vendor_by_code: dict, vendor_by_name: dict) -> Vendor | None:
+def _find_vendor(
+    raw_lower: str, vendor_by_code: dict, vendor_by_name: dict
+) -> Vendor | None:
     """Exact match by code, then exact match by name, then fuzzy match by name."""
     vendor = vendor_by_code.get(raw_lower)
     if vendor is None:
         vendor = vendor_by_name.get(raw_lower)
     if vendor is None:
         from app.utils.fuzzy import fuzzy_match_name
+
         vendor = fuzzy_match_name(raw_lower, vendor_by_name, threshold=0.85)
     return vendor
 
@@ -219,9 +270,7 @@ async def preview_with_matching(db: AsyncSession, content: bytes) -> dict:
     if not parsed["rows"]:
         return parsed
 
-    all_vendors = list((await db.execute(
-        select(Vendor)
-    )).scalars().all())
+    all_vendors = list((await db.execute(select(Vendor))).scalars().all())
 
     vendor_by_code: dict[str, Vendor] = {}
     vendor_by_name: dict[str, Vendor] = {}
@@ -294,9 +343,7 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
 
     resolver = LocationResolverService(db)
 
-    all_vendors = list((await db.execute(
-        select(Vendor)
-    )).scalars().all())
+    all_vendors = list((await db.execute(select(Vendor))).scalars().all())
     vendor_by_code: dict[str, Vendor] = {}
     vendor_by_name: dict[str, Vendor] = {}
     for v in all_vendors:
@@ -326,9 +373,9 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
             async with db.begin_nested():
                 await db.flush()
         except IntegrityError:
-            row = (await db.execute(
-                select(Vendor).where(Vendor.name == raw_stripped)
-            )).scalar_one_or_none()
+            row = (
+                await db.execute(select(Vendor).where(Vendor.name == raw_stripped))
+            ).scalar_one_or_none()
             if row is None:
                 raise
             new_vendor = row
@@ -348,7 +395,9 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
             return location_cache[key]
 
         result = await resolver.resolve_or_create(
-            raw_stripped, source=ResolverSource.IMPORT, user_id=None,
+            raw_stripped,
+            source=ResolverSource.IMPORT,
+            user_id=None,
         )
         loc = result.location
         if loc is None:
@@ -379,15 +428,17 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
             skipped += 1
             continue
 
-        existing = (await db.execute(
-            select(VendorRoutePricingORM).where(
-                VendorRoutePricingORM.vendor_id == vendor_id,
-                VendorRoutePricingORM.pickup_location_id == pickup_id,
-                VendorRoutePricingORM.dropoff_location_id == dropoff_id,
-                VendorRoutePricingORM.work_type == work_type,
-                VendorRoutePricingORM.is_active.is_(True),
+        existing = (
+            await db.execute(
+                select(VendorRoutePricingORM).where(
+                    VendorRoutePricingORM.vendor_id == vendor_id,
+                    VendorRoutePricingORM.pickup_location_id == pickup_id,
+                    VendorRoutePricingORM.dropoff_location_id == dropoff_id,
+                    VendorRoutePricingORM.work_type == work_type,
+                    VendorRoutePricingORM.is_active.is_(True),
+                )
             )
-        )).scalar_one_or_none()
+        ).scalar_one_or_none()
 
         if existing:
             changed = False
@@ -404,17 +455,19 @@ async def commit_import_rows(db: AsyncSession, rows: list[dict]) -> dict:
             updated += 1 if changed else 0
             skipped += 1 if not changed else 0
         else:
-            db.add(VendorRoutePricingORM(
-                vendor_id=vendor_id,
-                pickup_location_id=pickup_id,
-                dropoff_location_id=dropoff_id,
-                work_type=work_type,
-                f20_price=r.get("f20_price"),
-                f40_price=r.get("f40_price"),
-                e20_price=r.get("e20_price"),
-                e40_price=r.get("e40_price"),
-                is_active=True,
-            ))
+            db.add(
+                VendorRoutePricingORM(
+                    vendor_id=vendor_id,
+                    pickup_location_id=pickup_id,
+                    dropoff_location_id=dropoff_id,
+                    work_type=work_type,
+                    f20_price=r.get("f20_price"),
+                    f40_price=r.get("f40_price"),
+                    e20_price=r.get("e20_price"),
+                    e40_price=r.get("e40_price"),
+                    is_active=True,
+                )
+            )
             created += 1
 
     await db.commit()

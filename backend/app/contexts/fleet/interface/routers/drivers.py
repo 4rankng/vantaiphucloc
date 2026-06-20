@@ -22,7 +22,11 @@ from app.contexts.fleet.interface.dependencies import (
     get_list_drivers,
 )
 from app.contexts.identity.interface.dependencies import get_password_hasher
-from app.contexts.fleet.interface.schemas import DriverCreateIn, DriverOut, DriverResetPasswordIn
+from app.contexts.fleet.interface.schemas import (
+    DriverCreateIn,
+    DriverOut,
+    DriverResetPasswordIn,
+)
 from app.models.vehicle_helpers import (
     deactivate_existing_assignments,
     ensure_vehicle,
@@ -52,16 +56,20 @@ def _to_out(d: DriverDTO, plate: str | None = None) -> DriverOut:
     )
 
 
-_VALID_DRIVER_SORT = {'username', 'full_name', 'phone'}
+_VALID_DRIVER_SORT = {"username", "full_name", "phone"}
 
 
 @router.get("/drivers", response_model=PaginatedResponse[DriverOut])
 async def list_drivers(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=1000),
-    search: str | None = Query(None, description="Search by username, full name, phone"),
-    sort_by: str | None = Query(None, description="Sort column: username | full_name | phone"),
-    sort_order: str = Query('asc', pattern='^(asc|desc)$'),
+    search: str | None = Query(
+        None, description="Search by username, full name, phone"
+    ),
+    sort_by: str | None = Query(
+        None, description="Sort column: username | full_name | phone"
+    ),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     _current_user: User = Depends(get_current_user),
     use_case: ListDrivers = Depends(get_list_drivers),
     redis: Redis = Depends(get_redis),
@@ -138,12 +146,14 @@ async def create_driver(
         plate = body.plate.strip().upper()
         vehicle = await ensure_vehicle(db, plate)
         await deactivate_existing_assignments(db, dto.id)
-        db.add(VehicleDriver(
-            vehicle_id=vehicle.id,
-            driver_id=dto.id,
-            effective_from=_date.today(),
-            is_active=True,
-        ))
+        db.add(
+            VehicleDriver(
+                vehicle_id=vehicle.id,
+                driver_id=dto.id,
+                effective_from=_date.today(),
+                is_active=True,
+            )
+        )
         assigned_plate = plate
 
     await CacheManager(redis).invalidate_namespace("drivers")
@@ -175,9 +185,11 @@ async def update_driver(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    user = (await db.execute(
-        select(User).where(User.id == driver_id, User.role == "driver")
-    )).scalar_one_or_none()
+    user = (
+        await db.execute(
+            select(User).where(User.id == driver_id, User.role == "driver")
+        )
+    ).scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="Driver not found")
 
@@ -230,22 +242,28 @@ async def set_driver_vehicle(
 
     from fastapi import HTTPException
 
-    user = (await db.execute(
-        select(User).where(User.id == driver_id, User.role == "driver")
-    )).scalar_one_or_none()
+    user = (
+        await db.execute(
+            select(User).where(User.id == driver_id, User.role == "driver")
+        )
+    ).scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="Driver not found")
 
     plate = body.plate.strip().upper()
     vehicle = await ensure_vehicle(db, plate)
     await deactivate_existing_assignments(db, driver_id)
-    await db.execute(update(Vehicle).where(Vehicle.id == vehicle.id).values(driver_id=driver_id))
-    db.add(VehicleDriver(
-        vehicle_id=vehicle.id,
-        driver_id=driver_id,
-        effective_from=_date.today(),
-        is_active=True,
-    ))
+    await db.execute(
+        update(Vehicle).where(Vehicle.id == vehicle.id).values(driver_id=driver_id)
+    )
+    db.add(
+        VehicleDriver(
+            vehicle_id=vehicle.id,
+            driver_id=driver_id,
+            effective_from=_date.today(),
+            is_active=True,
+        )
+    )
     await db.commit()
 
     await CacheManager(redis).invalidate_namespace("drivers")
@@ -270,9 +288,11 @@ async def reset_driver_password(
 ):
     from fastapi import HTTPException
 
-    user = (await db.execute(
-        select(User).where(User.id == driver_id, User.role == "driver")
-    )).scalar_one_or_none()
+    user = (
+        await db.execute(
+            select(User).where(User.id == driver_id, User.role == "driver")
+        )
+    ).scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="Driver not found")
 
@@ -288,20 +308,31 @@ async def delete_driver(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    user = (await db.execute(
-        select(User).where(User.id == driver_id, User.role == "driver")
-    )).scalar_one_or_none()
+    user = (
+        await db.execute(
+            select(User).where(User.id == driver_id, User.role == "driver")
+        )
+    ).scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="Driver not found")
     # Null out FK references that don't cascade
-    await db.execute(update(Vehicle).where(Vehicle.driver_id == driver_id).values(driver_id=None))
-    await db.execute(update(DeliveredTrip).where(DeliveredTrip.driver_id == driver_id).values(driver_id=None))
+    await db.execute(
+        update(Vehicle).where(Vehicle.driver_id == driver_id).values(driver_id=None)
+    )
+    await db.execute(
+        update(DeliveredTrip)
+        .where(DeliveredTrip.driver_id == driver_id)
+        .values(driver_id=None)
+    )
     # Hard delete — VehicleDriver, DriverSalaryConfig, DriverSalary cascade via ondelete="CASCADE"
     try:
         await db.delete(user)
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(status_code=409, detail="Cannot delete driver: associated data prevents deletion. Please ensure the driver has no active work orders, locations, or expenses created.")
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete driver: associated data prevents deletion. Please ensure the driver has no active work orders, locations, or expenses created.",
+        )
     await CacheManager(redis).invalidate_namespace("drivers")
     return None

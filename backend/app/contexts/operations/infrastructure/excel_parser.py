@@ -19,15 +19,82 @@ from app.utils.iso6346 import normalize_container_number
 _logger = logging.getLogger(__name__)
 
 _HEADER_PATTERNS: dict[str, list[str]] = {
-    "container": ["container", "cont", "số cont", "so cont", "số container", "container no", "công container", "số côn"],
-    "date": ["ngày", "date", "ngày đi", "trip date", "ngày chạy", "ngày vận chuyển", "ngày thực hiện"],
-    "client": ["khách", "customer", "client", "khách hàng", "tên khách", "customer name", "đối tác", "partner"],
-    "pickup": ["điểm lấy", "pickup", "lấy hàng", "nơi lấy", "đi từ", "from", "điểm đi", "nơi đi", "lấy"],
-    "dropoff": ["điểm trả", "dropoff", "trả hàng", "nơi trả", "đến", "to", "điểm đến", "nơi đến", "trả"],
-    "amount": ["tiền", "amount", "cước", "giá", "đơn giá", "unit price", "cước phí", "thành tiền", "tổng tiền", "price"],
+    "container": [
+        "container",
+        "cont",
+        "số cont",
+        "so cont",
+        "số container",
+        "container no",
+        "công container",
+        "số côn",
+    ],
+    "date": [
+        "ngày",
+        "date",
+        "ngày đi",
+        "trip date",
+        "ngày chạy",
+        "ngày vận chuyển",
+        "ngày thực hiện",
+    ],
+    "client": [
+        "khách",
+        "customer",
+        "client",
+        "khách hàng",
+        "tên khách",
+        "customer name",
+        "đối tác",
+        "partner",
+    ],
+    "pickup": [
+        "điểm lấy",
+        "pickup",
+        "lấy hàng",
+        "nơi lấy",
+        "đi từ",
+        "from",
+        "điểm đi",
+        "nơi đi",
+        "lấy",
+    ],
+    "dropoff": [
+        "điểm trả",
+        "dropoff",
+        "trả hàng",
+        "nơi trả",
+        "đến",
+        "to",
+        "điểm đến",
+        "nơi đến",
+        "trả",
+    ],
+    "amount": [
+        "tiền",
+        "amount",
+        "cước",
+        "giá",
+        "đơn giá",
+        "unit price",
+        "cước phí",
+        "thành tiền",
+        "tổng tiền",
+        "price",
+    ],
     "work_type": ["loại", "work type", "type", "loại cont", "loại container", "size"],
     "notes": ["ghi chú", "note", "notes", "remark", "remarks", "mô tả", "description"],
-    "vehicle_plate": ["biển số", "biển số xe", "xe", "vehicle", "plate", "bsx", "bien so", "bien so xe", "số xe"],
+    "vehicle_plate": [
+        "biển số",
+        "biển số xe",
+        "xe",
+        "vehicle",
+        "plate",
+        "bsx",
+        "bien so",
+        "bien so xe",
+        "số xe",
+    ],
 }
 
 
@@ -78,7 +145,9 @@ class ExcelParser:
                     continue
                 col_map = self._detect_columns_from_data(raw_rows, header_idx)
             else:
-                col_map = _detect_columns([str(c) if c is not None else None for c in raw_rows[header_idx]])
+                col_map = _detect_columns(
+                    [str(c) if c is not None else None for c in raw_rows[header_idx]]
+                )
 
             if not col_map:
                 continue
@@ -114,7 +183,9 @@ class ExcelParser:
                 return idx
         return None
 
-    def _detect_columns_from_data(self, rows: list[tuple], start_idx: int) -> dict[str, int]:
+    def _detect_columns_from_data(
+        self, rows: list[tuple], start_idx: int
+    ) -> dict[str, int]:
         if start_idx >= len(rows):
             return {}
         col_map: dict[str, int] = {}
@@ -126,7 +197,9 @@ class ExcelParser:
                 col_map["date"] = idx
         return col_map
 
-    def _parse_row(self, row_num: int, cells: list[Any], col_map: dict[str, int]) -> ImportRow:
+    def _parse_row(
+        self, row_num: int, cells: list[Any], col_map: dict[str, int]
+    ) -> ImportRow:
         def _get(role: str) -> Any:
             idx = col_map.get(role)
             return cells[idx] if idx is not None and idx < len(cells) else None
@@ -148,18 +221,26 @@ class ExcelParser:
                 parse_error="Không tìm thấy số container",
             )
 
-        container_number = normalize_container_number(container_number) or container_number
+        container_number = (
+            normalize_container_number(container_number) or container_number
+        )
 
         trip_date = parse_date(_get("date"))
-        client_name = str(_get("client")).strip() if _get("client") is not None else None
+        client_name = (
+            str(_get("client")).strip() if _get("client") is not None else None
+        )
         pickup = str(_get("pickup")).strip() if _get("pickup") is not None else None
         dropoff = str(_get("dropoff")).strip() if _get("dropoff") is not None else None
         amount = _parse_amount(_get("amount"))
         cont_type_raw = _get("work_type")
-        cont_type = str(cont_type_raw).strip().upper() if cont_type_raw is not None else None
+        cont_type = (
+            str(cont_type_raw).strip().upper() if cont_type_raw is not None else None
+        )
         str(_get("notes")).strip() if _get("notes") is not None else None
         vehicle_plate_raw = _get("vehicle_plate")
-        vehicle_plate = str(vehicle_plate_raw).strip() if vehicle_plate_raw is not None else None
+        vehicle_plate = (
+            str(vehicle_plate_raw).strip() if vehicle_plate_raw is not None else None
+        )
 
         valid_cont_types = {"E20", "E40", "F20", "F40"}
         if cont_type and cont_type not in valid_cont_types:
