@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react'
 import { MapPin, Flag, Trash2 } from 'lucide-react'
-import { compactCurrency, WORK_TYPE_LABELS } from '@/data/domain'
+import { formatCurrencyFull, WORK_TYPE_LABELS } from '@/data/domain'
 import type { VendorRoutePricing, WorkType } from '@/data/domain'
 export type { VendorRoutePricingFormData } from './useVendorRoutePricing'
 import { useInlineEditForm } from '@/components/shared/forms/useInlineEditForm'
@@ -58,7 +58,7 @@ function PriceCell({ value }: { value: number | null }) {
   }
   return (
     <span className="font-mono-num text-xs tabular-nums" style={{ color: 'var(--ink-1)' }}>
-      {compactCurrency(value)}
+      {formatCurrencyFull(value)}
     </span>
   )
 }
@@ -157,7 +157,7 @@ function VendorRoutePricingEditRow({
     return (
       <td style={{ ...tdDimmed, textAlign: 'right' }} onClick={() => setActiveField(field)}>
         <span className="tabular-nums text-xs" style={{ color: form[field] ? color : 'var(--ink-4)', fontFamily: 'var(--theme-font-mono)' }}>
-          {form[field] ? compactCurrency(Number(form[field])) : '—'}
+          {form[field] ? formatCurrencyFull(Number(form[field])) : '—'}
         </span>
       </td>
     )

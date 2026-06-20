@@ -29,12 +29,7 @@ const greeting = () => {
   return 'Chào buổi tối'
 }
 
-const fmtCompact = (n: number): string => {
-  if (Math.abs(n) >= 1e9) return `${(n / 1e9).toFixed(1)} tỷ`
-  if (Math.abs(n) >= 1e6) return `${(n / 1e6).toFixed(1)} tr`
-  if (Math.abs(n) >= 1e3) return `${(n / 1e3).toFixed(0)}K`
-  return n.toLocaleString('vi-VN')
-}
+const fmtFull = (n: number): string => n.toLocaleString('vi-VN')
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
@@ -218,7 +213,7 @@ function NoiBoBarList({ rows }: { rows: VehiclePnLRow[] }) {
                 className="font-mono text-[12px] font-bold tabular-nums text-right whitespace-nowrap"
                 style={{ color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}
               >
-                {row.loiNhuan === 0 ? '0' : `${isProfit ? '+' : ''}${fmtCompact(row.loiNhuan)}`}
+                {row.loiNhuan === 0 ? '0' : `${isProfit ? '+' : ''}${fmtFull(row.loiNhuan)}`}
               </span>
               <span
                 className="font-mono text-[11px] tabular-nums text-right"
@@ -337,7 +332,7 @@ function NgoaiBarList({ rows }: { rows: VehiclePnLRow[] }) {
                 className="font-mono text-[12px] font-bold tabular-nums text-right whitespace-nowrap"
                 style={{ color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}
               >
-                {row.loiNhuan === 0 ? '0' : `${isProfit ? '+' : ''}${fmtCompact(row.loiNhuan)}`}
+                {row.loiNhuan === 0 ? '0' : `${isProfit ? '+' : ''}${fmtFull(row.loiNhuan)}`}
               </span>
               <span
                 className="font-mono text-[11px] tabular-nums text-right"
@@ -424,7 +419,7 @@ function DesktopDashboard() {
           formattedValue={<AnimatedNumber value={revenue} format="currency" />}
           icon={TrendingUp}
           color="emerald"
-          sublabel={`Tháng trước · ${fmtCompact(prevPnl?.revenue ?? 0)}`}
+          sublabel={`Tháng trước · ${fmtFull(prevPnl?.revenue ?? 0)}`}
           trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta > 0 } : undefined}
         />
         <KpiHeroCard
@@ -448,7 +443,7 @@ function DesktopDashboard() {
           formattedValue={<span>{bienLai != null ? `${bienLai.toFixed(1)}%` : '—'}</span>}
           icon={BarChart3}
           color="amber"
-          sublabel={revenue > 0 ? `Doanh thu ${fmtCompact(revenue)}` : 'Chưa có dữ liệu'}
+          sublabel={revenue > 0 ? `Doanh thu ${fmtFull(revenue)}` : 'Chưa có dữ liệu'}
         />
       </div>
 
@@ -472,7 +467,7 @@ function DesktopDashboard() {
           </div>
           {costSlices.length > 0 ? (
             <div className="flex flex-col items-center gap-4">
-              <CostDonut slices={costSlices} total={fmtCompact(chiPhi)} />
+              <CostDonut slices={costSlices} total={fmtFull(chiPhi)} />
               <div className="w-full flex flex-col gap-2.5">
                 {costSlices.map((s, i) => (
                   <div key={i} className="flex items-center gap-2.5 text-xs">
@@ -616,8 +611,8 @@ function MobileDashboard() {
         </div>
       </header>
 
-      {/* ── KPI cards (2×2) ── */}
-      <div className="grid grid-cols-2 gap-2.5">
+      {/* ── KPI cards ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         <KpiHeroCard
           label={`Doanh thu · ${pad(month)}/${year}`}
           formattedValue={<AnimatedNumber value={revenue} format="currency" />}
@@ -667,7 +662,7 @@ function MobileDashboard() {
           </div>
           {costSlices.length > 0 ? (
             <div className="flex flex-col items-center gap-4">
-              <CostDonut slices={costSlices} total={fmtCompact(chiPhi)} />
+              <CostDonut slices={costSlices} total={fmtFull(chiPhi)} />
               <div className="w-full flex flex-col gap-2.5">
                 {costSlices.map((s, i) => (
                   <div key={i} className="flex items-center gap-2.5 text-xs">

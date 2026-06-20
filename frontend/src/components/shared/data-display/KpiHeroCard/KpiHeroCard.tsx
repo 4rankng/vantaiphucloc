@@ -75,16 +75,7 @@ export function KpiHeroCard({
         boxShadow: 'none',
       }}
     >
-      {/*
-        Deterministic 3-row layout on the right of the icon:
-          row 1: LABEL (left, wraps) + trend/badge pill (right)
-          row 2: VALUE (large, single line, truncates)
-          row 3: sublabel (muted, single line, truncates)
-        All cards have identical structure regardless of sublabel / value length,
-        so a trio of KpiHeroCards in a grid is always visually aligned.
-      */}
       <div className="flex items-center gap-3 px-4 py-3">
-        {/* icon — vertically centered */}
         <div
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px]"
           style={{ background: c.iconBg }}
@@ -92,10 +83,8 @@ export function KpiHeroCard({
           <Icon className="h-3.5 w-3.5" style={{ color: c.iconText }} />
         </div>
 
-        {/* right column: label+pill / value / sublabel — stacked */}
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* row 1: label + trend/badge pill */}
-          <div className="flex items-start gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             <p
               className="flex-1 min-w-0 text-[11px] font-semibold uppercase tracking-widest leading-tight break-words"
               style={{ color: 'var(--theme-text-muted)' }}
@@ -133,20 +122,18 @@ export function KpiHeroCard({
             })()}
           </div>
 
-          {/* row 2: value — display font for financial impact */}
           <p
-            className="mt-1 font-bold tabular-nums leading-none"
+            className="mt-1 font-bold tabular-nums leading-tight break-words"
             style={{
               color: 'var(--theme-text-primary)',
               fontFamily: 'var(--theme-font-display)',
-              fontSize: '0.875rem',       /* 14px — fits full numbers on mobile */
-              letterSpacing: '-0.025em',
+              fontSize: '0.875rem',
+              letterSpacing: 0,
             }}
           >
             {displayValue}
           </p>
 
-          {/* row 3: sublabel (reserves the line even when missing so heights match) */}
           <p
             className="text-[11px] leading-tight break-words"
             style={{ color: 'var(--theme-text-muted)' }}
