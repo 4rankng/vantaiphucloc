@@ -15,6 +15,14 @@ interface AppShellProps {
 
 export function AppShell({ topbarProps, contentClassName, children, topbarTheme = 'light' }: AppShellProps) {
   const isDark = topbarTheme === 'dark'
+  const headerStyle = isDark
+    ? { background: 'var(--theme-sidebar, #0a3520)' }
+    : {
+        background: 'var(--glass-bg)',
+        backdropFilter: 'var(--glass-blur)',
+        WebkitBackdropFilter: 'var(--glass-blur)',
+        borderBottom: '1px solid var(--surface-border)',
+      }
 
   return (
     <div
@@ -23,16 +31,7 @@ export function AppShell({ topbarProps, contentClassName, children, topbarTheme 
     >
       <header
         className="z-20 w-full shrink-0"
-        style={
-          isDark
-            ? { background: 'var(--theme-sidebar, #0a3520)' }
-            : {
-                background: 'var(--glass-bg)',
-                backdropFilter: 'var(--glass-blur)',
-                WebkitBackdropFilter: 'var(--glass-blur)',
-                borderBottom: '1px solid var(--surface-border)',
-              }
-        }
+        style={{ ...headerStyle, paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <AppTopBar {...topbarProps} theme={topbarTheme} />
         {/* Brand glow strip at header bottom */}
