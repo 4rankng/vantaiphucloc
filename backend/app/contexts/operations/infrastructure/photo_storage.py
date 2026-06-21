@@ -1,11 +1,20 @@
 import base64
 import hashlib
+import io
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from PIL import Image
+import pillow_heif
+
 from app.config import settings
+
+# Let Pillow open HEIC/HEIF captures. iOS shoots still photos in HEIC by
+# default, and a client may send those bytes even under a `data:image/jpeg`
+# prefix — without this opener we cannot transcode them (see below).
+pillow_heif.register_heif_opener()
 
 
 @dataclass(frozen=True)
@@ -27,6 +36,46 @@ def hash_image_bytes(image_bytes: bytes) -> str:
     return hashlib.sha256(image_bytes).hexdigest()
 
 
+# HEIF "ftyp" major brands we treat as HEIC. iOS photos report `heic`; other
+# HEIF containers use `mif1`/`hevc`/etc. Any of these means the bytes are NOT
+# JPEG and must be transcoded before we store them under a .jpg name.
+_HEIF_BRANDS = {
+    b"heic", b"heix", b"hevc", b"hevx", b"heim", b"hevm", b"mif1", b"msf1",
+}
+
+
+def is_heic(image_bytes: bytes) -> bool:
+    """True if *image_bytes* is a HEIF/HEIC container.
+
+    Detects the ISO base-media-file-format ``ftyp`` box: bytes 4-8 are
+    ``b"ftyp"`` and bytes 8-12 carry the major brand. Real JPEG
+    (``\\xff\\xd8\\xff...``) and other formats never carry this box, so there
+    are no false positives for genuine JPEG.
+    """
+    return (
+        len(image_bytes) >= 12
+        and image_bytes[4:8] == b"ftyp"
+        and image_bytes[8:12].lower() in _HEIF_BRANDS
+    )
+
+
+def transcode_heic_to_jpeg(image_bytes: bytes) -> bytes:
+    """Return guaranteed-browser-decodable JPEG bytes.
+
+    HEIC/HEIF input is re-encoded to JPEG (quality 92); everything else
+    (already-JPEG, PNG, …) is returned unchanged. iOS gallery photos can arrive
+    as HEIC; without this normalization they'd be written to disk under a
+    ``.jpg`` name and render as broken images in Chrome/Firefox/Android, which
+    cannot decode HEIC.
+    """
+    if not is_heic(image_bytes):
+        return image_bytes
+    with Image.open(io.BytesIO(image_bytes)) as im:
+        out = io.BytesIO()
+        im.convert("RGB").save(out, format="JPEG", quality=92)
+        return out.getvalue()
+
+
 def save_base64_photo(data_url: str) -> StoredPhoto:
     """Decode a base64 data-URL, save to disk, return ``StoredPhoto``.
 
@@ -40,6 +89,9 @@ def save_base64_photo(data_url: str) -> StoredPhoto:
         raise ValueError("Invalid data URL: no base64 payload")
 
     image_bytes = base64.b64decode(encoded)
+    # iOS uploads can be HEIC even when the data-URL prefix claims jpeg.
+    # Normalize to real JPEG so every browser can render the stored photo.
+    image_bytes = transcode_heic_to_jpeg(image_bytes)
     content_hash = hash_image_bytes(image_bytes)
 
     now = datetime.now(tz=timezone.utc)

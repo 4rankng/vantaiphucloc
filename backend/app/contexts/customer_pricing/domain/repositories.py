@@ -68,5 +68,14 @@ class LocationRepository(ABC):
     async def save(self, loc: Location) -> Location: ...
 
     @abstractmethod
-    async def has_external_references(self, lid: LocationId) -> tuple[str, str] | None:
-        """Returns (table, column) of the first external FK or None."""
+    async def has_pricing_references(
+        self, lid: LocationId
+    ) -> tuple[str, str] | None:
+        """Returns (table, column) of the first pricing-rule FK or None.
+        Pricing rules block deletion — a route price is meaningless without
+        both endpoints."""
+
+    @abstractmethod
+    async def clear_trip_references(self, lid: LocationId) -> None:
+        """NULL the location's pickup/dropoff FKs on booked & delivered
+        trips so the location can be deleted without destroying trip history."""

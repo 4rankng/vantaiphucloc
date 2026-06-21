@@ -97,7 +97,9 @@ class UpdateLocation:
 
 
 class DeleteLocation:
-    """Soft-delete; refuses if any external aggregate references the row."""
+    """Soft-delete. Detaches the location from historical trips first
+    (NULL FK — trip records survive), and refuses only if a pricing rule
+    still references it."""
 
     def __init__(self, repo: LocationRepository, session: AsyncSession) -> None:
         self.repo = repo
@@ -107,9 +109,10 @@ class DeleteLocation:
         loc = await self.repo.get_by_id(lid)
         if loc is None:
             raise NotFound("Location", int(lid))
-        ref = await self.repo.has_external_references(lid)
-        if ref is not None:
-            raise LocationInUse(table=ref[0], column=ref[1])
+        pricing_ref = await self.repo.has_pricing_references(lid)
+        if pricing_ref is not None:
+            raise LocationInUse(table=pricing_ref[0], column=pricing_ref[1])
+        await self.repo.clear_trip_references(lid)
         loc.deactivate()
         await self.repo.save(loc)
         await self.session.commit()

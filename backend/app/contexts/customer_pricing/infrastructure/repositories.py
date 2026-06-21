@@ -133,11 +133,17 @@ class SqlClientRepository(PartnerRepository):
 
 
 class SqlLocationRepository(LocationRepository):
-    _EXTERNAL_REFS = (
-        ("delivered_trips", "pickup_location_id"),
-        ("delivered_trips", "dropoff_location_id"),
+    # Historical trip rows — detaching the location (NULL FK) is safe: the
+    # trip record survives and simply loses its endpoint name.
+    _TRIP_REFS = (
         ("booked_trips", "pickup_location_id"),
         ("booked_trips", "dropoff_location_id"),
+        ("delivered_trips", "pickup_location_id"),
+        ("delivered_trips", "dropoff_location_id"),
+    )
+    # Pricing rules lose their meaning without both endpoints, so a row that
+    # still references the location blocks deletion (409).
+    _PRICING_REFS = (
         ("route_pricings", "pickup_location_id"),
         ("route_pricings", "dropoff_location_id"),
         ("vendor_route_pricings", "pickup_location_id"),
@@ -245,8 +251,8 @@ class SqlLocationRepository(LocationRepository):
         refreshed = await self._aliases_for(existing.id)
         return location_to_domain(existing, refreshed)
 
-    async def has_external_references(self, lid: LocationId) -> tuple[str, str] | None:
-        for table, col in self._EXTERNAL_REFS:
+    async def has_pricing_references(self, lid: LocationId) -> tuple[str, str] | None:
+        for table, col in self._PRICING_REFS:
             row = await self.session.execute(
                 text(f"SELECT 1 FROM {table} WHERE {col} = :lid LIMIT 1"),
                 {"lid": int(lid)},
@@ -254,3 +260,12 @@ class SqlLocationRepository(LocationRepository):
             if row.scalar():
                 return (table, col)
         return None
+
+    async def clear_trip_references(self, lid: LocationId) -> None:
+        """Detach the location from historical trip rows by NULLing their
+        pickup/dropoff FKs. No-op when no trips reference it."""
+        for table, col in self._TRIP_REFS:
+            await self.session.execute(
+                text(f"UPDATE {table} SET {col} = NULL WHERE {col} = :lid"),
+                {"lid": int(lid)},
+            )

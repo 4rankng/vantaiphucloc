@@ -23,17 +23,18 @@ const MAX_CAPTURE_WIDTH = 1200
  * Images already at or below the threshold pass through untouched.
  */
 async function downsizeImageToDataUrl(imageSrc: string): Promise<string> {
+  // ALWAYS re-encode through a canvas as image/jpeg. iOS gallery photos can be
+  // HEIC; returning the raw source (as we used to for small images) would send
+  // HEIC bytes that get stored under a .jpg name and render as broken images in
+  // Chrome/Firefox/Android. Drawing to a canvas forces a decode + JPEG re-encode,
+  // so the output is always real JPEG regardless of the input format.
   return new Promise((resolve, reject) => {
     const img = new window.Image()
     img.crossOrigin = 'anonymous'
     img.onload = () => {
-      if (img.width <= MAX_CAPTURE_WIDTH) {
-        // Already small enough — return the original source as-is.
-        resolve(imageSrc)
-        return
-      }
-      const outW = MAX_CAPTURE_WIDTH
-      const outH = Math.round(img.height * (outW / img.width))
+      const scale = img.width > MAX_CAPTURE_WIDTH ? MAX_CAPTURE_WIDTH / img.width : 1
+      const outW = Math.max(1, Math.round(img.width * scale))
+      const outH = Math.max(1, Math.round(img.height * scale))
       const canvas = document.createElement('canvas')
       canvas.width = outW
       canvas.height = outH
