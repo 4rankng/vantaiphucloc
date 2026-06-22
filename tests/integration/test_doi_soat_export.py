@@ -88,7 +88,10 @@ class TestDoiSoatExport:
         "ĐIỂM ĐI",
         "ĐIỂM ĐẾN",
         "TÁC NGHIỆP",
+        "CƯỚC",
+        "LƯƠNG",
         "TRẠNG THÁI",
+        "GHI CHÚ",
     ]
 
     def test_export_unions_matched_and_unmatched(
@@ -147,6 +150,7 @@ class TestDoiSoatExport:
             cont_type="E20",
             work_type="E20",
             trip_date="2026-05-10",
+            note="Tài xế ghi chú khi nộp chuyến",
         )
         wo2 = create_work_order(
             client_id=partner["id"],
@@ -191,10 +195,12 @@ class TestDoiSoatExport:
             f"Expected 3 rows, got {len(data_rows)}: {data_rows}"
         )
 
-        status_by_cont = {row[3]: row[12] for row in data_rows}
+        status_by_cont = {row[3]: row[14] for row in data_rows}
         assert status_by_cont[cn1] == "Đã ghép"
         assert status_by_cont[cn2] == "Đã ghép"
         assert status_by_cont[cn3] == "Chưa ghép"
+        note_by_cont = {row[3]: row[15] for row in data_rows}
+        assert note_by_cont[cn1] == "Tài xế ghi chú khi nộp chuyến"
 
         assert [row[0] for row in data_rows] == [1, 2, 3]
         for row in data_rows:
@@ -245,7 +251,7 @@ class TestDoiSoatExport:
         data_rows = list(ws.iter_rows(min_row=12, values_only=True))
         assert len(data_rows) == 1
         assert data_rows[0][3] == cn_unmatched
-        assert data_rows[0][12] == "Chưa ghép"
+        assert data_rows[0][14] == "Chưa ghép"
         wb.close()
 
     def test_export_empty_date_range(

@@ -28,6 +28,7 @@ import * as vehicleDriversApi from './vehicleDrivers.api'
 import * as routePricingsApi from './routePricings.api'
 import * as vendorRoutePricingsApi from './vendorRoutePricings.api'
 import * as operationTypesApi from './operationTypes.api'
+import * as ocrStatsApi from './ocrStats.api'
 
 export const apiClient = {
   // Clients
@@ -139,6 +140,7 @@ export const apiClient = {
   getDashboardSummary: dashboardApi.getDashboardSummary,
   getKpiTrends: dashboardApi.getKpiTrends,
   getNotifications: dashboardApi.getNotifications,
+  getOcrStats: ocrStatsApi.getOcrStats,
 
   // Users
   getUsers: usersApi.getUsers,
@@ -220,3 +222,9 @@ export type {
   VehicleExpenseCreate,
   VehicleExpenseCategory,
 } from './vehicleExpenses.api'
+export type {
+  OcrStats,
+  OcrDailyPoint,
+  OcrMonthlyPoint,
+  OcrProviderTotal,
+} from './ocrStats.api'

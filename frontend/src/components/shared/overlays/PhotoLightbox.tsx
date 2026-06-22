@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Download } from 'lucide-react'
+import { X, Download, Loader2 } from 'lucide-react'
+import { downloadImage } from '@/lib/download'
 
 interface PhotoLightboxProps {
   src: string
@@ -46,6 +47,16 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
   const pinchStartRef = useRef<{ distance: number; midpoint: Point; transform: Transform } | null>(null)
   const gestureMovedRef = useRef(false)
   const lastTapRef = useRef(0)
+  const [isDownloading, setIsDownloading] = useState(false)
+
+  const handleDownload = useCallback(async () => {
+    setIsDownloading(true)
+    try {
+      await downloadImage(src, alt)
+    } finally {
+      setIsDownloading(false)
+    }
+  }, [alt, src])
 
   const updateTransform = useCallback((next: Transform | ((current: Transform) => Transform)) => {
     setTransform((current) => {
@@ -314,15 +325,14 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
         style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.36) 64%, transparent 100%)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <a
-          href={src}
-          download={alt}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="flex min-h-[48px] items-center gap-2 rounded-xl px-4 text-sm font-semibold touch-manipulation transition-colors duration-150"
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={isDownloading}
+          className="flex min-h-[48px] items-center gap-2 rounded-xl px-4 text-sm font-semibold touch-manipulation transition-colors duration-150 disabled:opacity-60"
           style={{ color: 'rgba(255,255,255,0.9)', background: 'rgba(255,255,255,0.10)' }}
           onMouseEnter={(e) => {
+            if (isDownloading) return
             e.currentTarget.style.color = '#fff'
             e.currentTarget.style.background = 'rgba(255,255,255,0.18)'
           }}
@@ -332,9 +342,9 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
           }}
           aria-label="Tải về"
         >
-          <Download className="h-5 w-5" />
+          {isDownloading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
           <span>Tải về</span>
-        </a>
+        </button>
         <button
           onClick={onClose}
           className="flex h-[52px] w-[52px] items-center justify-center rounded-xl touch-manipulation transition-colors duration-150"

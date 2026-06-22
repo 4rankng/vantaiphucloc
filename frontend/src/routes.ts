@@ -44,6 +44,7 @@ export const DirectorContacts       = lazy(() => import('@/pages/director/Direct
 
 // ─── SuperAdmin ───────────────────────────────────────────────────────────────
 export const SuperAdminApp = lazy(() => import('@/pages/superadmin/SuperAdminApp').then(m => ({ default: m.SuperAdminApp })))
+export const OcrAnalytics   = lazy(() => import('@/pages/superadmin/OcrAnalytics').then(m => ({ default: m.OcrAnalytics })))
 
 // ─── Shared ───────────────────────────────────────────────────────────────────
 export const NotFound = lazy(() => import('@/pages/NotFound').then(m => ({ default: m.NotFound })))

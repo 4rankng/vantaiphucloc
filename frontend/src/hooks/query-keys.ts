@@ -86,6 +86,7 @@ export const queryKeys = {
     ['director-dashboard-drilldown', dateFrom, dateTo] as const,
   kpiTrends: (days: number, endDate?: string) =>
     ['kpi-trends', days, endDate] as const,
+  ocrStats: (days: number) => ['ocr-stats', days] as const,
   monthlyPnL: (startDate: string, endDate: string) =>
     ['monthly-pnl', startDate, endDate] as const,
   vehiclePnL: (dateFrom: string, dateTo: string, vehicleId?: number) =>

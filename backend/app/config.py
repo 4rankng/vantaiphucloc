@@ -47,8 +47,19 @@ class Settings(BaseSettings):
     WORKER_TIMEOUT: int = 600
     WORKER_MAX_TRIES: int = 3
 
-    # AI provider (Gemini is always on whenever GEMINI_API_KEY is set)
+    # AI providers. An explicit *_ENABLE flag gates each provider; the API
+    # key must also be non-empty for the provider to be usable. For OCR,
+    # Gemini is primary and MiniMax is the last-resort fallback. Two Gemini
+    # keys are supported so OCR can alternate between them per request
+    # (round-robin) and avoid 429 rate limits; if either key 429s the other
+    # is tried before falling through to MiniMax.
     GEMINI_API_KEY: str = ""
+    GEMINI_API_KEY2: str = ""
+    GEMINI_ENABLE: bool = True
+    MINIMAX_API_KEY: str = ""
+    MINIMAX_ENABLE: bool = True
+    MINIMAX_BASE_URL: str = "https://api.minimax.io/v1"  # OpenAI-compatible host
+    MINIMAX_MODEL: str = "MiniMax-M3"
     CHATBOT_ENABLE: int = 0
 
     # Push notifications (VAPID)

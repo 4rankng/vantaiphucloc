@@ -558,3 +558,37 @@ class MappingProfile(Base):
     last_used_at = Column(DateTime(timezone=True), nullable=True)
     use_count = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, default=True, nullable=False)
+
+
+# ---------------------------------------------------------------------------
+# OcrRequest — one row per container-photo OCR request, for admin analytics
+# ---------------------------------------------------------------------------
+
+
+class OcrRequest(Base):
+    """Records each container-photo OCR request and which provider served it.
+
+    One row per user OCR action; ``provider`` is the provider that ultimately
+    produced the result (the winner of the MiniMax→Gemini chain), and
+    ``success`` covers failures. Powers the admin "OCR requests per
+    day/month/model" dashboard.
+    """
+
+    __tablename__ = "ocr_requests"
+
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    provider = Column(String(16), nullable=False)  # minimax | gemini
+    model = Column(String(64), nullable=True)
+    success = Column(Boolean, nullable=False, default=False)
+    container_numbers_found = Column(Integer, nullable=False, default=0)
+    latency_ms = Column(Integer, nullable=True)
+    error = Column(String(512), nullable=True)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    __table_args__ = (
+        Index("ix_ocr_requests_created_at", "created_at"),
+        Index("ix_ocr_requests_provider_created_at", "provider", "created_at"),
+    )

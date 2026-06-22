@@ -19,6 +19,7 @@ from .domain import (  # noqa: F401
     DriverSalaryConfig,
     DriverSalary,
     MappingProfile,
+    OcrRequest,
 )
 from .operation_type import OperationType  # noqa: F401
 from .audit_log import AuditLog  # noqa: F401
@@ -42,6 +43,7 @@ __all__ = [
     "DriverSalaryConfig",
     "DriverSalary",
     "MappingProfile",
+    "OcrRequest",
     "OperationType",
     "AuditLog",
     "PushSubscription",

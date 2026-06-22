@@ -18,6 +18,7 @@ import {
   Calendar,
   Route,
   Truck,
+  ScanText,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/components/shared/data-display/NotificationPanel/useUnreadCount'
@@ -90,6 +91,7 @@ const DIRECTOR_NAV_SECTION: SidebarSection = {
     { label: 'Tổng quan', href: '/superadmin/dashboard', icon: LayoutDashboard },
     { label: 'Đối tác', href: '/superadmin/partners', icon: Building2 },
     { label: 'Bảng giá', href: '/superadmin/pricing', icon: Route },
+    { label: 'Thống kê OCR', href: '/superadmin/ocr-analytics', icon: ScanText },
     { label: 'Gửi Thông báo', href: '/superadmin/notifications', icon: Bell },
   ],
 }

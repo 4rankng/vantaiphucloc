@@ -108,6 +108,7 @@ export function createAppRouter() {
             { path: 'dashboard',              element: ebc('DirectorDashboard', h(Lazy, { component: R.DirectorDashboard })) },
             { path: 'partners',               element: ebc('DirectorContacts', h(Lazy, { component: R.DirectorContacts })) },
             { path: 'pricing',                element: ebc('RoutePricingPage', h(Lazy, { component: R.RoutePricingPage })) },
+            { path: 'ocr-analytics',          element: ebc('OcrAnalytics', h(Lazy, { component: R.OcrAnalytics })) },
             { path: 'notifications',          element: ebc('Notifications', h(Lazy, { component: R.DirectorNotifications })) },
             { path: 'driver-jobs/:driverId',  element: ebc('DriverJobs', h(Lazy, { component: R.DriverJobs })) },
             { path: 'client-jobs/:clientId',  element: ebc('ClientJobs', h(Lazy, { component: R.ClientJobs })) },

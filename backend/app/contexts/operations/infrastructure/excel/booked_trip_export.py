@@ -199,8 +199,8 @@ async def generate_doi_soat_excel(
 
     Columns: STT | NGÀY ĐI | CHỦ HÀNG | SỐ CONTAINER | F20' | F40' | E20' |
     E40' | SỐ XE CHẠY | ĐIỂM ĐI | ĐIỂM ĐẾN | TÁC NGHIỆP | CƯỚC | LƯƠNG |
-    TRẠNG THÁI. Subtotal row at row 11 counts F20'/F40'/E20'/E40' and
-    sums CƯỚC/LƯƠNG across all rows.
+    TRẠNG THÁI | GHI CHÚ. Subtotal row at row 11 counts F20'/F40'/E20'/E40'
+    and sums CƯỚC/LƯƠNG across all rows.
     """
     import openpyxl
     from openpyxl.styles import Font, Alignment, Border, Side
@@ -292,6 +292,9 @@ async def generate_doi_soat_excel(
             "revenue": getattr(source, "revenue", None),
             "driver_salary": getattr(source, "driver_salary", None),
             "status": status,
+            "note": getattr(source, "note", None)
+            or (getattr(fb, "note", None) if fb else None)
+            or "",
         }
 
     deduped_rows: list[dict] = []
@@ -338,7 +341,7 @@ async def generate_doi_soat_excel(
     month_label = df.strftime("%m/%Y")
     ws.title = f"SL T{df.month}.{str(df.year)[2:]}"
 
-    num_cols = 15  # A-O
+    num_cols = 16  # A-P
     last_col = get_column_letter(num_cols)
 
     # -- Styles --
@@ -403,6 +406,7 @@ async def generate_doi_soat_excel(
         "CƯỚC",
         "LƯƠNG",
         "TRẠNG THÁI",
+        "GHI CHÚ",
     ]
     ws.append([])  # row 9 empty
     ws.append(headers)  # row 10
@@ -432,6 +436,7 @@ async def generate_doi_soat_excel(
             "",
             f"=SUBTOTAL(9,M12:M{last_data_row})",
             f"=SUBTOTAL(9,N12:N{last_data_row})",
+            "",
             "",
         ]
     )
@@ -480,6 +485,7 @@ async def generate_doi_soat_excel(
                 row["revenue"],
                 row["driver_salary"],
                 row["status"],
+                row["note"],
             ]
         )
 
@@ -489,14 +495,14 @@ async def generate_doi_soat_excel(
             cell.border = thin_border
             if col_num in (1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 15):
                 cell.alignment = center
-            elif col_num == 4:
+            elif col_num in (4, 16):
                 cell.alignment = left
             elif col_num in (13, 14):
                 cell.alignment = right
                 cell.number_format = "#,##0"
 
     # -- Column widths --
-    col_widths = [6, 12, 12, 18, 6, 6, 6, 6, 14, 20, 20, 16, 14, 14, 14]
+    col_widths = [6, 12, 12, 18, 6, 6, 6, 6, 14, 20, 20, 16, 14, 14, 14, 24]
     for i, width in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
 

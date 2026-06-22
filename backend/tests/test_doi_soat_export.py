@@ -40,6 +40,7 @@ async def test_doi_soat_export_includes_revenue_and_salary_columns(db_session):
         booked_trip_id=100,
         revenue=1_200_000,
         driver_salary=300_000,
+        note="Tài xế báo kẹt cổng",
     )
     db_session.add_all([booked, delivered])
     await db_session.flush()
@@ -55,9 +56,10 @@ async def test_doi_soat_export_includes_revenue_and_salary_columns(db_session):
     ws = wb.active
 
     headers = [cell.value for cell in ws[10]]
-    assert headers[12:15] == ["CƯỚC", "LƯƠNG", "TRẠNG THÁI"]
+    assert headers[12:16] == ["CƯỚC", "LƯƠNG", "TRẠNG THÁI", "GHI CHÚ"]
 
     row = [cell.value for cell in ws[12]]
     assert row[12] == 1_200_000
     assert row[13] == 300_000
     assert row[14] == "Đã ghép"
+    assert row[15] == "Tài xế báo kẹt cổng"

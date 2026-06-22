@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func
+from sqlalchemy import select, func, cast, Integer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
@@ -19,9 +19,10 @@ from app.models.domain import (
     DeliveredTrip,
     Vendor,
     Location,
+    OcrRequest,
 )
 from app.models.base import User
-from app.core.deps import get_current_user, require_permission
+from app.core.deps import get_current_user, require_permission, require_roles
 from app.core.worker import get_arq_pool
 from app.database import get_db
 from app.schemas.domain import (
@@ -1703,3 +1704,94 @@ async def get_notifications(
     except RuntimeError:
         logger.warning("arq pool unavailable, returning empty notifications")
         return []
+
+
+@router.get("/ocr-stats")
+async def get_ocr_stats(
+    days: int = Query(
+        30, ge=1, le=730, description="Trailing days including today (UTC)"
+    ),
+    _current_user: User = Depends(require_roles("superadmin")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin-only OCR request analytics: counts per day / month / model.
+
+    One row per container-photo OCR request is logged in ``ocr_requests``;
+    ``provider`` is whichever provider served it. Returns a zero-filled daily
+    series (per provider), a monthly roll-up derived from it, and per-provider
+    totals with success counts over the trailing ``days`` window.
+    """
+    from datetime import timezone as _tz
+
+    end_date = datetime.now(_tz.utc).date()
+    start_date = end_date - timedelta(days=days - 1)
+    day_labels = [start_date + timedelta(days=i) for i in range(days)]
+
+    day_expr = func.date(OcrRequest.created_at)
+
+    # ── Daily counts per provider ────────────────────────────────────────────
+    daily_rows = (
+        await db.execute(
+            select(
+                day_expr.label("d"),
+                OcrRequest.provider,
+                func.count(OcrRequest.id),
+            )
+            .where(day_expr >= start_date, day_expr <= end_date)
+            .group_by(day_expr, OcrRequest.provider)
+        )
+    ).all()
+    daily_map: dict[str, dict[str, int]] = {}
+    for raw_day, prov, cnt in daily_rows:
+        key = str(raw_day)[:10]
+        daily_map.setdefault(key, {"minimax": 0, "gemini": 0})[prov] = int(cnt)
+
+    daily = [
+        {
+            "date": d.isoformat(),
+            "minimax": daily_map.get(d.isoformat(), {}).get("minimax", 0),
+            "gemini": daily_map.get(d.isoformat(), {}).get("gemini", 0),
+        }
+        for d in day_labels
+    ]
+
+    # ── Monthly roll-up (derived from the daily series — dialect-agnostic) ───
+    monthly_map: dict[str, dict[str, int]] = {}
+    for point in daily:
+        month = point["date"][:7]  # YYYY-MM
+        bucket = monthly_map.setdefault(month, {"minimax": 0, "gemini": 0})
+        bucket["minimax"] += point["minimax"]
+        bucket["gemini"] += point["gemini"]
+    monthly = [
+        {"month": m, "minimax": v["minimax"], "gemini": v["gemini"]}
+        for m, v in sorted(monthly_map.items())
+    ]
+
+    # ── Per-provider totals + success counts over the range ──────────────────
+    total_rows = (
+        await db.execute(
+            select(
+                OcrRequest.provider,
+                func.count(OcrRequest.id),
+                func.sum(cast(OcrRequest.success, Integer)),
+            )
+            .where(day_expr >= start_date, day_expr <= end_date)
+            .group_by(OcrRequest.provider)
+        )
+    ).all()
+    totals = {
+        "minimax": {"total": 0, "success": 0},
+        "gemini": {"total": 0, "success": 0},
+    }
+    for prov, total, succ in total_rows:
+        if prov in totals:
+            totals[prov]["total"] = int(total or 0)
+            totals[prov]["success"] = int(succ or 0)
+
+    return {
+        "days": days,
+        "endDate": end_date.isoformat(),
+        "daily": daily,
+        "monthly": monthly,
+        "totals": totals,
+    }

@@ -66,6 +66,7 @@ async def call_gemini_vision(
     mime_type: str = "image/jpeg",
     model: str | None = None,
     response_schema: dict | None = None,
+    api_key: str | None = None,
 ) -> dict:
     """Call Gemini API with image input.
 
@@ -76,6 +77,10 @@ async def call_gemini_vision(
         model: Specific model to use (None = try fallback chain)
         response_schema: Optional JSON schema dict for structured output.
             When provided, forces JSON response via responseMimeType.
+        api_key: Optional API key override. When omitted, the module-level
+            ``GEMINI_API_KEY`` constant is used. The OCR orchestrator passes
+            a specific key so it can round-robin across multiple keys and
+            spread load away from any single key's rate limit.
 
     Returns:
         Dict with keys:
@@ -85,7 +90,8 @@ async def call_gemini_vision(
         - provider: str ("gemini")
         - model: str — which model was used
     """
-    if not GEMINI_API_KEY:
+    key = api_key or GEMINI_API_KEY
+    if not key:
         return {
             "success": False,
             "text": None,
@@ -136,7 +142,7 @@ async def call_gemini_vision(
     last_error = None
 
     for m in models_to_try:
-        url = f"{GEMINI_ENDPOINT}/models/{m}:generateContent?key={GEMINI_API_KEY}"
+        url = f"{GEMINI_ENDPOINT}/models/{m}:generateContent?key={key}"
 
         try:
             client = await _get_http_client()
@@ -196,13 +202,20 @@ async def analyze_image_with_fallback(
     image_bytes: bytes,
     mime_type: str = "image/jpeg",
     response_schema: dict | None = None,
+    api_key: str | None = None,
 ) -> dict:
     """Analyze image using Gemini AI with automatic model fallback.
 
     Thin wrapper around call_gemini_vision that adds ``fallback_used``.
+    ``api_key`` is forwarded so callers can pin a specific key (used by the
+    OCR orchestrator to round-robin across multiple Gemini keys).
     """
     result = await call_gemini_vision(
-        prompt, image_bytes, mime_type, response_schema=response_schema
+        prompt,
+        image_bytes,
+        mime_type,
+        response_schema=response_schema,
+        api_key=api_key,
     )
     result["fallback_used"] = (
         result["success"] and result.get("model") != GEMINI_MODELS[0]

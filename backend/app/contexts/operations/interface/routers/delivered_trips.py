@@ -43,6 +43,7 @@ from app.contexts.operations.interface.error_translation import translate
 from app.core.deps import get_current_user, require_permission
 from app.database import get_db
 from app.models.base import User
+from app.models.domain import OcrRequest
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import (
     DeliveredTripCreate,
@@ -189,9 +190,37 @@ async def validate_container(
 async def ocr_container(
     body: ContainerOCRRequest,
     current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     image_bytes = base64.b64decode(body.image_data)
     result = await extract_container_numbers(image_bytes, body.mime_type)
+
+    # Log one row per OCR request for the admin analytics dashboard. Only log
+    # when a provider actually ran — if OCR isn't configured (provider is None)
+    # there is no provider analytics to record, and we must never write a row
+    # the hardcoded {minimax, gemini} dashboard buckets can't display. Truncate
+    # the error so a long provider error message can't overflow the column and
+    # silently drop the row. A logging failure must never break the OCR
+    # response for the driver.
+    provider = result.get("provider")
+    if provider:
+        try:
+            db.add(
+                OcrRequest(
+                    provider=provider,
+                    model=result.get("model"),
+                    success=bool(result.get("success")),
+                    container_numbers_found=len(result.get("container_numbers", [])),
+                    latency_ms=result.get("latency_ms"),
+                    error=(result.get("error") or "")[:512] or None,
+                    user_id=current_user.id,
+                )
+            )
+            await db.commit()
+        except Exception:
+            _logger.exception("[OCR] failed to log ocr_requests row")
+            await db.rollback()
+
     return {
         "success": result["success"],
         "container_numbers": result.get("container_numbers", []),
