@@ -15,11 +15,36 @@ import {
   successRate,
 } from './ocrAnalytics.helpers'
 
-const DAY_OPTIONS = [7, 30, 90, 365] as const
+type ViewMode = 'day' | 'month'
+
+interface ViewConfig {
+  label: string
+  days: number
+  title: string
+  subtitle: string
+}
+
+const VIEW_CONFIG: Record<ViewMode, ViewConfig> = {
+  day: {
+    label: 'Theo ngày',
+    days: 30,
+    title: 'Lượt OCR theo ngày',
+    subtitle: 'MiniMax (chính) và Gemini (dự phòng)',
+  },
+  month: {
+    label: 'Theo tháng',
+    days: 365,
+    title: 'Lượt OCR theo tháng',
+    subtitle: 'Tổng hợp theo nhà cung cấp',
+  },
+}
+
+const VIEW_ORDER: ViewMode[] = ['day', 'month']
 
 export function OcrAnalytics() {
-  const [days, setDays] = useState<number>(30)
-  const { data, isLoading } = useOcrStats(days)
+  const [view, setView] = useState<ViewMode>('day')
+  const config = VIEW_CONFIG[view]
+  const { data, isLoading } = useOcrStats(config.days)
 
   const monthlyData = useMemo(
     () => buildMonthlyBarData(data?.monthly ?? []),
@@ -34,50 +59,51 @@ export function OcrAnalytics() {
   const minimax = totals?.minimax
   const gemini = totals?.gemini
 
+  const chartActions = (
+    <div
+      className="flex items-center gap-1 rounded-lg p-1"
+      style={{ background: 'var(--theme-bg-secondary)' }}
+      role="tablist"
+      aria-label="Chế độ xem biểu đồ"
+    >
+      {VIEW_ORDER.map((mode) => {
+        const active = mode === view
+        return (
+          <button
+            key={mode}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => setView(mode)}
+            className="rounded-md min-h-[44px] px-3 py-2 text-[12.5px] font-medium transition-colors"
+            style={{
+              background: active ? 'var(--surface)' : 'transparent',
+              color: active
+                ? 'var(--theme-text-primary)'
+                : 'var(--theme-text-muted)',
+              boxShadow: active ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+            }}
+          >
+            {VIEW_CONFIG[mode].label}
+          </button>
+        )
+      })}
+    </div>
+  )
+
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         title="Thống kê OCR"
-        subtitle="Số lượt nhận dạng số cont theo ngày / tháng và theo nhà cung cấp (MiniMax, Gemini)"
+        subtitle="Số lượt nhận dạng số cont theo ngày / tháng"
         lucideIcon={ScanText}
-        actions={
-          <div
-            className="flex items-center gap-1 rounded-lg p-1"
-            style={{ background: 'var(--theme-bg-secondary)' }}
-          >
-            {DAY_OPTIONS.map((opt) => {
-              const active = opt === days
-              return (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => setDays(opt)}
-                  className="rounded-md min-h-[44px] px-3 py-2 text-[12.5px] font-medium transition-colors"
-                  style={{
-                    background: active ? 'var(--surface)' : 'transparent',
-                    color: active
-                      ? 'var(--theme-text-primary)'
-                      : 'var(--theme-text-muted)',
-                    boxShadow: active
-                      ? '0 1px 2px rgba(0,0,0,0.06)'
-                      : 'none',
-                  }}
-                  aria-pressed={active}
-                >
-                  {opt === 365 ? '12 tháng' : `${opt} ngày`}
-                </button>
-              )
-            })}
-          </div>
-        }
       />
 
-      {/* ── Totals ─────────────────────────────────────────────────────── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatTile
           label="Tổng lượt OCR"
           value={grandTotal(data)}
-          hint={`${days} ngày gần nhất`}
+          hint={`${config.days} ngày gần nhất`}
         />
         <StatTile
           label="MiniMax"
@@ -101,26 +127,21 @@ export function OcrAnalytics() {
         />
       </div>
 
-      {/* ── Monthly bar chart ──────────────────────────────────────────── */}
       <ChartCard
-        title="Lượt OCR theo tháng"
-        subtitle="Tổng hợp theo nhà cung cấp"
+        title={config.title}
+        subtitle={config.subtitle}
+        actions={chartActions}
         loading={isLoading}
       >
-        <BarChartWidget data={monthlyData} height={280} />
-      </ChartCard>
-
-      {/* ── Daily line chart ───────────────────────────────────────────── */}
-      <ChartCard
-        title="Lượt OCR theo ngày"
-        subtitle="MiniMax (chính) và Gemini (dự phòng)"
-        loading={isLoading}
-      >
-        <LineChartWidget
-          data={dailyData}
-          height={280}
-          options={{ plugins: { legend: { display: true } } }}
-        />
+        {view === 'month' ? (
+          <BarChartWidget data={monthlyData} height={320} />
+        ) : (
+          <LineChartWidget
+            data={dailyData}
+            height={320}
+            options={{ plugins: { legend: { display: true } } }}
+          />
+        )}
       </ChartCard>
     </div>
   )

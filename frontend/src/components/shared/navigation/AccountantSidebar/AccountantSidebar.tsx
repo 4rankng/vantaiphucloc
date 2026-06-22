@@ -85,16 +85,41 @@ const ACCOUNTANT_NAV_SECTIONS: SidebarSection[] = [
   },
 ]
 
-const DIRECTOR_NAV_SECTION: SidebarSection = {
-  label: 'GIÁM ĐỐC',
-  items: [
-    { label: 'Tổng quan', href: '/superadmin/dashboard', icon: LayoutDashboard },
-    { label: 'Đối tác', href: '/superadmin/partners', icon: Building2 },
-    { label: 'Bảng giá', href: '/superadmin/pricing', icon: Route },
-    { label: 'Thống kê OCR', href: '/superadmin/ocr-analytics', icon: ScanText },
-    { label: 'Gửi Thông báo', href: '/superadmin/notifications', icon: Bell },
-  ],
-}
+const SUPERADMIN_NAV_SECTIONS: SidebarSection[] = [
+  {
+    label: 'HỆ THỐNG',
+    items: [
+      { label: 'Tài khoản', href: '/superadmin', icon: UserCircle, exact: true },
+      { label: 'Thống kê OCR', href: '/superadmin/ocr-analytics', icon: ScanText },
+      { label: 'Gửi Thông báo', href: '/superadmin/notifications', icon: Bell },
+    ],
+  },
+  {
+    label: 'GIÁM ĐỐC',
+    items: [
+      { label: 'Tổng quan', href: '/superadmin/dashboard', icon: LayoutDashboard },
+      { label: 'Đối tác', href: '/superadmin/partners', icon: Building2 },
+      { label: 'Bảng giá', href: '/superadmin/pricing', icon: Route },
+    ],
+  },
+  {
+    label: 'KẾ TOÁN',
+    items: [
+      { label: 'Tổng quan', href: '/accountant', icon: LayoutDashboard, exact: true },
+      { label: 'Chủ hàng', href: '/accountant/clients', icon: Building2 },
+      { label: 'Vận tải', href: '/accountant/transporters', icon: Container },
+      { label: 'Đối soát', href: '/accountant/doi-soat', icon: ClipboardCheck },
+      { label: 'Chi phí xe', href: '/accountant/expenses', icon: Fuel },
+      { label: 'Lương', href: '/accountant/salary', icon: Wallet },
+      { label: 'Tổng hợp', href: '/accountant/pnl', icon: TrendingUp },
+      { label: 'Địa điểm', href: '/accountant/locations', icon: MapPin },
+      { label: 'Kỳ lương', href: '/accountant/settings/ky-luong', icon: Calendar },
+      { label: 'Cước tuyến', href: '/accountant/settings/cuoc-tuyen', icon: Route },
+      { label: 'Cước xe ngoài', href: '/accountant/settings/cuoc-tra-xe-ngoai', icon: Truck },
+      { label: 'Tác nghiệp', href: '/accountant/settings/tac-nghiep', icon: Wrench },
+    ],
+  },
+]
 
 export interface AccountantSidebarProps {
   collapsed?: boolean
@@ -134,16 +159,7 @@ export function AccountantSidebar({
   const sections: SidebarSection[] = items
     ? [{ label: null, items }]
     : user?.role === 'superadmin'
-      ? [
-          ...ACCOUNTANT_NAV_SECTIONS,
-          DIRECTOR_NAV_SECTION,
-          {
-            label: 'HỆ THỐNG',
-            items: [
-              { label: 'Quản lý tài khoản', href: '/superadmin', icon: UserCircle, exact: true },
-            ],
-          },
-        ]
+      ? SUPERADMIN_NAV_SECTIONS
       : ACCOUNTANT_NAV_SECTIONS
 
   const isActive = useCallback(
