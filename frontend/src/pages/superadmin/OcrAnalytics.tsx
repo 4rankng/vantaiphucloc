@@ -139,7 +139,18 @@ export function OcrAnalytics() {
           <LineChartWidget
             data={dailyData}
             height={320}
-            options={{ plugins: { legend: { display: true } } }}
+            options={{
+              plugins: {
+                legend: {
+                  display: true,
+                  labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+                },
+              },
+              interaction: {
+                mode: 'index',
+                intersect: false,
+              },
+            }}
           />
         )}
       </ChartCard>

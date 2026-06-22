@@ -32,9 +32,11 @@ function baseOptions(overrides?: ChartOptions<'bar'>): ChartOptions<'bar'> {
     plugins: {
       legend: {
         labels: {
+          usePointStyle: true,
+          boxWidth: 8,
+          boxHeight: 8,
           font: { family: BASE_FONT, size: 11 },
           color: CHART_TEXT_COLOR,
-          boxWidth: 10,
           padding: 12,
         },
       },
@@ -99,6 +101,10 @@ export function LineChartWidget({ data, height = 200, options }: LineChartProps)
         padding: 10,
         cornerRadius: 8,
       },
+    },
+    interaction: {
+      mode: 'index',
+      intersect: false,
     },
     scales: {
       x: {

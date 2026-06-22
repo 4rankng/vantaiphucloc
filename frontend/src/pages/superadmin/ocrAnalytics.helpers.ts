@@ -33,7 +33,6 @@ export function buildMonthlyBarData(monthly: OcrMonthlyPoint[]): ChartData<'bar'
   }
 }
 
-/** Daily request counts as a two-line chart (MiniMax vs Gemini). */
 export function buildDailyLineData(daily: OcrDailyPoint[]): ChartData<'line'> {
   return {
     labels: daily.map((d) => d.date.slice(5)), // MM-DD
@@ -42,17 +41,47 @@ export function buildDailyLineData(daily: OcrDailyPoint[]): ChartData<'line'> {
         label: PROVIDER_LABEL.minimax,
         data: daily.map((d) => d.minimax),
         borderColor: OCR_COLORS.minimax,
-        backgroundColor: `${OCR_COLORS.minimax}22`,
-        fill: false,
-        tension: 0.35,
+        backgroundColor: (context) => {
+          const chart = context.chart
+          const { ctx, chartArea } = chart
+          if (!chartArea) return `${OCR_COLORS.minimax}1A`
+          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+          gradient.addColorStop(0, `${OCR_COLORS.minimax}33`) // 20% opacity
+          gradient.addColorStop(1, `${OCR_COLORS.minimax}00`) // 0% opacity
+          return gradient
+        },
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2.5,
+        pointRadius: 3,
+        pointBackgroundColor: '#ffffff',
+        pointBorderColor: OCR_COLORS.minimax,
+        pointBorderWidth: 2,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: OCR_COLORS.minimax,
       },
       {
         label: PROVIDER_LABEL.gemini,
         data: daily.map((d) => d.gemini),
         borderColor: OCR_COLORS.gemini,
-        backgroundColor: `${OCR_COLORS.gemini}22`,
-        fill: false,
-        tension: 0.35,
+        backgroundColor: (context) => {
+          const chart = context.chart
+          const { ctx, chartArea } = chart
+          if (!chartArea) return `${OCR_COLORS.gemini}1A`
+          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+          gradient.addColorStop(0, `${OCR_COLORS.gemini}33`)
+          gradient.addColorStop(1, `${OCR_COLORS.gemini}00`)
+          return gradient
+        },
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2.5,
+        pointRadius: 3,
+        pointBackgroundColor: '#ffffff',
+        pointBorderColor: OCR_COLORS.gemini,
+        pointBorderWidth: 2,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: OCR_COLORS.gemini,
       },
     ],
   }
