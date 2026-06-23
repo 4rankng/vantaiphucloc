@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react'
 import { normalizeVietnamese } from '@/lib/search-utils'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Search, ArrowRight,
   LayoutDashboard, X,
@@ -28,18 +28,6 @@ export interface CommandPaletteProps {
   placeholder?: string
 }
 
-const DEFAULT_COMMANDS: CommandItem[] = [
-  {
-    id: 'dashboard',
-    label: 'Tổng quan',
-    description: 'Xem dashboard kế toán',
-    icon: <LayoutDashboard className="h-4 w-4" />,
-    href: '/accountant',
-    keywords: ['dashboard', 'tong quan', 'home'],
-    category: 'Navigation',
-  },
-]
-
 export function CommandPalette({
   open,
   onClose,
@@ -47,12 +35,28 @@ export function CommandPalette({
   placeholder = 'Tìm kiếm hoặc nhập lệnh...',
 }: CommandPaletteProps) {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
-  const allCommands = useMemo(() => [...DEFAULT_COMMANDS, ...commands], [commands])
+  const allCommands = useMemo(() => {
+    // Keep the dashboard quick-link in the user's own namespace (/superadmin vs /accountant).
+    const dashboardHref = pathname.startsWith('/superadmin') ? '/superadmin' : '/accountant'
+    return [
+      {
+        id: 'dashboard',
+        label: 'Tổng quan',
+        description: 'Xem dashboard',
+        icon: <LayoutDashboard className="h-4 w-4" />,
+        href: dashboardHref,
+        keywords: ['dashboard', 'tong quan', 'home'],
+        category: 'Navigation',
+      },
+      ...commands,
+    ]
+  }, [commands, pathname])
 
   const filteredCommands = useMemo(() => {
     if (!query.trim()) return allCommands

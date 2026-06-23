@@ -1,4 +1,4 @@
-import type { ChartData } from 'chart.js'
+import type { ChartData, ChartDataset } from 'chart.js'
 import type { OcrDailyPoint, OcrMonthlyPoint, OcrStats } from '@/services/api/ocrStats.api'
 
 /** Provider → chart color. MiniMax is the brand accent (primary provider). */
@@ -33,56 +33,56 @@ export function buildMonthlyBarData(monthly: OcrMonthlyPoint[]): ChartData<'bar'
   }
 }
 
+/** One filled line dataset sharing the OCR chart's gradient + point styling. */
+function lineDataset(label: string, data: number[], color: string): ChartDataset<'line'> {
+  return {
+    label,
+    data,
+    borderColor: color,
+    backgroundColor: (context) => {
+      const { ctx, chartArea } = context.chart
+      if (!chartArea) return `${color}1A`
+      const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+      gradient.addColorStop(0, `${color}33`) // 20% opacity
+      gradient.addColorStop(1, `${color}00`) // 0% opacity
+      return gradient
+    },
+    fill: true,
+    tension: 0.4,
+    borderWidth: 2.5,
+    pointRadius: 3,
+    pointBackgroundColor: '#ffffff',
+    pointBorderColor: color,
+    pointBorderWidth: 2,
+    pointHoverRadius: 5,
+    pointHoverBackgroundColor: color,
+  }
+}
+
+/**
+ * Per-provider daily OCR counts as two lines (MiniMax + Gemini). Used on the
+ * OCR analytics detail page where the provider split matters.
+ */
 export function buildDailyLineData(daily: OcrDailyPoint[]): ChartData<'line'> {
   return {
     labels: daily.map((d) => d.date.slice(5)), // MM-DD
     datasets: [
-      {
-        label: PROVIDER_LABEL.minimax,
-        data: daily.map((d) => d.minimax),
-        borderColor: OCR_COLORS.minimax,
-        backgroundColor: (context) => {
-          const chart = context.chart
-          const { ctx, chartArea } = chart
-          if (!chartArea) return `${OCR_COLORS.minimax}1A`
-          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-          gradient.addColorStop(0, `${OCR_COLORS.minimax}33`) // 20% opacity
-          gradient.addColorStop(1, `${OCR_COLORS.minimax}00`) // 0% opacity
-          return gradient
-        },
-        fill: true,
-        tension: 0.4,
-        borderWidth: 2.5,
-        pointRadius: 3,
-        pointBackgroundColor: '#ffffff',
-        pointBorderColor: OCR_COLORS.minimax,
-        pointBorderWidth: 2,
-        pointHoverRadius: 5,
-        pointHoverBackgroundColor: OCR_COLORS.minimax,
-      },
-      {
-        label: PROVIDER_LABEL.gemini,
-        data: daily.map((d) => d.gemini),
-        borderColor: OCR_COLORS.gemini,
-        backgroundColor: (context) => {
-          const chart = context.chart
-          const { ctx, chartArea } = chart
-          if (!chartArea) return `${OCR_COLORS.gemini}1A`
-          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-          gradient.addColorStop(0, `${OCR_COLORS.gemini}33`)
-          gradient.addColorStop(1, `${OCR_COLORS.gemini}00`)
-          return gradient
-        },
-        fill: true,
-        tension: 0.4,
-        borderWidth: 2.5,
-        pointRadius: 3,
-        pointBackgroundColor: '#ffffff',
-        pointBorderColor: OCR_COLORS.gemini,
-        pointBorderWidth: 2,
-        pointHoverRadius: 5,
-        pointHoverBackgroundColor: OCR_COLORS.gemini,
-      },
+      lineDataset(PROVIDER_LABEL.minimax, daily.map((d) => d.minimax), OCR_COLORS.minimax),
+      lineDataset(PROVIDER_LABEL.gemini, daily.map((d) => d.gemini), OCR_COLORS.gemini),
+    ],
+  }
+}
+
+/**
+ * Daily OCR request count as a SINGLE total line — minimax + gemini combined
+ * per day, regardless of which provider handled the request. Used on the admin
+ * dashboard where only overall volume matters.
+ */
+export function buildDailyTotalLineData(daily: OcrDailyPoint[]): ChartData<'line'> {
+  return {
+    labels: daily.map((d) => d.date.slice(5)), // MM-DD
+    datasets: [
+      lineDataset('Tổng số lượt OCR', daily.map((d) => d.minimax + d.gemini), OCR_COLORS.minimax),
     ],
   }
 }
@@ -97,4 +97,10 @@ export function successRate(total: number, success: number): number {
 export function grandTotal(stats: OcrStats | null | undefined): number {
   if (!stats) return 0
   return stats.totals.minimax.total + stats.totals.gemini.total
+}
+
+/** True when there is any OCR data to chart (at least one daily point or a non-zero total). */
+export function hasOcrData(stats: OcrStats | null | undefined): boolean {
+  if (!stats) return false
+  return stats.daily.length > 0 || grandTotal(stats) > 0
 }

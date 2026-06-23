@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Plus, Route, FileSpreadsheet, ArrowLeft } from 'lucide-react'
 import { Button, Pagination, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
@@ -15,6 +16,8 @@ import type { VendorRoutePricingUpdatePayload } from '@/services/api/vendorRoute
 import { LinkButton } from '@/components/shared'
 
 export function VendorRoutePricingPage() {
+  const { pathname } = useLocation()
+  const settingsPath = pathname.startsWith('/superadmin') ? '/superadmin/settings' : '/accountant/settings'
   const [importOpen, setImportOpen] = useState(false)
   const [inlineEditId, setInlineEditId] = useState<number | null>(null)
   const [inlineEditField, setInlineEditField] = useState<FocusableField>('f20Price')
@@ -105,7 +108,7 @@ export function VendorRoutePricingPage() {
         subtitle="Quản lý bảng giá cước trả nhà thầu theo tuyến đường"
         lucideIcon={Route}
         breadcrumbs={
-          <LinkButton to="/accountant/settings" icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
+          <LinkButton to={settingsPath} icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
         }
       />
 

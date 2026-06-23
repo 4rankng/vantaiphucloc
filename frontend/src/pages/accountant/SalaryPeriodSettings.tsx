@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Calendar, AlertTriangle, ArrowLeft } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button } from '@/components/ui'
 import { Panel } from '@/components/shared/overlays/Panel'
@@ -24,6 +25,8 @@ function periodExample(fromDay: number, toDay: number) {
 }
 
 export function SalaryPeriodSettings() {
+  const { pathname } = useLocation()
+  const settingsPath = pathname.startsWith('/superadmin') ? '/superadmin/settings' : '/accountant/settings'
   const toast = useToast()
   const qc = useQueryClient()
   const { data: config, isLoading } = useSalaryConfig()
@@ -70,7 +73,7 @@ export function SalaryPeriodSettings() {
       subtitle="Cấu hình ngày bắt đầu và kết thúc kỳ lương hàng tháng"
       icon={Calendar}
       breadcrumb={
-        <LinkButton to="/accountant/settings" icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
+        <LinkButton to={settingsPath} icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
       }
     >
       <Panel>

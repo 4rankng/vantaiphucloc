@@ -103,8 +103,25 @@ export function createAppRouter() {
           path: 'superadmin',
           element: h(Lazy, { component: R.AccountantLayout }),
           children: [
-            { index: true, element: ebc('SuperAdminDashboard', h(Lazy, { component: R.SuperAdminApp })) },
-            // Director pages (accessible via GIÁM ĐỐC sidebar section)
+            { index: true, element: ebc('SuperAdminOverview', h(Lazy, { component: R.SuperAdminOverview })) },
+            { path: 'accounts',               element: ebc('SuperAdminDashboard', h(Lazy, { component: R.SuperAdminApp })) },
+            // SuperAdmin mirrors the accountant business pages under /superadmin/* (own namespace, not /accountant)
+            { path: 'clients',                    element: ebc('AccountantClients', h(Lazy, { component: R.AccountantClients })) },
+            { path: 'vendors',                    element: h(Navigate, { to: '/superadmin/transporters?tab=nha-thau', replace: true }) },
+            { path: 'drivers',                    element: h(Navigate, { to: '/superadmin/transporters', replace: true }) },
+            { path: 'transporters',               element: ebc('AccountantTransporters', h(Lazy, { component: R.AccountantTransporters })) },
+            { path: 'doi-soat',                   element: ebc('AccountantDoiSoat', h(Lazy, { component: R.AccountantDoiSoat })) },
+            { path: 'import',                     element: h(Navigate, { to: '/superadmin/doi-soat', replace: true }) },
+            { path: 'expenses',                   element: ebc('AccountantExpenses', h(Lazy, { component: R.AccountantExpenses })) },
+            { path: 'salary',                     element: ebc('AccountantSalary', h(Lazy, { component: R.AccountantSalary })) },
+            { path: 'pnl',                        element: ebc('AccountantPnL', h(Lazy, { component: R.AccountantPnL })) },
+            { path: 'locations',                  element: ebc('AccountantLocations', h(Lazy, { component: R.AccountantLocations })) },
+            { path: 'settings',                   element: h(Navigate, { to: '/superadmin/settings/ky-luong', replace: true }) },
+            { path: 'settings/ky-luong',          element: ebc('SalaryPeriodSettings', h(Lazy, { component: R.SalaryPeriodSettings })) },
+            { path: 'settings/cuoc-tuyen',        element: ebc('RoutePricingPage', h(Lazy, { component: R.RoutePricingPage })) },
+            { path: 'settings/cuoc-tra-xe-ngoai', element: ebc('VendorRoutePricingPage', h(Lazy, { component: R.VendorRoutePricingPage })) },
+            { path: 'settings/tac-nghiep',        element: ebc('OperationTypesPage', h(Lazy, { component: R.OperationTypesPage })) },
+            // Director pages (deep-link reachable; not in the superadmin sidebar)
             { path: 'dashboard',              element: ebc('DirectorDashboard', h(Lazy, { component: R.DirectorDashboard })) },
             { path: 'partners',               element: ebc('DirectorContacts', h(Lazy, { component: R.DirectorContacts })) },
             { path: 'pricing',                element: ebc('RoutePricingPage', h(Lazy, { component: R.RoutePricingPage })) },

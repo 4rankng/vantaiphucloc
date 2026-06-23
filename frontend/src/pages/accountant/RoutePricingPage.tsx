@@ -20,7 +20,9 @@ import { useIsMobile } from '@/hooks/use-mobile'
 
 export function RoutePricingPage() {
   const { pathname } = useLocation()
-  const backTo = pathname.startsWith('/accountant') ? '/accountant/settings' : undefined
+  const backTo = pathname.startsWith('/accountant') ? '/accountant/settings'
+    : pathname.startsWith('/superadmin') ? '/superadmin/settings'
+    : undefined
   const isMobile = useIsMobile(768)
   const [importOpen, setImportOpen] = useState(false)
   const [syncOpen, setSyncOpen] = useState(false)
