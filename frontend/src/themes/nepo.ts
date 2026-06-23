@@ -9,9 +9,9 @@ export const nepoTheme: ThemeDefinition = {
   name: 'nepo',
   label: 'NEPO',
   colors: {
-    bgPrimary: '#F7F8FA',
+    bgPrimary: '#EDEFF3',
     bgSecondary: '#FFFFFF',
-    bgTertiary: '#EFF1F5',
+    bgTertiary: '#E5E8EC',
     bgGlass: 'rgba(255, 255, 255, 0.70)',
 
     brandPrimary: '#00B14F',
@@ -28,8 +28,8 @@ export const nepoTheme: ThemeDefinition = {
     textInverse: '#FFFFFF',
     textOnBrand: '#FFFFFF',
 
-    borderDefault: '#EAECEF',
-    borderLight: '#EAECEF',
+    borderDefault: '#D1D6DE',
+    borderLight: '#D1D6DE',
     borderGlass: 'rgba(0, 0, 0, 0.06)',
 
     statusSuccess: '#00B14F',
@@ -61,9 +61,9 @@ export const nepoTheme: ThemeDefinition = {
     header: 'rgba(255, 255, 255, 0.70)',
     headerBorder: '#EAECEF',
 
-    shadowCard: '0 1px 2px rgba(10, 10, 10, 0.04)',
-    shadowElevated: '0 4px 14px rgba(10, 10, 10, 0.06), 0 1px 2px rgba(10, 10, 10, 0.03)',
-    shadowSm: '0 1px 2px rgba(10, 10, 10, 0.04)',
+    shadowCard: '0 2px 8px rgba(10, 10, 10, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02)',
+    shadowElevated: '0 12px 28px rgba(10, 10, 10, 0.08), 0 2px 4px rgba(10, 10, 10, 0.04)',
+    shadowSm: '0 2px 4px rgba(10, 10, 10, 0.04)',
 
     glassBg: 'rgba(255, 255, 255, 0.70)',
     glassBorder: '#EAECEF',

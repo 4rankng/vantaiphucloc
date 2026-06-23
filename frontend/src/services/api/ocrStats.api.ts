@@ -28,6 +28,8 @@ export interface OcrStats {
     minimax: OcrProviderTotal
     gemini: OcrProviderTotal
   }
+  minimaxEnable?: boolean
+  geminiEnable?: boolean
 }
 
 export function getOcrStats(days = 30): Promise<ApiResponse<OcrStats>> {

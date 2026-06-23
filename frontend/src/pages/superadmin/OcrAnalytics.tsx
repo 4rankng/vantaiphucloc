@@ -41,11 +41,11 @@ export function OcrAnalytics() {
   const { data, isLoading } = useOcrStats(config.days)
 
   const monthlyData = useMemo(
-    () => buildMonthlyBarData(data?.monthly ?? []),
+    () => buildMonthlyBarData(data?.monthly ?? [], data?.minimaxEnable, data?.geminiEnable),
     [data],
   )
   const dailyData = useMemo(
-    () => buildDailyLineData(data?.daily ?? []),
+    () => buildDailyLineData(data?.daily ?? [], data?.minimaxEnable, data?.geminiEnable),
     [data],
   )
 
@@ -69,26 +69,30 @@ export function OcrAnalytics() {
           value={grandTotal(data)}
           hint={`${config.days} ngày gần nhất`}
         />
-        <StatTile
-          label="MiniMax"
-          value={minimax?.total ?? 0}
-          hint={
-            minimax
-              ? `Thành công ${successRate(minimax.total, minimax.success)}%`
-              : 'Chưa có dữ liệu'
-          }
-          dotColor={OCR_COLORS.minimax}
-        />
-        <StatTile
-          label="Gemini"
-          value={gemini?.total ?? 0}
-          hint={
-            gemini
-              ? `Thành công ${successRate(gemini.total, gemini.success)}%`
-              : 'Chưa có dữ liệu'
-          }
-          dotColor={OCR_COLORS.gemini}
-        />
+        {(data?.minimaxEnable ?? true) && (
+          <StatTile
+            label="MiniMax"
+            value={minimax?.total ?? 0}
+            hint={
+              minimax
+                ? `Thành công ${successRate(minimax.total, minimax.success)}%`
+                : 'Chưa có dữ liệu'
+            }
+            dotColor={OCR_COLORS.minimax}
+          />
+        )}
+        {(data?.geminiEnable ?? true) && (
+          <StatTile
+            label="Gemini"
+            value={gemini?.total ?? 0}
+            hint={
+              gemini
+                ? `Thành công ${successRate(gemini.total, gemini.success)}%`
+                : 'Chưa có dữ liệu'
+            }
+            dotColor={OCR_COLORS.gemini}
+          />
+        )}
       </div>
 
       <ChartCard
@@ -107,7 +111,13 @@ export function OcrAnalytics() {
               plugins: {
                 legend: {
                   display: true,
-                  labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+                  labels: {
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    boxWidth: 6,
+                    boxHeight: 6,
+                    padding: 15,
+                  },
                 },
               },
               interaction: {

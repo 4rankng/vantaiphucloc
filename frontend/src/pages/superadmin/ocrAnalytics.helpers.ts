@@ -13,23 +13,31 @@ export const PROVIDER_LABEL = {
 } as const
 
 /** Monthly request counts as a grouped bar chart (one bar per provider per month). */
-export function buildMonthlyBarData(monthly: OcrMonthlyPoint[]): ChartData<'bar'> {
+export function buildMonthlyBarData(
+  monthly: OcrMonthlyPoint[],
+  minimaxEnable = true,
+  geminiEnable = true
+): ChartData<'bar'> {
+  const datasets: ChartDataset<'bar'>[] = []
+  if (minimaxEnable) {
+    datasets.push({
+      label: PROVIDER_LABEL.minimax,
+      data: monthly.map((m) => m.minimax),
+      backgroundColor: OCR_COLORS.minimax,
+      borderRadius: 4,
+    })
+  }
+  if (geminiEnable) {
+    datasets.push({
+      label: PROVIDER_LABEL.gemini,
+      data: monthly.map((m) => m.gemini),
+      backgroundColor: OCR_COLORS.gemini,
+      borderRadius: 4,
+    })
+  }
   return {
     labels: monthly.map((m) => m.month),
-    datasets: [
-      {
-        label: PROVIDER_LABEL.minimax,
-        data: monthly.map((m) => m.minimax),
-        backgroundColor: OCR_COLORS.minimax,
-        borderRadius: 4,
-      },
-      {
-        label: PROVIDER_LABEL.gemini,
-        data: monthly.map((m) => m.gemini),
-        backgroundColor: OCR_COLORS.gemini,
-        borderRadius: 4,
-      },
-    ],
+    datasets,
   }
 }
 
@@ -63,13 +71,25 @@ function lineDataset(label: string, data: number[], color: string): ChartDataset
  * Per-provider daily OCR counts as two lines (MiniMax + Gemini). Used on the
  * OCR analytics detail page where the provider split matters.
  */
-export function buildDailyLineData(daily: OcrDailyPoint[]): ChartData<'line'> {
+export function buildDailyLineData(
+  daily: OcrDailyPoint[],
+  minimaxEnable = true,
+  geminiEnable = true
+): ChartData<'line'> {
+  const datasets: ChartDataset<'line'>[] = []
+  if (minimaxEnable) {
+    datasets.push(
+      lineDataset(PROVIDER_LABEL.minimax, daily.map((d) => d.minimax), OCR_COLORS.minimax)
+    )
+  }
+  if (geminiEnable) {
+    datasets.push(
+      lineDataset(PROVIDER_LABEL.gemini, daily.map((d) => d.gemini), OCR_COLORS.gemini)
+    )
+  }
   return {
     labels: daily.map((d) => d.date.slice(5)), // MM-DD
-    datasets: [
-      lineDataset(PROVIDER_LABEL.minimax, daily.map((d) => d.minimax), OCR_COLORS.minimax),
-      lineDataset(PROVIDER_LABEL.gemini, daily.map((d) => d.gemini), OCR_COLORS.gemini),
-    ],
+    datasets,
   }
 }
 

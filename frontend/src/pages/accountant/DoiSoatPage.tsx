@@ -20,6 +20,7 @@ import { EmptyState } from '@/components/shared/feedback/EmptyState'
 import { TableSkeleton } from '@/components/shared/data-display/TableSkeleton/TableSkeleton'
 import { Button, Switch } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/forms/InlineSelect/InlineSelect'
+import { InlineDatePicker } from '@/components/shared/forms/InlineDatePicker/InlineDatePicker'
 import { ExcelImportDrawer } from '@/components/shared/overlays/ExcelImportDrawer'
 import { DeliveredTripDetailDrawer } from '@/components/shared/overlays/DeliveredTripDetailDrawer'
 import { AutoMatchDialog, AutoMatchDateDialog } from '@/components/shared/feedback/AutoMatchDialog'
@@ -71,10 +72,17 @@ export function DoiSoatPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
   const [showExportDialog, setShowExportDialog] = useState(false)
 
+  const [filterDate, setFilterDate] = useState<string>('')
+
+  // Reset date filter when month/year changes
+  useEffect(() => {
+    setFilterDate('')
+  }, [month, year])
+
   const [showDuplicates, setShowDuplicates] = useState(false)
   const duplicatesQuery = useDuplicateContainers({
-    dateFrom,
-    dateTo,
+    dateFrom: filterDate || dateFrom,
+    dateTo: filterDate || dateTo,
     clientId: doiSoatClientId !== 'ALL' && doiSoatClientId !== '' ? Number(doiSoatClientId) : undefined,
     driverId: driverIdFilter !== 'ALL' && driverIdFilter !== '' ? Number(driverIdFilter) : undefined,
     enabled: showDuplicates,
@@ -194,8 +202,8 @@ export function DoiSoatPage() {
     hasNextPage,
     isFetchingNextPage,
   } = useDeliveredTripsInfinite({
-    dateFrom,
-    dateTo,
+    dateFrom: filterDate || dateFrom,
+    dateTo: filterDate || dateTo,
     clientId: doiSoatClientId !== 'ALL' && doiSoatClientId !== '' ? Number(doiSoatClientId) : undefined,
     driverId: driverIdFilter !== 'ALL' && driverIdFilter !== '' ? Number(driverIdFilter) : undefined,
     vendorId: vendorId !== 'ALL' && vendorId !== '' ? Number(vendorId) : undefined,
@@ -214,8 +222,8 @@ export function DoiSoatPage() {
 
   // Global stats from trip daily stats endpoint — respects all active filters
   const { data: dailyStats } = useTripDailyStats(
-    dateFrom,
-    dateTo,
+    filterDate || dateFrom,
+    filterDate || dateTo,
     doiSoatClientId !== 'ALL' && doiSoatClientId !== '' ? Number(doiSoatClientId) : undefined,
     driverIdFilter !== 'ALL' && driverIdFilter !== '' ? Number(driverIdFilter) : undefined,
     statusFilter !== 'ALL' ? (statusFilter === 'MATCHED') : undefined,
@@ -319,18 +327,45 @@ export function DoiSoatPage() {
 
         {/* Row 2: search + filter dropdowns in a card */}
         <Panel flush className="mb-2">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-3 px-4 py-2.5">
-            <div className="w-full lg:w-[280px]">
-              <ToolbarSearch
-                value={search}
-                onChange={setSearch}
-                placeholder="Tìm chủ hàng, tàu, tuyến, cont…"
-                width="100%"
-              />
+          <div className="flex flex-col gap-3 px-4 py-3">
+            {/* Row 1: Search + Date + Status */}
+            <div className="flex flex-col md:flex-row md:items-center gap-3">
+              <div className="flex-1 min-w-[280px]">
+                <ToolbarSearch
+                  value={search}
+                  onChange={setSearch}
+                  placeholder="Tìm chủ hàng, tàu, tuyến, cont…"
+                  width="100%"
+                />
+              </div>
+              <div className="w-full md:w-[160px]">
+                <InlineDatePicker
+                  placeholder="Lọc theo ngày"
+                  value={filterDate}
+                  min={dateFrom}
+                  max={dateTo}
+                  onChange={setFilterDate}
+                  style={{ width: '100%', height: 32, fontSize: 12.5 }}
+                />
+              </div>
+              <div className="w-full md:w-[160px]">
+                <InlineSelect
+                  placeholder="Trạng thái"
+                  value={statusFilter}
+                  options={[
+                    { value: 'ALL', label: 'Tất cả chuyến xe' },
+                    { value: 'PENDING', label: 'Chờ ghép' },
+                    { value: 'MATCHED', label: 'Đã ghép' },
+                  ]}
+                  onChange={(val) => setStatusFilter(val as StatusFilter)}
+                  style={{ width: '100%', height: 32, fontSize: 12.5 }}
+                />
+              </div>
             </div>
-            <div className="hidden lg:block flex-1" />
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
-              <div className="w-full sm:w-[185px]">
+
+            {/* Row 2: Client + Driver + Duplicates Toggle */}
+            <div className="flex flex-col md:flex-row md:items-center gap-3">
+              <div className="flex-1 min-w-[240px]">
                 <InlineSelect
                   placeholder="Tất cả chủ hàng"
                   value={doiSoatClientId}
@@ -342,7 +377,7 @@ export function DoiSoatPage() {
                   style={{ width: '100%', height: 32, fontSize: 12.5 }}
                 />
               </div>
-              <div className="w-full sm:w-[160px]">
+              <div className="flex-1 min-w-[200px]">
                 <InlineSelect
                   placeholder="Tất cả lái xe"
                   value={driverIdFilter}
@@ -354,30 +389,19 @@ export function DoiSoatPage() {
                   style={{ width: '100%', height: 32, fontSize: 12.5 }}
                 />
               </div>
-              <div className="w-full sm:w-[130px]">
-                <InlineSelect
-                  placeholder="Trạng thái"
-                  value={statusFilter}
-                  options={[
-                    { value: 'ALL', label: 'Tất cả' },
-                    { value: 'PENDING', label: 'Chờ ghép' },
-                    { value: 'MATCHED', label: 'Đã ghép' },
-                  ]}
-                  onChange={(val) => setStatusFilter(val as StatusFilter)}
-                  style={{ width: '100%', height: 32, fontSize: 12.5 }}
-                />
+              <div className="w-full md:w-auto flex items-center md:justify-end md:ml-auto">
+                <label className="flex items-center gap-2 cursor-pointer select-none px-1 py-1">
+                  <Switch
+                    checked={showDuplicates}
+                    onCheckedChange={setShowDuplicates}
+                    aria-label="Hiện cont trùng"
+                  />
+                  <span className="text-[12.5px] inline-flex items-center gap-1" style={{ color: 'var(--ink-2)' }}>
+                    <Copy className="h-3.5 w-3.5" />
+                    Hiện cont trùng
+                  </span>
+                </label>
               </div>
-              <label className="flex items-center gap-2 cursor-pointer select-none px-1 min-h-[44px]">
-                <Switch
-                  checked={showDuplicates}
-                  onCheckedChange={setShowDuplicates}
-                  aria-label="Hiện cont trùng"
-                />
-                <span className="text-[12.5px] inline-flex items-center gap-1" style={{ color: 'var(--ink-2)' }}>
-                  <Copy className="h-3.5 w-3.5" />
-                  Hiện cont trùng
-                </span>
-              </label>
             </div>
           </div>
         </Panel>

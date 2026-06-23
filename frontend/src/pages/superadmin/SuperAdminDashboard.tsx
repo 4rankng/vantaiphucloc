@@ -1,5 +1,20 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Plus, Search, Phone, Building2, Eye, Pencil, Play, Users, CheckCircle2 } from 'lucide-react'
+import {
+  Plus,
+  Search,
+  Phone,
+  Building2,
+  Eye,
+  Pencil,
+  Play,
+  Users,
+  CheckCircle2,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  Coins,
+  ShieldAlert,
+} from 'lucide-react'
 import { EmptyState } from '@/components/shared/feedback/EmptyState/EmptyState'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { ROLE_LABELS, type Role } from '@/data/domain'
@@ -8,6 +23,14 @@ import { useOcrStats } from '@/hooks/queries/ocr-stats'
 import { ChartCard } from '@/components/shared/data-display/ChartCard'
 import { LineChartWidget } from '@/components/shared/data-display/Charts'
 import { OCR_COLORS, buildDailyLineData, grandTotal, successRate } from './ocrAnalytics.helpers'
+import { KpiHeroCard } from '@/components/shared/data-display/KpiHeroCard'
+import { PageHeader } from '@/components/shared/layouts/PageHeader'
+import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
+import { useMonthParams } from '../accountant/use-month-params'
+import { useDirectorDashboard } from '@/hooks/queries/pnl'
+import { pad } from '@/lib/accounting-utils'
+
+const fmtFull = (n: number): string => n.toLocaleString('vi-VN')
 
 
 // ─── Role styling ─────────────────────────────────────────────────────────────
@@ -317,9 +340,24 @@ export function SuperAdminDashboard({
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const searchRef = useRef<HTMLInputElement>(null)
 
+  const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
+  const { data: stats } = useDirectorDashboard(dateFrom, dateTo)
+
+  const total       = stats?.total       ?? 0
+  const matched     = stats?.matched     ?? 0
+  const pending     = stats?.pending     ?? 0
+  const revenue     = stats?.revenue     ?? 0
+  const avgRev      = stats?.avgRevenuePerTrip ?? 0
+  const totalCost   = stats?.totalCost   ?? 0
+  const profit      = stats?.profit      ?? 0
+  const totalDelta     = stats?.totalDelta     ?? null
+  const revenueDelta   = stats?.revenueDelta   ?? null
+  const costDelta      = stats?.costDelta      ?? null
+  const profitDelta    = stats?.profitDelta    ?? null
+
   const { data: ocrStats, isLoading: ocrLoading } = useOcrStats(30)
   const dailyData = useMemo(
-    () => buildDailyLineData(ocrStats?.daily ?? []),
+    () => buildDailyLineData(ocrStats?.daily ?? [], ocrStats?.minimaxEnable, ocrStats?.geminiEnable),
     [ocrStats]
   )
 
@@ -398,6 +436,63 @@ export function SuperAdminDashboard({
   return (
     <div className="space-y-6 animate-fade-in">
 
+      {/* ── Header ── */}
+      <PageHeader
+        title="Quản trị hệ thống"
+        subtitle="Tổng quan người dùng, hiệu suất nhận dạng cont OCR và hiệu năng vận hành"
+        lucideIcon={ShieldAlert}
+        actions={
+          <MonthNavigator
+            year={year}
+            month={month}
+            onPrev={onPrev}
+            onNext={onNext}
+            periodStart={periodStart}
+            periodEnd={periodEnd}
+          />
+        }
+      />
+
+      {/* ── KPI Row (Operational & Financial Metrics) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+        <KpiHeroCard
+          label={`Tổng chuyến · Tháng ${pad(month)}/${year}`}
+          value={total}
+          formattedValue={<span>{total.toLocaleString('vi-VN')}</span>}
+          icon={Activity}
+          color="emerald"
+          sublabel={`${pending} chờ ghép · ${matched} đã ghép`}
+          trend={totalDelta != null ? { value: `${Math.abs(totalDelta)}%`, positive: totalDelta >= 0 } : undefined}
+        />
+        <KpiHeroCard
+          label="Doanh thu"
+          value={revenue}
+          formattedValue={<span>{fmtFull(revenue)}</span>}
+          icon={TrendingUp}
+          color="blue"
+          sublabel={avgRev > 0 ? `TB ${fmtFull(avgRev)}/chuyến` : 'Chưa có doanh thu'}
+          trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta >= 0 } : undefined}
+        />
+        <KpiHeroCard
+          label="Chi phí"
+          value={totalCost}
+          formattedValue={<span>{fmtFull(totalCost)}</span>}
+          icon={TrendingDown}
+          color="rose"
+          sublabel={revenue > 0 ? `${Math.round((totalCost / revenue) * 100)}% doanh thu` : 'Chưa có dữ liệu'}
+          trend={costDelta != null ? { value: `${Math.abs(costDelta)}%`, positive: costDelta <= 0 } : undefined}
+        />
+        <KpiHeroCard
+          label="Lợi nhuận"
+          value={profit}
+          formattedValue={<span>{fmtFull(profit)}</span>}
+          icon={Coins}
+          color="amber"
+          sublabel={revenue > 0 ? `Biên ${Math.round((profit / revenue) * 100)}%` : 'Chưa có dữ liệu'}
+          trend={profitDelta != null ? { value: `${Math.abs(profitDelta)}%`, positive: profitDelta >= 0 } : undefined}
+        />
+      </div>
+
       {/* ── Summary Stats Bento Grid ── */}
       <div className="bento-grid">
         {/* Panel 1: Tài khoản hệ thống */}
@@ -470,31 +565,49 @@ export function SuperAdminDashboard({
             <LineChartWidget
               data={dailyData}
               height={220}
-              options={{ plugins: { legend: { display: true } } }}
+              options={{
+                plugins: {
+                  legend: {
+                    display: true,
+                    labels: {
+                      usePointStyle: true,
+                      pointStyle: 'circle',
+                      boxWidth: 6,
+                      boxHeight: 6,
+                      padding: 15,
+                    }
+                  }
+                },
+                interaction: { mode: 'index', intersect: false },
+              }}
             />
           </ChartCard>
         </div>
         <div className="flex flex-col gap-4">
           <StatTile
-            label="Tổng lượt OCR (30 ngày)"
+            label="Tổng lượt OCR"
             value={grandTotal(ocrStats)}
             hint="Tổng số lượt gọi nhận dạng cont"
             loading={ocrLoading}
           />
-          <StatTile
-            label="Tỷ lệ thành công MiniMax"
-            value={ocrStats?.totals?.minimax ? `${successRate(ocrStats.totals.minimax.total, ocrStats.totals.minimax.success)}%` : '0%'}
-            hint={ocrStats?.totals?.minimax ? `Thành công ${ocrStats.totals.minimax.success}/${ocrStats.totals.minimax.total}` : 'Chưa có cuộc gọi nào'}
-            dotColor={OCR_COLORS.minimax}
-            loading={ocrLoading}
-          />
-          <StatTile
-            label="Tỷ lệ thành công Gemini"
-            value={ocrStats?.totals?.gemini ? `${successRate(ocrStats.totals.gemini.total, ocrStats.totals.gemini.success)}%` : '0%'}
-            hint={ocrStats?.totals?.gemini ? `Thành công ${ocrStats.totals.gemini.success}/${ocrStats.totals.gemini.total}` : 'Chưa có cuộc gọi nào'}
-            dotColor={OCR_COLORS.gemini}
-            loading={ocrLoading}
-          />
+          {(ocrStats?.minimaxEnable ?? true) && (
+            <StatTile
+              label="Tỷ lệ thành công MiniMax"
+              value={ocrStats?.totals?.minimax ? `${successRate(ocrStats.totals.minimax.total, ocrStats.totals.minimax.success)}%` : '0%'}
+              hint={ocrStats?.totals?.minimax ? `Thành công ${ocrStats.totals.minimax.success}/${ocrStats.totals.minimax.total}` : 'Chưa có cuộc gọi nào'}
+              dotColor={OCR_COLORS.minimax}
+              loading={ocrLoading}
+            />
+          )}
+          {(ocrStats?.geminiEnable ?? true) && (
+            <StatTile
+              label="Tỷ lệ thành công Gemini"
+              value={ocrStats?.totals?.gemini ? `${successRate(ocrStats.totals.gemini.total, ocrStats.totals.gemini.success)}%` : '0%'}
+              hint={ocrStats?.totals?.gemini ? `Thành công ${ocrStats.totals.gemini.success}/${ocrStats.totals.gemini.total}` : 'Chưa có cuộc gọi nào'}
+              dotColor={OCR_COLORS.gemini}
+              loading={ocrLoading}
+            />
+          )}
         </div>
       </div>
 

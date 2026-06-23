@@ -1788,10 +1788,14 @@ async def get_ocr_stats(
             totals[prov]["total"] = int(total or 0)
             totals[prov]["success"] = int(succ or 0)
 
+    from app.config import settings
+
     return {
         "days": days,
         "endDate": end_date.isoformat(),
         "daily": daily,
         "monthly": monthly,
         "totals": totals,
+        "minimax_enable": settings.MINIMAX_ENABLE,
+        "gemini_enable": settings.GEMINI_ENABLE,
     }
