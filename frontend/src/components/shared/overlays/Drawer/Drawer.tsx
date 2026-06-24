@@ -52,8 +52,11 @@ export function Drawer({
         >
           {/* Header */}
           <header
-            className="flex items-start justify-between gap-3 px-6 pt-5 pb-4 shrink-0"
-            style={{ borderBottom: '1px solid var(--line)' }}
+            className="flex items-start justify-between gap-3 px-6 pb-4 shrink-0"
+            style={{
+              paddingTop: 'max(20px, env(safe-area-inset-top, 0px))',
+              borderBottom: '1px solid var(--line)',
+            }}
           >
             <div className="min-w-0 flex-1">
               {breadcrumb && (
@@ -123,8 +126,12 @@ export function Drawer({
           {/* Footer */}
           {footer && (
             <footer
-              className="flex items-center justify-end gap-2 px-6 py-3.5 shrink-0"
-              style={{ borderTop: '1px solid var(--line)', background: 'var(--surface)' }}
+              className="flex items-center justify-end gap-2 px-6 pt-3.5 shrink-0"
+              style={{
+                paddingBottom: 'max(14px, env(safe-area-inset-bottom, 0px))',
+                borderTop: '1px solid var(--line)',
+                background: 'var(--surface)',
+              }}
             >
               {footer}
             </footer>
