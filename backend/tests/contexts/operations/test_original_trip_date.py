@@ -25,10 +25,11 @@ from app.contexts.operations.application.dto import (
     DeliveredTripCreateInput,
     DeliveredTripUpdateInput,
 )
+from app.contexts.operations.infrastructure.auto_match_service import confirm_matches
 from app.contexts.operations.infrastructure.repositories import (
     SqlDeliveredTripRepository,
 )
-from app.models.domain import Client, DeliveredTrip, Location
+from app.models.domain import BookedTrip, Client, DeliveredTrip, Location
 
 
 @pytest.fixture
@@ -68,6 +69,29 @@ def _trip(
         trip_date=trip_date,
         original_trip_date=original_trip_date,
         booked_trip_id=booked_trip_id,
+    )
+
+
+def _booked(
+    *,
+    client_id: int,
+    trip_date: date,
+    cont_number: str = "HACU1234567",
+    work_type: str = "CHUYEN_BAI",
+    pickup_id: int | None = None,
+    dropoff_id: int | None = None,
+) -> BookedTrip:
+    """Build an ORM BookedTrip (customer/chủ-hàng order) for match tests.
+
+    ``trip_date``, ``client_id`` and ``work_type`` are NOT NULL on the model.
+    """
+    return BookedTrip(
+        trip_date=trip_date,
+        client_id=client_id,
+        work_type=work_type,
+        cont_number=cont_number,
+        pickup_location_id=pickup_id,
+        dropoff_location_id=dropoff_id,
     )
 
 
@@ -225,3 +249,186 @@ class TestUnmatchRestoresTripDate:
             )
         ).one()
         assert row.trip_date == date(2026, 6, 1)  # unchanged (guard skipped)
+
+
+class TestConfirmMatchPreservesOriginalTripDate:
+    """``confirm_matches`` may overwrite ``trip_date`` from the booked (chủ hàng)
+    side via ``SYNCABLE_FIELDS``, but it must NEVER touch ``original_trip_date`` —
+    that frozen snapshot is what ``unmatch_endpoint`` restores from. These are the
+    first tests to drive the match step itself; the existing unmatch tests seed
+    matched state by hand instead.
+    """
+
+    @staticmethod
+    def _pair(wo_id, to_id, sync_source=None, field_choices=None):
+        # confirm_matches pair shape: (wo_id, to_id, sync_source, field_choices, score)
+        return (wo_id, to_id, sync_source, field_choices, None)
+
+    @staticmethod
+    async def _fetch_wo(db_session, wo_id):
+        return (
+            await db_session.execute(
+                select(
+                    DeliveredTrip.trip_date,
+                    DeliveredTrip.original_trip_date,
+                    DeliveredTrip.booked_trip_id,
+                ).where(DeliveredTrip.id == wo_id)
+            )
+        ).one()
+
+    async def _seed_pair(self, db_session, seeded):
+        """A delivered trip (driver date 06-10) + a booked trip (chủ hàng date 06-01)."""
+        repo = SqlDeliveredTripRepository(db_session)
+        wo = await CreateDeliveredTrip(repo, db_session)(
+            DeliveredTripCreateInput(
+                client_id=seeded["client_id"],
+                pickup_location_id=seeded["pickup_id"],
+                dropoff_location_id=seeded["dropoff_id"],
+                trip_date=date(2026, 6, 10),
+            ),
+            _accountant(),
+        )
+        assert wo.original_trip_date == date(2026, 6, 10)  # snapshot captured
+        to = _booked(
+            client_id=seeded["client_id"],
+            trip_date=date(2026, 6, 1),
+            pickup_id=seeded["pickup_id"],
+            dropoff_id=seeded["dropoff_id"],
+        )
+        db_session.add(to)
+        await db_session.flush()
+        return wo, to
+
+    async def test_confirm_booked_date_overwrites_trip_date_keeps_original(
+        self, db_session, seeded
+    ):
+        wo, to = await self._seed_pair(db_session, seeded)
+
+        result = await confirm_matches(
+            db_session, [self._pair(wo.id, to.id, None, {"tripDate": "booked"})]
+        )
+
+        assert result["matched_count"] == 1
+        assert result["errors"] == []
+        row = await self._fetch_wo(db_session, wo.id)
+        assert row.trip_date == date(2026, 6, 1)  # overwritten from chủ hàng side
+        assert row.original_trip_date == date(2026, 6, 10)  # snapshot frozen
+        assert row.booked_trip_id == to.id
+
+    async def test_confirm_delivered_date_keeps_delivered_trip_date(
+        self, db_session, seeded
+    ):
+        wo, to = await self._seed_pair(db_session, seeded)
+
+        result = await confirm_matches(
+            db_session, [self._pair(wo.id, to.id, None, {"tripDate": "delivered"})]
+        )
+
+        assert result["matched_count"] == 1
+        wo_row = await self._fetch_wo(db_session, wo.id)
+        assert wo_row.trip_date == date(2026, 6, 10)  # delivered (lái xe) unchanged
+        assert wo_row.original_trip_date == date(2026, 6, 10)
+        to_row = (
+            await db_session.execute(
+                select(BookedTrip.trip_date).where(BookedTrip.id == to.id)
+            )
+        ).one()
+        assert to_row.trip_date == date(2026, 6, 10)  # booked adopted the driver date
+
+    async def test_confirm_no_choice_does_not_overwrite_when_both_present(
+        self, db_session, seeded
+    ):
+        wo, to = await self._seed_pair(db_session, seeded)
+
+        # No field_choices, no sync_source → fill-empty branch. Both sides have a
+        # date, so neither is overwritten.
+        result = await confirm_matches(db_session, [self._pair(wo.id, to.id)])
+
+        assert result["matched_count"] == 1
+        row = await self._fetch_wo(db_session, wo.id)
+        assert row.trip_date == date(2026, 6, 10)
+        assert row.original_trip_date == date(2026, 6, 10)
+
+    async def test_confirm_sync_source_booked_fallback_overwrites_keeps_original(
+        self, db_session, seeded
+    ):
+        wo, to = await self._seed_pair(db_session, seeded)
+
+        # field_choices is None → confirm_matches falls back to sync_source for
+        # every syncable field (the path used by bulk/vendor import).
+        result = await confirm_matches(
+            db_session, [self._pair(wo.id, to.id, "booked", None)]
+        )
+
+        assert result["matched_count"] == 1
+        row = await self._fetch_wo(db_session, wo.id)
+        assert row.trip_date == date(2026, 6, 1)  # overwritten from chủ hàng side
+        assert row.original_trip_date == date(2026, 6, 10)  # snapshot still frozen
+
+
+class TestMatchThenUnmatchLifecycle:
+    """End-to-end: the driver's date must survive a match (booked-side date
+    written via ``confirm_matches``) and be restored on a subsequent unmatch —
+    the full reconciliation flow, driven through the real use-cases/endpoint
+    rather than seeded matched state.
+    """
+
+    async def test_full_lifecycle_match_booked_then_unmatch_restores_driver_date(
+        self, db_session, async_client, make_auth_headers, seeded
+    ):
+        # 1. Driver submits with their own date → snapshot captured.
+        repo = SqlDeliveredTripRepository(db_session)
+        wo = await CreateDeliveredTrip(repo, db_session)(
+            DeliveredTripCreateInput(
+                client_id=seeded["client_id"],
+                pickup_location_id=seeded["pickup_id"],
+                dropoff_location_id=seeded["dropoff_id"],
+                trip_date=date(2026, 6, 10),
+            ),
+            _accountant(),
+        )
+
+        # 2. Match against a booked trip whose date differs; pick the chủ hàng
+        #    date → trip_date is overwritten, original_trip_date is not.
+        to = _booked(
+            client_id=seeded["client_id"],
+            trip_date=date(2026, 6, 1),
+            pickup_id=seeded["pickup_id"],
+            dropoff_id=seeded["dropoff_id"],
+        )
+        db_session.add(to)
+        await db_session.flush()
+
+        match_result = await confirm_matches(
+            db_session, [(wo.id, to.id, None, {"tripDate": "booked"}, None)]
+        )
+        assert match_result["matched_count"] == 1
+
+        matched = (
+            await db_session.execute(
+                select(DeliveredTrip.trip_date, DeliveredTrip.original_trip_date).where(
+                    DeliveredTrip.id == wo.id
+                )
+            )
+        ).one()
+        assert matched.trip_date == date(2026, 6, 1)
+        assert matched.original_trip_date == date(2026, 6, 10)
+
+        # 3. Bỏ ghép → trip_date reverts to the driver's original.
+        headers = await make_auth_headers("accountant")
+        resp = await async_client.post(
+            "/api/v1/auto-match/unmatch",
+            json={"delivered_trip_id": wo.id},
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
+
+        final = (
+            await db_session.execute(
+                select(DeliveredTrip.trip_date, DeliveredTrip.booked_trip_id).where(
+                    DeliveredTrip.id == wo.id
+                )
+            )
+        ).one()
+        assert final.trip_date == date(2026, 6, 10)  # restored to lái-xe date
+        assert final.booked_trip_id is None

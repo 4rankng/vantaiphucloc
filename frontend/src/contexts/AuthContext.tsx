@@ -2,7 +2,6 @@
 import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
 import type { Role } from '@/data/domain'
 import { api, setTokens, clearTokens } from '@/services/api/client'
-import { startHealthMonitor, stopHealthMonitor } from '@/lib/network'
 import { queryClient } from '@/lib/query-client'
 
 export interface UserInfo {
@@ -41,14 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     localStorage.setItem('ttransport_user', JSON.stringify(u))
     setUser(u)
-    if (role === 'driver') startHealthMonitor()
     return u
   }, [])
 
   const logout = useCallback(() => {
     api.post('/auth/logout').catch(() => {})
     clearTokens()
-    stopHealthMonitor()
     queryClient.clear()
     setUser(null)
   }, [])

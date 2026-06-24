@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
@@ -11,6 +11,20 @@ import { invalidateDeliveredTripDeps } from '@/hooks/query-keys'
 import { useContainerManager } from './useContainerManager'
 import { migrateWorkType } from './useContainerManager'
 import type { DuplicateCheckCandidate } from '@/services/api/deliveredTrips.api'
+import { checkBackendHealth } from '@/lib/backend-health'
+
+/** One container the backend did NOT confirm during submit. */
+export interface SubmitFailure {
+  number: string | null
+  reason: string
+}
+
+/** Honest submit-failure state. Shown instead of the green success overlay
+ *  whenever ≥1 container was not confirmed by the backend. Form data is kept
+ *  so the driver can retry in place. */
+export interface SubmitError {
+  failed: SubmitFailure[]
+}
 
 export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | null) {
   const navigate = useNavigate()
@@ -66,6 +80,14 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   const [submitting, setSubmitting] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  // Honest submit failure — shown only when the backend did not confirm every
+  // container. All form state (containers, photos, notes) is retained so the
+  // driver can retry without re-entering data.
+  const [submitError, setSubmitError] = useState<SubmitError | null>(null)
+  // Container numbers the backend has confirmed this submit session. Retry
+  // skips these so a non-idempotent POST /delivered-trips is never re-sent
+  // (which would create a duplicate). Reset on each fresh submit.
+  const succeededContNumbersRef = useRef<Set<string>>(new Set())
 
   // Duplicate-trip warning (driver submit-time check against own last 7 days)
   const [duplicateChecking, setDuplicateChecking] = useState(false)
@@ -159,21 +181,52 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
         return
       }
 
-      // Edit mode: single container only
+      // Pre-submit reachability gate: if the backend is unreachable, fail fast
+      // with an honest error instead of letting each POST time out. Re-runs on
+      // retry so a driver who regained signal can resend immediately.
+      const healthy = await checkBackendHealth()
+      if (!healthy) {
+        setSubmitting(false)
+        setSubmitError({
+          failed: containers
+            .filter(c => c.containerNumber.trim())
+            .map(c => ({
+              number: c.containerNumber.trim(),
+              reason: 'Mất kết nối đến máy chủ – kiểm tra mạng rồi gửi lại',
+            })),
+        })
+        return
+      }
+
+      // Edit mode: single container only. PUT is checked for success the same
+      // way as create — no green overlay unless the backend confirmed the save.
       if (isEdit && existingDeliveredTrip) {
         const firstCont = containers[0]
-        await apiClient.updateDeliveredTrip(existingDeliveredTrip.id, {
-          contNumber: firstCont?.containerNumber.trim() || null,
-          contType: firstCont?.contType ?? null,
-          workType: firstCont?.workType ?? null,
-          clientId: Number(clientId),
-          pickupLocationId: pickupId,
-          dropoffLocationId: dropoffId,
-          vessel: vessel || null,
-          vehiclePlate: null,
-          tripDate,
-          note: note.trim() || null,
-        })
+        const contNumber = firstCont?.containerNumber.trim() || null
+        try {
+          const res = await apiClient.updateDeliveredTrip(existingDeliveredTrip.id, {
+            contNumber,
+            contType: firstCont?.contType ?? null,
+            workType: firstCont?.workType ?? null,
+            clientId: Number(clientId),
+            pickupLocationId: pickupId,
+            dropoffLocationId: dropoffId,
+            vessel: vessel || null,
+            vehiclePlate: null,
+            tripDate,
+            note: note.trim() || null,
+          })
+
+          if (!res.success) {
+            setSubmitting(false)
+            setSubmitError({ failed: [{ number: contNumber, reason: res.message ?? 'Không lưu được – thử lại' }] })
+            return
+          }
+        } catch {
+          setSubmitting(false)
+          setSubmitError({ failed: [{ number: contNumber, reason: 'Mất kết nối – kiểm tra mạng và gửi lại' }] })
+          return
+        }
         // Upload photo if taken
         if (firstCont?.photoTaken && firstCont?.photoDataUrl) {
           apiClient.uploadDeliveredTripPhoto(existingDeliveredTrip.id, firstCont.photoDataUrl)
@@ -190,15 +243,21 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
         return
       }
 
-      // Create mode: submit each container as a separate DeliveredTrip
+      // Create mode: submit each container as a separate DeliveredTrip.
+      // Success is truthful: the green overlay shows only when the backend
+      // has confirmed EVERY container. POST /delivered-trips is not idempotent,
+      // so retry skips containers already confirmed this session
+      // (succeededContNumbersRef) to avoid creating duplicates.
       const activeContainers = containers.filter(c => c.containerNumber.trim())
-      let anyFailed = false
+      const failed: SubmitFailure[] = []
 
-      for (let i = 0; i < activeContainers.length; i++) {
-        const cont = activeContainers[i]
+      for (const cont of activeContainers) {
+        const contNumber = cont.containerNumber.trim()
+        if (succeededContNumbersRef.current.has(contNumber)) continue
+
         try {
           const res = await apiClient.createDeliveredTrip({
-            contNumber: cont.containerNumber.trim() || null,
+            contNumber: contNumber || null,
             contType: cont.contType ?? null,
             workType: cont.workType ?? null,
             clientId: Number(clientId),
@@ -212,35 +271,65 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
           })
 
           if (!res.success) {
-            anyFailed = true
+            failed.push({ number: contNumber, reason: res.message ?? 'Không gửi được – thử lại' })
             continue
           }
 
-          // Upload this container's own photo if it has one
+          succeededContNumbersRef.current.add(contNumber)
+
+          // Upload this container's own photo if it has one (best-effort)
           if (res.data?.id && cont.photoTaken && cont.photoDataUrl) {
             apiClient.uploadDeliveredTripPhoto(res.data.id, cont.photoDataUrl)
               .catch(() => {})
           }
         } catch {
-          anyFailed = true
+          failed.push({ number: contNumber, reason: 'Mất kết nối – kiểm tra mạng và gửi lại' })
         }
       }
 
       invalidateDeliveredTripDeps(qc)
+
+      // Any container the backend did NOT confirm → NO success. Keep all form
+      // data and surface the honest failures so the driver can retry in place.
+      if (failed.length > 0) {
+        setSubmitting(false)
+        setSubmitError({ failed })
+        return
+      }
+
       setShowSuccess(true)
       if (vessel.trim()) addRecentVessel(vessel.trim())
       if (note.trim()) addRecentNote(note.trim())
       setTimeout(() => {
         setShowSuccess(false)
         navigate('/driver')
-      }, anyFailed ? 3000 : 2000)
+      }, 2000)
     } catch (err) {
       console.error('Submit failed:', err)
       setSubmitting(false)
+      setSubmitError({ failed: [{ number: null, reason: 'Lỗi không xác định – thử lại' }] })
     }
   }, [containers, qc, clientId, vessel, note, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingDeliveredTrip, addRecentVessel, addRecentNote, tripDate])
 
+  // Driver tapped "Gửi lại" in the failure dialog → re-run the submit. The
+  // succeededContNumbersRef is preserved so only unconfirmed containers re-send.
+  const retrySubmit = useCallback(() => {
+    setSubmitError(null)
+    void confirmSubmit()
+  }, [confirmSubmit])
+
+  // Driver tapped "Đóng" in the failure dialog → keep the form data, stay on
+  // the page, allow editing before the next attempt.
+  const dismissSubmitError = useCallback(() => {
+    setSubmitError(null)
+    setSubmitting(false)
+  }, [])
+
   const onRequestSubmit = useCallback(async (): Promise<'validation-error' | undefined> => {
+    // Fresh submit: reset the confirmed-containers set so a previous (failed)
+    // attempt's successes don't suppress a new submission. retrySubmit keeps
+    // the set intact so it can skip already-confirmed containers.
+    succeededContNumbersRef.current = new Set()
     if (!canSubmit) return
     // Validate container numbers via backend
     const errors: Record<number, string> = {}
@@ -364,6 +453,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
 
     // UI state
     submitting, scannerOpen, summaryOpen, showSuccess,
+    submitError,
     duplicateChecking, duplicateCandidates, duplicateDialogOpen,
     forceManualEntry, missingFields, containerErrors, containerSuggestions, containerIsoValidating, suggestionLoading,
 
@@ -387,6 +477,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     addContainerWithNumber, validateContainerFormat,
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit,
+    retrySubmit, dismissSubmitError,
     setSummaryOpen,
     onDuplicateOverride, onDuplicateCancel,
   }

@@ -13,7 +13,7 @@ import { UserDropdown } from '@/components/shared/overlays/ProfileDialog'
  *
  * Layout:
  *  Left  → [hamburger?] [back arrow?] [logo | greeting | title]
- *  Right → [actions] [offline] [bell] [profile]
+ *  Right → [actions] [bell] [profile]
  *
  * When both onMenu and onBack are provided (sub-pages with drawer nav),
  * the hamburger and back arrow are both shown.

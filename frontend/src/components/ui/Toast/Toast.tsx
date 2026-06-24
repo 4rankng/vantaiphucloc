@@ -99,7 +99,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitive.Viewport
     ref={ref}
     className={cn(
-      // Mobile: centered at top, below the offline pill (top-16 ≈ 64px)
+      // Mobile: centered at top (top-16 ≈ 64px)
       // Desktop: top-right corner, same vertical offset
       "fixed top-16 left-4 right-4 z-[190] flex max-h-screen flex-col gap-2 md:left-auto md:right-4 md:w-[380px]",
       className

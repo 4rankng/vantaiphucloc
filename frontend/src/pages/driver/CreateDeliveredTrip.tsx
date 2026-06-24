@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AlertCircle, Loader2, Plus,
@@ -10,6 +10,7 @@ import { ContainerScanner } from '@/components/shared/overlays/ContainerScanner'
 import { ContainerTypeGrid } from '@/components/shared/data-display/ContainerTypeGrid'
 import { TripSummaryDialog } from '@/components/shared/overlays/TripSummaryDialog'
 import { DuplicateTripWarningDialog } from '@/components/shared/overlays/DuplicateTripWarningDialog/DuplicateTripWarningDialog'
+import { SubmitErrorDialog } from '@/components/shared/overlays/SubmitErrorDialog/SubmitErrorDialog'
 import { SuccessOverlay } from '@/components/shared/feedback/SuccessOverlay'
 import { AIScanningOverlay } from '@/components/shared/feedback/AIScanningOverlay'
 import { RecentTripSuggestions } from '@/components/shared/cards/RecentTripSuggestions'
@@ -40,7 +41,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
     recentNotes,
     containers, clientId, vessel, note, pickupLocation, dropoffLocation, tripDate,
     selectedTripId,
-    submitting, scannerOpen, summaryOpen, showSuccess,
+    submitting, scannerOpen, summaryOpen, showSuccess, submitError,
     forceManualEntry, missingFields, containerErrors, containerSuggestions, containerIsoValidating, suggestionLoading,
     canSubmit, summaryContNumber, summaryContType, summaryWorkType, summaryClientName,
     hasAnyPhoto, containerCount,
@@ -52,7 +53,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
     updateAllContType, updateAllWorkType, scanNewContainer,
     addContainerWithNumber, validateContainerFormat,
     handleRecentTripSelect,
-    onRequestSubmit, confirmSubmit, setSummaryOpen,
+    onRequestSubmit, confirmSubmit, retrySubmit, dismissSubmitError, setSummaryOpen,
     duplicateChecking, duplicateCandidates, duplicateDialogOpen,
     onDuplicateOverride, onDuplicateCancel,
   } = useCreateDeliveredTrip(existingDeliveredTrip)
@@ -85,13 +86,20 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
   // started scanning because OCR is one-at-a-time in practice.
   const scanningContainer = containers.find(c => c.ocrLoading)
 
-  const handleConfirmSubmit = async () => {
-    try {
-      await confirmSubmit()
-    } catch {
-      toast.error('Gửi thất bại', 'Vui lòng thử lại')
-    }
+  const handleConfirmSubmit = () => {
+    void confirmSubmit()
   }
+
+  // Any submit failure (health-check fail, per-container fail, edit fail, or
+  // unexpected error) surfaces as a prominent toast in addition to the blocking
+  // SubmitErrorDialog — so the driver cannot miss that the trip did not send.
+  // confirmSubmit never throws on backend failure (it catches and sets
+  // submitError), so watching submitError covers every failure path centrally.
+  useEffect(() => {
+    if (submitError) {
+      toast.error('Không gửi được chuyến', 'Máy chủ chưa nhận – kiểm tra mạng rồi gửi lại')
+    }
+  }, [submitError, toast])
 
   return (
     <div className="-mx-4 -my-4 pb-32">
@@ -618,8 +626,12 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
         detectedNumbers={containers.filter(c => c.containerNumber.trim() && !c.ocrLoading).map(c => c.containerNumber)}
       />
 
-      {/* Success overlay */}
+      {/* Success overlay — only when the backend confirmed every container */}
       <SuccessOverlay visible={showSuccess} />
+
+      {/* Failure dialog — backend did NOT confirm every container.
+          Keeps all form data; driver can resend the unconfirmed containers. */}
+      <SubmitErrorDialog error={submitError} onRetry={retrySubmit} onClose={dismissSubmitError} />
     </div>
   )
 }

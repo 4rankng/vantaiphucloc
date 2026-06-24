@@ -91,8 +91,13 @@ export function getDeliveredTrips(filters?: DeliveredTripFilters): Promise<ApiRe
   }, (res) => unwrapPaginated<DeliveredTrip>(res.data, (raw) => toCamel<DeliveredTrip>(raw)))
 }
 
+// Submit-critical writes get a tighter 5s timeout (axios default is 30s) so a
+// hanging request can't strand the driver at the submit button. The photo
+// upload stays at the default — it's best-effort and carries a larger payload.
+const SUBMIT_TIMEOUT = 5000
+
 export function createDeliveredTrip(data: DeliveredTripCreatePayload): Promise<ApiResponse<DeliveredTrip>> {
-  return safeRequest(() => api.post('/delivered-trips', toSnake(data)))
+  return safeRequest(() => api.post('/delivered-trips', toSnake(data), { timeout: SUBMIT_TIMEOUT }))
 }
 
 export interface OCRContainerResponse {
@@ -119,7 +124,7 @@ export function deleteDeliveredTrip(id: number): Promise<ApiResponse<void>> {
 }
 
 export function updateDeliveredTrip(id: number, data: DeliveredTripUpdatePayload): Promise<ApiResponse<DeliveredTrip>> {
-  return safeRequest(() => api.put(`/delivered-trips/${id}`, toSnake(data)))
+  return safeRequest(() => api.put(`/delivered-trips/${id}`, toSnake(data), { timeout: SUBMIT_TIMEOUT }))
 }
 
 export function uploadDeliveredTripPhoto(id: number, imageDataUrl: string): Promise<ApiResponse<DeliveredTrip>> {
