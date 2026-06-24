@@ -1,28 +1,13 @@
 import { NotificationList, type AppNotification } from '@/components/shared/data-display/NotificationList'
-import { useNavigate } from 'react-router-dom'
+import { SubpageHeader } from '@/components/shared/navigation/SubpageHeader'
 import { useNotifications } from '@/hooks/use-queries'
 
 export function DirectorNotifications() {
-  const navigate = useNavigate()
   const { data: notifications = [] } = useNotifications()
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-2 mb-1">
-        <button
-          onClick={() => navigate(-1)}
-          aria-label="Quay lại"
-          className="inline-flex items-center gap-1 text-sm font-medium shrink-0"
-          style={{ color: 'var(--theme-text-secondary)' }}
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h1 className="text-base font-bold truncate" style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.01em' }}>
-          Thông báo
-        </h1>
-      </div>
+      <SubpageHeader title="Thông báo" />
       <NotificationList notifications={notifications as AppNotification[]} />
     </div>
   )

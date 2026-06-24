@@ -212,10 +212,9 @@ export function RoutePricingPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {isMobile && backTo ? (
+      {isMobile ? (
         <div className="flex items-center justify-between gap-3 -mb-2">{backToLink}</div>
-      ) : null}
-      {isMobile ? null : (
+      ) : (
         <PageHeader
           title="Bảng giá cước"
           subtitle="Quản lý bảng giá cước theo tuyến đường và loại hình tác nghiệp"

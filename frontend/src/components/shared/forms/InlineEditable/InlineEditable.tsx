@@ -5,7 +5,7 @@ interface InlineEditableProps {
   display: ReactNode
   value: string
   onSave: (value: string) => void | Promise<void>
-  inputType?: 'text' | 'number'
+  inputType?: 'text' | 'number' | 'date'
   placeholder?: string
   className?: string
   editLabel?: string

@@ -1,6 +1,6 @@
 .PHONY: help install migrate dev dev-infra dev-backend dev-frontend dev-worker lint seed stop clean \
         push-all deploy-all push-backend push-frontend deploy-backend deploy-frontend deploy \
-        api-test test test-backend test-frontend backup adminer-on adminer-off
+        api-test test test-backend test-frontend backup adminer adminer-on adminer-off
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 # Override with: make dev BACKEND_PORT=9000 FRONTEND_PORT=5180
@@ -10,6 +10,10 @@ FRONTEND_PORT ?= 5174
 ADMINER_PORT  ?= 8083
 POSTGRES_PORT ?= 5433
 REDIS_PORT    ?= 6381
+# Local Adminer → PRODUCTION over SSH tunnel (make adminer)
+# local port forwarded to prod adminer web UI (prod 127.0.0.1:8080) over SSH:
+ADMINER_PROD_PORT ?= 8084
+PROD_DB_NAME      ?= vantaihanghoa
 
 # ── Help ───────────────────────────────────────────────────────────────────────
 
@@ -44,8 +48,9 @@ help:
 	@echo "  deploy-frontend  Pull & restart frontend on droplet"
 	@echo "  backup           Dump production PostgreSQL DB → OneDrive"
 	@echo "  restore          Restore latest backup to local dev DB"
-	@echo "  adminer-on       Enable adminer access on production (start container)"
-	@echo "  adminer-off      Disable adminer access on production (stop container)"
+	@echo "  adminer          Open adminer over SSH tunnel -> http://localhost:8084 (Ctrl-C to close)"
+	@echo "  adminer-on       Start prod adminer container (loopback only; never public)"
+	@echo "  adminer-off      Stop prod adminer container"
 
 # ── Install & DB ───────────────────────────────────────────────────────────────
 
@@ -255,15 +260,32 @@ backup:
 
 # ── Adminer toggle ─────────────────────────────────────────────────────────────
 
-## adminer-on: Start adminer container on production (accessible via nginx /adminer with basic auth)
+## adminer-on: Start the prod adminer container (public /adminer is DISABLED — use `make adminer`)
 adminer-on:
-	@echo "🔓 Enabling adminer on production..."
+	@echo "⚠️  Public adminer (https://$(PROD_SERVER)/adminer) is intentionally blocked → 404."
+	@echo "    This only starts the prod container, which binds 127.0.0.1 and is NOT web-reachable."
 	@ssh root@$(PROD_SERVER) "cd /opt/vantaiphucloc && docker compose start adminer"
-	@echo "✅ Adminer is now accessible at: https://$(PROD_SERVER)/adminer"
-	@echo "🔐 Login: check /etc/nginx/.htpasswd on server"
+	@echo "✅ Prod adminer container started. To actually use adminer, run:  make adminer  (local SSH tunnel)"
 
-## adminer-off: Stop adminer container on production (disables /adminer endpoint)
+## adminer-off: Stop the prod adminer container
 adminer-off:
-	@echo "🔒 Disabling adminer on production..."
 	@ssh root@$(PROD_SERVER) "cd /opt/vantaiphucloc && docker compose stop adminer"
-	@echo "✅ Adminer container stopped — /adminer endpoint disabled"
+	@echo "✅ Prod adminer container stopped."
+
+# ── Adminer over SSH tunnel (private, no public exposure) ──────────────────────
+# Starts the adminer container on prod (bound to 127.0.0.1:8080 only — NOT public),
+# forwards localhost:8084 -> prod loopback:8080, and opens the page.
+# Ctrl-C closes the tunnel. The public /adminer path stays blocked (returns 404).
+# Creds live in backend/.env (ADMINER_PROD_DB_*); adminer reaches postgres over the
+# prod docker network (Server: postgres).
+
+## adminer: Open adminer over SSH tunnel -> http://localhost:8084 (Ctrl-C to close)
+adminer:
+	@echo "🔓 Opening adminer over SSH tunnel (private, no public exposure)..."
+	@ssh root@$(PROD_SERVER) "cd /opt/vantaiphucloc && docker compose start adminer" 2>/dev/null || true
+	@echo "🌐 adminer: http://localhost:$(ADMINER_PROD_PORT)"
+	@echo "   System: PostgreSQL  ·  Server: postgres  ·  Database: $(PROD_DB_NAME)"
+	@echo "   Username: $$(grep -E '^ADMINER_PROD_DB_USER=' backend/.env | head -1 | cut -d= -f2-)   Password: $$(grep -E '^ADMINER_PROD_DB_PASSWORD=' backend/.env | head -1 | cut -d= -f2-)"
+	@echo "⏎  Press Ctrl-C to close the tunnel. (Container stays on prod loopback — 'make adminer-off' to stop it.)"
+	@(sleep 1 && (open "http://localhost:$(ADMINER_PROD_PORT)?server=postgres&db=$(PROD_DB_NAME)" || xdg-open "http://localhost:$(ADMINER_PROD_PORT)?server=postgres&db=$(PROD_DB_NAME)" || true)) &
+	@ssh -N -L $(ADMINER_PROD_PORT):127.0.0.1:8080 root@$(PROD_SERVER)

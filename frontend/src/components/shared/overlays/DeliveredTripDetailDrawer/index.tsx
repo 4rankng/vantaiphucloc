@@ -14,6 +14,7 @@ import {
 import { useOperationTypes } from '@/hooks/queries/operation-types'
 import type { DeliveredTrip, ContType } from '@/data/domain'
 import { CONT_TYPES } from '@/data/domain'
+import { formatDate } from '@/lib/format'
 import { CriteriaEditRow } from './CriteriaEditRow'
 import { InlineSelect } from './InlineSelect'
 import { AISuggestionDialog } from '@/components/shared/feedback/AISuggestionDialog'
@@ -174,6 +175,21 @@ export function DeliveredTripDetailDrawer({
                   displayValue={operationTypes.find(o => o.name === trip.workType)?.label ?? trip.workType}
                   options={operationTypes.filter(o => o.isActive).map((o) => ({ value: o.name, label: o.label }))}
                   onChange={(v) => updateTrip.mutate({ id: trip.id, data: { workType: v as string || null } })}
+                />
+              </CriteriaEditRow>
+
+              <CriteriaEditRow label="Ngày vận chuyển" className="col-span-2 border-t border-[var(--line)]">
+                <InlineEditable
+                  display={
+                    <span style={{ color: trip.tripDate ? 'var(--ink)' : 'var(--ink-4)' }}>
+                      {formatDate(trip.tripDate, 'full')}
+                    </span>
+                  }
+                  value={trip.tripDate ?? ''}
+                  inputType="date"
+                  onSave={async (v) => {
+                    await updateTrip.mutateAsync({ id: trip.id, data: { tripDate: v || null } })
+                  }}
                 />
               </CriteriaEditRow>
 

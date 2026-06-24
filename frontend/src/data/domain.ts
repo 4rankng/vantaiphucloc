@@ -195,6 +195,7 @@ export interface DeliveredTrip {
   revenue: number
   driverSalary: number
   tripDate?: string | null
+  originalTripDate?: string | null
   note?: string | null
   createdAt: string
   updatedAt: string

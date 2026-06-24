@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
+import { SubpageHeader } from '@/components/shared/navigation/SubpageHeader'
 import { useDeliveredTrips, useDrivers } from '@/hooks/use-queries'
 
 export function DriverJobs() {
-  const navigate = useNavigate()
   const { driverId: driverIdStr } = useParams<{ driverId: string }>()
   const driverId = Number(driverIdStr)
   const { data } = useDeliveredTrips({ driverId })
@@ -23,21 +23,7 @@ export function DriverJobs() {
 
   return (
     <div className="space-y-3 w-full">
-      <div className="flex items-center gap-2 mb-1">
-        <button
-          onClick={() => navigate(-1)}
-          aria-label="Quay lại"
-          className="inline-flex items-center gap-1 text-sm font-medium shrink-0"
-          style={{ color: 'var(--theme-text-secondary)' }}
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h1 className="text-base font-bold truncate" style={{ color: 'var(--theme-text-primary)', letterSpacing: '-0.01em' }}>
-          {driverName}
-        </h1>
-      </div>
+      <SubpageHeader title={driverName} />
       {/* Summary */}
         <div className="rounded-lg p-3 flex items-center justify-between" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
           <div>
