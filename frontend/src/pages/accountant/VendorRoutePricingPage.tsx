@@ -14,10 +14,15 @@ import { WORK_TYPE_LABELS } from '@/data/domain'
 import type { WorkType, VendorRoutePricing } from '@/data/domain'
 import type { VendorRoutePricingUpdatePayload } from '@/services/api/vendorRoutePricings.api'
 import { LinkButton } from '@/components/shared'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 export function VendorRoutePricingPage() {
   const { pathname } = useLocation()
   const settingsPath = pathname.startsWith('/superadmin') ? '/superadmin/settings' : '/accountant/settings'
+  const isMobile = useIsMobile(768)
+  const settingsLink = (
+    <LinkButton to={settingsPath} icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
+  )
   const [importOpen, setImportOpen] = useState(false)
   const [inlineEditId, setInlineEditId] = useState<number | null>(null)
   const [inlineEditField, setInlineEditField] = useState<FocusableField>('f20Price')
@@ -103,14 +108,16 @@ export function VendorRoutePricingPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title="Bảng phí thuê xe"
-        subtitle="Quản lý bảng giá cước trả nhà thầu theo tuyến đường"
-        lucideIcon={Route}
-        breadcrumbs={
-          <LinkButton to={settingsPath} icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
-        }
-      />
+      {isMobile ? (
+        <div className="flex items-center justify-between gap-3 -mb-2">{settingsLink}</div>
+      ) : (
+        <PageHeader
+          title="Bảng phí thuê xe"
+          subtitle="Quản lý bảng giá cước trả nhà thầu theo tuyến đường"
+          lucideIcon={Route}
+          breadcrumbs={settingsLink}
+        />
+      )}
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 flex-wrap">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">

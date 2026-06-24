@@ -195,6 +195,7 @@ class CreateDeliveredTrip:
             revenue=estimated_revenue,
             driver_salary=estimated_salary,
             trip_date=data.trip_date if data.trip_date else date.today(),
+            original_trip_date=data.trip_date if data.trip_date else date.today(),
             note=data.note,
         )
 
@@ -261,6 +262,8 @@ class UpdateDeliveredTrip:
             w.cont_photo_hash = data.cont_photo_hash
         if data.trip_date is not None:
             w.trip_date = data.trip_date
+            if not w.matched:
+                w.original_trip_date = data.trip_date
         if data.revenue is not None:
             w.revenue = int(data.revenue)
         if data.driver_salary is not None:
@@ -390,6 +393,9 @@ class BatchCreateDeliveredTrips:
                             revenue=revenue_map.get(i, 0),
                             driver_salary=salary_map.get(i, 0),
                             trip_date=item.trip_date
+                            if item.trip_date
+                            else date.today(),
+                            original_trip_date=item.trip_date
                             if item.trip_date
                             else date.today(),
                             note=item.note,

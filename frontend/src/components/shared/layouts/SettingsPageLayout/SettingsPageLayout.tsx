@@ -18,6 +18,7 @@ export function SettingsPageLayout({
   icon,
   actions,
   breadcrumb,
+  children,
 }: SettingsPageLayoutProps) {
   const isMobile = useIsMobile(768)
   return (

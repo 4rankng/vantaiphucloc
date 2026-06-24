@@ -517,21 +517,31 @@ function FleetSection() {
 }
 
 export function TransportersPage() {
+  const isMobile = useIsMobile(768)
   const [showVendorMgmt, setShowVendorMgmt] = useState(false)
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <PageHeader
-        title="Vận tải"
-        subtitle="Quản lý đội xe, tài xế và nhà thầu vận chuyển"
-        lucideIcon={Truck}
-        actions={
-          <Button variant="outline" size="sm" onClick={() => setShowVendorMgmt(true)} className="shrink-0 mt-1">
+      {isMobile ? (
+        <div className="flex items-center justify-end -mb-1">
+          <Button variant="outline" size="sm" onClick={() => setShowVendorMgmt(true)} className="shrink-0">
             <Building2 className="h-4 w-4" />
-            Quản lý nhà thầu
+            Nhà thầu
           </Button>
-        }
-      />
+        </div>
+      ) : (
+        <PageHeader
+          title="Vận tải"
+          subtitle="Quản lý đội xe, tài xế và nhà thầu vận chuyển"
+          lucideIcon={Truck}
+          actions={
+            <Button variant="outline" size="sm" onClick={() => setShowVendorMgmt(true)} className="shrink-0 mt-1">
+              <Building2 className="h-4 w-4" />
+              Quản lý nhà thầu
+            </Button>
+          }
+        />
+      )}
 
       <FleetSection />
 

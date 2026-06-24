@@ -23,6 +23,9 @@ export function RoutePricingPage() {
   const backTo = pathname.startsWith('/accountant') ? '/accountant/settings'
     : pathname.startsWith('/superadmin') ? '/superadmin/settings'
     : undefined
+  const backToLink = backTo
+    ? <LinkButton to={backTo} icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
+    : null
   const isMobile = useIsMobile(768)
   const [importOpen, setImportOpen] = useState(false)
   const [syncOpen, setSyncOpen] = useState(false)
@@ -209,16 +212,17 @@ export function RoutePricingPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title="Bảng giá cước"
-        subtitle="Quản lý bảng giá cước theo tuyến đường và loại hình tác nghiệp"
-        lucideIcon={Route}
-        breadcrumbs={
-          backTo
-            ? <LinkButton to={backTo} icon={ArrowLeft} variant="muted">Thiết lập</LinkButton>
-            : undefined
-        }
-      />
+      {isMobile && backTo ? (
+        <div className="flex items-center justify-between gap-3 -mb-2">{backToLink}</div>
+      ) : null}
+      {isMobile ? null : (
+        <PageHeader
+          title="Bảng giá cước"
+          subtitle="Quản lý bảng giá cước theo tuyến đường và loại hình tác nghiệp"
+          lucideIcon={Route}
+          breadcrumbs={backToLink ?? undefined}
+        />
+      )}
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 flex-wrap">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">

@@ -251,6 +251,13 @@ async def unmatch_endpoint(
     cleared_revenue = int(wo.revenue or 0)
     cleared_driver_salary = int(wo.driver_salary or 0)
 
+    # Restore trip_date to the driver-entered snapshot so the reconciliation
+    # view shows the original date again instead of the client-side date that
+    # was written at match time. Guard against NULL for legacy rows that have
+    # no snapshot (defensive — backfill should have populated it).
+    if wo.original_trip_date is not None:
+        wo.trip_date = wo.original_trip_date
+
     # Zero out financials so the trip no longer contributes to billing/P&L.
     # The audit log (auto-captured via AuditableMixin) records the change.
     wo.booked_trip_id = None

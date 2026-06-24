@@ -359,6 +359,7 @@ class DeliveredTrip(AuditableMixin, Base):
     revenue = Column(Integer, nullable=False, default=0)
     driver_salary = Column(Integer, nullable=False, default=0)
     trip_date = Column(Date, nullable=True)
+    original_trip_date = Column(Date, nullable=True)
     note = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(

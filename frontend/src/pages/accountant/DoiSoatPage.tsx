@@ -249,16 +249,22 @@ export function DoiSoatPage() {
     <div className="space-y-6 animate-fade-in">
 
       {/* ── Header ── */}
-      <PageHeader
-        title="Đối soát"
-        subtitle="Ghép chuyến thực tế với đơn hàng — theo dõi trạng thái khớp và xuất báo cáo"
-        lucideIcon={ClipboardList}
-        actions={
-          <div className="flex items-center gap-2">
-            <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
-          </div>
-        }
-      />
+      {!isMobile ? (
+        <PageHeader
+          title="Đối soát"
+          subtitle="Ghép chuyến thực tế với đơn hàng — theo dõi trạng thái khớp và xuất báo cáo"
+          lucideIcon={ClipboardList}
+          actions={
+            <div className="flex items-center gap-2">
+              <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
+            </div>
+          }
+        />
+      ) : (
+        <div className="flex items-center justify-end -mb-1">
+          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
+        </div>
+      )}
 
       {/* ── Stats ── */}
       {!isLoading && globalTotal > 0 && (

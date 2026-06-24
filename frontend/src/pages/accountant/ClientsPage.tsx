@@ -431,16 +431,8 @@ export function ClientsPage() {
 
       {/* ── Header ── */}
       {isMobile ? (
-        <div className="flex items-center justify-between gap-3 -mb-1">
-          <h1
-            className="type-h1"
-            style={{ color: 'var(--ink)' }}
-          >
-            Chủ hàng
-          </h1>
-          <div className="flex items-center gap-1.5">
-            {statPills}
-          </div>
+        <div className="flex items-center justify-end gap-3 -mb-1">
+          {statPills}
         </div>
       ) : (
         <PageHeader

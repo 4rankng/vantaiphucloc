@@ -101,6 +101,7 @@ class DeliveredTripOut(BaseModel):
     trip_date: date | None = None
     note: str | None = None
     booked_trip_id: int | None = None
+    original_trip_date: date | None = None
     created_at: datetime
     updated_at: datetime
 
