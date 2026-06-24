@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { normalizeVietnamese } from '@/lib/search-utils'
-import { TrendingUp, DollarSign, Coins, Download } from 'lucide-react'
+import { TrendingUp, Coins, Download } from 'lucide-react'
 import { Button } from '@/components/ui/Button/Button'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
 import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
@@ -318,19 +318,27 @@ export function PnLPage() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
-      <PageHeader
-        title="Tổng hợp"
-        subtitle="Doanh thu và lợi nhuận từng xe theo kỳ — đối chiếu chi phí xe, lương và biên lợi nhuận"
-        lucideIcon={TrendingUp}
-        actions={<MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />}
-      />
+      {isMobile ? (
+        <div className="flex items-center justify-between gap-3 -mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
+          </div>
+        </div>
+      ) : (
+        <PageHeader
+          title="Tổng hợp"
+          subtitle="Doanh thu và lợi nhuận từng xe theo kỳ — đối chiếu chi phí xe, lương và biên lợi nhuận"
+          lucideIcon={TrendingUp}
+          actions={<MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />}
+        />
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <KpiHeroCard
           label="Doanh thu"
           formattedValue={<><AnimatedNumber value={totalRevenue} format="currency" /> ₫</>}
           value={totalRevenue}
-          icon={DollarSign}
+          icon={Coins}
           color="amber"
           sublabel="Kỳ hiện tại"
           className="card-hover-lift"

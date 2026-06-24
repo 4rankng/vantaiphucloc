@@ -211,27 +211,43 @@ export function LocationAliasesPage() {
     <div className="animate-fade-in flex flex-col" style={{ height: panelHeight, maxHeight: panelHeight, overflow: 'hidden' }}>
       {/* ── Header ── */}
       <div className="shrink-0">
-        <PageHeader
-          title="Địa điểm"
-          subtitle="Tên phụ giúp hệ thống nhận ra các cách viết khác nhau của cùng một địa điểm khi ghép chuyến tự động"
-          lucideIcon={MapPin}
-          actions={
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <StatPill count={locations.length} label={isMobile ? " đ.điểm" : " địa điểm"} accent />
-              {!isMobile && <StatPill count={aliases.length} label=" tên phụ" />}
-              <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={() => setImporting(true)} className="gap-1 px-2.5">
+        {isMobile ? (
+          <div className="flex items-center justify-between gap-3 px-1 pt-1 pb-2">
+            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+              <StatPill count={locations.length} label=" đ.điểm" accent />
+              <Button variant="outline" size="sm" onClick={() => setImporting(true)} className="gap-1 px-2.5">
                 <FileSpreadsheet className="h-3.5 w-3.5" />
-                {!isMobile && <span>Nhập Excel</span>}
               </Button>
               {locations.length >= 2 && (
-                <Button variant="ghost" size={isMobile ? "sm" : "default"} onClick={() => openMergeDialog()} className="gap-1 px-2.5">
+                <Button variant="ghost" size="sm" onClick={() => openMergeDialog()} className="gap-1 px-2.5">
                   <Merge className="h-3.5 w-3.5" />
-                  {!isMobile && <span>Gộp</span>}
                 </Button>
               )}
             </div>
-          }
-        />
+          </div>
+        ) : (
+          <PageHeader
+            title="Địa điểm"
+            subtitle="Tên phụ giúp hệ thống nhận ra các cách viết khác nhau của cùng một địa điểm khi ghép chuyến tự động"
+            lucideIcon={MapPin}
+            actions={
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <StatPill count={locations.length} label=" địa điểm" accent />
+                <StatPill count={aliases.length} label=" tên phụ" />
+                <Button variant="outline" size="default" onClick={() => setImporting(true)} className="gap-1 px-2.5">
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  <span>Nhập Excel</span>
+                </Button>
+                {locations.length >= 2 && (
+                  <Button variant="ghost" size="default" onClick={() => openMergeDialog()} className="gap-1 px-2.5">
+                    <Merge className="h-3.5 w-3.5" />
+                    <span>Gộp</span>
+                  </Button>
+                )}
+              </div>
+            }
+          />
+        )}
       </div>
 
       {/* ── Master-detail split ── */}

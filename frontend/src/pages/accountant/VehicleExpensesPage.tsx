@@ -145,14 +145,22 @@ export function VehicleExpensesPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title="Chi phí xe"
-        subtitle="Quản lý chi phí vận hành theo từng xe: xăng dầu, sửa chữa, tiền luật và khác"
-        lucideIcon={Fuel}
-        actions={
-          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
-        }
-      />
+      {isMobile ? (
+        <div className="flex items-center justify-between gap-3 -mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
+          </div>
+        </div>
+      ) : (
+        <PageHeader
+          title="Chi phí xe"
+          subtitle="Quản lý chi phí vận hành theo từng xe: xăng dầu, sửa chữa, tiền luật và khác"
+          lucideIcon={Fuel}
+          actions={
+            <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
+          }
+        />
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <KpiHeroCard

@@ -319,10 +319,41 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
       style={{ background: '#000' }}
       onClick={onClose}
     >
+      <div
+        className={`relative z-10 flex h-full w-full items-center justify-center select-none ${transform.scale > MIN_SCALE ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (e.target === e.currentTarget) onClose()
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        onWheel={handleWheel}
+        style={{ touchAction: 'none' }}
+      >
+        <img
+          src={src}
+          alt={alt}
+          className="max-h-[90vh] max-w-[92vw] object-contain select-none rounded-sm animate-in zoom-in-95 duration-200 will-change-transform"
+          style={{
+            transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale})`,
+            transition: isInteracting ? 'none' : 'transform 120ms ease-out',
+          }}
+          draggable={false}
+        />
+      </div>
+
       {/* Top toolbar */}
       <div
-        className="absolute top-0 inset-x-0 z-[220] flex items-center justify-end gap-2 px-3 pb-3 pt-[calc(env(safe-area-inset-top,0px)+12px)] sm:px-4 sm:pb-4 sm:pt-4"
-        style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.36) 64%, transparent 100%)' }}
+        className="absolute top-0 inset-x-0 z-20 flex items-center justify-end gap-2 px-3 pb-3 pt-[calc(env(safe-area-inset-top,0px)+12px)] sm:px-4 sm:pb-4 sm:pt-4"
+        style={{
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.36) 64%, transparent 100%)',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -361,35 +392,6 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
         >
           <X className="h-6 w-6" />
         </button>
-      </div>
-
-      <div
-        className={`relative z-[210] flex h-full w-full items-center justify-center select-none ${transform.scale > MIN_SCALE ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
-        onClick={(e) => {
-          e.stopPropagation()
-          if (e.target === e.currentTarget) onClose()
-        }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerEnd}
-        onPointerCancel={handlePointerEnd}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
-        onWheel={handleWheel}
-        style={{ touchAction: 'none' }}
-      >
-        <img
-          src={src}
-          alt={alt}
-          className="max-h-[90vh] max-w-[92vw] object-contain select-none rounded-sm animate-in zoom-in-95 duration-200 will-change-transform"
-          style={{
-            transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale})`,
-            transition: isInteracting ? 'none' : 'transform 120ms ease-out',
-          }}
-          draggable={false}
-        />
       </div>
     </div>,
     document.body
