@@ -10,11 +10,25 @@ export type PriceField =
 
 export const SALARY_TINT = 'color-mix(in srgb, var(--theme-status-warning) 5%, transparent)'
 export const SALARY_BORDER = '1px solid color-mix(in srgb, var(--theme-status-warning) 22%, transparent)'
+export const FARE_TINT = 'color-mix(in srgb, var(--theme-brand-primary) 5%, transparent)'
+export const FARE_BORDER = '1px solid color-mix(in srgb, var(--theme-brand-primary) 22%, transparent)'
+export const FARE_FIELDS: PriceField[] = [
+  'f20Price',
+  'f40Price',
+  'e20Price',
+  'e40Price',
+]
+
 export const SALARY_FIELDS: PriceField[] = [
   'f20DriverSalary',
   'f40DriverSalary',
   'e20DriverSalary',
   'e40DriverSalary',
+]
+
+export const PRICE_FIELDS: PriceField[] = [
+  ...FARE_FIELDS,
+  ...SALARY_FIELDS,
 ]
 
 export const COL = {

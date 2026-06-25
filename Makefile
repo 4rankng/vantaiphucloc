@@ -1,6 +1,6 @@
 .PHONY: help install migrate dev dev-infra dev-backend dev-frontend dev-worker lint seed stop clean \
         push-all deploy-all push-backend push-frontend deploy-backend deploy-frontend deploy \
-        api-test test test-backend test-frontend backup adminer adminer-on adminer-off
+        api-test test test-backend test-frontend backup adminer
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 # Override with: make dev BACKEND_PORT=9000 FRONTEND_PORT=5180
@@ -49,8 +49,6 @@ help:
 	@echo "  backup           Dump production PostgreSQL DB → OneDrive"
 	@echo "  restore          Restore latest backup to local dev DB"
 	@echo "  adminer          Open adminer over SSH tunnel -> http://localhost:8084 (Ctrl-C to close)"
-	@echo "  adminer-on       Start prod adminer container (loopback only; never public)"
-	@echo "  adminer-off      Stop prod adminer container"
 
 # ── Install & DB ───────────────────────────────────────────────────────────────
 
@@ -258,34 +256,23 @@ backup:
 	echo "📂 Saved to: $$BACKUP_DIR/$$BACKUP_FILE_GZ" && \
 	echo "📊 Size: $$(du -h "$$BACKUP_DIR/$$BACKUP_FILE_GZ" | cut -f1)"
 
-# ── Adminer toggle ─────────────────────────────────────────────────────────────
-
-## adminer-on: Start the prod adminer container (public /adminer is DISABLED — use `make adminer`)
-adminer-on:
-	@echo "⚠️  Public adminer (https://$(PROD_SERVER)/adminer) is intentionally blocked → 404."
-	@echo "    This only starts the prod container, which binds 127.0.0.1 and is NOT web-reachable."
-	@ssh root@$(PROD_SERVER) "cd /opt/vantaiphucloc && docker compose start adminer"
-	@echo "✅ Prod adminer container started. To actually use adminer, run:  make adminer  (local SSH tunnel)"
-
-## adminer-off: Stop the prod adminer container
-adminer-off:
-	@ssh root@$(PROD_SERVER) "cd /opt/vantaiphucloc && docker compose stop adminer"
-	@echo "✅ Prod adminer container stopped."
-
 # ── Adminer over SSH tunnel (private, no public exposure) ──────────────────────
-# Starts the adminer container on prod (bound to 127.0.0.1:8080 only — NOT public),
-# forwards localhost:8084 -> prod loopback:8080, and opens the page.
-# Ctrl-C closes the tunnel. The public /adminer path stays blocked (returns 404).
-# Creds live in backend/.env (ADMINER_PROD_DB_*); adminer reaches postgres over the
-# prod docker network (Server: postgres).
+# Self-healing: ensures the adminer container exists and is running on prod
+# (bound to 127.0.0.1:8080 only — NOT public), forwards localhost:8084 to
+# prod loopback:8080, and opens the page. Ctrl-C closes the tunnel. The
+# container stays running on prod (safe — loopback only, never publicly
+# exposed). Creds live in backend/.env (ADMINER_PROD_DB_*); adminer reaches
+# postgres over the prod docker network (Server: postgres).
 
 ## adminer: Open adminer over SSH tunnel -> http://localhost:8084 (Ctrl-C to close)
 adminer:
 	@echo "🔓 Opening adminer over SSH tunnel (private, no public exposure)..."
-	@ssh root@$(PROD_SERVER) "cd /opt/vantaiphucloc && docker compose start adminer" 2>/dev/null || true
+	@ssh root@$(PROD_SERVER) "cd /opt/vantaiphucloc && docker compose up -d --no-deps adminer"
+	@echo "⏳ Waiting for adminer on prod 127.0.0.1:8080..."
+	@ssh root@$(PROD_SERVER) "for i in \$$(seq 1 30); do (ss -ltn 2>/dev/null || netstat -ltn 2>/dev/null) | grep -qE '127\\.0\\.0\\.1:8080[[:space:]]' && exit 0; sleep 1; done; echo '❌ Adminer did not become ready in 30s' >&2; exit 1"
 	@echo "🌐 adminer: http://localhost:$(ADMINER_PROD_PORT)"
 	@echo "   System: PostgreSQL  ·  Server: postgres  ·  Database: $(PROD_DB_NAME)"
 	@echo "   Username: $$(grep -E '^ADMINER_PROD_DB_USER=' backend/.env | head -1 | cut -d= -f2-)   Password: $$(grep -E '^ADMINER_PROD_DB_PASSWORD=' backend/.env | head -1 | cut -d= -f2-)"
-	@echo "⏎  Press Ctrl-C to close the tunnel. (Container stays on prod loopback — 'make adminer-off' to stop it.)"
+	@echo "⏎  Press Ctrl-C to close the tunnel. (Container stays on prod loopback — safe to leave running, not publicly exposed.)"
 	@(sleep 1 && (open "http://localhost:$(ADMINER_PROD_PORT)?server=postgres&db=$(PROD_DB_NAME)" || xdg-open "http://localhost:$(ADMINER_PROD_PORT)?server=postgres&db=$(PROD_DB_NAME)" || true)) &
 	@ssh -N -L $(ADMINER_PROD_PORT):127.0.0.1:8080 root@$(PROD_SERVER)

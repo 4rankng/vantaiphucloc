@@ -12,17 +12,15 @@ export interface RoutePricingMobileGroupProps {
   onEditOpenDialog: (rp: RoutePricing) => void
 }
 
-function clientInitials(name: string): string {
-  const words = name.split(/\s+/).filter(Boolean)
-  if (words.length === 0) return '?'
-  if (words.length === 1) return words[0][0].toUpperCase()
-  return (words[0][0] + words[words.length - 1][0]).toUpperCase()
-}
-
 function clientAvatarColor(id: number): string {
-  const hues = [210, 160, 30, 340, 270, 190, 45, 300, 120, 15]
-  const hue = hues[id % hues.length]
-  return `hsl(${hue}, 55%, 88%)`
+  const colors = [
+    'color-mix(in srgb, var(--theme-brand-primary) 16%, var(--theme-bg-secondary))',
+    'color-mix(in srgb, var(--theme-status-info) 15%, var(--theme-bg-secondary))',
+    'color-mix(in srgb, var(--theme-status-warning) 16%, var(--theme-bg-secondary))',
+    'color-mix(in srgb, var(--theme-express-color) 14%, var(--theme-bg-secondary))',
+    'color-mix(in srgb, var(--theme-status-success) 14%, var(--theme-bg-secondary))',
+  ]
+  return colors[id % colors.length]
 }
 
 export function RoutePricingMobileGroup({
@@ -55,22 +53,14 @@ export function RoutePricingMobileGroup({
           }}
         />
         <span
-          className="inline-flex items-center justify-center h-7 w-7 rounded-full text-[10.5px] font-bold shrink-0"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums"
           style={{ background: clientAvatarColor(group.clientId), color: 'var(--theme-text-primary)' }}
+          title={`${group.routeCount} tuyến`}
         >
-          {clientInitials(group.clientName)}
+          {group.routeCount}
         </span>
         <span className="text-sm font-bold truncate flex-1 text-left" style={{ color: 'var(--theme-text-primary)' }}>
           {label}
-        </span>
-        <span
-          className="inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-semibold shrink-0"
-          style={{
-            background: 'color-mix(in srgb, var(--theme-text-primary) 7%, transparent)',
-            color: 'var(--theme-text-muted)',
-          }}
-        >
-          {group.routeCount} tuyến
         </span>
       </button>
 

@@ -16,6 +16,10 @@ import { OpBadge } from './RoutePricingCells'
 import type { FocusableField, RoutePricingFormData } from './RoutePricingTable.types'
 import type { PriceField } from './RoutePricingTable.constants'
 import {
+  FARE_TINT,
+  FARE_BORDER,
+  FARE_FIELDS,
+  PRICE_FIELDS,
   SALARY_TINT,
   SALARY_BORDER,
   SALARY_FIELDS,
@@ -30,6 +34,7 @@ export function RoutePricingEditRow({
   locations,
   initialFocus = 'f20Price',
   hideClient,
+  priceFields,
 }: {
   initial: RoutePricingFormData
   onSave: (data: RoutePricingFormData) => void
@@ -39,9 +44,11 @@ export function RoutePricingEditRow({
   locations: Array<{ id: number; name: string }>
   initialFocus?: FocusableField
   hideClient?: boolean
+  priceFields?: PriceField[]
 }) {
   const [activeField, setActiveField] = useState<FocusableField>(initialFocus)
   const fieldRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const visiblePriceFields = priceFields ?? PRICE_FIELDS
 
   const { form, errors, set, handleSave } = useInlineEditForm<RoutePricingFormData>({
     initial,
@@ -62,7 +69,9 @@ export function RoutePricingEditRow({
     fieldRefs.current[activeField]?.focus()
   }, [activeField])
 
-  const isLastCol = activeField === 'e40DriverSalary' || activeField === 'workType'
+  const isLastCol = activeField === visiblePriceFields[visiblePriceFields.length - 1] || activeField === 'workType'
+  const isSalaryMode = visiblePriceFields.some(field => SALARY_FIELDS.includes(field))
+  const rowTint = isSalaryMode ? 'var(--theme-status-warning-light)' : FARE_TINT
 
   const floatingActions = (
     <div style={{
@@ -92,12 +101,14 @@ export function RoutePricingEditRow({
 
   const priceInput = (field: PriceField, color: string) => {
     const isSalary = SALARY_FIELDS.includes(field)
+    const isFare = FARE_FIELDS.includes(field)
     const isFirstSalary = field === 'f20DriverSalary'
-    const salaryBg = isSalary ? { background: SALARY_TINT } : null
-    const salaryLeft = isFirstSalary ? { borderLeft: SALARY_BORDER } : null
+    const isFirstFare = field === 'f20Price'
+    const fieldBg = isSalary ? { background: SALARY_TINT } : isFare ? { background: FARE_TINT } : null
+    const fieldLeft = isFirstSalary ? { borderLeft: SALARY_BORDER } : isFirstFare ? { borderLeft: FARE_BORDER } : null
     if (activeField === field) {
       return (
-        <td style={{ ...tdActive, textAlign: 'right', ...salaryBg, ...salaryLeft }}>
+        <td key={field} style={{ ...tdActive, textAlign: 'right', ...fieldBg, ...fieldLeft }}>
           {/* Dimmed display value for visual continuity */}
           <span className="tabular-nums text-xs" style={{ color: 'var(--theme-text-muted)', fontFamily: 'var(--theme-font-mono)', opacity: 0.4 }}>
             {form[field] ? formatCurrency(Number(form[field])) : '—'}
@@ -135,7 +146,7 @@ export function RoutePricingEditRow({
       )
     }
     return (
-      <td style={{ ...tdDimmed, textAlign: 'right', ...salaryBg, ...salaryLeft }} onClick={() => setActiveField(field)}>
+      <td key={field} style={{ ...tdDimmed, textAlign: 'right', ...fieldBg, ...fieldLeft }} onClick={() => setActiveField(field)}>
         <span className="tabular-nums text-xs" style={{ color: form[field] ? color : 'var(--theme-text-muted)', fontFamily: 'var(--theme-font-mono)' }}>
           {form[field] ? formatCurrency(Number(form[field])) : '—'}
         </span>
@@ -144,7 +155,7 @@ export function RoutePricingEditRow({
   }
 
   return (
-    <tr style={{ background: 'var(--theme-status-warning-light)' }}>
+    <tr style={{ background: rowTint }}>
       <td style={{ ...tdDimmed, color: 'var(--theme-text-muted)', fontSize: 12 }} />
 
       {!hideClient && (activeField === 'clientId' ? (
@@ -211,15 +222,12 @@ export function RoutePricingEditRow({
         </td>
       )}
 
-      {priceInput('f20Price', 'var(--theme-status-info)')}
-      {priceInput('f40Price', 'var(--theme-status-info)')}
-      {priceInput('e20Price', 'var(--theme-express-color)')}
-      {priceInput('e40Price', 'var(--theme-express-color)')}
-
-      {priceInput('f20DriverSalary', 'var(--theme-status-warning)')}
-      {priceInput('f40DriverSalary', 'var(--theme-status-warning)')}
-      {priceInput('e20DriverSalary', 'var(--theme-status-warning)')}
-      {priceInput('e40DriverSalary', 'var(--theme-status-warning)')}
+      {visiblePriceFields.map(field =>
+        priceInput(
+          field,
+          SALARY_FIELDS.includes(field) ? 'var(--theme-status-warning)' : 'var(--theme-status-info)',
+        )
+      )}
 
       {activeField === 'workType' ? (
         <td
@@ -227,7 +235,7 @@ export function RoutePricingEditRow({
             ...tdActive,
             position: 'sticky',
             right: 0,
-            background: 'var(--theme-status-warning-light)',
+            background: rowTint,
             zIndex: 1,
             borderLeft: '1px solid var(--theme-border-light)',
           }}
@@ -247,7 +255,7 @@ export function RoutePricingEditRow({
             ...tdDimmed,
             position: 'sticky',
             right: 0,
-            background: 'var(--theme-status-warning-light)',
+            background: rowTint,
             zIndex: 1,
             borderLeft: '1px solid var(--theme-border-light)',
           }}

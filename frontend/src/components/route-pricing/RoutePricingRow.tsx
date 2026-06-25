@@ -1,17 +1,22 @@
 import { Trash2 } from 'lucide-react'
 import type { RoutePricing } from '@/data/domain'
 import { OpBadge, PriceCell } from './RoutePricingCells'
-import { COL, SALARY_TINT, SALARY_BORDER } from './RoutePricingTable.constants'
+import { COL, FARE_TINT, FARE_BORDER, PRICE_FIELDS, SALARY_TINT, SALARY_BORDER } from './RoutePricingTable.constants'
 import type { FocusableField } from './RoutePricingTable.types'
+import type { PriceField } from './RoutePricingTable.constants'
 
-export function RoutePricingRow({ rp, idx, onEdit, onDelete, hideClient }: {
+export function RoutePricingRow({ rp, idx, onEdit, onDelete, hideClient, priceFields }: {
   rp: RoutePricing
   idx: number
   onEdit: (field: FocusableField) => void
   onDelete: () => void
   hideClient?: boolean
+  priceFields?: PriceField[]
 }) {
   const cell = (field: FocusableField) => (e: React.MouseEvent) => { e.stopPropagation(); onEdit(field) }
+  const visiblePriceFields = priceFields ?? PRICE_FIELDS
+  const isSalaryField = (field: PriceField) => field.endsWith('DriverSalary')
+  const isFareField = (field: PriceField) => !isSalaryField(field)
 
   return (
     <tr className="cursor-pointer group">
@@ -59,15 +64,23 @@ export function RoutePricingRow({ rp, idx, onEdit, onDelete, hideClient }: {
         </span>
       </td>
 
-      <td style={{ textAlign: 'right' }} onClick={cell('f20Price')}><PriceCell value={rp.f20Price} /></td>
-      <td style={{ textAlign: 'right' }} onClick={cell('f40Price')}><PriceCell value={rp.f40Price} /></td>
-      <td style={{ textAlign: 'right' }} onClick={cell('e20Price')}><PriceCell value={rp.e20Price} /></td>
-      <td style={{ textAlign: 'right' }} onClick={cell('e40Price')}><PriceCell value={rp.e40Price} /></td>
-
-      <td style={{ textAlign: 'right', background: SALARY_TINT, borderLeft: SALARY_BORDER }} onClick={cell('f20DriverSalary')}><PriceCell value={rp.f20DriverSalary} /></td>
-      <td style={{ textAlign: 'right', background: SALARY_TINT }} onClick={cell('f40DriverSalary')}><PriceCell value={rp.f40DriverSalary} /></td>
-      <td style={{ textAlign: 'right', background: SALARY_TINT }} onClick={cell('e20DriverSalary')}><PriceCell value={rp.e20DriverSalary} /></td>
-      <td style={{ textAlign: 'right', background: SALARY_TINT }} onClick={cell('e40DriverSalary')}><PriceCell value={rp.e40DriverSalary} /></td>
+      {visiblePriceFields.map((field, fieldIdx) => {
+        const isSalary = isSalaryField(field)
+        const isFare = isFareField(field)
+        return (
+          <td
+            key={field}
+            style={{
+              textAlign: 'right',
+              background: isSalary ? SALARY_TINT : FARE_TINT,
+              borderLeft: fieldIdx === 0 ? (isSalary ? SALARY_BORDER : isFare ? FARE_BORDER : undefined) : undefined,
+            }}
+            onClick={cell(field)}
+          >
+            <PriceCell value={rp[field]} />
+          </td>
+        )
+      })}
 
       <td
         onClick={cell('workType')}

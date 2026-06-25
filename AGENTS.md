@@ -50,8 +50,7 @@ New migration: `cd backend && PYTHONPATH=. alembic revision --autogenerate -m "d
 ```bash
 make push-all         # Build & push Docker images to Docker Hub
 make deploy-all       # Pull & restart on production droplet (phucloc.tingting.vip)
-make adminer-on       # Enable adminer on production (https://phucloc.tingting.vip/adminer)
-make adminer-off      # Disable adminer on production
+make adminer          # Open prod adminer over SSH tunnel -> http://localhost:8084
 ```
 
 ## Backend Architecture

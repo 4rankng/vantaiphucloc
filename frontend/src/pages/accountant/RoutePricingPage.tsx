@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Plus, Route, FileSpreadsheet, ArrowLeft, RefreshCw, Search, SlidersHorizontal, Users, Boxes, Cable, Shuffle } from 'lucide-react'
+import { Plus, Route, FileSpreadsheet, ArrowLeft, RefreshCw, Search, Users, Boxes, Cable, Shuffle } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/forms/InlineSelect/InlineSelect'
 import { DangerConfirmDialog } from '@/components/shared/overlays/DangerConfirmDialog/DangerConfirmDialog'
@@ -65,7 +65,6 @@ export function RoutePricingPage() {
     clients,
     locations,
     clientId,
-    setClientId,
     workType,
     setWorkType,
     dialogOpen,
@@ -232,11 +231,6 @@ export function RoutePricingPage() {
       .map(([key, label]) => ({ value: key, label })),
   ]
 
-  const clientOptions = [
-    { value: 'all', label: 'Tất cả chủ hàng' },
-    ...clients.map(c => ({ value: String(c.id), label: c.code ? `${c.code} – ${c.name}` : c.name })),
-  ]
-
   const summaryStats = useMemo(() => {
     const clientCount = new Set(filteredRoutePricings.map(rp => rp.client.id)).size
     const chuyenBai = filteredRoutePricings.filter(rp => rp.workType === 'CHUYEN_BAI').length
@@ -247,12 +241,6 @@ export function RoutePricingPage() {
       other: Math.max(filteredRoutePricings.length - chuyenBai, 0),
     }
   }, [filteredRoutePricings])
-
-  const clearFilters = useCallback(() => {
-    setClientId(undefined)
-    setWorkType(undefined)
-    setRouteSearch('')
-  }, [setClientId, setWorkType])
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -311,15 +299,7 @@ export function RoutePricingPage() {
           boxShadow: 'var(--theme-shadow-card)',
         }}
       >
-        <div className="grid flex-1 gap-3 md:grid-cols-[auto_minmax(190px,1fr)_auto_minmax(190px,1fr)_minmax(240px,1.2fr)] md:items-center">
-          <span className="hidden text-xs font-medium md:block" style={{ color: 'var(--theme-text-secondary)' }}>Chủ hàng</span>
-          <InlineSelect
-            placeholder="Tất cả chủ hàng"
-            value={clientId ? String(clientId) : 'all'}
-            options={clientOptions}
-            onChange={v => setClientId(v === 'all' ? undefined : Number(v))}
-            size="md"
-          />
+        <div className="grid flex-1 gap-3 md:grid-cols-[auto_minmax(190px,0.55fr)_minmax(240px,1.2fr)] md:items-center">
           <span className="hidden text-xs font-medium md:block" style={{ color: 'var(--theme-text-secondary)' }}>Tác nghiệp</span>
           <InlineSelect
             placeholder="Tất cả tác nghiệp"
@@ -340,10 +320,6 @@ export function RoutePricingPage() {
             />
           </div>
         </div>
-        <Button variant="outline" onClick={clearFilters} className="justify-center gap-1.5 whitespace-nowrap">
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          Bộ lọc
-        </Button>
       </section>
 
       {isMobile ? (
