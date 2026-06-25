@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Download, Loader2 } from 'lucide-react'
-import { downloadImage } from '@/lib/download'
+import { downloadImage, prefetchImageBlob } from '@/lib/download'
 
 interface PhotoLightboxProps {
   src: string
@@ -82,6 +82,12 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
+
+  // Prefetch the image bytes on open so the "Tải về" button can invoke
+  // navigator.share() synchronously within the tap gesture (see download.ts).
+  useEffect(() => {
+    prefetchImageBlob(src)
+  }, [src])
 
   const zoomBy = useCallback((delta: number) => {
     updateTransform((current) => {
