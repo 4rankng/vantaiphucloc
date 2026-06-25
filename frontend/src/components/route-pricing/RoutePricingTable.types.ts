@@ -56,6 +56,9 @@ export interface RoutePricingTableProps {
   onToggleClient: (clientId: number) => void
   onExpandAll: () => void
   onCollapseAll: () => void
+  selectedClientId?: number | null
+  onSelectClient?: (clientId: number) => void
+  routeSearch?: string
   // Mobile
   isMobile?: boolean
   onEditOpenDialog?: (rp: RoutePricing) => void

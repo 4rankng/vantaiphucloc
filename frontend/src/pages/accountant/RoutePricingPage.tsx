@@ -1,9 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Plus, Route, FileSpreadsheet, ArrowLeft, RefreshCw } from 'lucide-react'
+import { Plus, Route, FileSpreadsheet, ArrowLeft, RefreshCw, Search, SlidersHorizontal, Users, Boxes, Cable, Shuffle } from 'lucide-react'
 import { Button } from '@/components/ui'
-import { PageHeader } from '@/components/shared/layouts/PageHeader'
-import { Panel } from '@/components/shared/overlays/Panel'
 import { InlineSelect } from '@/components/shared/forms/InlineSelect/InlineSelect'
 import { DangerConfirmDialog } from '@/components/shared/overlays/DangerConfirmDialog/DangerConfirmDialog'
 import { RoutePricingTable, type RoutePricingFormData, type ClientGroup } from '@/components/route-pricing/RoutePricingTable'
@@ -30,6 +28,8 @@ export function RoutePricingPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [syncOpen, setSyncOpen] = useState(false)
   const [inlineEditId, setInlineEditId] = useState<number | null>(null)
+  const [routeSearch, setRouteSearch] = useState('')
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null)
 
   const { toast } = useToast()
   const syncAllPricing = useSyncAllPricing()
@@ -86,9 +86,24 @@ export function RoutePricingPage() {
 
   // ─── Group route pricings by client ──────────────────────────────────────
 
+  const filteredRoutePricings = useMemo(() => {
+    const term = routeSearch.trim().toLowerCase()
+    if (!term) return routePricings
+    return routePricings.filter(rp => {
+      const haystack = [
+        rp.client.name,
+        rp.client.code ?? '',
+        rp.pickupLocation.name,
+        rp.dropoffLocation.name,
+        WORK_TYPE_LABELS[rp.workType] ?? rp.workType,
+      ].join(' ').toLowerCase()
+      return haystack.includes(term)
+    })
+  }, [routePricings, routeSearch])
+
   const groups = useMemo<ClientGroup[]>(() => {
     const map = new Map<number, ClientGroup>()
-    for (const rp of routePricings) {
+    for (const rp of filteredRoutePricings) {
       const existing = map.get(rp.client.id)
       if (existing) {
         existing.routes.push(rp)
@@ -104,7 +119,7 @@ export function RoutePricingPage() {
       }
     }
     return Array.from(map.values()).sort((a, b) => a.clientName.localeCompare(b.clientName, 'vi'))
-  }, [routePricings])
+  }, [filteredRoutePricings])
 
   // ─── Expand/collapse state ───────────────────────────────────────────────
 
@@ -114,8 +129,20 @@ export function RoutePricingPage() {
   useEffect(() => {
     if (clientId) {
       setExpandedClients(new Set([clientId]))
+      setSelectedClientId(clientId)
     }
   }, [clientId])
+
+  useEffect(() => {
+    if (!groups.length) {
+      setSelectedClientId(null)
+      return
+    }
+    setSelectedClientId(prev => {
+      if (prev && groups.some(group => group.clientId === prev)) return prev
+      return groups[0].clientId
+    })
+  }, [groups])
 
   const toggleClient = useCallback((id: number) => {
     setExpandedClients(prev => {
@@ -210,77 +237,118 @@ export function RoutePricingPage() {
     ...clients.map(c => ({ value: String(c.id), label: c.code ? `${c.code} – ${c.name}` : c.name })),
   ]
 
+  const summaryStats = useMemo(() => {
+    const clientCount = new Set(filteredRoutePricings.map(rp => rp.client.id)).size
+    const chuyenBai = filteredRoutePricings.filter(rp => rp.workType === 'CHUYEN_BAI').length
+    return {
+      clients: clientCount,
+      routes: filteredRoutePricings.length,
+      yard: chuyenBai,
+      other: Math.max(filteredRoutePricings.length - chuyenBai, 0),
+    }
+  }, [filteredRoutePricings])
+
+  const clearFilters = useCallback(() => {
+    setClientId(undefined)
+    setWorkType(undefined)
+    setRouteSearch('')
+  }, [setClientId, setWorkType])
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      {isMobile ? (
-        <div className="flex items-center justify-between gap-3 -mb-2">{backToLink}</div>
-      ) : (
-        <PageHeader
-          title="Bảng giá cước"
-          subtitle="Quản lý bảng giá cước theo tuyến đường và loại hình tác nghiệp"
-          lucideIcon={Route}
-          breadcrumbs={backToLink ?? undefined}
-        />
-      )}
-
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 flex-wrap">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
-          <div className={isMobile ? 'w-full' : 'w-full sm:w-[190px]'}>
-            <InlineSelect
-              placeholder="Tất cả chủ hàng"
-              value={clientId ? String(clientId) : 'all'}
-              options={clientOptions}
-              onChange={v => setClientId(v === 'all' ? undefined : Number(v))}
-              size="md"
-            />
+    <div className="space-y-5 animate-fade-in">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
+          {backToLink && <div className="mb-4">{backToLink}</div>}
+          <div className="flex min-w-0 items-center gap-4">
+            {!isMobile && (
+              <div
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl"
+                style={{
+                  background: 'var(--theme-bg-secondary)',
+                  border: '1px solid var(--theme-border-light)',
+                  boxShadow: 'var(--theme-shadow-card)',
+                }}
+              >
+                <Route className="h-7 w-7" style={{ color: 'var(--theme-brand-primary)' }} />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold leading-tight md:text-3xl" style={{ color: 'var(--theme-text-primary)', letterSpacing: 0 }}>
+                Bảng giá cước
+              </h1>
+              <p className="mt-1 text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+                Quản lý bảng giá cước theo tuyến đường và loại hình tác nghiệp
+              </p>
+            </div>
           </div>
-
-          <div className={isMobile ? 'w-full' : 'w-full sm:w-[180px]'}>
-            <InlineSelect
-              placeholder="Tất cả tác nghiệp"
-              value={workType ?? 'all'}
-              options={workTypeOptions}
-              onChange={v => setWorkType(v === 'all' ? undefined : v)}
-              size="md"
-            />
-          </div>
-
-          {(clientId || workType) && (
-            <button
-              className="text-xs font-medium transition-colors whitespace-nowrap self-start sm:self-center"
-              style={{ color: 'var(--ink-3)' }}
-              onClick={() => { setClientId(undefined); setWorkType(undefined) }}
-              onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.color = 'var(--ink-1)')}
-              onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = 'var(--ink-3)')}
-            >
-              Xoá lọc
-            </button>
-          )}
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           {!isMobile && (
-            <Button variant="outline" onClick={() => setSyncOpen(true)} className="flex-1 sm:flex-none gap-1.5 whitespace-nowrap">
+            <Button variant="outline" onClick={() => setSyncOpen(true)} className="gap-1.5 whitespace-nowrap">
               <RefreshCw className="h-3.5 w-3.5" />
               Đồng bộ cước/lương
             </Button>
           )}
           {!isMobile && (
-            <Button variant="outline" onClick={() => setImportOpen(true)} className="flex-1 sm:flex-none gap-1.5 whitespace-nowrap">
+            <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5 whitespace-nowrap">
               <FileSpreadsheet className="h-3.5 w-3.5" />
               Nhập Excel
             </Button>
           )}
-          <Button onClick={openCreate} className="flex-1 sm:flex-none gap-1.5 whitespace-nowrap">
+          <Button onClick={openCreate} className="gap-1.5 whitespace-nowrap">
             <Plus className="h-3.5 w-3.5" />
             Thêm cước tuyến
           </Button>
         </div>
       </div>
 
+      <section
+        className="flex flex-col gap-3 rounded-xl p-3 lg:flex-row lg:items-center"
+        style={{
+          background: 'var(--theme-bg-secondary)',
+          border: '1px solid var(--theme-border-default)',
+          boxShadow: 'var(--theme-shadow-card)',
+        }}
+      >
+        <div className="grid flex-1 gap-3 md:grid-cols-[auto_minmax(190px,1fr)_auto_minmax(190px,1fr)_minmax(240px,1.2fr)] md:items-center">
+          <span className="hidden text-xs font-medium md:block" style={{ color: 'var(--theme-text-secondary)' }}>Chủ hàng</span>
+          <InlineSelect
+            placeholder="Tất cả chủ hàng"
+            value={clientId ? String(clientId) : 'all'}
+            options={clientOptions}
+            onChange={v => setClientId(v === 'all' ? undefined : Number(v))}
+            size="md"
+          />
+          <span className="hidden text-xs font-medium md:block" style={{ color: 'var(--theme-text-secondary)' }}>Tác nghiệp</span>
+          <InlineSelect
+            placeholder="Tất cả tác nghiệp"
+            value={workType ?? 'all'}
+            options={workTypeOptions}
+            onChange={v => setWorkType(v === 'all' ? undefined : v)}
+            size="md"
+          />
+          <div className="relative">
+            <Search className="absolute h-4 w-4" style={{ left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--theme-text-muted)' }} />
+            <input
+              type="search"
+              value={routeSearch}
+              onChange={event => setRouteSearch(event.target.value)}
+              placeholder="Tìm kiếm tuyến, địa điểm..."
+              className="nepo-input w-full text-sm"
+              style={{ height: 38, paddingLeft: 36 }}
+            />
+          </div>
+        </div>
+        <Button variant="outline" onClick={clearFilters} className="justify-center gap-1.5 whitespace-nowrap">
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          Bộ lọc
+        </Button>
+      </section>
+
       {isMobile ? (
         <RoutePricingTable
-          data={routePricings}
+          data={filteredRoutePricings}
           isLoading={isLoading}
           editingId={inlineEditId}
           editingField={inlineEditField}
@@ -301,28 +369,65 @@ export function RoutePricingPage() {
           onEditOpenDialog={handleEditOpenDialog}
         />
       ) : (
-        <Panel flush>
-          <RoutePricingTable
-            data={routePricings}
-            isLoading={isLoading}
-            editingId={inlineEditId}
-            editingField={inlineEditField}
-            onStartEdit={handleStartEdit}
-            onSave={handleSaveInline}
-            onCancelEdit={handleCancelInline}
-            onDelete={setDeleteId}
-            editInitial={inlineEditInitial}
-            isSaving={isUpdating}
-            clients={clients}
-            locations={locations}
-            groups={groups}
-            expandedClients={expandedClients}
-            onToggleClient={toggleClient}
-            onExpandAll={expandAll}
-            onCollapseAll={collapseAll}
-          />
-        </Panel>
+        <RoutePricingTable
+          data={filteredRoutePricings}
+          isLoading={isLoading}
+          editingId={inlineEditId}
+          editingField={inlineEditField}
+          onStartEdit={handleStartEdit}
+          onSave={handleSaveInline}
+          onCancelEdit={handleCancelInline}
+          onDelete={setDeleteId}
+          editInitial={inlineEditInitial}
+          isSaving={isUpdating}
+          clients={clients}
+          locations={locations}
+          groups={groups}
+          expandedClients={expandedClients}
+          onToggleClient={toggleClient}
+          onExpandAll={expandAll}
+          onCollapseAll={collapseAll}
+          selectedClientId={selectedClientId}
+          onSelectClient={setSelectedClientId}
+          routeSearch={routeSearch}
+        />
       )}
+
+      <section
+        className="rounded-xl p-5"
+        style={{
+          background: 'var(--theme-bg-secondary)',
+          border: '1px solid var(--theme-border-default)',
+          boxShadow: 'var(--theme-shadow-card)',
+        }}
+      >
+        <h2 className="mb-4 text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tổng quan bảng giá cước</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: 'Chủ hàng', value: summaryStats.clients, icon: Users, tone: 'var(--theme-brand-primary)' },
+            { label: 'Tuyến đang áp dụng', value: summaryStats.routes, icon: Boxes, tone: 'var(--theme-status-info)' },
+            { label: 'Tuyến chuyển bãi', value: summaryStats.yard, icon: Cable, tone: 'var(--theme-status-warning)' },
+            { label: 'Tuyến khác', value: summaryStats.other, icon: Shuffle, tone: 'var(--theme-express-color)' },
+          ].map(stat => (
+            <div
+              key={stat.label}
+              className="flex items-center gap-4 rounded-lg p-4"
+              style={{ border: '1px solid var(--theme-border-light)', background: 'var(--theme-bg-primary)' }}
+            >
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+                style={{ background: `color-mix(in srgb, ${stat.tone} 14%, var(--theme-bg-secondary))`, color: stat.tone }}
+              >
+                <stat.icon className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-xl font-bold leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{stat.value}</p>
+                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{stat.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* Create/edit dialog */}
       <RoutePricingDialog
