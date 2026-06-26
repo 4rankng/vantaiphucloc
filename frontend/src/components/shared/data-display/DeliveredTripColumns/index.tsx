@@ -120,16 +120,6 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
       ),
     },
     {
-      key: 'vessel',
-      header: 'Số tàu',
-      sortKey: 'vessel',
-      render: (t) => (
-        <span className="text-[13px] whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
-          {t.vessel || '—'}
-        </span>
-      ),
-    },
-    {
       key: 'client',
       header: 'Mã KH',
       sortKey: 'client_code',
@@ -255,6 +245,16 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
           <span style={{ color: 'var(--ink-4)' }}>—</span>
         )
       },
+    },
+    {
+      key: 'vessel',
+      header: 'Số tàu',
+      sortKey: 'vessel',
+      render: (t) => (
+        <span className="text-[13px] whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
+          {t.vessel || '—'}
+        </span>
+      ),
     },
     {
       key: 'driverSalary',

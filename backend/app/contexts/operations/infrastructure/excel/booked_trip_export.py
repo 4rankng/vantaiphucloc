@@ -198,9 +198,9 @@ async def generate_doi_soat_excel(
     - ``Chưa ghép`` when it appears on only one side
 
     Columns: STT | NGÀY ĐI | CHỦ HÀNG | SỐ CONTAINER | F20' | F40' | E20' |
-    E40' | SỐ XE CHẠY | ĐIỂM ĐI | ĐIỂM ĐẾN | TÁC NGHIỆP | CƯỚC | LƯƠNG |
-    TRẠNG THÁI | GHI CHÚ. Subtotal row at row 11 counts F20'/F40'/E20'/E40'
-    and sums CƯỚC/LƯƠNG across all rows.
+    E40' | SỐ XE CHẠY | ĐIỂM ĐI | ĐIỂM ĐẾN | TÁC NGHIỆP | TÊN TÀU | CƯỚC |
+    LƯƠNG | TRẠNG THÁI | GHI CHÚ. Subtotal row at row 11 counts
+    F20'/F40'/E20'/E40' and sums CƯỚC/LƯƠNG across all rows.
     """
     import openpyxl
     from openpyxl.styles import Font, Alignment, Border, Side
@@ -405,8 +405,8 @@ async def generate_doi_soat_excel(
         "SỐ XE CHẠY",
         "ĐIỂM ĐI",
         "ĐIỂM ĐẾN",
-        "TÊN TÀU",
         "TÁC NGHIỆP",
+        "TÊN TÀU",
         "CƯỚC",
         "LƯƠNG",
         "TRẠNG THÁI",
@@ -486,8 +486,8 @@ async def generate_doi_soat_excel(
                 row["vehicle_plate"],
                 pickup,
                 dropoff,
-                row["vessel"],
                 row["work_type"],
+                row["vessel"],
                 row["revenue"],
                 row["driver_salary"],
                 row["status"],
@@ -508,7 +508,7 @@ async def generate_doi_soat_excel(
                 cell.number_format = "#,##0"
 
     # -- Column widths --
-    col_widths = [6, 12, 12, 18, 6, 6, 6, 6, 14, 20, 20, 16, 14, 14, 14, 14, 24]
+    col_widths = [6, 12, 12, 18, 6, 6, 6, 6, 14, 20, 20, 14, 16, 14, 14, 14, 24]
     for i, width in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
 

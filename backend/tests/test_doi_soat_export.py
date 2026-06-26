@@ -56,10 +56,10 @@ async def test_doi_soat_export_includes_revenue_and_salary_columns(db_session):
     ws = wb.active
 
     headers = [cell.value for cell in ws[10]]
-    assert headers[12:16] == ["CƯỚC", "LƯƠNG", "TRẠNG THÁI", "GHI CHÚ"]
+    assert headers[13:17] == ["CƯỚC", "LƯƠNG", "TRẠNG THÁI", "GHI CHÚ"]
 
     row = [cell.value for cell in ws[12]]
-    assert row[12] == 1_200_000
-    assert row[13] == 300_000
-    assert row[14] == "Đã ghép"
-    assert row[15] == "Tài xế báo kẹt cổng"
+    assert row[13] == 1_200_000
+    assert row[14] == 300_000
+    assert row[15] == "Đã ghép"
+    assert row[16] == "Tài xế báo kẹt cổng"
