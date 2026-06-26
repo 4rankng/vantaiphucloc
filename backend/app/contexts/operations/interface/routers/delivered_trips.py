@@ -195,10 +195,10 @@ async def ocr_container(
     image_bytes = base64.b64decode(body.image_data)
     result = await extract_container_numbers(image_bytes, body.mime_type)
 
-    # Log one row per OCR request for the admin analytics dashboard. Only log
-    # when a provider actually ran — if OCR isn't configured (provider is None)
-    # there is no provider analytics to record, and we must never write a row
-    # the hardcoded {minimax, gemini} dashboard buckets can't display. Truncate
+    # Log one row per OCR request for the analytics dashboard. Only log when a
+    # provider actually ran — if OCR isn't configured (provider is None) there
+    # is nothing to record. The dashboard aggregates totals across ALL
+    # providers (model-agnostic), so any provider string is counted. Truncate
     # the error so a long provider error message can't overflow the column and
     # silently drop the row. A logging failure must never break the OCR
     # response for the driver.

@@ -2,21 +2,19 @@ import { api } from './client'
 import { safeRequest, toCamel } from '@/lib/safe-request'
 import type { ApiResponse } from '@/data/domain'
 
+/**
+ * OCR analytics is model-agnostic: a single "total" series counts every OCR
+ * request regardless of which provider (Gemini, MiniMax, OpenRouter, …)
+ * served it. There is no per-provider split.
+ */
 export interface OcrDailyPoint {
   date: string // YYYY-MM-DD
-  minimax: number
-  gemini: number
+  total: number
 }
 
 export interface OcrMonthlyPoint {
   month: string // YYYY-MM
-  minimax: number
-  gemini: number
-}
-
-export interface OcrProviderTotal {
   total: number
-  success: number
 }
 
 export interface OcrStats {
@@ -25,11 +23,9 @@ export interface OcrStats {
   daily: OcrDailyPoint[]
   monthly: OcrMonthlyPoint[]
   totals: {
-    minimax: OcrProviderTotal
-    gemini: OcrProviderTotal
+    total: number
+    success: number
   }
-  minimaxEnable?: boolean
-  geminiEnable?: boolean
 }
 
 export function getOcrStats(days = 30): Promise<ApiResponse<OcrStats>> {

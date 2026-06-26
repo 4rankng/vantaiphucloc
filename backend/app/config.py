@@ -48,11 +48,15 @@ class Settings(BaseSettings):
     WORKER_MAX_TRIES: int = 3
 
     # AI providers. An explicit *_ENABLE flag gates each provider; the API
-    # key must also be non-empty for the provider to be usable. For OCR,
-    # Gemini is primary and MiniMax is the last-resort fallback. Two Gemini
-    # keys are supported so OCR can alternate between them per request
+    # key must also be non-empty for the provider to be usable. For OCR, the
+    # provider order is OpenRouter → Gemini → MiniMax: OpenRouter (Qwen3-VL
+    # -8B-Instruct) is tried first when enabled; if it errors (e.g. HTTP 429)
+    # the request falls back to Gemini, then MiniMax as last resort. Two
+    # Gemini keys are supported so OCR can alternate between them per request
     # (round-robin) and avoid 429 rate limits; if either key 429s the other
-    # is tried before falling through to MiniMax.
+    # is tried before falling through further. Enable OPENROUTER_ENABLE +
+    # GEMINI_ENABLE together for automatic OpenRouter→Gemini failover, or
+    # just one to run a single provider.
     GEMINI_API_KEY: str = ""
     GEMINI_API_KEY2: str = ""
     GEMINI_ENABLE: bool = True
@@ -60,6 +64,11 @@ class Settings(BaseSettings):
     MINIMAX_ENABLE: bool = True
     MINIMAX_BASE_URL: str = "https://api.minimax.io/v1"  # OpenAI-compatible host
     MINIMAX_MODEL: str = "MiniMax-M3"
+    # OpenRouter (OpenAI-compatible). Opt-in trial provider; off by default.
+    OPENROUTER_API_KEY: str = ""
+    OPENROUTER_ENABLE: bool = False
+    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    OPENROUTER_MODEL: str = "qwen/qwen3-vl-8b-instruct"
     CHATBOT_ENABLE: int = 0
 
     # Push notifications (VAPID)

@@ -19,10 +19,7 @@ import { EmptyState } from '@/components/shared/feedback/EmptyState/EmptyState'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { ROLE_LABELS, type Role } from '@/data/domain'
 import { type UserAccount } from '@/services/api/users.api'
-import { useOcrStats } from '@/hooks/queries/ocr-stats'
-import { ChartCard } from '@/components/shared/data-display/ChartCard'
-import { LineChartWidget } from '@/components/shared/data-display/Charts'
-import { OCR_COLORS, buildDailyLineData, grandTotal, successRate } from './ocrAnalytics.helpers'
+import { OcrTotalChart } from '@/components/shared/data-display/OcrTotalChart/OcrTotalChart'
 import { KpiHeroCard } from '@/components/shared/data-display/KpiHeroCard'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
 import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
@@ -355,12 +352,6 @@ export function SuperAdminDashboard({
   const costDelta      = stats?.costDelta      ?? null
   const profitDelta    = stats?.profitDelta    ?? null
 
-  const { data: ocrStats, isLoading: ocrLoading } = useOcrStats(30)
-  const dailyData = useMemo(
-    () => buildDailyLineData(ocrStats?.daily ?? [], ocrStats?.minimaxEnable, ocrStats?.geminiEnable),
-    [ocrStats]
-  )
-
   // ⌘K shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -554,62 +545,8 @@ export function SuperAdminDashboard({
         </div>
       </div>
 
-      {/* ── OCR Analytics Chart ── */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="md:col-span-2">
-          <ChartCard
-            title="Lượt OCR theo ngày (30 ngày)"
-            subtitle="MiniMax (chính) và Gemini (dự phòng)"
-            loading={ocrLoading}
-          >
-            <LineChartWidget
-              data={dailyData}
-              height={220}
-              options={{
-                plugins: {
-                  legend: {
-                    display: true,
-                    labels: {
-                      usePointStyle: true,
-                      pointStyle: 'circle',
-                      boxWidth: 6,
-                      boxHeight: 6,
-                      padding: 15,
-                    }
-                  }
-                },
-                interaction: { mode: 'index', intersect: false },
-              }}
-            />
-          </ChartCard>
-        </div>
-        <div className="flex flex-col gap-4">
-          <StatTile
-            label="Tổng lượt OCR"
-            value={grandTotal(ocrStats)}
-            hint="Tổng số lượt gọi nhận dạng cont"
-            loading={ocrLoading}
-          />
-          {(ocrStats?.minimaxEnable ?? true) && (
-            <StatTile
-              label="Tỷ lệ thành công MiniMax"
-              value={ocrStats?.totals?.minimax ? `${successRate(ocrStats.totals.minimax.total, ocrStats.totals.minimax.success)}%` : '0%'}
-              hint={ocrStats?.totals?.minimax ? `Thành công ${ocrStats.totals.minimax.success}/${ocrStats.totals.minimax.total}` : 'Chưa có cuộc gọi nào'}
-              dotColor={OCR_COLORS.minimax}
-              loading={ocrLoading}
-            />
-          )}
-          {(ocrStats?.geminiEnable ?? true) && (
-            <StatTile
-              label="Tỷ lệ thành công Gemini"
-              value={ocrStats?.totals?.gemini ? `${successRate(ocrStats.totals.gemini.total, ocrStats.totals.gemini.success)}%` : '0%'}
-              hint={ocrStats?.totals?.gemini ? `Thành công ${ocrStats.totals.gemini.success}/${ocrStats.totals.gemini.total}` : 'Chưa có cuộc gọi nào'}
-              dotColor={OCR_COLORS.gemini}
-              loading={ocrLoading}
-            />
-          )}
-        </div>
-      </div>
+      {/* ── OCR Analytics (total-only, model-agnostic) ── */}
+      <OcrTotalChart />
 
       {/* ── Toolbar ── */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -818,53 +755,6 @@ export function SuperAdminDashboard({
           )}
         </p>
       )}
-    </div>
-  )
-}
-
-interface StatTileProps {
-  label: string
-  value: string | number
-  hint?: string
-  dotColor?: string
-  loading?: boolean
-}
-
-function StatTile({ label, value, hint, dotColor, loading }: StatTileProps) {
-  return (
-    <div
-      className="rounded-xl p-4 flex flex-col justify-between min-h-[96px]"
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--line)',
-      }}
-    >
-      <div className="flex items-center gap-2">
-        {dotColor && (
-          <span
-            aria-hidden
-            className="inline-block h-2.5 w-2.5 rounded-full"
-            style={{ background: dotColor }}
-          />
-        )}
-        <p className="typo-meta">{label}</p>
-      </div>
-      {loading ? (
-        <div className="h-7 w-20 bg-theme-bg-tertiary animate-pulse rounded mt-2" />
-      ) : (
-        <p
-          className="mt-2 font-semibold leading-none"
-          style={{
-            fontFamily: 'var(--theme-font-display)',
-            fontSize: '1.5rem',
-            letterSpacing: '-0.03em',
-            color: 'var(--theme-text-primary)',
-          }}
-        >
-          {typeof value === 'number' ? value.toLocaleString('vi-VN') : value}
-        </p>
-      )}
-      {hint && <p className="typo-meta mt-1.5 text-xs text-theme-muted">{hint}</p>}
     </div>
   )
 }

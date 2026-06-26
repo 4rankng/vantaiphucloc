@@ -11,6 +11,7 @@ import { KpiHeroCard } from '@/components/shared/data-display/KpiHeroCard'
 import { DashboardSectionHeader } from '@/components/shared/data-display/DashboardSectionHeader'
 import { AnimatedNumber } from '@/components/shared'
 import { TripChartCard } from '@/components/shared/data-display/TripChartCard'
+import { OcrTotalChart } from '@/components/shared/data-display/OcrTotalChart/OcrTotalChart'
 import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull as fmt } from '@/data/domain'
 import { pad, daysInMonth, sumChiPhi, computeDelta } from '@/lib/accounting-utils'
@@ -449,6 +450,9 @@ function DesktopDashboard() {
 
       {/* ── Main grid ── */}
       <div className="bento-grid">
+        {/* OCR requests — total-only, model-agnostic */}
+        <OcrTotalChart days={30} className="bento-col-12" />
+
         {/* Chart */}
         <TripChartCard
           title="Chuyến theo ngày"
@@ -645,6 +649,9 @@ function MobileDashboard() {
 
       {/* ── Main grid ── */}
       <div className="bento-grid">
+        {/* OCR requests — total-only, model-agnostic */}
+        <OcrTotalChart days={30} className="bento-col-12" />
+
         {/* Bar chart */}
         <TripChartCard
           subtitle={`Tháng ${pad(month)} · ${year}`}

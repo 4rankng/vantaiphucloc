@@ -94,7 +94,10 @@ async def convert_all(*, dry_run: bool, limit: int | None, backup: bool) -> None
         except Exception as exc:  # noqa: BLE001 — corrupt HEIC, libheif error, …
             failed += 1
             log.warning(
-                "convert FAILED %s: %s: %s (left untouched)", path, type(exc).__name__, exc
+                "convert FAILED %s: %s: %s (left untouched)",
+                path,
+                type(exc).__name__,
+                exc,
             )
             continue
 
@@ -150,7 +153,10 @@ def main() -> None:
         "--dry-run", action="store_true", help="report counts only, write nothing"
     )
     ap.add_argument(
-        "--limit", type=int, default=None, help="max HEIC files to convert (default: all)"
+        "--limit",
+        type=int,
+        default=None,
+        help="max HEIC files to convert (default: all)",
     )
     ap.add_argument(
         "--no-backup",
@@ -160,9 +166,7 @@ def main() -> None:
     )
     ap.set_defaults(backup=True)
     args = ap.parse_args()
-    asyncio.run(
-        convert_all(dry_run=args.dry_run, limit=args.limit, backup=args.backup)
-    )
+    asyncio.run(convert_all(dry_run=args.dry_run, limit=args.limit, backup=args.backup))
 
 
 if __name__ == "__main__":

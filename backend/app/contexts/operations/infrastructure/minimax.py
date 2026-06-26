@@ -1,8 +1,8 @@
 """MiniMax vision client (OpenAI-compatible) for container-number OCR.
 
-Mirrors ``call_gemini_vision`` so the OCR orchestrator can treat both
-providers uniformly. MiniMax is the primary OCR provider; Gemini is the
-fallback when MiniMax is disabled or fails.
+Mirrors ``call_gemini_vision`` so the OCR orchestrator can treat each
+provider uniformly. MiniMax is the last-resort OCR fallback, used only when
+both OpenRouter and Gemini are disabled or have failed.
 
 Uses MiniMax's OpenAI-compatible Chat Completions endpoint:
     POST {MINIMAX_BASE_URL}/chat/completions  (Authorization: Bearer <key>)
@@ -109,9 +109,7 @@ async def call_minimax_vision(
                     {"type": "text", "text": prompt},
                     {
                         "type": "image_url",
-                        "image_url": {
-                            "url": f"data:{mime_type};base64,{encoded}"
-                        },
+                        "image_url": {"url": f"data:{mime_type};base64,{encoded}"},
                     },
                 ],
             }

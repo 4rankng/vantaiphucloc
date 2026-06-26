@@ -43,7 +43,9 @@ from app.core.security import hash_password
 
 _REAL_DATA_PATH = (
     Path(__file__).resolve().parent.parent.parent
-    / "docs" / "real-life-data" / "trips_shipside_t4_26.json"
+    / "docs"
+    / "real-life-data"
+    / "trips_shipside_t4_26.json"
 )
 
 MONTHS = [
@@ -72,35 +74,155 @@ def _name_to_username(full_name: str) -> str:
 
 
 SEED_USERS = [
-    {"phone": "0000000000", "username": "admin", "password": "admin123", "role": "superadmin", "full_name": "Super Admin"},
-    {"phone": "0000000001", "username": "giamdoc", "password": "admin123", "role": "director", "full_name": "Giám Đốc Test"},
-    {"phone": "0000000002", "username": "ketoan", "password": "admin123", "role": "accountant", "full_name": "Kế Toán Test"},
+    {
+        "phone": "0000000000",
+        "username": "admin",
+        "password": "admin123",
+        "role": "superadmin",
+        "full_name": "Super Admin",
+    },
+    {
+        "phone": "0000000001",
+        "username": "giamdoc",
+        "password": "admin123",
+        "role": "director",
+        "full_name": "Giám Đốc Test",
+    },
+    {
+        "phone": "0000000002",
+        "username": "ketoan",
+        "password": "admin123",
+        "role": "accountant",
+        "full_name": "Kế Toán Test",
+    },
 ]
 
 DRIVER_VEHICLES = {
-    "15C09877": {"full_name": "Nguyễn Văn Tám", "phone": "0901001001", "secondary": None, "base_salary": 5000000},
-    "15C15033": {"full_name": "Trần Minh Đức", "phone": "0902002002", "secondary": "15H07788", "base_salary": 5500000},
-    "15C17301": {"full_name": "Lê Quang Anh", "phone": "0903003003", "secondary": None, "base_salary": 4500000},
-    "15C17442": {"full_name": "Phạm Văn Hùng", "phone": "0904004004", "secondary": "15H07644", "base_salary": 5500000},
-    "15C30649": {"full_name": "Hoàng Đức Thắng", "phone": "0905005005", "secondary": None, "base_salary": 5000000},
-    "15H06892": {"full_name": "Vũ Đình Nam", "phone": "0906006006", "secondary": None, "base_salary": 4500000},
-    "15H07135": {"full_name": "Đỗ Quang Hải", "phone": "0907007007", "secondary": None, "base_salary": 5000000},
-    "15H07524": {"full_name": "Bùi Thanh Sơn", "phone": "0908008008", "secondary": "15H08574", "base_salary": 5500000},
-    "15H07644": {"full_name": "Ngô Minh Tuấn", "phone": "0909009009", "secondary": None, "base_salary": 4500000},
-    "15H07788": {"full_name": "Dương Văn Thành", "phone": "0910101001", "secondary": None, "base_salary": 5000000},
-    "15H08574": {"full_name": "Lý Hoàng Long", "phone": "0911111002", "secondary": None, "base_salary": 4500000},
-    "15H12925": {"full_name": "Trịnh Đức Minh", "phone": "0912122003", "secondary": None, "base_salary": 5000000},
-    "15H15378": {"full_name": "Cao Văn Lượng", "phone": "0913133004", "secondary": None, "base_salary": 5000000},
-    "15H17403": {"full_name": "Đinh Công Phú", "phone": "0914144005", "secondary": None, "base_salary": 4500000},
-    "15H17712": {"full_name": "Mai Văn Bình", "phone": "0915155006", "secondary": None, "base_salary": 5000000},
-    "15H18552": {"full_name": "Tạ Quang Vinh", "phone": "0916166007", "secondary": None, "base_salary": 5000000},
-    "15H18753": {"full_name": "Chu Đức Anh", "phone": "0917177008", "secondary": None, "base_salary": 5500000},
-    "15H20645": {"full_name": "Lâm Thanh Tùng", "phone": "0918188009", "secondary": None, "base_salary": 5000000},
+    "15C09877": {
+        "full_name": "Nguyễn Văn Tám",
+        "phone": "0901001001",
+        "secondary": None,
+        "base_salary": 5000000,
+    },
+    "15C15033": {
+        "full_name": "Trần Minh Đức",
+        "phone": "0902002002",
+        "secondary": "15H07788",
+        "base_salary": 5500000,
+    },
+    "15C17301": {
+        "full_name": "Lê Quang Anh",
+        "phone": "0903003003",
+        "secondary": None,
+        "base_salary": 4500000,
+    },
+    "15C17442": {
+        "full_name": "Phạm Văn Hùng",
+        "phone": "0904004004",
+        "secondary": "15H07644",
+        "base_salary": 5500000,
+    },
+    "15C30649": {
+        "full_name": "Hoàng Đức Thắng",
+        "phone": "0905005005",
+        "secondary": None,
+        "base_salary": 5000000,
+    },
+    "15H06892": {
+        "full_name": "Vũ Đình Nam",
+        "phone": "0906006006",
+        "secondary": None,
+        "base_salary": 4500000,
+    },
+    "15H07135": {
+        "full_name": "Đỗ Quang Hải",
+        "phone": "0907007007",
+        "secondary": None,
+        "base_salary": 5000000,
+    },
+    "15H07524": {
+        "full_name": "Bùi Thanh Sơn",
+        "phone": "0908008008",
+        "secondary": "15H08574",
+        "base_salary": 5500000,
+    },
+    "15H07644": {
+        "full_name": "Ngô Minh Tuấn",
+        "phone": "0909009009",
+        "secondary": None,
+        "base_salary": 4500000,
+    },
+    "15H07788": {
+        "full_name": "Dương Văn Thành",
+        "phone": "0910101001",
+        "secondary": None,
+        "base_salary": 5000000,
+    },
+    "15H08574": {
+        "full_name": "Lý Hoàng Long",
+        "phone": "0911111002",
+        "secondary": None,
+        "base_salary": 4500000,
+    },
+    "15H12925": {
+        "full_name": "Trịnh Đức Minh",
+        "phone": "0912122003",
+        "secondary": None,
+        "base_salary": 5000000,
+    },
+    "15H15378": {
+        "full_name": "Cao Văn Lượng",
+        "phone": "0913133004",
+        "secondary": None,
+        "base_salary": 5000000,
+    },
+    "15H17403": {
+        "full_name": "Đinh Công Phú",
+        "phone": "0914144005",
+        "secondary": None,
+        "base_salary": 4500000,
+    },
+    "15H17712": {
+        "full_name": "Mai Văn Bình",
+        "phone": "0915155006",
+        "secondary": None,
+        "base_salary": 5000000,
+    },
+    "15H18552": {
+        "full_name": "Tạ Quang Vinh",
+        "phone": "0916166007",
+        "secondary": None,
+        "base_salary": 5000000,
+    },
+    "15H18753": {
+        "full_name": "Chu Đức Anh",
+        "phone": "0917177008",
+        "secondary": None,
+        "base_salary": 5500000,
+    },
+    "15H20645": {
+        "full_name": "Lâm Thanh Tùng",
+        "phone": "0918188009",
+        "secondary": None,
+        "base_salary": 5000000,
+    },
 }
 
 EXTRA_DRIVERS = [
-    {"username": "taixe", "full_name": "Phùng Tài Xế", "phone": "0920002001", "plate": "15C09877", "base_salary": 4500000},
-    {"username": "laixe", "full_name": "Trần Lái Xe", "phone": "0920002002", "plate": "15C15033", "base_salary": 4500000},
+    {
+        "username": "taixe",
+        "full_name": "Phùng Tài Xế",
+        "phone": "0920002001",
+        "plate": "15C09877",
+        "base_salary": 4500000,
+    },
+    {
+        "username": "laixe",
+        "full_name": "Trần Lái Xe",
+        "phone": "0920002002",
+        "plate": "15C15033",
+        "base_salary": 4500000,
+    },
 ]
 
 SEED_LOCATIONS = [
@@ -165,34 +287,130 @@ SEED_VENDORS = [
 
 ALL_PRICING = {
     "HAIAN": {
-        ("NHĐV", "HẢI AN"): {"unit_price": 448500, "driver_salary": 180000, "allowance": 70000},
-        ("HẢI AN", "NHĐV"): {"unit_price": 448500, "driver_salary": 180000, "allowance": 70000},
-        ("NHĐV", "VIP GREEN"): {"unit_price": 465000, "driver_salary": 185000, "allowance": 70000},
-        ("VIP GREEN", "NHĐV"): {"unit_price": 465000, "driver_salary": 185000, "allowance": 70000},
-        ("HẢI AN", "GREEN PORT"): {"unit_price": 490000, "driver_salary": 190000, "allowance": 75000},
-        ("GREEN PORT", "HẢI AN"): {"unit_price": 490000, "driver_salary": 190000, "allowance": 75000},
-        ("NHĐV", "ĐÌNH VŨ"): {"unit_price": 430000, "driver_salary": 175000, "allowance": 65000},
-        ("ĐÌNH VŨ", "NHĐV"): {"unit_price": 430000, "driver_salary": 175000, "allowance": 65000},
-        ("HẢI AN", "CHU VĂN AN"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
-        ("CHU VĂN AN", "HẢI AN"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
-        ("NHĐV", "NAM ĐỊNH VỤ"): {"unit_price": 435000, "driver_salary": 178000, "allowance": 66000},
-        ("NAM ĐỊNH VỤ", "NHĐV"): {"unit_price": 435000, "driver_salary": 178000, "allowance": 66000},
+        ("NHĐV", "HẢI AN"): {
+            "unit_price": 448500,
+            "driver_salary": 180000,
+            "allowance": 70000,
+        },
+        ("HẢI AN", "NHĐV"): {
+            "unit_price": 448500,
+            "driver_salary": 180000,
+            "allowance": 70000,
+        },
+        ("NHĐV", "VIP GREEN"): {
+            "unit_price": 465000,
+            "driver_salary": 185000,
+            "allowance": 70000,
+        },
+        ("VIP GREEN", "NHĐV"): {
+            "unit_price": 465000,
+            "driver_salary": 185000,
+            "allowance": 70000,
+        },
+        ("HẢI AN", "GREEN PORT"): {
+            "unit_price": 490000,
+            "driver_salary": 190000,
+            "allowance": 75000,
+        },
+        ("GREEN PORT", "HẢI AN"): {
+            "unit_price": 490000,
+            "driver_salary": 190000,
+            "allowance": 75000,
+        },
+        ("NHĐV", "ĐÌNH VŨ"): {
+            "unit_price": 430000,
+            "driver_salary": 175000,
+            "allowance": 65000,
+        },
+        ("ĐÌNH VŨ", "NHĐV"): {
+            "unit_price": 430000,
+            "driver_salary": 175000,
+            "allowance": 65000,
+        },
+        ("HẢI AN", "CHU VĂN AN"): {
+            "unit_price": 458000,
+            "driver_salary": 182000,
+            "allowance": 68000,
+        },
+        ("CHU VĂN AN", "HẢI AN"): {
+            "unit_price": 458000,
+            "driver_salary": 182000,
+            "allowance": 68000,
+        },
+        ("NHĐV", "NAM ĐỊNH VỤ"): {
+            "unit_price": 435000,
+            "driver_salary": 178000,
+            "allowance": 66000,
+        },
+        ("NAM ĐỊNH VỤ", "NHĐV"): {
+            "unit_price": 435000,
+            "driver_salary": 178000,
+            "allowance": 66000,
+        },
     },
     "GLORY": {
-        ("NHĐV", "HẢI AN"): {"unit_price": 475000, "driver_salary": 185000, "allowance": 72000},
-        ("HẢI AN", "NHĐV"): {"unit_price": 475000, "driver_salary": 185000, "allowance": 72000},
-        ("NHĐV", "VIP GREEN"): {"unit_price": 495000, "driver_salary": 190000, "allowance": 72000},
-        ("VIP GREEN", "NHĐV"): {"unit_price": 495000, "driver_salary": 190000, "allowance": 72000},
-        ("HẢI AN", "GREEN PORT"): {"unit_price": 518000, "driver_salary": 195000, "allowance": 77000},
-        ("NHĐV", "ĐÌNH VŨ"): {"unit_price": 458000, "driver_salary": 180000, "allowance": 67000},
-        ("HẢI AN", "CHU VĂN AN"): {"unit_price": 485000, "driver_salary": 187000, "allowance": 70000},
+        ("NHĐV", "HẢI AN"): {
+            "unit_price": 475000,
+            "driver_salary": 185000,
+            "allowance": 72000,
+        },
+        ("HẢI AN", "NHĐV"): {
+            "unit_price": 475000,
+            "driver_salary": 185000,
+            "allowance": 72000,
+        },
+        ("NHĐV", "VIP GREEN"): {
+            "unit_price": 495000,
+            "driver_salary": 190000,
+            "allowance": 72000,
+        },
+        ("VIP GREEN", "NHĐV"): {
+            "unit_price": 495000,
+            "driver_salary": 190000,
+            "allowance": 72000,
+        },
+        ("HẢI AN", "GREEN PORT"): {
+            "unit_price": 518000,
+            "driver_salary": 195000,
+            "allowance": 77000,
+        },
+        ("NHĐV", "ĐÌNH VŨ"): {
+            "unit_price": 458000,
+            "driver_salary": 180000,
+            "allowance": 67000,
+        },
+        ("HẢI AN", "CHU VĂN AN"): {
+            "unit_price": 485000,
+            "driver_salary": 187000,
+            "allowance": 70000,
+        },
     },
     "CONSCIENCE": {
-        ("NHĐV", "HẢI AN"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
-        ("HẢI AN", "NHĐV"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
-        ("NHĐV", "VIP GREEN"): {"unit_price": 478000, "driver_salary": 187000, "allowance": 68000},
-        ("HẢI AN", "GREEN PORT"): {"unit_price": 500000, "driver_salary": 192000, "allowance": 73000},
-        ("NHĐV", "ĐÌNH VŨ"): {"unit_price": 442000, "driver_salary": 177000, "allowance": 64000},
+        ("NHĐV", "HẢI AN"): {
+            "unit_price": 458000,
+            "driver_salary": 182000,
+            "allowance": 68000,
+        },
+        ("HẢI AN", "NHĐV"): {
+            "unit_price": 458000,
+            "driver_salary": 182000,
+            "allowance": 68000,
+        },
+        ("NHĐV", "VIP GREEN"): {
+            "unit_price": 478000,
+            "driver_salary": 187000,
+            "allowance": 68000,
+        },
+        ("HẢI AN", "GREEN PORT"): {
+            "unit_price": 500000,
+            "driver_salary": 192000,
+            "allowance": 73000,
+        },
+        ("NHĐV", "ĐÌNH VŨ"): {
+            "unit_price": 442000,
+            "driver_salary": 177000,
+            "allowance": 64000,
+        },
     },
 }
 
@@ -217,15 +435,35 @@ CLIENT_W = list(CLIENT_WEIGHTS.values())
 
 
 VESSELS = [
-    "HAIAN ALFA 073N", "HAIAN LINK V.138S", "HAIAN BETA 062S",
-    "HAIAN EXPRESS 251N", "HAIAN GLOBAL 045S", "HAIAN PIONEER 112N",
-    "GLORY SHANGHAI 2612N", "CONSCIENCE 2615N",
-    "HAIAN ALPHA 085S", "HAIAN NEPTUNE 201N", "GLORY PACIFIC 310S",
+    "HAIAN ALFA 073N",
+    "HAIAN LINK V.138S",
+    "HAIAN BETA 062S",
+    "HAIAN EXPRESS 251N",
+    "HAIAN GLOBAL 045S",
+    "HAIAN PIONEER 112N",
+    "GLORY SHANGHAI 2612N",
+    "CONSCIENCE 2615N",
+    "HAIAN ALPHA 085S",
+    "HAIAN NEPTUNE 201N",
+    "GLORY PACIFIC 310S",
 ]
 
 _CONTAINER_PREFIXES = [
-    "HACU", "NSSU", "FBLU", "MSCU", "CSLU", "TCLU", "EISU", "OOLU",
-    "NYKU", "KKTU", "YMMU", "APLU", "CMAU", "HLXU", "ONEU",
+    "HACU",
+    "NSSU",
+    "FBLU",
+    "MSCU",
+    "CSLU",
+    "TCLU",
+    "EISU",
+    "OOLU",
+    "NYKU",
+    "KKTU",
+    "YMMU",
+    "APLU",
+    "CMAU",
+    "HLXU",
+    "ONEU",
 ]
 
 
@@ -250,17 +488,19 @@ def _generate_trips_for_month(year: int, month: int, plates: list[str]) -> list[
         else:
             fallback = ALL_PRICING["HAIAN"].get((pickup, dropoff))
             unit_price = fallback["unit_price"] if fallback else 400000
-        trips.append({
-            "container": _rand_container(),
-            "size": size,
-            "vessel": rng.choice(VESSELS),
-            "pickup": pickup,
-            "dropoff": dropoff,
-            "plate": rng.choice(plates),
-            "unit_price": unit_price,
-            "trip_date": f"{year}-{month:02d}-{day:02d}",
-            "client_code": client_code,
-        })
+        trips.append(
+            {
+                "container": _rand_container(),
+                "size": size,
+                "vessel": rng.choice(VESSELS),
+                "pickup": pickup,
+                "dropoff": dropoff,
+                "plate": rng.choice(plates),
+                "unit_price": unit_price,
+                "trip_date": f"{year}-{month:02d}-{day:02d}",
+                "client_code": client_code,
+            }
+        )
     return trips
 
 
@@ -272,7 +512,9 @@ def _load_all_trips() -> list[dict]:
             real_april = json.load(f)
         for t in real_april:
             t["client_code"] = "HAIAN"
-        print(f"  Loaded {len(real_april)} real April trips from {_REAL_DATA_PATH.name}")
+        print(
+            f"  Loaded {len(real_april)} real April trips from {_REAL_DATA_PATH.name}"
+        )
 
     plates = sorted(DRIVER_VEHICLES.keys())
 
@@ -289,8 +531,10 @@ def _load_all_trips() -> list[dict]:
 
 
 TIEN_LUAT_DESCRIPTIONS = [
-    "Phí đường bộ", "Tiền luật giao thông",
-    "Phí cầu đường", "Phí trọng lượng",
+    "Phí đường bộ",
+    "Tiền luật giao thông",
+    "Phí cầu đường",
+    "Phí trọng lượng",
 ]
 
 
@@ -321,13 +565,18 @@ async def seed_dev() -> None:
         print("\n=== Seeding Staff Users ===")
         user_map: dict[str, User] = {}
         for u in SEED_USERS:
-            result = await db.execute(select(User).where(User.username == u["username"]))
+            result = await db.execute(
+                select(User).where(User.username == u["username"])
+            )
             existing = result.scalars().first()
             if existing is None:
                 existing = User(
-                    phone=u["phone"], username=u["username"],
+                    phone=u["phone"],
+                    username=u["username"],
                     hashed_password=hash_password(u["password"]),
-                    role=u["role"], is_active=True, full_name=u.get("full_name"),
+                    role=u["role"],
+                    is_active=True,
+                    full_name=u.get("full_name"),
                 )
                 db.add(existing)
                 await db.flush()
@@ -352,9 +601,12 @@ async def seed_dev() -> None:
             drv = result.scalars().first()
             if drv is None:
                 drv = User(
-                    phone=info["phone"], username=uname,
+                    phone=info["phone"],
+                    username=uname,
                     hashed_password=hash_password("admin123"),
-                    role="driver", is_active=True, full_name=info["full_name"],
+                    role="driver",
+                    is_active=True,
+                    full_name=info["full_name"],
                 )
                 db.add(drv)
                 await db.flush()
@@ -367,13 +619,18 @@ async def seed_dev() -> None:
             driver_map[plate] = drv
 
         for ed in EXTRA_DRIVERS:
-            result = await db.execute(select(User).where(User.username == ed["username"]))
+            result = await db.execute(
+                select(User).where(User.username == ed["username"])
+            )
             drv = result.scalars().first()
             if drv is None:
                 drv = User(
-                    phone=ed["phone"], username=ed["username"],
+                    phone=ed["phone"],
+                    username=ed["username"],
                     hashed_password=hash_password("admin123"),
-                    role="driver", is_active=True, full_name=ed["full_name"],
+                    role="driver",
+                    is_active=True,
+                    full_name=ed["full_name"],
                 )
                 db.add(drv)
                 await db.flush()
@@ -406,27 +663,39 @@ async def seed_dev() -> None:
         for plate, info in DRIVER_VEHICLES.items():
             primary_drv = driver_map[plate]
             veh = vehicle_map[plate]
-            db.add(VehicleDriver(
-                vehicle_id=veh.id, driver_id=primary_drv.id,
-                effective_from=date(2026, 1, 1), is_active=True,
-            ))
+            db.add(
+                VehicleDriver(
+                    vehicle_id=veh.id,
+                    driver_id=primary_drv.id,
+                    effective_from=date(2026, 1, 1),
+                    is_active=True,
+                )
+            )
             vd_count += 1
             if info.get("secondary"):
                 sec_drv = driver_map[info["secondary"]]
-                db.add(VehicleDriver(
-                    vehicle_id=veh.id, driver_id=sec_drv.id,
-                    effective_from=date(2026, 3, 1), is_active=True,
-                ))
+                db.add(
+                    VehicleDriver(
+                        vehicle_id=veh.id,
+                        driver_id=sec_drv.id,
+                        effective_from=date(2026, 3, 1),
+                        is_active=True,
+                    )
+                )
                 vd_count += 1
                 print(f"  + SECONDARY: {sec_drv.full_name} → {plate}")
 
         for ed in EXTRA_DRIVERS:
             veh = vehicle_map[ed["plate"]]
             drv = driver_map[ed["username"]]
-            db.add(VehicleDriver(
-                vehicle_id=veh.id, driver_id=drv.id,
-                effective_from=date(2026, 2, 1), is_active=True,
-            ))
+            db.add(
+                VehicleDriver(
+                    vehicle_id=veh.id,
+                    driver_id=drv.id,
+                    effective_from=date(2026, 2, 1),
+                    is_active=True,
+                )
+            )
             vd_count += 1
             print(f"  + SECONDARY: {drv.full_name} ({ed['username']}) → {ed['plate']}")
 
@@ -438,13 +707,18 @@ async def seed_dev() -> None:
         print("\n=== Seeding Locations ===")
         loc_map: dict[str, Location] = {}
         for loc_data in SEED_LOCATIONS:
-            result = await db.execute(select(Location).where(Location.name == loc_data["name"]))
+            result = await db.execute(
+                select(Location).where(Location.name == loc_data["name"])
+            )
             loc = result.scalars().first()
             if loc is None:
                 loc = Location(
-                    name=loc_data["name"], is_active=True,
-                    lat=loc_data.get("lat"), lng=loc_data.get("lng"),
-                    pending_geocode=False, created_via="real_seed",
+                    name=loc_data["name"],
+                    is_active=True,
+                    lat=loc_data.get("lat"),
+                    lng=loc_data.get("lng"),
+                    pending_geocode=False,
+                    created_via="real_seed",
                     location_review_needed=False,
                 )
                 db.add(loc)
@@ -461,9 +735,12 @@ async def seed_dev() -> None:
             client = result.scalars().first()
             if client is None:
                 client = Client(
-                    code=p["code"], name=p["name"],
-                    phone=p["phone"], tax_code=p.get("tax_code"),
-                    address=p.get("address"), contact_person=p.get("contact_person"),
+                    code=p["code"],
+                    name=p["name"],
+                    phone=p["phone"],
+                    tax_code=p.get("tax_code"),
+                    address=p.get("address"),
+                    contact_person=p.get("contact_person"),
                     is_active=True,
                 )
                 db.add(client)
@@ -477,9 +754,12 @@ async def seed_dev() -> None:
             vendor = result.scalars().first()
             if vendor is None:
                 vendor = Vendor(
-                    code=p["code"], name=p["name"],
-                    phone=p["phone"], tax_code=p.get("tax_code"),
-                    address=p.get("address"), contact_person=p.get("contact_person"),
+                    code=p["code"],
+                    name=p["name"],
+                    phone=p["phone"],
+                    tax_code=p.get("tax_code"),
+                    address=p.get("address"),
+                    contact_person=p.get("contact_person"),
                     is_active=True,
                 )
                 db.add(vendor)
@@ -510,21 +790,23 @@ async def seed_dev() -> None:
                         continue
                     unit = prices["unit_price"]
                     drv_sal = prices["driver_salary"]
-                    db.add(RoutePricing(
-                        client_id=client.id,
-                        pickup_location_id=pickup_loc.id,
-                        dropoff_location_id=dropoff_loc.id,
-                        work_type=work_type,
-                        f20_price=unit,
-                        f40_price=int(unit * 1.4),
-                        e20_price=int(unit * 0.6),
-                        e40_price=int(unit * 0.85),
-                        f20_driver_salary=drv_sal,
-                        f40_driver_salary=int(drv_sal * 1.3),
-                        e20_driver_salary=int(drv_sal * 0.7),
-                        e40_driver_salary=int(drv_sal * 0.9),
-                        is_active=True,
-                    ))
+                    db.add(
+                        RoutePricing(
+                            client_id=client.id,
+                            pickup_location_id=pickup_loc.id,
+                            dropoff_location_id=dropoff_loc.id,
+                            work_type=work_type,
+                            f20_price=unit,
+                            f40_price=int(unit * 1.4),
+                            e20_price=int(unit * 0.6),
+                            e40_price=int(unit * 0.85),
+                            f20_driver_salary=drv_sal,
+                            f40_driver_salary=int(drv_sal * 1.3),
+                            e20_driver_salary=int(drv_sal * 0.7),
+                            e40_driver_salary=int(drv_sal * 0.9),
+                            is_active=True,
+                        )
+                    )
                     rp_count += 1
         await db.flush()
         print(f"  Created {rp_count} route pricing records")
@@ -555,7 +837,11 @@ async def seed_dev() -> None:
             prices = client_pricing.get((pickup, dropoff))
             if not prices:
                 prices = ALL_PRICING["HAIAN"].get((pickup, dropoff), {})
-            trip_date = date.fromisoformat(trip["trip_date"]) if trip["trip_date"] else date(2026, 4, 1)
+            trip_date = (
+                date.fromisoformat(trip["trip_date"])
+                if trip["trip_date"]
+                else date(2026, 4, 1)
+            )
 
             drv_plate = plate if plate in driver_map else rng.choice(plates_list)
             drv = driver_map.get(drv_plate)
@@ -605,17 +891,13 @@ async def seed_dev() -> None:
         for year, month in MONTHS:
             n_pending = rng.randint(8, 18)
             import calendar
+
             days_in_month = calendar.monthrange(year, month)[1]
             for _ in range(n_pending):
                 pickup, dropoff = rng.choice(ROUTES)
                 size = rng.choices([20, 40], weights=[75, 25])[0]
                 client_code = rng.choices(CLIENT_KEYS, weights=CLIENT_W)[0]
                 client = org_map[client_code]
-                client_pricing = ALL_PRICING.get(client_code, {})
-                prices = client_pricing.get((pickup, dropoff))
-                if not prices:
-                    prices = ALL_PRICING["HAIAN"].get((pickup, dropoff), {})
-                prices.get("unit_price", 400000) if prices else 400000
                 trip_date = date(year, month, rng.randint(1, days_in_month))
 
                 to = BookedTrip(
@@ -640,36 +922,54 @@ async def seed_dev() -> None:
         for year, month in MONTHS:
             for plate, veh in vehicle_map.items():
                 fuel = rng.randint(3500000, 5000000)
-                db.add(VehicleExpense(
-                    vehicle_id=veh.id, category="XANG_DAU",
-                    amount=fuel, expense_date=date(year, month, rng.randint(1, 28)),
-                    description=f"Xăng dầu T{month}/{year}",
-                    created_by=ketoan.id,
-                ))
+                db.add(
+                    VehicleExpense(
+                        vehicle_id=veh.id,
+                        category="XANG_DAU",
+                        amount=fuel,
+                        expense_date=date(year, month, rng.randint(1, 28)),
+                        description=f"Xăng dầu T{month}/{year}",
+                        created_by=ketoan.id,
+                    )
+                )
                 expense_count += 1
 
                 if rng.random() < 0.25:
                     repair = rng.randint(500000, 2500000)
-                    db.add(VehicleExpense(
-                        vehicle_id=veh.id, category="SUA_CHUA",
-                        amount=repair, expense_date=date(year, month, rng.randint(1, 28)),
-                        description=rng.choice([
-                            "Thay lốp xe", "Sửa chữa phanh",
-                            "Thay nhớt + lọc gió", "Sửa chữa gầm xe",
-                            "Thay ắc quy", "Cán chỉnh lốp",
-                        ]),
-                        created_by=ketoan.id,
-                    ))
+                    db.add(
+                        VehicleExpense(
+                            vehicle_id=veh.id,
+                            category="SUA_CHUA",
+                            amount=repair,
+                            expense_date=date(year, month, rng.randint(1, 28)),
+                            description=rng.choice(
+                                [
+                                    "Thay lốp xe",
+                                    "Sửa chữa phanh",
+                                    "Thay nhớt + lọc gió",
+                                    "Sửa chữa gầm xe",
+                                    "Thay ắc quy",
+                                    "Cán chỉnh lốp",
+                                ]
+                            ),
+                            created_by=ketoan.id,
+                        )
+                    )
                     expense_count += 1
 
                 if rng.random() < 0.3:
                     law = rng.randint(300000, 1500000)
-                    db.add(VehicleExpense(
-                        vehicle_id=veh.id, category="TIEN_LUAT",
-                        amount=law, expense_date=date(year, month, rng.randint(1, 28)),
-                        description=rng.choice(TIEN_LUAT_DESCRIPTIONS) + f" T{month}/{year}",
-                        created_by=ketoan.id,
-                    ))
+                    db.add(
+                        VehicleExpense(
+                            vehicle_id=veh.id,
+                            category="TIEN_LUAT",
+                            amount=law,
+                            expense_date=date(year, month, rng.randint(1, 28)),
+                            description=rng.choice(TIEN_LUAT_DESCRIPTIONS)
+                            + f" T{month}/{year}",
+                            created_by=ketoan.id,
+                        )
+                    )
                     expense_count += 1
 
         await db.flush()
@@ -682,25 +982,29 @@ async def seed_dev() -> None:
         for plate, info in DRIVER_VEHICLES.items():
             drv = driver_map[plate]
             base = info.get("base_salary", 5000000)
-            db.add(DriverSalaryConfig(
-                driver_id=drv.id,
-                base_salary=base,
-                effective_from=date(2026, 1, 1),
-                note=f"Lương cơ bản {base // 1000000}TR/tháng",
-                created_by=ketoan.id,
-            ))
+            db.add(
+                DriverSalaryConfig(
+                    driver_id=drv.id,
+                    base_salary=base,
+                    effective_from=date(2026, 1, 1),
+                    note=f"Lương cơ bản {base // 1000000}TR/tháng",
+                    created_by=ketoan.id,
+                )
+            )
             salary_count += 1
 
         for ed in EXTRA_DRIVERS:
             drv = driver_map[ed["username"]]
             base = ed.get("base_salary", 4500000)
-            db.add(DriverSalaryConfig(
-                driver_id=drv.id,
-                base_salary=base,
-                effective_from=date(2026, 1, 1),
-                note=f"Lương cơ bản {base // 1000000}TR/tháng",
-                created_by=ketoan.id,
-            ))
+            db.add(
+                DriverSalaryConfig(
+                    driver_id=drv.id,
+                    base_salary=base,
+                    effective_from=date(2026, 1, 1),
+                    note=f"Lương cơ bản {base // 1000000}TR/tháng",
+                    created_by=ketoan.id,
+                )
+            )
             salary_count += 1
 
         await db.flush()
@@ -710,6 +1014,7 @@ async def seed_dev() -> None:
         # ── 11. OCR Requests ───────────────────────────────────────────
         print("\n=== Seeding OCR Requests ===")
         from datetime import datetime, timedelta, timezone
+
         ocr_count = 0
         now = datetime.now(timezone.utc)
         for days_ago in range(35):
@@ -717,15 +1022,28 @@ async def seed_dev() -> None:
             n_reqs = rng.randint(15, 35)
             for _ in range(n_reqs):
                 provider = rng.choices(["minimax", "gemini"], weights=[85, 15])[0]
-                model = "minimax-vision" if provider == "minimax" else "gemini-1.5-flash"
+                model = (
+                    "minimax-vision" if provider == "minimax" else "gemini-1.5-flash"
+                )
                 success = rng.random() < 0.94
                 container_numbers_found = rng.choice([1, 2]) if success else 0
-                latency = rng.randint(300, 1500) if provider == "minimax" else rng.randint(800, 2500)
-                error = None if success else rng.choice(["No container number detected", "Timeout", "Vision API error"])
+                latency = (
+                    rng.randint(300, 1500)
+                    if provider == "minimax"
+                    else rng.randint(800, 2500)
+                )
+                error = (
+                    None
+                    if success
+                    else rng.choice(
+                        ["No container number detected", "Timeout", "Vision API error"]
+                    )
+                )
                 drv = rng.choice(list(driver_map.values()))
-                
+
                 req = OcrRequest(
-                    created_at=day_date - timedelta(hours=rng.randint(0, 23), minutes=rng.randint(0, 59)),
+                    created_at=day_date
+                    - timedelta(hours=rng.randint(0, 23), minutes=rng.randint(0, 59)),
                     provider=provider,
                     model=model,
                     success=success,
@@ -745,11 +1063,19 @@ async def seed_dev() -> None:
         print("SEED COMPLETE — Realistic P&L data (Feb–May 2026)")
         print("=" * 60)
         for t in [
-            "users", "vehicles", "vehicle_drivers", "locations", "clients", "vendors",
-            "settings", "route_pricings",
+            "users",
+            "vehicles",
+            "vehicle_drivers",
+            "locations",
+            "clients",
+            "vendors",
+            "settings",
+            "route_pricings",
             "delivered_trips",
             "booked_trips",
-            "vehicle_expenses", "driver_salary_configs", "ocr_requests",
+            "vehicle_expenses",
+            "driver_salary_configs",
+            "ocr_requests",
         ]:
             cnt = (await db.execute(text(f"SELECT count(*) FROM {t}"))).scalar()
             print(f"  {t:30s} {cnt:>5d} rows")
@@ -769,7 +1095,9 @@ async def seed_dev() -> None:
             client_counts[cc] = client_counts.get(cc, 0) + 1
         print("\nTrips by client:")
         for cc in sorted(client_counts):
-            print(f"  {cc}: {client_counts[cc]} trips ({client_counts[cc] * 100 // len(trips)}%)")
+            print(
+                f"  {cc}: {client_counts[cc]} trips ({client_counts[cc] * 100 // len(trips)}%)"
+            )
 
         print("\nLogin credentials:")
         print("  admin    / admin123  (superadmin)")
@@ -781,7 +1109,7 @@ async def seed_dev() -> None:
         for plate, info in DRIVER_VEHICLES.items():
             uname = _name_to_username(info["full_name"])
             sec = " +2nd" if info.get("secondary") else ""
-            print(f"  {info['full_name']:25s} → {uname:10s} ({base // 1000000}TR{sec})")
+            print(f"  {info['full_name']:25s} → {uname:10s} ({info.get('base_salary', 5000000) // 1000000}TR{sec})")
         for ed in EXTRA_DRIVERS:
             print(f"  {ed['full_name']:25s} → {ed['username']}")
 

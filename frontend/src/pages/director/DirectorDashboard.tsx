@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { TripChartCard } from '@/components/shared/data-display/TripChartCard'
+import { OcrTotalChart } from '@/components/shared/data-display/OcrTotalChart/OcrTotalChart'
 import { KpiHeroCard } from '@/components/shared/data-display/KpiHeroCard'
 import { DashboardSectionHeader } from '@/components/shared/data-display/DashboardSectionHeader'
 import {
@@ -756,6 +757,9 @@ export function DirectorDashboard() {
           <div className="mb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }} />
           <VehicleBarList rows={vendorRows} />
         </div>
+
+        {/* OCR requests — total-only, model-agnostic */}
+        <OcrTotalChart days={30} className="bento-col-12" />
       </div>
     </div>
   )

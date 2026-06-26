@@ -226,5 +226,4 @@ export type {
   OcrStats,
   OcrDailyPoint,
   OcrMonthlyPoint,
-  OcrProviderTotal,
 } from './ocrStats.api'

@@ -65,8 +65,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index(
-        "ix_ocr_requests_provider_created_at", table_name="ocr_requests"
-    )
+    op.drop_index("ix_ocr_requests_provider_created_at", table_name="ocr_requests")
     op.drop_index("ix_ocr_requests_created_at", table_name="ocr_requests")
     op.drop_table("ocr_requests")

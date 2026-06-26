@@ -579,7 +579,7 @@ class OcrRequest(Base):
 
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
-    provider = Column(String(16), nullable=False)  # minimax | gemini
+    provider = Column(String(16), nullable=False)  # minimax | gemini | openrouter
     model = Column(String(64), nullable=True)
     success = Column(Boolean, nullable=False, default=False)
     container_numbers_found = Column(Integer, nullable=False, default=0)

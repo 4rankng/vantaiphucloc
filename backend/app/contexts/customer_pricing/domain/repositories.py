@@ -68,9 +68,7 @@ class LocationRepository(ABC):
     async def save(self, loc: Location) -> Location: ...
 
     @abstractmethod
-    async def has_pricing_references(
-        self, lid: LocationId
-    ) -> tuple[str, str] | None:
+    async def has_pricing_references(self, lid: LocationId) -> tuple[str, str] | None:
         """Returns (table, column) of the first pricing-rule FK or None.
         Pricing rules block deletion — a route price is meaningless without
         both endpoints."""

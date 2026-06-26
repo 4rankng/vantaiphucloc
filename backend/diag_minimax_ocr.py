@@ -46,7 +46,12 @@ def _make_image(number: str) -> bytes:
     text = f"{number[:4]}  {number[4:]}"
     bbox = draw.textbbox((0, 0), text, font=font)
     w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    draw.text(((900 - w) / 2 - bbox[0], (300 - h) / 2 - bbox[1]), text, fill=(20, 20, 20), font=font)
+    draw.text(
+        ((900 - w) / 2 - bbox[0], (300 - h) / 2 - bbox[1]),
+        text,
+        fill=(20, 20, 20),
+        font=font,
+    )
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=95)
     return buf.getvalue()
@@ -55,10 +60,14 @@ def _make_image(number: str) -> bytes:
 def main() -> None:
     print("=== MiniMax OCR config ===")
     print(f"  MINIMAX_ENABLE : {settings.MINIMAX_ENABLE}")
-    print(f"  MINIMAX_API_KEY: {'set (len=' + str(len(settings.MINIMAX_API_KEY)) + ')' if settings.MINIMAX_API_KEY else 'EMPTY'}")
+    print(
+        f"  MINIMAX_API_KEY: {'set (len=' + str(len(settings.MINIMAX_API_KEY)) + ')' if settings.MINIMAX_API_KEY else 'EMPTY'}"
+    )
     print(f"  MINIMAX_BASE_URL: {settings.MINIMAX_BASE_URL}")
     print(f"  MINIMAX_MODEL  : {settings.MINIMAX_MODEL}")
-    print(f"  GEMINI_ENABLE  : {settings.GEMINI_ENABLE} (expected False while testing MiniMax only)")
+    print(
+        f"  GEMINI_ENABLE  : {settings.GEMINI_ENABLE} (expected False while testing MiniMax only)"
+    )
 
     if not (settings.MINIMAX_ENABLE and settings.MINIMAX_API_KEY):
         print("\nMiniMax not enabled / no key — aborting.")
@@ -98,16 +107,30 @@ async def _run() -> None:
             "model": settings.MINIMAX_MODEL,
             "temperature": 0,
             "max_tokens": 2048,
-            "messages": [{"role": "user", "content": [
-                {"type": "text", "text": "What text is in this image? Reply with the text only."},
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
-            ]}],
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "What text is in this image? Reply with the text only.",
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+                        },
+                    ],
+                }
+            ],
         }
         try:
             r = httpx.post(
                 url,
                 json=payload,
-                headers={"Authorization": f"Bearer {settings.MINIMAX_API_KEY}", "Content-Type": "application/json"},
+                headers={
+                    "Authorization": f"Bearer {settings.MINIMAX_API_KEY}",
+                    "Content-Type": "application/json",
+                },
                 timeout=60.0,
             )
             print(f"  HTTP {r.status_code}")

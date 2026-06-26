@@ -40,7 +40,14 @@ def hash_image_bytes(image_bytes: bytes) -> str:
 # HEIF containers use `mif1`/`hevc`/etc. Any of these means the bytes are NOT
 # JPEG and must be transcoded before we store them under a .jpg name.
 _HEIF_BRANDS = {
-    b"heic", b"heix", b"hevc", b"hevx", b"heim", b"hevm", b"mif1", b"msf1",
+    b"heic",
+    b"heix",
+    b"hevc",
+    b"hevx",
+    b"heim",
+    b"hevm",
+    b"mif1",
+    b"msf1",
 }
 
 
