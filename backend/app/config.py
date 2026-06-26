@@ -47,21 +47,23 @@ class Settings(BaseSettings):
     WORKER_TIMEOUT: int = 600
     WORKER_MAX_TRIES: int = 3
 
-    # AI providers. An explicit *_ENABLE flag gates each provider; the API
-    # key must also be non-empty for the provider to be usable. For OCR, the
-    # provider order is OpenRouter → Gemini → MiniMax: OpenRouter (Qwen3-VL
-    # -8B-Instruct) is tried first when enabled; if it errors (e.g. HTTP 429)
-    # the request falls back to Gemini, then MiniMax as last resort. Two
-    # Gemini keys are supported so OCR can alternate between them per request
-    # (round-robin) and avoid 429 rate limits; if either key 429s the other
-    # is tried before falling through further. Enable OPENROUTER_ENABLE +
-    # GEMINI_ENABLE together for automatic OpenRouter→Gemini failover, or
-    # just one to run a single provider.
+    # AI providers. Each provider is OFF by default — both the *_ENABLE flag
+    # AND a non-empty API key must be set for the provider to be used. This
+    # forces an explicit opt-in so deployments don't accidentally hit paid
+    # APIs on boot. For OCR, the provider order is OpenRouter → Gemini →
+    # MiniMax: OpenRouter (Qwen3-VL-8B-Instruct) is tried first when enabled;
+    # if it errors (e.g. HTTP 429) the request falls back to Gemini, then
+    # MiniMax as last resort. Two Gemini keys are supported so OCR can
+    # alternate between them per request (round-robin) and avoid 429 rate
+    # limits; if either key 429s the other is tried before falling through
+    # further. Enable OPENROUTER_ENABLE + GEMINI_ENABLE together for
+    # automatic OpenRouter→Gemini failover, or just one to run a single
+    # provider.
     GEMINI_API_KEY: str = ""
     GEMINI_API_KEY2: str = ""
-    GEMINI_ENABLE: bool = True
+    GEMINI_ENABLE: bool = False
     MINIMAX_API_KEY: str = ""
-    MINIMAX_ENABLE: bool = True
+    MINIMAX_ENABLE: bool = False
     MINIMAX_BASE_URL: str = "https://api.minimax.io/v1"  # OpenAI-compatible host
     MINIMAX_MODEL: str = "MiniMax-M3"
     # OpenRouter (OpenAI-compatible). Opt-in trial provider; off by default.

@@ -295,6 +295,9 @@ async def generate_doi_soat_excel(
             "note": getattr(source, "note", None)
             or (getattr(fb, "note", None) if fb else None)
             or "",
+            "vessel": getattr(source, "vessel", None)
+            or (getattr(fb, "vessel", None) if fb else None)
+            or "",
         }
 
     deduped_rows: list[dict] = []
@@ -341,7 +344,7 @@ async def generate_doi_soat_excel(
     month_label = df.strftime("%m/%Y")
     ws.title = f"SL T{df.month}.{str(df.year)[2:]}"
 
-    num_cols = 16  # A-P
+    num_cols = 17  # A-Q
     last_col = get_column_letter(num_cols)
 
     # -- Styles --
@@ -402,6 +405,7 @@ async def generate_doi_soat_excel(
         "SỐ XE CHẠY",
         "ĐIỂM ĐI",
         "ĐIỂM ĐẾN",
+        "TÊN TÀU",
         "TÁC NGHIỆP",
         "CƯỚC",
         "LƯƠNG",
@@ -434,18 +438,19 @@ async def generate_doi_soat_excel(
             "",
             "",
             "",
-            f"=SUBTOTAL(9,M12:M{last_data_row})",
+            "",
             f"=SUBTOTAL(9,N12:N{last_data_row})",
+            f"=SUBTOTAL(9,O12:O{last_data_row})",
             "",
             "",
         ]
     )
-    for col_num in [5, 6, 7, 8, 13, 14]:
+    for col_num in [5, 6, 7, 8, 14, 15]:
         ws.cell(row=11, column=col_num).font = _bold
         ws.cell(row=11, column=col_num).alignment = (
-            right if col_num in (13, 14) else center
+            right if col_num in (14, 15) else center
         )
-        if col_num in (13, 14):
+        if col_num in (14, 15):
             ws.cell(row=11, column=col_num).number_format = "#,##0"
 
     # -- Data rows (12+) -- one row per unique container
@@ -481,6 +486,7 @@ async def generate_doi_soat_excel(
                 row["vehicle_plate"],
                 pickup,
                 dropoff,
+                row["vessel"],
                 row["work_type"],
                 row["revenue"],
                 row["driver_salary"],
@@ -493,16 +499,16 @@ async def generate_doi_soat_excel(
         for col_num in range(1, num_cols + 1):
             cell = ws.cell(row=row_num, column=col_num)
             cell.border = thin_border
-            if col_num in (1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 15):
+            if col_num in (1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16):
                 cell.alignment = center
-            elif col_num in (4, 16):
+            elif col_num in (4, 17):
                 cell.alignment = left
-            elif col_num in (13, 14):
+            elif col_num in (14, 15):
                 cell.alignment = right
                 cell.number_format = "#,##0"
 
     # -- Column widths --
-    col_widths = [6, 12, 12, 18, 6, 6, 6, 6, 14, 20, 20, 16, 14, 14, 14, 24]
+    col_widths = [6, 12, 12, 18, 6, 6, 6, 6, 14, 20, 20, 16, 14, 14, 14, 14, 24]
     for i, width in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
 

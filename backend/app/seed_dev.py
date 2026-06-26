@@ -1109,7 +1109,9 @@ async def seed_dev() -> None:
         for plate, info in DRIVER_VEHICLES.items():
             uname = _name_to_username(info["full_name"])
             sec = " +2nd" if info.get("secondary") else ""
-            print(f"  {info['full_name']:25s} → {uname:10s} ({info.get('base_salary', 5000000) // 1000000}TR{sec})")
+            print(
+                f"  {info['full_name']:25s} → {uname:10s} ({info.get('base_salary', 5000000) // 1000000}TR{sec})"
+            )
         for ed in EXTRA_DRIVERS:
             print(f"  {ed['full_name']:25s} → {ed['username']}")
 
