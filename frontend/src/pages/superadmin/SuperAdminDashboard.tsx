@@ -19,7 +19,8 @@ import { EmptyState } from '@/components/shared/feedback/EmptyState/EmptyState'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { ROLE_LABELS, type Role } from '@/data/domain'
 import { type UserAccount } from '@/services/api/users.api'
-import { OcrTotalChart } from '@/components/shared/data-display/OcrTotalChart/OcrTotalChart'
+import { OcrPerformanceChart } from '@/components/shared/data-display/OcrPerformanceChart/OcrPerformanceChart'
+import { OcrDriverChart } from '@/components/shared/data-display/OcrDriverChart/OcrDriverChart'
 import { KpiHeroCard } from '@/components/shared/data-display/KpiHeroCard'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
 import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
@@ -545,8 +546,9 @@ export function SuperAdminDashboard({
         </div>
       </div>
 
-      {/* ── OCR Analytics (total-only, model-agnostic) ── */}
-      <OcrTotalChart />
+      <OcrPerformanceChart />
+
+      <OcrDriverChart />
 
       {/* ── Toolbar ── */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -758,4 +760,3 @@ export function SuperAdminDashboard({
     </div>
   )
 }
-

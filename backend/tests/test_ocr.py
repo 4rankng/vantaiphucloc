@@ -28,7 +28,7 @@ from app.contexts.operations.infrastructure.openrouter import (
     _extract_text as _openrouter_extract_text,
     call_openrouter_vision,
 )
-from app.models.domain import OcrRequest
+from app.models.domain import OcrDriverRequest, OcrRequest
 
 
 def _make_test_image(width: int = 800, height: int = 600, color: str = "red") -> bytes:
@@ -100,6 +100,7 @@ async def test_extract_container_numbers_fail():
     assert result["success"] is False
     assert result["container_numbers"] == []
     assert result["error"] == "Không nhận dạng được số cont"
+    assert result["analytics_error"] == "boom"
     assert result["provider"] == "minimax"
 
 
@@ -809,7 +810,7 @@ async def test_ocr_stats_latency_aggregation(
     db_session.add_all(rows)
     await db_session.commit()
 
-    headers = await make_auth_headers("director")
+    headers = await make_auth_headers("superadmin")
     response = await async_client.get(
         "/api/v1/dashboard/ocr-stats", params={"days": 30}, headers=headers
     )
@@ -825,6 +826,7 @@ async def test_ocr_stats_latency_aggregation(
 
     assert payload["days"] == 30
     assert payload["totals"]["total"] == 18  # 10 + 4 + 1 latency + 3 null
+    assert payload["totals"]["success"] == 15
     assert payload["totals"]["latencyAvgMs"] == pytest.approx(expected_avg, abs=0.01)
     assert payload["totals"]["latencyP95Ms"] == pytest.approx(expected_p95, abs=0.5)
     # Backward-compatible fields still present
@@ -837,6 +839,8 @@ async def test_ocr_stats_latency_aggregation(
 
     # Day 0 (yesterday) — 10 latency samples + 3 null = 13 total, latency qualifies
     assert daily_by_date[yesterday_iso]["total"] == 13
+    assert daily_by_date[yesterday_iso]["success"] == 10
+    assert daily_by_date[yesterday_iso]["failed"] == 3
     assert daily_by_date[yesterday_iso]["latencyAvgMs"] == pytest.approx(
         sum(range(100, 1100, 100)) / 10, abs=0.01
     )
@@ -844,13 +848,106 @@ async def test_ocr_stats_latency_aggregation(
 
     # Day 1 (two_days_ago) — 4 latency samples, below floor → null
     assert daily_by_date[two_days_iso]["total"] == 4
+    assert daily_by_date[two_days_iso]["success"] == 4
+    assert daily_by_date[two_days_iso]["failed"] == 0
     assert daily_by_date[two_days_iso]["latencyAvgMs"] is None
     assert daily_by_date[two_days_iso]["latencyP95Ms"] is None
 
     # Today — 1 latency sample, below floor → null (would skew the average)
     assert daily_by_date[today_iso]["total"] == 1
+    assert daily_by_date[today_iso]["success"] == 1
+    assert daily_by_date[today_iso]["failed"] == 0
     assert daily_by_date[today_iso]["latencyAvgMs"] is None
     assert daily_by_date[today_iso]["latencyP95Ms"] is None
+
+
+@pytest.mark.asyncio
+async def test_ocr_stats_latency_hidden_for_non_admin(
+    db_session, async_client, make_auth_headers
+):
+    today = datetime.now(timezone.utc).replace(microsecond=0)
+    db_session.add_all(
+        [
+            OcrRequest(
+                created_at=today + timedelta(milliseconds=i),
+                provider="gemini",
+                success=True,
+                container_numbers_found=1,
+                latency_ms=latency,
+                error=None,
+                user_id=None,
+            )
+            for i, latency in enumerate([100, 200, 300, 400, 500])
+        ]
+    )
+    await db_session.commit()
+
+    headers = await make_auth_headers("accountant")
+    response = await async_client.get(
+        "/api/v1/dashboard/ocr-stats", params={"days": 7}, headers=headers
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+
+    assert payload["totals"]["total"] == 5
+    assert payload["totals"]["success"] == 5
+    assert payload["errorBreakdown"] == []
+    assert sum(d["success"] for d in payload["daily"]) == 5
+    assert sum(d["failed"] for d in payload["daily"]) == 0
+    assert payload["totals"]["latencyAvgMs"] is None
+    assert payload["totals"]["latencyP95Ms"] is None
+    assert all(d["latencyAvgMs"] is None for d in payload["daily"])
+    assert all(d["latencyP95Ms"] is None for d in payload["daily"])
+    assert payload["monthly"] == [] or all(
+        m["latencyAvgMs"] is None for m in payload["monthly"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_ocr_stats_error_breakdown_for_admin(
+    db_session, async_client, make_auth_headers
+):
+    today = datetime.now(timezone.utc).replace(microsecond=0)
+    errors = [
+        "HTTP 429: rate limit exceeded",
+        "HTTP 429: quota exhausted",
+        "HTTP 500: provider unavailable",
+        "HTTP 400: invalid image payload",
+        "TimeoutError: request timed out",
+        "no valid numbers",
+    ]
+    db_session.add_all(
+        [
+            OcrRequest(
+                created_at=today + timedelta(milliseconds=i),
+                provider="openrouter",
+                success=False,
+                container_numbers_found=0,
+                latency_ms=1000 + i,
+                error=error,
+                user_id=None,
+            )
+            for i, error in enumerate(errors)
+        ]
+    )
+    await db_session.commit()
+
+    headers = await make_auth_headers("superadmin")
+    response = await async_client.get(
+        "/api/v1/dashboard/ocr-stats", params={"days": 7}, headers=headers
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    by_category = {item["category"]: item for item in payload["errorBreakdown"]}
+
+    assert by_category["http_429"]["label"] == "HTTP 429"
+    assert by_category["http_429"]["statusCode"] == 429
+    assert by_category["http_429"]["total"] == 2
+    assert "rate limit" in by_category["http_429"]["action"]
+    assert by_category["http_500"]["total"] == 1
+    assert by_category["http_400"]["total"] == 1
+    assert by_category["timeout"]["total"] == 1
+    assert by_category["no_detection"]["total"] == 1
 
 
 @pytest.mark.asyncio
@@ -864,6 +961,7 @@ async def test_ocr_stats_empty_window(db_session, async_client, make_auth_header
     assert response.status_code == 200
     payload = response.json()
     assert payload["days"] == 7
+    assert payload["errorBreakdown"] == []
     assert payload["totals"]["total"] == 0
     assert payload["totals"]["success"] == 0
     assert payload["totals"]["latencyAvgMs"] is None
@@ -901,7 +999,14 @@ async def test_ocr_stats_backward_compatible_field_names(
     )
     assert response.status_code == 200
     payload = response.json()
-    assert set(payload.keys()) >= {"days", "endDate", "daily", "monthly", "totals"}
+    assert set(payload.keys()) >= {
+        "days",
+        "endDate",
+        "daily",
+        "monthly",
+        "errorBreakdown",
+        "totals",
+    }
     assert set(payload["totals"].keys()) >= {
         "total",
         "success",
@@ -909,6 +1014,254 @@ async def test_ocr_stats_backward_compatible_field_names(
         "latencyP95Ms",
     }
     for d in payload["daily"]:
-        assert set(d.keys()) >= {"date", "total", "latencyAvgMs", "latencyP95Ms"}
+        assert set(d.keys()) >= {
+            "date",
+            "total",
+            "success",
+            "failed",
+            "latencyAvgMs",
+            "latencyP95Ms",
+        }
     for m in payload["monthly"]:
-        assert set(m.keys()) >= {"month", "total", "latencyAvgMs"}
+        assert set(m.keys()) >= {"month", "total", "success", "failed", "latencyAvgMs"}
+
+
+# ---------------------------------------------------------------------------
+# Per-attempt analytics — each provider LLM call recorded, incl. rescued 429s
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_extract_container_numbers_returns_attempt_per_provider_call():
+    """Each provider LLM call yields one entry in ``attempts``.
+
+    A 429 rescued by Gemini produces 2 attempts (openrouter fail, gemini
+    success), so the 429 is visible to analytics even though the request
+    overall succeeded — the undercounting that the per-attempt refactor fixes.
+    """
+
+    async def _openrouter_429(image_bytes, mime_type):
+        return {
+            "success": False,
+            "text": None,
+            "error": "HTTP 429: rate limit exceeded",
+            "provider": "openrouter",
+            "model": "qwen/qwen3-vl-8b-instruct",
+        }
+
+    async def _gemini_ok(image_bytes, mime_type):
+        return {
+            "success": True,
+            "text": '{"container_numbers": ["MSKU1234565"]}',
+            "error": None,
+            "provider": "gemini",
+            "model": "gemini-flash-latest",
+        }
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=[("openrouter", _openrouter_429), ("gemini", _gemini_ok)],
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert result["success"] is True
+    assert result["provider"] == "gemini"
+    attempts = result["attempts"]
+    assert len(attempts) == 2
+
+    or_attempt, gem_attempt = attempts
+    assert or_attempt["provider"] == "openrouter"
+    assert or_attempt["success"] is False
+    assert or_attempt["error"] == "HTTP 429: rate limit exceeded"
+    assert or_attempt["container_numbers_found"] == 0
+    assert isinstance(or_attempt["latency_ms"], int)
+
+    assert gem_attempt["provider"] == "gemini"
+    assert gem_attempt["success"] is True
+    assert gem_attempt["error"] is None
+    assert gem_attempt["container_numbers_found"] == 1
+
+
+@pytest.mark.asyncio
+async def test_ocr_container_logs_driver_request_and_per_attempt_rows(
+    db_session, async_client, make_auth_headers
+):
+    """ocr_container writes ONE ocr_driver_requests row (the photo upload) plus
+    one ocr_requests row per provider attempt. A 429 rescued by the Gemini
+    fallback is captured as a failed ocr_requests row."""
+    from sqlalchemy import select
+
+    async def _openrouter_429(image_bytes, mime_type):
+        return {
+            "success": False,
+            "text": None,
+            "error": "HTTP 429: rate limit exceeded",
+            "provider": "openrouter",
+            "model": "qwen/qwen3-vl-8b-instruct",
+        }
+
+    async def _gemini_ok(image_bytes, mime_type):
+        return {
+            "success": True,
+            "text": '{"container_numbers": ["MSKU1234565"]}',
+            "error": None,
+            "provider": "gemini",
+            "model": "gemini-flash-latest",
+        }
+
+    img_b64 = __import__("base64").b64encode(_make_test_image(200, 200)).decode()
+    headers = await make_auth_headers("superadmin")
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=[("openrouter", _openrouter_429), ("gemini", _gemini_ok)],
+    ):
+        response = await async_client.post(
+            "/api/v1/delivered-trips/ocr-container",
+            json={"image_data": img_b64, "mime_type": "image/jpeg"},
+            headers=headers,
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is True
+    assert body["provider"] == "gemini"
+
+    driver_rows = (await db_session.execute(select(OcrDriverRequest))).scalars().all()
+    attempt_rows = (await db_session.execute(select(OcrRequest))).scalars().all()
+
+    assert len(driver_rows) == 1
+    driver = driver_rows[0]
+    assert driver.success is True
+    assert driver.attempts == 2  # openrouter + gemini
+    assert driver.numbers_found == 1
+    assert driver.provider == "gemini"
+    assert driver.latency_ms is not None and driver.latency_ms >= 0
+
+    assert len(attempt_rows) == 2
+    by_provider = {r.provider: r for r in attempt_rows}
+    assert by_provider["openrouter"].success is False
+    assert "HTTP 429" in by_provider["openrouter"].error
+    assert by_provider["gemini"].success is True
+    assert by_provider["gemini"].container_numbers_found == 1
+
+
+@pytest.mark.asyncio
+async def test_ocr_container_no_provider_skips_analytics(
+    db_session, async_client, make_auth_headers, monkeypatch
+):
+    """OCR unconfigured → no analytics rows written (nothing ran)."""
+    from sqlalchemy import select
+
+    monkeypatch.setattr(settings, "OPENROUTER_ENABLE", False)
+    monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "")
+    monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
+    monkeypatch.setattr(settings, "GEMINI_API_KEY2", "")
+    monkeypatch.setattr(settings, "MINIMAX_ENABLE", False)
+    monkeypatch.setattr(settings, "MINIMAX_API_KEY", "")
+
+    img_b64 = __import__("base64").b64encode(_make_test_image(100, 100)).decode()
+    headers = await make_auth_headers("superadmin")
+    response = await async_client.post(
+        "/api/v1/delivered-trips/ocr-container",
+        json={"image_data": img_b64, "mime_type": "image/jpeg"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+
+    driver_rows = (await db_session.execute(select(OcrDriverRequest))).scalars().all()
+    attempt_rows = (await db_session.execute(select(OcrRequest))).scalars().all()
+    assert driver_rows == []
+    assert attempt_rows == []
+
+
+@pytest.mark.asyncio
+async def test_ocr_stats_driver_experience(db_session, async_client, make_auth_headers):
+    """driverExperience reports photo-upload counts + e2e latency from
+    ocr_driver_requests, separate from the per-attempt ocr_requests grain."""
+    today = datetime.now(timezone.utc).replace(microsecond=0)
+    rows = []
+    for i, lat in enumerate([800, 900, 1000, 1100, 1200, 1300]):
+        rows.append(
+            OcrDriverRequest(
+                created_at=today + timedelta(milliseconds=i),
+                success=True,
+                attempts=1,
+                numbers_found=1,
+                latency_ms=lat,
+                provider="openrouter",
+                user_id=None,
+            )
+        )
+    # one failed upload with no latency → counted in requests, excluded from latency
+    rows.append(
+        OcrDriverRequest(
+            created_at=today + timedelta(seconds=5),
+            success=False,
+            attempts=2,
+            numbers_found=0,
+            latency_ms=None,
+            provider="openrouter",
+            user_id=None,
+        )
+    )
+    db_session.add_all(rows)
+    await db_session.commit()
+
+    headers = await make_auth_headers("superadmin")
+    response = await async_client.get(
+        "/api/v1/dashboard/ocr-stats", params={"days": 7}, headers=headers
+    )
+    assert response.status_code == 200, response.text
+    dx = response.json()["driverExperience"]
+
+    assert dx["totals"]["requests"] == 7
+    assert dx["totals"]["success"] == 6
+    assert dx["totals"]["latencyAvgMs"] == pytest.approx(
+        sum([800, 900, 1000, 1100, 1200, 1300]) / 6, abs=0.01
+    )
+    assert dx["totals"]["latencyP95Ms"] is not None
+
+    today_iso = today.date().isoformat()
+    by_date = {d["date"]: d for d in dx["daily"]}
+    assert by_date[today_iso]["requests"] == 7
+    assert by_date[today_iso]["success"] == 6
+    assert by_date[today_iso]["failed"] == 1
+    # 6 latency samples ≥ MIN_LATENCY_SAMPLES → per-day latency present
+    assert by_date[today_iso]["latencyAvgMs"] is not None
+
+
+@pytest.mark.asyncio
+async def test_ocr_stats_driver_experience_latency_hidden_for_non_admin(
+    db_session, async_client, make_auth_headers
+):
+    """Driver-experience counts are visible to all roles; the e2e latency is
+    superadmin-only (mirrors the provider-call latency gating)."""
+    today = datetime.now(timezone.utc).replace(microsecond=0)
+    db_session.add_all(
+        [
+            OcrDriverRequest(
+                created_at=today + timedelta(milliseconds=i),
+                success=True,
+                attempts=1,
+                numbers_found=1,
+                latency_ms=lat,
+                provider="openrouter",
+                user_id=None,
+            )
+            for i, lat in enumerate([100, 200, 300, 400, 500])
+        ]
+    )
+    await db_session.commit()
+
+    headers = await make_auth_headers("accountant")
+    response = await async_client.get(
+        "/api/v1/dashboard/ocr-stats", params={"days": 7}, headers=headers
+    )
+    assert response.status_code == 200
+    dx = response.json()["driverExperience"]
+    assert dx["totals"]["requests"] == 5
+    assert dx["totals"]["latencyAvgMs"] is None
+    assert dx["totals"]["latencyP95Ms"] is None
+    assert all(d["latencyAvgMs"] is None for d in dx["daily"])

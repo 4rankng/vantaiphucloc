@@ -42,6 +42,7 @@ from app.contexts.platform.interface.routers.audit import router as audit_router
 from app.contexts.platform.interface.routers.operation_types import (
     router as operation_types_router,
 )
+from app.contexts.platform.interface.routers.chatbot import router as chatbot_router
 from app.core.deps import get_current_user, get_worker_pool
 from app.models.base import User
 from app.schemas.domain import JobStatusResponse
@@ -68,6 +69,7 @@ router.include_router(users_router)
 router.include_router(dashboard_router)
 router.include_router(audit_router)
 router.include_router(operation_types_router)
+router.include_router(chatbot_router)
 router.include_router(reports_router)
 router.include_router(imports_router)
 router.include_router(vendors_router)

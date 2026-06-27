@@ -1,7 +1,7 @@
 /**
- * Day/month segmented toggle for OCR charts. Shared by the /superadmin
- * dashboard overview and the /superadmin/ocr-analytics detail page so both
- * present the same granularity switch with identical styling and a11y.
+ * Day/month segmented toggle for OCR charts. Shared by the admin dashboard
+ * OCR cards so they present the same granularity switch with identical styling
+ * and a11y.
  */
 export type ViewMode = 'day' | 'month'
 

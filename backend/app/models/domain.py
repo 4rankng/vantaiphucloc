@@ -593,3 +593,37 @@ class OcrRequest(Base):
         Index("ix_ocr_requests_created_at", "created_at"),
         Index("ix_ocr_requests_provider_created_at", "provider", "created_at"),
     )
+
+
+# ---------------------------------------------------------------------------
+# OcrDriverRequest — one row per driver photo-upload, for driver-experience
+# analytics (request count + end-to-end perceived latency)
+# ---------------------------------------------------------------------------
+
+
+class OcrDriverRequest(Base):
+    """Records each driver photo-upload (the human OCR action).
+
+    Distinct from ``OcrRequest`` (one row per provider LLM call): a single
+    upload that falls back across providers produces **one** ``OcrDriverRequest``
+    row but multiple ``OcrRequest`` rows. ``latency_ms`` here is the
+    end-to-end time the driver actually waited (photo upload → numbers
+    returned), not any single provider's call time. Powers the admin
+    driver-experience chart: upload count + perceived latency, separate from
+    the provider-call analytics on ``ocr_requests``.
+    """
+
+    __tablename__ = "ocr_driver_requests"
+
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    success = Column(Boolean, nullable=False, default=False)
+    attempts = Column(Integer, nullable=False, default=0)
+    numbers_found = Column(Integer, nullable=False, default=0)
+    latency_ms = Column(Integer, nullable=True)  # end-to-end, driver-perceived
+    provider = Column(String(16), nullable=True)  # winning provider, if any
+
+    __table_args__ = (Index("ix_ocr_driver_requests_created_at", "created_at"),)

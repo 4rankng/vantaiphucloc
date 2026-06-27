@@ -15,9 +15,9 @@
  *
  * Strategy:
  *  1. Read the blob synchronously from the cache. On a cache miss (user
- *     tapped faster than the prefetch finished) fall back to `await fetch`.
- *  2. If the fetch itself fails (CORS / network), open the URL in a new tab
- *     so the user can still save it manually.
+ *     tapped faster than the prefetch finished, or CORS blocked prefetch),
+ *     trigger a direct URL download/open while the tap is still active.
+ *  2. Warm the cache in the background after a direct fallback.
  *  3. Prefer the Web Share API with a File when the browser supports sharing
  *     files → native share sheet with "Save Image" / "Save to Files".
  *  4. Fall back to a synthetic `<a download>` for desktop browsers without
@@ -58,19 +58,13 @@ export async function downloadImage(url: string, fallbackName = 'anh'): Promise<
   const filename = resolveFilename(url, fallbackName)
 
   // Read the blob synchronously when prefetched so navigator.share() stays
-  // inside the user gesture. Only await on a cache miss.
-  let blob = blobCache.get(url)
+  // inside the user gesture. If the prefetch has not completed, avoid awaiting
+  // here: mobile browsers can block share sheets and new tabs after an await.
+  const blob = blobCache.get(url)
   if (!blob) {
-    try {
-      const res = await fetch(url)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      blob = await res.blob()
-      cacheBlob(url, blob)
-    } catch {
-      // CORS-blocked or network failure — let the user grab it manually.
-      window.open(url, '_blank', 'noopener,noreferrer')
-      return
-    }
+    triggerDirectImageDownload(url, filename)
+    prefetchImageBlob(url)
+    return
   }
 
   const file = new File([blob], filename, { type: blob.type || 'image/jpeg' })
@@ -99,6 +93,17 @@ export async function downloadImage(url: string, fallbackName = 'anh'): Promise<
   a.remove()
   // Delay revoke: Safari/iOS can cancel the download if the URL is revoked too soon.
   setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+}
+
+function triggerDirectImageDownload(url: string, filename: string): void {
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.target = '_blank'
+  a.rel = 'noopener noreferrer'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
 }
 
 function canShareFiles(file: File): boolean {

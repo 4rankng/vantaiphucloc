@@ -229,7 +229,12 @@ async def extract_container_numbers(
         - error: str | None
         - provider: str | None — provider that produced the result
         - model: str | None
-        - latency_ms: int | None
+        - latency_ms: int | None — winning provider's call latency (NOT e2e)
+        - attempts: list[dict] — one entry per provider LLM call tried, each
+          {provider, model, success, latency_ms, error, container_numbers_found}.
+          A fail-then-fallback request yields one entry per attempt, so every
+          429 / "no valid numbers" / success is visible to analytics even when
+          a later provider rescued the request.
     """
     try:
         image_bytes, mime_type = preprocess_image(image_bytes)
@@ -246,6 +251,7 @@ async def extract_container_numbers(
             "provider": None,
             "model": None,
             "latency_ms": None,
+            "attempts": [],
         }
 
     # Validate FORMAT only (4 letters + 7 digits).  We intentionally skip the
@@ -259,6 +265,10 @@ async def extract_container_numbers(
         "latency_ms": None,
         "error": None,
     }
+    # One entry per provider LLM call (fail / no-valid / winner). Returned so
+    # the caller can log a row per attempt — every 429 and every fallback is
+    # then visible to analytics, not just the winning provider.
+    attempts: list[dict] = []
 
     for name, call_fn in providers:
         t0 = time.perf_counter()
@@ -273,6 +283,16 @@ async def extract_container_numbers(
                 "latency_ms": latency_ms,
                 "error": result.get("error"),
             }
+            attempts.append(
+                {
+                    "provider": provider_label,
+                    "model": result.get("model"),
+                    "success": False,
+                    "latency_ms": latency_ms,
+                    "error": result.get("error"),
+                    "container_numbers_found": 0,
+                }
+            )
             _logger.warning(
                 "[OCR] %s failed (%s): %s — trying next provider",
                 provider_label,
@@ -291,6 +311,16 @@ async def extract_container_numbers(
                 "latency_ms": latency_ms,
                 "error": "no valid numbers",
             }
+            attempts.append(
+                {
+                    "provider": provider_label,
+                    "model": result.get("model"),
+                    "success": False,
+                    "latency_ms": latency_ms,
+                    "error": "no valid numbers",
+                    "container_numbers_found": 0,
+                }
+            )
             _logger.info(
                 "[OCR] %s returned no valid numbers (%s) — trying next provider",
                 provider_label,
@@ -310,6 +340,16 @@ async def extract_container_numbers(
             len(valid),
             ", ".join(valid),
         )
+        attempts.append(
+            {
+                "provider": provider_label,
+                "model": result.get("model"),
+                "success": True,
+                "latency_ms": latency_ms,
+                "error": None,
+                "container_numbers_found": len(valid),
+            }
+        )
         return {
             "success": True,
             "container_numbers": valid,
@@ -317,6 +357,7 @@ async def extract_container_numbers(
             "provider": provider_label,
             "model": result.get("model"),
             "latency_ms": latency_ms,
+            "attempts": attempts,
         }
 
     _logger.info("[OCR] all providers exhausted, no valid numbers found")
@@ -324,7 +365,9 @@ async def extract_container_numbers(
         "success": False,
         "container_numbers": [],
         "error": "Không nhận dạng được số cont",
+        "analytics_error": last["error"],
         "provider": last["provider"],
         "model": last["model"],
         "latency_ms": last["latency_ms"],
+        "attempts": attempts,
     }

@@ -6,6 +6,7 @@ import base64
 import io
 import logging
 import math
+import time
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query, Request, UploadFile
@@ -43,7 +44,7 @@ from app.contexts.operations.interface.error_translation import translate
 from app.core.deps import get_current_user, require_permission
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import OcrRequest
+from app.models.domain import OcrDriverRequest, OcrRequest
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import (
     DeliveredTripCreate,
@@ -192,33 +193,53 @@ async def ocr_container(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    t_start = time.perf_counter()
     image_bytes = base64.b64decode(body.image_data)
     result = await extract_container_numbers(image_bytes, body.mime_type)
+    # End-to-end latency the driver perceived: decode + preprocess + every
+    # provider attempt (including fallbacks) + postprocess. Distinct from each
+    # attempt's own provider-call latency_ms.
+    end_to_end_ms = int((time.perf_counter() - t_start) * 1000)
 
-    # Log one row per OCR request for the analytics dashboard. Only log when a
-    # provider actually ran — if OCR isn't configured (provider is None) there
-    # is nothing to record. The dashboard aggregates totals across ALL
-    # providers (model-agnostic), so any provider string is counted. Truncate
-    # the error so a long provider error message can't overflow the column and
-    # silently drop the row. A logging failure must never break the OCR
-    # response for the driver.
-    provider = result.get("provider")
-    if provider:
+    # Analytics — two grains back two charts:
+    # - ocr_driver_requests: ONE row per photo upload (the driver action);
+    #   carries the upload count + end-to-end perceived latency.
+    # - ocr_requests: ONE row per provider LLM call (every attempt, including
+    #   429s and "no valid numbers" that a later provider rescued); carries
+    #   provider-call latency + the error/429 breakdown.
+    # Only log when at least one provider actually ran. Truncate errors so a
+    # long provider message can't overflow the column and silently drop the
+    # row. A logging failure must never break the OCR response for the driver.
+    attempts = result.get("attempts") or []
+    if attempts:
         try:
             db.add(
-                OcrRequest(
-                    provider=provider,
-                    model=result.get("model"),
-                    success=bool(result.get("success")),
-                    container_numbers_found=len(result.get("container_numbers", [])),
-                    latency_ms=result.get("latency_ms"),
-                    error=(result.get("error") or "")[:512] or None,
+                OcrDriverRequest(
                     user_id=current_user.id,
+                    success=bool(result.get("success")),
+                    attempts=len(attempts),
+                    numbers_found=len(result.get("container_numbers", [])),
+                    latency_ms=end_to_end_ms,
+                    provider=result.get("provider"),
                 )
             )
+            for attempt in attempts:
+                db.add(
+                    OcrRequest(
+                        provider=attempt["provider"],
+                        model=attempt.get("model"),
+                        success=bool(attempt.get("success")),
+                        container_numbers_found=int(
+                            attempt.get("container_numbers_found", 0)
+                        ),
+                        latency_ms=attempt.get("latency_ms"),
+                        error=(attempt.get("error") or "")[:512] or None,
+                        user_id=current_user.id,
+                    )
+                )
             await db.commit()
         except Exception:
-            _logger.exception("[OCR] failed to log ocr_requests row")
+            _logger.exception("[OCR] failed to log ocr analytics rows")
             await db.rollback()
 
     return {

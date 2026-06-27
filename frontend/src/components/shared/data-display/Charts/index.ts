@@ -1,1 +1,1 @@
-export { BarChartWidget, LineChartWidget, DoughnutChartWidget } from './Charts'
+export { BarChartWidget, LineChartWidget, MixedChartWidget, DoughnutChartWidget } from './Charts'

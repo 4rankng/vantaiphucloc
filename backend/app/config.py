@@ -70,7 +70,7 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_ENABLE: bool = False
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
-    OPENROUTER_MODEL: str = "qwen/qwen3-vl-8b-instruct"
+    OPENROUTER_MODEL: str = "qwen/qwen3-vl-32b-instruct"
     CHATBOT_ENABLE: int = 0
 
     # Push notifications (VAPID)

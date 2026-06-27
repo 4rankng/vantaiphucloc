@@ -1,0 +1,140 @@
+import { useMemo, useState } from 'react'
+import { ChartCard } from '@/components/shared/data-display/ChartCard'
+import { MixedChartWidget } from '@/components/shared/data-display/Charts'
+import { OcrViewToggle, type ViewMode } from '@/components/shared/data-display/OcrViewToggle/OcrViewToggle'
+import { useOcrStats } from '@/hooks/queries/ocr-stats'
+import {
+  buildDailyDriverExperienceData,
+  buildMonthlyDriverExperienceData,
+  driverSuccess,
+  driverTotal,
+  formatLatencyMs,
+  hasDriverData,
+  hasDriverLatencyData,
+  successRate,
+} from '@/lib/ocr-analytics'
+
+interface OcrDriverChartProps {
+  days?: number
+  showToggle?: boolean
+  className?: string
+  title?: string
+}
+
+/**
+ * Driver-experience OCR chart — the human grain, distinct from the per-provider
+ * performance chart. Bars count how many times drivers uploaded a photo (one
+ * per upload, regardless of fallback calls); the lines plot the end-to-end
+ * latency the driver actually waited (upload → numbers returned), not any
+ * single provider's call time. Latency is superadmin-only, so for other roles
+ * the lines render empty but the upload counts remain.
+ */
+export function OcrDriverChart({
+  days = 30,
+  showToggle = true,
+  className,
+  title = 'Trải nghiệm tài xế',
+}: OcrDriverChartProps) {
+  const [view, setView] = useState<ViewMode>('day')
+  const isMonth = showToggle && view === 'month'
+  const effectiveDays = isMonth ? 365 : days
+  const { data: stats, isLoading } = useOcrStats(effectiveDays)
+
+  const driverDaily = stats?.driverExperience.daily ?? []
+  const driverMonthly = stats?.driverExperience.monthly ?? []
+  const dailyData = useMemo(() => buildDailyDriverExperienceData(driverDaily), [driverDaily])
+  const monthlyData = useMemo(
+    () => buildMonthlyDriverExperienceData(driverMonthly),
+    [driverMonthly],
+  )
+
+  const total = driverTotal(stats)
+  const successPct = stats ? successRate(driverTotal(stats), driverSuccess(stats)) : 0
+  const baseSubtitle = isMonth
+    ? 'Lượt tải ảnh và độ trễ cảm nhận theo tháng'
+    : `Lượt tải ảnh và độ trễ cảm nhận · ${effectiveDays} ngày gần nhất`
+  const latencySubtitle = hasDriverLatencyData(stats)
+    ? ` · TB ${formatLatencyMs(stats?.driverExperience.totals.latencyAvgMs ?? null)} · p95 ${formatLatencyMs(stats?.driverExperience.totals.latencyP95Ms ?? null)}`
+    : ''
+  const subtitle = hasDriverData(stats)
+    ? `${baseSubtitle} · ${total.toLocaleString('vi-VN')} lượt · thành công ${successPct}%${latencySubtitle}`
+    : baseSubtitle
+
+  const actions = showToggle ? <OcrViewToggle value={view} onChange={setView} /> : undefined
+  const chartData = isMonth ? monthlyData : dailyData
+
+  return (
+    <ChartCard
+      title={title}
+      subtitle={subtitle}
+      actions={actions}
+      loading={isLoading}
+      className={className}
+    >
+      {!isLoading && !hasDriverData(stats) ? (
+        <div className="flex items-center justify-center py-12">
+          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+            Chưa có dữ liệu
+          </p>
+        </div>
+      ) : (
+        <MixedChartWidget
+          data={chartData}
+          height={300}
+          options={{
+            plugins: {
+              legend: {
+                position: 'top',
+                align: 'end',
+                labels: {
+                  usePointStyle: true,
+                  pointStyle: 'circle',
+                  boxWidth: 7,
+                  boxHeight: 7,
+                  padding: 14,
+                },
+              },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const label = ctx.dataset.label ?? ''
+                    const value = ctx.parsed.y
+                    if (ctx.dataset.yAxisID === 'yLatency') {
+                      return `${label}: ${formatLatencyMs(Number(value) * 1000)}`
+                    }
+                    return `${label}: ${Number(value).toLocaleString('vi-VN')} lượt`
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                stacked: true,
+              },
+              y: {
+                stacked: true,
+                title: {
+                  display: true,
+                  text: 'Lượt tải ảnh',
+                },
+                ticks: {
+                  precision: 0,
+                  callback: (value) => Number(value).toLocaleString('vi-VN'),
+                },
+              },
+              yLatency: {
+                title: {
+                  display: true,
+                  text: 'Độ trễ',
+                },
+                ticks: {
+                  callback: (value) => formatLatencyMs(Number(value) * 1000),
+                },
+              },
+            },
+          }}
+        />
+      )}
+    </ChartCard>
+  )
+}

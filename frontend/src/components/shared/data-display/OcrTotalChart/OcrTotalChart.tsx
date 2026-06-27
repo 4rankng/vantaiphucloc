@@ -4,10 +4,11 @@ import { BarChartWidget, LineChartWidget } from '@/components/shared/data-displa
 import { OcrViewToggle, type ViewMode } from '@/components/shared/data-display/OcrViewToggle/OcrViewToggle'
 import { useOcrStats } from '@/hooks/queries/ocr-stats'
 import {
-  buildDailyLineData,
-  buildMonthlyBarData,
-  grandTotal,
-  hasOcrData,
+  buildDailyDriverVolumeData,
+  buildMonthlyDriverVolumeData,
+  driverSuccess,
+  driverTotal,
+  hasDriverData,
   successRate,
 } from '@/lib/ocr-analytics'
 
@@ -21,10 +22,10 @@ interface OcrTotalChartProps {
 }
 
 /**
- * Total-only OCR request chart. One series counts every OCR request across
- * ALL providers (Gemini, MiniMax, OpenRouter, …), so it is model-agnostic and
- * works for any provider without per-model wiring. Shared by the superadmin
- * overview/detail pages and the director & accountant dashboards.
+ * Total OCR chart counting DRIVER PHOTO UPLOADS (the human action), not
+ * provider LLM calls — a single upload that falls back across providers is
+ * one upload, however many calls it triggered. Model-agnostic. Shared by the
+ * director and accountant dashboards; superadmin uses the dual-axis charts.
  *
  * `className` passes through to the ChartCard root so callers can place the
  * tile in a bento grid (e.g. `className="bento-col-12 lg:bento-col-8"`).
@@ -40,16 +41,18 @@ export function OcrTotalChart({
   const effectiveDays = isMonth ? 365 : days
   const { data: stats, isLoading } = useOcrStats(effectiveDays)
 
-  const dailyData = useMemo(() => buildDailyLineData(stats?.daily ?? []), [stats])
-  const monthlyData = useMemo(() => buildMonthlyBarData(stats?.monthly ?? []), [stats])
+  const driverDaily = stats?.driverExperience.daily ?? []
+  const driverMonthly = stats?.driverExperience.monthly ?? []
+  const dailyData = useMemo(() => buildDailyDriverVolumeData(driverDaily), [driverDaily])
+  const monthlyData = useMemo(() => buildMonthlyDriverVolumeData(driverMonthly), [driverMonthly])
 
   const baseSubtitle = isMonth
-    ? 'Số lượt nhận dạng số cont theo tháng'
-    : `Số lượt nhận dạng số cont · ${effectiveDays} ngày gần nhất`
+    ? 'Số lượt tài xế tải ảnh nhận dạng theo tháng'
+    : `Số lượt tài xế tải ảnh · ${effectiveDays} ngày gần nhất`
 
-  const total = grandTotal(stats)
-  const successPct = stats ? successRate(stats.totals.total, stats.totals.success) : 0
-  const subtitle = hasOcrData(stats)
+  const total = driverTotal(stats)
+  const successPct = stats ? successRate(driverTotal(stats), driverSuccess(stats)) : 0
+  const subtitle = hasDriverData(stats)
     ? `${baseSubtitle} · ${total.toLocaleString('vi-VN')} lượt · thành công ${successPct}%`
     : baseSubtitle
 
@@ -63,7 +66,7 @@ export function OcrTotalChart({
       loading={isLoading}
       className={className}
     >
-      {!isLoading && !hasOcrData(stats) ? (
+      {!isLoading && !hasDriverData(stats) ? (
         <div className="flex items-center justify-center py-12">
           <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
             Chưa có dữ liệu

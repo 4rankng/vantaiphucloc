@@ -14,6 +14,8 @@ import type { ApiResponse } from '@/data/domain'
 export interface OcrDailyPoint {
   date: string // YYYY-MM-DD
   total: number
+  success: number
+  failed: number
   /** Average latency in milliseconds; null when no samples in this day. */
   latencyAvgMs: number | null
   /** 95th-percentile latency in milliseconds; null when no samples. */
@@ -23,8 +25,55 @@ export interface OcrDailyPoint {
 export interface OcrMonthlyPoint {
   month: string // YYYY-MM
   total: number
+  success: number
+  failed: number
   /** Weighted average latency in milliseconds; null when no qualifying days. */
   latencyAvgMs: number | null
+}
+
+export interface OcrErrorBucket {
+  category: string
+  label: string
+  statusCode: number | null
+  total: number
+  action: string
+  sampleError: string | null
+}
+
+/**
+ * Driver-experience grain: ONE data point per photo upload (the human OCR
+ * action), distinct from the per-provider-call `daily`/`monthly` series above.
+ * `requests` is the number of times a driver uploaded a photo (not the number
+ * of provider LLM calls); `latencyAvgMs`/`latencyP95Ms` are the end-to-end
+ * time the driver perceived (upload → numbers returned). Latency fields are
+ * superadmin-only — null for other roles; counts are returned to every role.
+ */
+export interface OcrDriverDailyPoint {
+  date: string // YYYY-MM-DD
+  requests: number
+  success: number
+  failed: number
+  latencyAvgMs: number | null
+  latencyP95Ms: number | null
+}
+
+export interface OcrDriverMonthlyPoint {
+  month: string // YYYY-MM
+  requests: number
+  success: number
+  failed: number
+  latencyAvgMs: number | null
+}
+
+export interface OcrDriverExperience {
+  daily: OcrDriverDailyPoint[]
+  monthly: OcrDriverMonthlyPoint[]
+  totals: {
+    requests: number
+    success: number
+    latencyAvgMs: number | null
+    latencyP95Ms: number | null
+  }
 }
 
 export interface OcrStats {
@@ -32,12 +81,16 @@ export interface OcrStats {
   endDate: string
   daily: OcrDailyPoint[]
   monthly: OcrMonthlyPoint[]
+  errorBreakdown: OcrErrorBucket[]
+  /** Per-provider-call analytics (volume, provider latency, error/429 breakdown). */
   totals: {
     total: number
     success: number
     latencyAvgMs: number | null
     latencyP95Ms: number | null
   }
+  /** Per-photo-upload analytics (upload count + driver-perceived e2e latency). */
+  driverExperience: OcrDriverExperience
 }
 
 export function getOcrStats(days = 30): Promise<ApiResponse<OcrStats>> {

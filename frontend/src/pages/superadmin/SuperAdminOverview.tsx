@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { Activity, TrendingUp, TrendingDown, BarChart3, Truck, Coins } from 'lucide-react'
-import { OcrTotalChart } from '@/components/shared/data-display/OcrTotalChart/OcrTotalChart'
+import { OcrPerformanceChart } from '@/components/shared/data-display/OcrPerformanceChart/OcrPerformanceChart'
+import { OcrDriverChart } from '@/components/shared/data-display/OcrDriverChart/OcrDriverChart'
 import { TripChartCard } from '@/components/shared/data-display/TripChartCard'
 import { KpiHeroCard } from '@/components/shared/data-display/KpiHeroCard'
 import { DashboardSectionHeader } from '@/components/shared/data-display/DashboardSectionHeader'
@@ -38,7 +39,7 @@ export function SuperAdminOverview() {
   const { data: profile } = useProfile()
 
   // Director Dashboard Stats (KPIs, Trip frequency, Top Routes, Top Drivers, Vehicle PNL breakdown)
-  const { data: stats, isLoading: statsLoading } = useDirectorDashboard(dateFrom, dateTo)
+  const { data: stats } = useDirectorDashboard(dateFrom, dateTo)
   const { data: drilldown, isFetching: drilldownLoading } = useDirectorDashboardDrilldown(dateFrom, dateTo)
   const [activeMetric, setActiveMetric] = useState<KpiMetric | null>(null)
 
@@ -418,8 +419,9 @@ export function SuperAdminOverview() {
         </div>
       </div>
 
-      {/* ── OCR Analytics (total-only, model-agnostic) ── */}
-      <OcrTotalChart />
+      <OcrPerformanceChart />
+
+      <OcrDriverChart />
     </div>
   )
 }

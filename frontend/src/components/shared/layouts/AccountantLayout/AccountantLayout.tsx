@@ -177,7 +177,6 @@ function resolveMobileTitle(pathname: string): string {
     '/superadmin/dashboard': 'Tổng quan (Giám đốc)',
     '/superadmin/partners': 'Đối tác',
     '/superadmin/pricing': 'Bảng giá',
-    '/superadmin/ocr-analytics': 'Thống kê OCR',
     '/superadmin/notifications': 'Gửi Thông báo',
     '/superadmin/profile': 'Thông tin cá nhân',
   }
