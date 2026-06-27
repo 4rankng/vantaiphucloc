@@ -2,10 +2,12 @@
 
 Verifies the single-pass extraction flow (OpenRouter primary → Gemini
 fallback with round-robin key rotation → MiniMax last resort) without
-making real API calls.
+making real API calls, plus the /dashboard/ocr-stats aggregation logic.
 """
 
 import io
+import statistics
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
@@ -26,6 +28,7 @@ from app.contexts.operations.infrastructure.openrouter import (
     _extract_text as _openrouter_extract_text,
     call_openrouter_vision,
 )
+from app.models.domain import OcrRequest
 
 
 def _make_test_image(width: int = 800, height: int = 600, color: str = "red") -> bytes:
@@ -721,3 +724,191 @@ async def test_call_openrouter_vision_http_status_in_error(monkeypatch):
     assert result["provider"] == "openrouter"
     assert "HTTP 404" in result["error"]
     assert "model not found" in result["error"]
+
+
+# ---------------------------------------------------------------------------
+# /dashboard/ocr-stats — latency aggregation
+# ---------------------------------------------------------------------------
+
+
+def _utc_midnight(days_ago: int) -> datetime:
+    """UTC midnight ``days_ago`` days before today — keeps tests deterministic
+    regardless of when they run."""
+    today = datetime.now(timezone.utc).date()
+    target = today - timedelta(days=days_ago)
+    return datetime(target.year, target.month, target.day, tzinfo=timezone.utc)
+
+
+@pytest.mark.asyncio
+async def test_ocr_stats_latency_aggregation(
+    db_session, async_client, make_auth_headers
+):
+    """Seed a deterministic fixture and verify avg/p95 + zero-fill behaviour."""
+    # Day 0: 10 samples with latencies 100..1000 ms in steps of 100
+    # Day 1: 4 samples (below MIN_LATENCY_SAMPLES=5) — should yield null
+    # Day 2: no rows — should yield null but total=0
+    # Legacy rows: latency_ms IS NULL — excluded from latency stats, counted in total
+    # Today: high-latency outlier to verify p95 placement
+    today = datetime.now(timezone.utc).replace(microsecond=0)
+    yesterday = today - timedelta(days=1)
+    two_days_ago = today - timedelta(days=2)
+
+    rows = []
+    # Day 0 — 10 samples, evenly spaced
+    for i, latency in enumerate(range(100, 1100, 100)):
+        rows.append(
+            OcrRequest(
+                created_at=yesterday + timedelta(milliseconds=i),
+                provider="gemini",
+                model="gemini-flash-latest",
+                success=True,
+                container_numbers_found=1,
+                latency_ms=latency,
+                error=None,
+                user_id=None,
+            )
+        )
+    # Day 1 — only 4 samples (under floor) → null latency
+    for i, latency in enumerate([200, 400, 600, 800]):
+        rows.append(
+            OcrRequest(
+                created_at=two_days_ago + timedelta(milliseconds=i),
+                provider="gemini",
+                success=True,
+                container_numbers_found=1,
+                latency_ms=latency,
+                error=None,
+                user_id=None,
+            )
+        )
+    # Today — single high outlier to drive p95 placement
+    rows.append(
+        OcrRequest(
+            created_at=today,
+            provider="minimax",
+            success=True,
+            container_numbers_found=2,
+            latency_ms=5000,
+            error=None,
+            user_id=None,
+        )
+    )
+    # Legacy rows: NULL latency must be excluded from latency stats but counted in total
+    for i in range(3):
+        rows.append(
+            OcrRequest(
+                created_at=yesterday + timedelta(seconds=i + 30),
+                provider="gemini",
+                success=False,
+                container_numbers_found=0,
+                latency_ms=None,
+                error="legacy",
+                user_id=None,
+            )
+        )
+    db_session.add_all(rows)
+    await db_session.commit()
+
+    headers = await make_auth_headers("director")
+    response = await async_client.get(
+        "/api/v1/dashboard/ocr-stats", params={"days": 30}, headers=headers
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+
+    # 15 latency samples overall: yesterday (10) + two_days_ago (4) + today (1)
+    # Daily-bucket floor only suppresses per-day summaries; the overall
+    # latency aggregate includes every non-null sample in the window.
+    latency_samples = list(range(100, 1100, 100)) + [200, 400, 600, 800] + [5000]
+    expected_avg = sum(latency_samples) / len(latency_samples)
+    expected_p95 = statistics.quantiles(latency_samples, n=20, method="inclusive")[18]
+
+    assert payload["days"] == 30
+    assert payload["totals"]["total"] == 18  # 10 + 4 + 1 latency + 3 null
+    assert payload["totals"]["latencyAvgMs"] == pytest.approx(expected_avg, abs=0.01)
+    assert payload["totals"]["latencyP95Ms"] == pytest.approx(expected_p95, abs=0.5)
+    # Backward-compatible fields still present
+    assert "success" in payload["totals"]
+
+    daily_by_date = {p["date"]: p for p in payload["daily"]}
+    today_iso = today.date().isoformat()
+    yesterday_iso = yesterday.date().isoformat()
+    two_days_iso = two_days_ago.date().isoformat()
+
+    # Day 0 (yesterday) — 10 latency samples + 3 null = 13 total, latency qualifies
+    assert daily_by_date[yesterday_iso]["total"] == 13
+    assert daily_by_date[yesterday_iso]["latencyAvgMs"] == pytest.approx(
+        sum(range(100, 1100, 100)) / 10, abs=0.01
+    )
+    assert daily_by_date[yesterday_iso]["latencyP95Ms"] is not None
+
+    # Day 1 (two_days_ago) — 4 latency samples, below floor → null
+    assert daily_by_date[two_days_iso]["total"] == 4
+    assert daily_by_date[two_days_iso]["latencyAvgMs"] is None
+    assert daily_by_date[two_days_iso]["latencyP95Ms"] is None
+
+    # Today — 1 latency sample, below floor → null (would skew the average)
+    assert daily_by_date[today_iso]["total"] == 1
+    assert daily_by_date[today_iso]["latencyAvgMs"] is None
+    assert daily_by_date[today_iso]["latencyP95Ms"] is None
+
+
+@pytest.mark.asyncio
+async def test_ocr_stats_empty_window(db_session, async_client, make_auth_headers):
+    """No rows in the window → totals.latencyAvgMs / latencyP95Ms are null,
+    monthly list may be empty, but the response shape stays intact."""
+    headers = await make_auth_headers("accountant")
+    response = await async_client.get(
+        "/api/v1/dashboard/ocr-stats", params={"days": 7}, headers=headers
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["days"] == 7
+    assert payload["totals"]["total"] == 0
+    assert payload["totals"]["success"] == 0
+    assert payload["totals"]["latencyAvgMs"] is None
+    assert payload["totals"]["latencyP95Ms"] is None
+    assert all(d["latencyAvgMs"] is None for d in payload["daily"])
+    assert all(d["latencyP95Ms"] is None for d in payload["daily"])
+    # monthly may be empty
+    assert payload["monthly"] == [] or all(
+        m["latencyAvgMs"] is None for m in payload["monthly"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_ocr_stats_backward_compatible_field_names(
+    db_session, async_client, make_auth_headers
+):
+    """Existing fields (days, endDate, daily, monthly, totals.total, totals.success)
+    are still present with the same names. Daily/monthly still keep the existing
+    'date'/'month'/'total' keys."""
+    today = datetime.now(timezone.utc)
+    db_session.add(
+        OcrRequest(
+            created_at=today,
+            provider="gemini",
+            success=True,
+            container_numbers_found=1,
+            latency_ms=800,
+        )
+    )
+    await db_session.commit()
+
+    headers = await make_auth_headers("accountant")
+    response = await async_client.get(
+        "/api/v1/dashboard/ocr-stats", params={"days": 30}, headers=headers
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert set(payload.keys()) >= {"days", "endDate", "daily", "monthly", "totals"}
+    assert set(payload["totals"].keys()) >= {
+        "total",
+        "success",
+        "latencyAvgMs",
+        "latencyP95Ms",
+    }
+    for d in payload["daily"]:
+        assert set(d.keys()) >= {"date", "total", "latencyAvgMs", "latencyP95Ms"}
+    for m in payload["monthly"]:
+        assert set(m.keys()) >= {"month", "total", "latencyAvgMs"}
