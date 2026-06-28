@@ -155,7 +155,7 @@ export function OcrPerformanceChart({
               style={{ color: driverFailed > 0 ? 'var(--theme-status-error)' : 'var(--theme-text-muted)' }}
             >
               {driverFailed > 0
-                ? `${driverFailed.toLocaleString('vi-VN')} ảnh không nhận được số cont — mọi provider đều thất bại.`
+                ? `${driverFailed.toLocaleString('vi-VN')} ảnh không nhận được số cont.`
                 : 'Không có tài xế nào gặp lỗi — mọi ảnh tải lên đều nhận được số cont.'}
             </p>
           </div>
@@ -165,16 +165,8 @@ export function OcrPerformanceChart({
               succeeded (see the driver-seen count above for actual user impact). */}
           {topErrors.length > 0 && (
             <div className="border-t pt-3" style={{ borderColor: 'var(--line)' }}>
-              <div className="mb-1 flex items-center justify-between gap-2">
-                <p className="text-[12px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                  Lỗi provider
-                </p>
-                <p className="text-[11px] tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>
-                  {providerErrors.reduce((sum, item) => sum + item.total, 0).toLocaleString('vi-VN')} lượt gọi
-                </p>
-              </div>
-              <p className="mb-2 text-[11px] leading-snug" style={{ color: 'var(--theme-text-muted)' }}>
-                Mỗi mục là một lượt gọi provider; ảnh có thể đã được provider khác cứu nên tài xế vẫn thành công.
+              <p className="mb-2 text-[12px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                Lỗi AI
               </p>
               <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                 {topErrors.map((item) => (
