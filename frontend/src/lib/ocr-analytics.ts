@@ -438,6 +438,18 @@ export function driverSuccess(stats: OcrStats | null | undefined): number {
   return stats.driverExperience.totals.success
 }
 
+/**
+ * Driver-seen failures: uploads where the driver actually saw an error (no
+ * provider rescued the request). Distinct from `providerErrors`, which counts
+ * every failed provider *attempt* — including ones a later provider rescued.
+ * This is the user-impact error count; `requests - success` over the window.
+ */
+export function driverFailedTotal(stats: OcrStats | null | undefined): number {
+  if (!stats) return 0
+  const t = stats.driverExperience.totals
+  return Math.max(t.requests - t.success, 0)
+}
+
 /** True when there is any driver-upload data to chart. */
 export function hasDriverData(stats: OcrStats | null | undefined): boolean {
   if (!stats) return false

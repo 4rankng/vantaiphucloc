@@ -81,7 +81,7 @@ export interface OcrStats {
   endDate: string
   daily: OcrDailyPoint[]
   monthly: OcrMonthlyPoint[]
-  errorBreakdown: OcrErrorBucket[]
+  providerErrors: OcrErrorBucket[]
   /** Per-provider-call analytics (volume, provider latency, error/429 breakdown). */
   totals: {
     total: number

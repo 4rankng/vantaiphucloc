@@ -202,45 +202,47 @@ async def ocr_container(
     end_to_end_ms = int((time.perf_counter() - t_start) * 1000)
 
     # Analytics — two grains back two charts:
-    # - ocr_driver_requests: ONE row per photo upload (the driver action);
-    #   carries the upload count + end-to-end perceived latency.
+    # - ocr_driver_requests: ONE row per photo upload (the driver action),
+    #   written ALWAYS — even when no provider ran (e.g. OCR not configured,
+    #   empty attempts) — so the driver-seen failure count stays faithful.
+    #   Carries the upload count + end-to-end perceived latency.
     # - ocr_requests: ONE row per provider LLM call (every attempt, including
     #   429s and "no valid numbers" that a later provider rescued); carries
-    #   provider-call latency + the error/429 breakdown.
-    # Only log when at least one provider actually ran. Truncate errors so a
-    # long provider message can't overflow the column and silently drop the
-    # row. A logging failure must never break the OCR response for the driver.
+    #   provider-call latency + the error/429 breakdown. Only written when at
+    #   least one provider actually ran.
+    # Truncate errors so a long provider message can't overflow the column and
+    # silently drop the row. A logging failure must never break the OCR
+    # response for the driver.
     attempts = result.get("attempts") or []
-    if attempts:
-        try:
+    try:
+        db.add(
+            OcrDriverRequest(
+                user_id=current_user.id,
+                success=bool(result.get("success")),
+                attempts=len(attempts),
+                numbers_found=len(result.get("container_numbers", [])),
+                latency_ms=end_to_end_ms,
+                provider=result.get("provider"),
+            )
+        )
+        for attempt in attempts:
             db.add(
-                OcrDriverRequest(
+                OcrRequest(
+                    provider=attempt["provider"],
+                    model=attempt.get("model"),
+                    success=bool(attempt.get("success")),
+                    container_numbers_found=int(
+                        attempt.get("container_numbers_found", 0)
+                    ),
+                    latency_ms=attempt.get("latency_ms"),
+                    error=(attempt.get("error") or "")[:512] or None,
                     user_id=current_user.id,
-                    success=bool(result.get("success")),
-                    attempts=len(attempts),
-                    numbers_found=len(result.get("container_numbers", [])),
-                    latency_ms=end_to_end_ms,
-                    provider=result.get("provider"),
                 )
             )
-            for attempt in attempts:
-                db.add(
-                    OcrRequest(
-                        provider=attempt["provider"],
-                        model=attempt.get("model"),
-                        success=bool(attempt.get("success")),
-                        container_numbers_found=int(
-                            attempt.get("container_numbers_found", 0)
-                        ),
-                        latency_ms=attempt.get("latency_ms"),
-                        error=(attempt.get("error") or "")[:512] or None,
-                        user_id=current_user.id,
-                    )
-                )
-            await db.commit()
-        except Exception:
-            _logger.exception("[OCR] failed to log ocr analytics rows")
-            await db.rollback()
+        await db.commit()
+    except Exception:
+        _logger.exception("[OCR] failed to log ocr analytics rows")
+        await db.rollback()
 
     return {
         "success": result["success"],

@@ -891,7 +891,7 @@ async def test_ocr_stats_latency_hidden_for_non_admin(
 
     assert payload["totals"]["total"] == 5
     assert payload["totals"]["success"] == 5
-    assert payload["errorBreakdown"] == []
+    assert payload["providerErrors"] == []
     assert sum(d["success"] for d in payload["daily"]) == 5
     assert sum(d["failed"] for d in payload["daily"]) == 0
     assert payload["totals"]["latencyAvgMs"] is None
@@ -938,7 +938,7 @@ async def test_ocr_stats_error_breakdown_for_admin(
     )
     assert response.status_code == 200, response.text
     payload = response.json()
-    by_category = {item["category"]: item for item in payload["errorBreakdown"]}
+    by_category = {item["category"]: item for item in payload["providerErrors"]}
 
     assert by_category["http_429"]["label"] == "HTTP 429"
     assert by_category["http_429"]["statusCode"] == 429
@@ -961,7 +961,7 @@ async def test_ocr_stats_empty_window(db_session, async_client, make_auth_header
     assert response.status_code == 200
     payload = response.json()
     assert payload["days"] == 7
-    assert payload["errorBreakdown"] == []
+    assert payload["providerErrors"] == []
     assert payload["totals"]["total"] == 0
     assert payload["totals"]["success"] == 0
     assert payload["totals"]["latencyAvgMs"] is None
@@ -1004,7 +1004,7 @@ async def test_ocr_stats_backward_compatible_field_names(
         "endDate",
         "daily",
         "monthly",
-        "errorBreakdown",
+        "providerErrors",
         "totals",
     }
     assert set(payload["totals"].keys()) >= {
@@ -1147,10 +1147,11 @@ async def test_ocr_container_logs_driver_request_and_per_attempt_rows(
 
 
 @pytest.mark.asyncio
-async def test_ocr_container_no_provider_skips_analytics(
+async def test_ocr_container_no_provider_records_driver_failure(
     db_session, async_client, make_auth_headers, monkeypatch
 ):
-    """OCR unconfigured → no analytics rows written (nothing ran)."""
+    """OCR unconfigured → no provider ran, but the upload still counts as a
+    driver-seen failure: one ``OcrDriverRequest`` row, zero per-attempt rows."""
     from sqlalchemy import select
 
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", False)
@@ -1169,10 +1170,13 @@ async def test_ocr_container_no_provider_skips_analytics(
         headers=headers,
     )
     assert response.status_code == 200
+    assert response.json()["success"] is False
 
     driver_rows = (await db_session.execute(select(OcrDriverRequest))).scalars().all()
     attempt_rows = (await db_session.execute(select(OcrRequest))).scalars().all()
-    assert driver_rows == []
+    assert len(driver_rows) == 1
+    assert driver_rows[0].success is False
+    assert driver_rows[0].attempts == 0
     assert attempt_rows == []
 
 

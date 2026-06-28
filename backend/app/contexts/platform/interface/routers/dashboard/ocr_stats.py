@@ -454,7 +454,7 @@ async def get_ocr_stats(
         "endDate": end_date.isoformat(),
         "daily": daily,
         "monthly": monthly,
-        "errorBreakdown": error_breakdown,
+        "providerErrors": error_breakdown,
         "driverExperience": driver_experience,
         "totals": {
             "total": total_count,
