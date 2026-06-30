@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Download, Loader2 } from 'lucide-react'
-import { downloadImage, prefetchImageBlob } from '@/lib/download'
+import { downloadImage, prefetchImageBlob, shouldPrepareImageDownload } from '@/lib/download'
 
 interface PhotoLightboxProps {
   src: string
@@ -48,15 +48,17 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
   const gestureMovedRef = useRef(false)
   const lastTapRef = useRef(0)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [isPreparingDownload, setIsPreparingDownload] = useState(false)
 
   const handleDownload = useCallback(async () => {
+    if (isPreparingDownload) return
     setIsDownloading(true)
     try {
       await downloadImage(src, alt)
     } finally {
       setIsDownloading(false)
     }
-  }, [alt, src])
+  }, [alt, isPreparingDownload, src])
 
   const updateTransform = useCallback((next: Transform | ((current: Transform) => Transform)) => {
     setTransform((current) => {
@@ -86,7 +88,15 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
   // Prefetch the image bytes on open so the "Tải về" button can invoke
   // navigator.share() synchronously within the tap gesture (see download.ts).
   useEffect(() => {
-    prefetchImageBlob(src)
+    let active = true
+    const shouldWait = shouldPrepareImageDownload()
+    setIsPreparingDownload(shouldWait)
+    void prefetchImageBlob(src).finally(() => {
+      if (active) setIsPreparingDownload(false)
+    })
+    return () => {
+      active = false
+    }
   }, [src])
 
   const zoomBy = useCallback((delta: number) => {
@@ -365,11 +375,11 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
         <button
           type="button"
           onClick={handleDownload}
-          disabled={isDownloading}
+          disabled={isDownloading || isPreparingDownload}
           className="flex min-h-[48px] items-center gap-2 rounded-xl px-4 text-sm font-semibold touch-manipulation transition-colors duration-150 disabled:opacity-60"
           style={{ color: 'rgba(255,255,255,0.9)', background: 'rgba(255,255,255,0.10)' }}
           onMouseEnter={(e) => {
-            if (isDownloading) return
+            if (isDownloading || isPreparingDownload) return
             e.currentTarget.style.color = '#fff'
             e.currentTarget.style.background = 'rgba(255,255,255,0.18)'
           }}
@@ -379,8 +389,8 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
           }}
           aria-label="Tải về"
         >
-          {isDownloading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
-          <span>Tải về</span>
+          {isDownloading || isPreparingDownload ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
+          <span>{isPreparingDownload ? 'Đang chuẩn bị' : 'Tải về'}</span>
         </button>
         <button
           onClick={onClose}
