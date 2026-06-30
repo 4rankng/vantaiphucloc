@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { Activity, TrendingUp, TrendingDown, BarChart3, Truck, Coins } from 'lucide-react'
 import { OcrPerformanceChart } from '@/components/shared/data-display/OcrPerformanceChart/OcrPerformanceChart'
 import { OcrDriverChart } from '@/components/shared/data-display/OcrDriverChart/OcrDriverChart'
+import { OcrAccuracyChart } from '@/components/shared/data-display/OcrAccuracyChart/OcrAccuracyChart'
 import { TripChartCard } from '@/components/shared/data-display/TripChartCard'
 import { KpiHeroCard } from '@/components/shared/data-display/KpiHeroCard'
 import { DashboardSectionHeader } from '@/components/shared/data-display/DashboardSectionHeader'
@@ -420,6 +421,8 @@ export function SuperAdminOverview() {
       </div>
 
       <OcrPerformanceChart />
+
+      <OcrAccuracyChart />
 
       <OcrDriverChart />
     </div>

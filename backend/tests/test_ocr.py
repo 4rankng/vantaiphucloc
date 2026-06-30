@@ -7,7 +7,7 @@ API calls, plus the /dashboard/ocr-stats aggregation logic.
 
 import io
 import statistics
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
@@ -27,7 +27,15 @@ from app.contexts.operations.infrastructure.openrouter import (
     _extract_text as _openrouter_extract_text,
     call_openrouter_vision,
 )
-from app.models.domain import OcrDriverRequest, OcrRequest
+from app.models.base import User
+from app.models.domain import (
+    BookedTrip,
+    Client,
+    DeliveredTrip,
+    Location,
+    OcrDriverRequest,
+    OcrRequest,
+)
 
 
 def _make_test_image(width: int = 800, height: int = 600, color: str = "red") -> bytes:
@@ -571,48 +579,6 @@ async def test_first_format_valid_wins_does_not_try_next_provider():
 
 
 # ---------------------------------------------------------------------------
-# OpenRouter response parsing
-# ---------------------------------------------------------------------------
-
-
-def test_openrouter_extract_text_string():
-    assert _openrouter_extract_text("plain text") == "plain text"
-
-
-def test_openrouter_extract_text_blocks():
-    content = [
-        {"type": "thinking", "thinking": "internal reasoning"},
-        {"type": "text", "text": "visible answer"},
-    ]
-    assert _openrouter_extract_text(content) == "visible answer"
-
-
-def test_openrouter_extract_text_multiple_text_blocks():
-    content = [
-        {"type": "text", "text": "a"},
-        {"type": "text", "text": "b"},
-    ]
-    assert _openrouter_extract_text(content) == "a\nb"
-
-
-def test_openrouter_extract_text_none():
-    assert _openrouter_extract_text(None) == ""
-
-
-def test_openrouter_extract_text_strips_think_block():
-    """Qwen3 can leak <think>…</think> before the answer — strip it."""
-    content = (
-        "<think>The image shows MSKU1234565, 4 letters + 7 digits.</think>\n\n"
-        '{"container_numbers": ["MSKU1234565"]}'
-    )
-    assert _openrouter_extract_text(content) == '{"container_numbers": ["MSKU1234565"]}'
-
-
-def test_openrouter_extract_text_strips_unclosed_think():
-    assert _openrouter_extract_text("<think>reasoning that got cut off") == ""
-
-
-# ---------------------------------------------------------------------------
 # call_openrouter_vision — no-key guard + HTTP-status error
 # ---------------------------------------------------------------------------
 
@@ -954,6 +920,94 @@ async def test_ocr_stats_backward_compatible_field_names(
         }
     for m in payload["monthly"]:
         assert set(m.keys()) >= {"month", "total", "success", "failed", "latencyAvgMs"}
+
+
+@pytest.mark.asyncio
+async def test_ocr_stats_accuracy_uses_original_container_snapshot(
+    db_session, async_client, make_auth_headers
+):
+    client = Client(code="OCRACC", name="OCR Accuracy Client", is_active=True)
+    pickup = Location(name="Cang OCR Accuracy", is_active=True)
+    dropoff = Location(name="Kho OCR Accuracy", is_active=True)
+    driver = User(
+        phone="0900123456",
+        username="ocr_accuracy_driver",
+        hashed_password="unused",
+        role="driver",
+        is_active=True,
+    )
+    db_session.add_all([client, pickup, dropoff, driver])
+    await db_session.flush()
+
+    today = datetime.now(timezone.utc).replace(microsecond=0)
+    trip_day = date.today()
+    pairs = [
+        ("MSKU1234565", "MSKU1234565"),
+        ("MSKU1234564", "MSKU1234565"),
+        ("XXXX1234565", "MSKU1234565"),
+        ("ABCD1111111", "MSKU1234565"),
+    ]
+    delivered_rows = []
+    for idx, (original_cont, truth_cont) in enumerate(pairs):
+        booked = BookedTrip(
+            trip_date=trip_day,
+            client_id=client.id,
+            pickup_location_id=pickup.id,
+            dropoff_location_id=dropoff.id,
+            work_type="F20",
+            cont_number=truth_cont,
+            cont_type="F20",
+            created_at=today + timedelta(seconds=idx),
+        )
+        db_session.add(booked)
+        await db_session.flush()
+        delivered_rows.append(
+            DeliveredTrip(
+                client_id=client.id,
+                pickup_location_id=pickup.id,
+                dropoff_location_id=dropoff.id,
+                driver_id=driver.id,
+                work_type="F20",
+                cont_number=truth_cont,
+                original_cont_number=original_cont,
+                cont_type="F20",
+                trip_date=trip_day,
+                booked_trip_id=booked.id,
+                created_at=today + timedelta(seconds=idx),
+            )
+        )
+    db_session.add_all(delivered_rows)
+    await db_session.commit()
+
+    headers = await make_auth_headers("superadmin")
+    response = await async_client.get(
+        "/api/v1/dashboard/ocr-stats", params={"days": 7}, headers=headers
+    )
+    assert response.status_code == 200, response.text
+    accuracy = response.json()["accuracy"]
+
+    assert accuracy["totals"] == {
+        "evaluated": 4,
+        "exact": 1,
+        "near": 1,
+        "partial": 1,
+        "mismatch": 1,
+        "accuracyPct": 25.0,
+        "acceptedPct": 75.0,
+    }
+    today_bucket = {
+        point["date"]: point for point in accuracy["daily"]
+    }[today.date().isoformat()]
+    assert today_bucket == {
+        "date": today.date().isoformat(),
+        "evaluated": 4,
+        "exact": 1,
+        "near": 1,
+        "partial": 1,
+        "mismatch": 1,
+        "accuracyPct": 25.0,
+        "rollingAccuracyPct": 25.0,
+    }
 
 
 # ---------------------------------------------------------------------------

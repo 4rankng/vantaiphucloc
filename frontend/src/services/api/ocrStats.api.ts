@@ -76,6 +76,34 @@ export interface OcrDriverExperience {
   }
 }
 
+export interface OcrAccuracyDailyPoint {
+  date: string
+  evaluated: number
+  exact: number
+  near: number
+  partial: number
+  mismatch: number
+  /** Accuracy percentage (exact / evaluated); null when evaluated == 0. */
+  accuracyPct: number | null
+  /** Accuracy over the latest 500 evaluated OCR trip snapshots up to this day. */
+  rollingAccuracyPct: number | null
+}
+
+export interface OcrAccuracy {
+  totals: {
+    evaluated: number
+    exact: number
+    near: number
+    partial: number
+    mismatch: number
+    /** exact / evaluated × 100; null when no data. */
+    accuracyPct: number | null
+    /** (exact + near + partial) / evaluated × 100; null when no data. */
+    acceptedPct: number | null
+  }
+  daily: OcrAccuracyDailyPoint[]
+}
+
 export interface OcrStats {
   days: number
   endDate: string
@@ -91,6 +119,8 @@ export interface OcrStats {
   }
   /** Per-photo-upload analytics (upload count + driver-perceived e2e latency). */
   driverExperience: OcrDriverExperience
+  /** OCR accuracy — compares driver-submitted container number vs matched ground truth. */
+  accuracy: OcrAccuracy
 }
 
 export function getOcrStats(days = 30): Promise<ApiResponse<OcrStats>> {

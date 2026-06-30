@@ -479,6 +479,7 @@ class ReconciliationImportService:
             cont_type=row.cont_type or "E20",
             trip_date=row.trip_date,
             original_trip_date=row.trip_date if row.trip_date else date.today(),
+            original_cont_number=row.container_number,
             revenue=0,
             driver_salary=row.amount or 0,
         )

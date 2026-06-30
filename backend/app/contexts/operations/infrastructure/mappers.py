@@ -78,6 +78,7 @@ def delivered_trip_to_domain(orm: DeliveredTripORM) -> DeliveredTrip:
         driver_salary=int(orm.driver_salary or 0),
         trip_date=orm.trip_date,
         original_trip_date=orm.original_trip_date,
+        original_cont_number=orm.original_cont_number,
         note=orm.note,
         created_at=orm.created_at,
         updated_at=orm.updated_at,
@@ -108,5 +109,6 @@ def delivered_trip_to_orm(
     orm.driver_salary = int(w.driver_salary)
     orm.trip_date = w.trip_date
     orm.original_trip_date = w.original_trip_date
+    orm.original_cont_number = w.original_cont_number
     orm.note = w.note
     return orm

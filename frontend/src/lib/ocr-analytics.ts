@@ -1,5 +1,6 @@
 import type { ChartData, ChartDataset } from 'chart.js'
 import type {
+  OcrAccuracyDailyPoint,
   OcrDailyPoint,
   OcrDriverDailyPoint,
   OcrDriverMonthlyPoint,
@@ -460,4 +461,112 @@ export function hasDriverData(stats: OcrStats | null | undefined): boolean {
 export function hasDriverLatencyData(stats: OcrStats | null | undefined): boolean {
   if (!stats) return false
   return stats.driverExperience.daily.some((d) => d.latencyAvgMs !== null)
+}
+
+// ---------------------------------------------------------------------------
+// OCR accuracy chart helpers — container-number correctness vs ground truth
+// ---------------------------------------------------------------------------
+
+const EXACT_LABEL = 'Chính xác'
+const NEAR_LABEL = 'Gần đúng'
+const PARTIAL_LABEL = 'Sai chữ'
+const MISMATCH_LABEL = 'Sai hoàn toàn'
+const ROLLING_ACCURACY_LABEL = 'Tỷ lệ chính xác (500 lượt gần nhất)'
+
+/** Green for exact match (same as OCR_COLOR). */
+export const OCR_ACCURACY_EXACT_COLOR = '#00B14F'
+/** Amber for near match (edit distance ≤ 2). */
+export const OCR_ACCURACY_NEAR_COLOR = '#F59E0B'
+/** Blue for partial match (digits-only). */
+export const OCR_ACCURACY_PARTIAL_COLOR = '#0EA5E9'
+/** Red for complete mismatch. */
+export const OCR_ACCURACY_MISMATCH_COLOR = '#DC2626'
+const OCR_ACCURACY_LINE_COLOR = '#1F2937'
+
+/**
+ * OCR accuracy breakdown for the admin dashboard.
+ * Stacked bars show daily result buckets; the line shows exact-match accuracy
+ * over the latest 500 evaluated OCR trip snapshots up to each day.
+ */
+export function buildDailyOcrAccuracyData(
+  daily: OcrAccuracyDailyPoint[],
+): ChartData<'bar' | 'line'> {
+  return {
+    labels: daily.map((d) => d.date.slice(5)), // MM-DD
+    datasets: [
+      {
+        type: 'bar',
+        label: EXACT_LABEL,
+        data: daily.map((d) => d.exact),
+        backgroundColor: `${OCR_ACCURACY_EXACT_COLOR}B3`,
+        borderColor: OCR_ACCURACY_EXACT_COLOR,
+        borderWidth: 1,
+        borderRadius: 4,
+        stack: 'accuracy',
+        yAxisID: 'y',
+        order: 2,
+      },
+      {
+        type: 'bar',
+        label: NEAR_LABEL,
+        data: daily.map((d) => d.near),
+        backgroundColor: `${OCR_ACCURACY_NEAR_COLOR}B3`,
+        borderColor: OCR_ACCURACY_NEAR_COLOR,
+        borderWidth: 1,
+        borderRadius: 4,
+        stack: 'accuracy',
+        yAxisID: 'y',
+        order: 2,
+      },
+      {
+        type: 'bar',
+        label: PARTIAL_LABEL,
+        data: daily.map((d) => d.partial),
+        backgroundColor: `${OCR_ACCURACY_PARTIAL_COLOR}B3`,
+        borderColor: OCR_ACCURACY_PARTIAL_COLOR,
+        borderWidth: 1,
+        borderRadius: 4,
+        stack: 'accuracy',
+        yAxisID: 'y',
+        order: 2,
+      },
+      {
+        type: 'bar',
+        label: MISMATCH_LABEL,
+        data: daily.map((d) => d.mismatch),
+        backgroundColor: `${OCR_ACCURACY_MISMATCH_COLOR}B3`,
+        borderColor: OCR_ACCURACY_MISMATCH_COLOR,
+        borderWidth: 1,
+        borderRadius: 4,
+        stack: 'accuracy',
+        yAxisID: 'y',
+        order: 2,
+      },
+      {
+        type: 'line',
+        label: ROLLING_ACCURACY_LABEL,
+        data: daily.map((d) => d.rollingAccuracyPct),
+        borderColor: OCR_ACCURACY_LINE_COLOR,
+        backgroundColor: OCR_ACCURACY_LINE_COLOR,
+        tension: 0.35,
+        spanGaps: true,
+        borderWidth: 2.5,
+        pointRadius: 0,
+        pointHitRadius: 10,
+        pointBackgroundColor: '#ffffff',
+        pointBorderColor: OCR_ACCURACY_LINE_COLOR,
+        pointBorderWidth: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: OCR_ACCURACY_LINE_COLOR,
+        yAxisID: 'yPct',
+        order: 1,
+      },
+    ],
+  }
+}
+
+/** True when at least one matched trip has been evaluated for accuracy. */
+export function hasAccuracyData(stats: OcrStats | null | undefined): boolean {
+  if (!stats) return false
+  return (stats.accuracy?.totals.evaluated ?? 0) > 0
 }

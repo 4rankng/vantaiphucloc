@@ -196,6 +196,7 @@ class CreateDeliveredTrip:
             driver_salary=estimated_salary,
             trip_date=data.trip_date if data.trip_date else date.today(),
             original_trip_date=data.trip_date if data.trip_date else date.today(),
+            original_cont_number=data.cont_number,
             note=data.note,
         )
 
@@ -398,6 +399,7 @@ class BatchCreateDeliveredTrips:
                             original_trip_date=item.trip_date
                             if item.trip_date
                             else date.today(),
+                            original_cont_number=item.cont_number,
                             note=item.note,
                         )
                         saved = await self.repo.add(w)

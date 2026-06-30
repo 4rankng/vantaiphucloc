@@ -9,10 +9,12 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func, cast, Integer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import OcrDriverRequest, OcrRequest
+from app.models.domain import BookedTrip, DeliveredTrip, OcrDriverRequest, OcrRequest
 from app.models.base import User
 from app.core.deps import require_roles
 from app.database import get_db
+from app.utils.fuzzy import container_edit_distance
+from app.utils.iso6346 import normalize_container_number
 
 router = APIRouter()
 
@@ -128,6 +130,29 @@ def _summarize_latency(values: list[int]) -> tuple[Optional[float], Optional[flo
     if len(values) < MIN_LATENCY_SAMPLES:
         return None, None
     return _avg(values), _percentile_p95(values)
+
+
+def _classify_ocr_accuracy(ocr_cn: str, truth_cn: str) -> str | None:
+    """Classify an OCR container number against ground truth.
+
+    Reuses the same graduated buckets as ``auto_match_service._score_pair``:
+    exact, near (edit distance ≤ 2), partial (digits-only match), or mismatch.
+    Returns ``None`` when either side is empty after normalization.
+    """
+    a = normalize_container_number(ocr_cn)
+    b = normalize_container_number(truth_cn)
+    if not a or not b:
+        return None
+    if a == b:
+        return "exact"
+    dist = container_edit_distance(a, b)
+    if dist is not None and dist <= 2:
+        return "near"
+    a_digits = re.sub(r"[^0-9]", "", a)
+    b_digits = re.sub(r"[^0-9]", "", b)
+    if a_digits and b_digits and a_digits == b_digits:
+        return "partial"
+    return "mismatch"
 
 
 @router.get("/ocr-stats")
@@ -449,6 +474,130 @@ async def get_ocr_stats(
         },
     }
 
+    # ── OCR Accuracy (matched trips vs ground truth) ─────────────────────────
+    acc_day_expr = func.date(DeliveredTrip.created_at)
+    acc_rows = (
+        await db.execute(
+            select(
+                acc_day_expr.label("dt_date"),
+                DeliveredTrip.original_cont_number,
+                BookedTrip.cont_number,
+            )
+            .join(BookedTrip, DeliveredTrip.booked_trip_id == BookedTrip.id)
+            .where(
+                DeliveredTrip.booked_trip_id.isnot(None),
+                DeliveredTrip.original_cont_number.isnot(None),
+                BookedTrip.cont_number.isnot(None),
+                acc_day_expr >= start_date,
+                acc_day_expr <= end_date,
+            )
+        )
+    ).all()
+    rolling_rows = (
+        await db.execute(
+            select(
+                acc_day_expr.label("dt_date"),
+                DeliveredTrip.created_at,
+                DeliveredTrip.original_cont_number,
+                BookedTrip.cont_number,
+            )
+            .join(BookedTrip, DeliveredTrip.booked_trip_id == BookedTrip.id)
+            .where(
+                DeliveredTrip.booked_trip_id.isnot(None),
+                DeliveredTrip.original_cont_number.isnot(None),
+                BookedTrip.cont_number.isnot(None),
+                acc_day_expr <= end_date,
+            )
+            .order_by(DeliveredTrip.created_at.asc(), DeliveredTrip.id.asc())
+        )
+    ).all()
+
+    daily_acc: dict[str, dict[str, int]] = {}
+    totals_acc = {"exact": 0, "near": 0, "partial": 0, "mismatch": 0}
+    for row in acc_rows:
+        bucket = _classify_ocr_accuracy(
+            row.original_cont_number, row.cont_number
+        )
+        if bucket is None:
+            continue
+        d = str(row.dt_date)[:10]
+        day = daily_acc.setdefault(
+            d,
+            {"exact": 0, "near": 0, "partial": 0, "mismatch": 0, "evaluated": 0},
+        )
+        day[bucket] += 1
+        day["evaluated"] += 1
+        totals_acc[bucket] += 1
+
+    total_evaluated = sum(totals_acc.values())
+    accuracy_totals: dict = {
+        "evaluated": total_evaluated,
+        "exact": totals_acc["exact"],
+        "near": totals_acc["near"],
+        "partial": totals_acc["partial"],
+        "mismatch": totals_acc["mismatch"],
+        "accuracyPct": (
+            round(totals_acc["exact"] / total_evaluated * 100, 1)
+            if total_evaluated
+            else None
+        ),
+        "acceptedPct": (
+            round(
+                (totals_acc["exact"] + totals_acc["near"] + totals_acc["partial"])
+                / total_evaluated
+                * 100,
+                1,
+            )
+            if total_evaluated
+            else None
+        ),
+    }
+
+    rolling_window: list[tuple[str, str]] = []
+    rolling_by_day: dict[str, float | None] = {}
+    rolling_index = 0
+    for day_label in day_labels:
+        d = str(day_label)
+        while (
+            rolling_index < len(rolling_rows)
+            and str(rolling_rows[rolling_index].dt_date)[:10] <= d
+        ):
+            row = rolling_rows[rolling_index]
+            bucket = _classify_ocr_accuracy(
+                row.original_cont_number, row.cont_number
+            )
+            if bucket is not None:
+                rolling_window.append((str(row.dt_date)[:10], bucket))
+                if len(rolling_window) > 500:
+                    rolling_window.pop(0)
+            rolling_index += 1
+        if rolling_window:
+            exact_count = sum(1 for _, bucket in rolling_window if bucket == "exact")
+            rolling_by_day[d] = round(exact_count / len(rolling_window) * 100, 1)
+        else:
+            rolling_by_day[d] = None
+
+    accuracy_daily: list[dict] = []
+    for day_label in day_labels:
+        d = str(day_label)
+        acc = daily_acc.get(
+            d,
+            {"exact": 0, "near": 0, "partial": 0, "mismatch": 0, "evaluated": 0},
+        )
+        ev = acc["evaluated"]
+        accuracy_daily.append(
+            {
+                "date": d,
+                "evaluated": ev,
+                "exact": acc["exact"],
+                "near": acc["near"],
+                "partial": acc["partial"],
+                "mismatch": acc["mismatch"],
+                "accuracyPct": round(acc["exact"] / ev * 100, 1) if ev else None,
+                "rollingAccuracyPct": rolling_by_day[d],
+            }
+        )
+
     return {
         "days": days,
         "endDate": end_date.isoformat(),
@@ -461,5 +610,9 @@ async def get_ocr_stats(
             "success": success_count,
             "latencyAvgMs": overall_avg,
             "latencyP95Ms": overall_p95,
+        },
+        "accuracy": {
+            "totals": accuracy_totals,
+            "daily": accuracy_daily,
         },
     }

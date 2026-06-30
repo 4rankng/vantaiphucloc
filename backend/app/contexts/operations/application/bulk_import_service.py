@@ -472,6 +472,7 @@ class BulkImportService:
             cont_type=row.cont_type or "E20",
             trip_date=row.trip_date,
             original_trip_date=row.trip_date if row.trip_date else date.today(),
+            original_cont_number=row.container_number,
             vessel=row.notes
             if row.notes and ("tau" in row.notes.lower() or "tàu" in row.notes.lower())
             else None,
