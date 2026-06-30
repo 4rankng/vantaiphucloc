@@ -109,7 +109,7 @@ function fetchImageBlob(url: string): Promise<Blob> {
 }
 
 function triggerDirectImageDownload(url: string, filename: string): void {
-  const downloadUrl = resolveAttachmentDownloadUrl(url)
+  const downloadUrl = getImageDownloadHref(url)
   const a = document.createElement('a')
   a.href = downloadUrl
   a.download = filename
@@ -121,7 +121,7 @@ function triggerDirectImageDownload(url: string, filename: string): void {
 }
 
 async function shareImageUrl(url: string, filename: string): Promise<void> {
-  const downloadUrl = resolveAttachmentDownloadUrl(url)
+  const downloadUrl = getImageDownloadHref(url)
   if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
     try {
       await navigator.share({ title: filename, url: resolveAbsoluteUrl(downloadUrl) })
@@ -177,7 +177,7 @@ function resolveAbsoluteUrl(url: string): string {
   }
 }
 
-function resolveAttachmentDownloadUrl(url: string): string {
+export function getImageDownloadHref(url: string): string {
   try {
     const parsed = new URL(url, window.location.href)
     if (parsed.pathname.startsWith('/photos/')) {
