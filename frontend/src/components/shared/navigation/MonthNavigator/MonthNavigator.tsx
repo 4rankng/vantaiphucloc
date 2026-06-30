@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDDMM } from '@/lib/salaryPeriod'
+import { cn } from '@/lib/utils'
 
 interface MonthNavigatorProps {
   year: number
@@ -11,6 +12,7 @@ interface MonthNavigatorProps {
   periodEnd?: Date
   /** Optional label shown to the right of the navigator */
   rightLabel?: React.ReactNode
+  className?: string
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -25,6 +27,7 @@ export function MonthNavigator({
   periodStart,
   periodEnd,
   rightLabel,
+  className,
 }: MonthNavigatorProps) {
   const mm = String(month).padStart(2, '0')
 
@@ -39,9 +42,9 @@ export function MonthNavigator({
         })()
 
   return (
-    <div className="flex items-center gap-3">
+    <div className={cn('flex min-w-0 items-center gap-3', className)}>
       <div
-        className="flex items-center gap-1"
+        className="grid w-full min-w-[13.5rem] grid-cols-[2rem_minmax(0,1fr)_2rem] items-center gap-1"
         style={{
           background: 'var(--surface)',
           border: '1px solid var(--line)',
@@ -58,26 +61,24 @@ export function MonthNavigator({
           <ChevronLeft className="w-4 h-4" />
         </button>
 
-        <div className="flex flex-col items-center px-2.5 min-w-0">
+        <div className="flex min-w-0 flex-col items-center px-2">
           {/* Body font — navigational label, not code output */}
           <span
-            className="leading-tight whitespace-nowrap"
+            className="max-w-full truncate leading-tight"
             style={{
               fontSize: '13px',
               fontWeight: 600,
               color: 'var(--ink)',
-              letterSpacing: '-0.015em',
             }}
           >
             {primaryLabel}
           </span>
           {rangeLabel && (
             <span
-              className="leading-tight whitespace-nowrap tabular-nums"
+              className="max-w-full truncate leading-tight tabular-nums"
               style={{
                 fontSize: '10.5px',
                 color: 'var(--ink-3)',
-                letterSpacing: '0.01em',   /* slight tracking helps short date ranges read clearly */
               }}
             >
               {rangeLabel}

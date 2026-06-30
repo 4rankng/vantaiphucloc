@@ -570,7 +570,7 @@ class OcrRequest(Base):
     """Records each container-photo OCR request and which provider served it.
 
     One row per user OCR action; ``provider`` is the provider that ultimately
-    produced the result (the winner of the MiniMax→Gemini chain), and
+    produced the result (the winner of the OpenRouter→Gemini chain), and
     ``success`` covers failures. Powers the admin "OCR requests per
     day/month/model" dashboard.
     """
@@ -579,7 +579,7 @@ class OcrRequest(Base):
 
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
-    provider = Column(String(16), nullable=False)  # minimax | gemini | openrouter
+    provider = Column(String(16), nullable=False)  # openrouter | gemini
     model = Column(String(64), nullable=True)
     success = Column(Boolean, nullable=False, default=False)
     container_numbers_found = Column(Integer, nullable=False, default=0)

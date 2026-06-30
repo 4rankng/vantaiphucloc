@@ -14,14 +14,13 @@
  * `File` and invoke `share()` without awaiting anything first.
  *
  * Strategy:
- *  1. Read the blob synchronously from the cache. On a cache miss (user
- *     tapped faster than the prefetch finished, or CORS blocked prefetch),
- *     trigger a direct URL download/open while the tap is still active.
- *  2. Warm the cache in the background after a direct fallback.
- *  3. Prefer the Web Share API with a File when the browser supports sharing
- *     files → native share sheet with "Save Image" / "Save to Files".
- *  4. Fall back to a synthetic `<a download>` for desktop browsers without
- *     Web Share file support.
+ *  1. Read the blob synchronously from the cache.
+ *  2. On iOS/Android cache miss, trigger a direct URL download/open while the
+ *     tap is still active, then warm the cache in the background.
+ *  3. On desktop cache miss, fetch the blob on demand and trigger a real
+ *     `<a download>` file save.
+ *  4. Use the Web Share API only on mobile browsers where normal download
+ *     links are unreliable.
  */
 
 /** Resolved-image cache, keyed by source URL. Bounded to BLOB_CACHE_MAX. */
@@ -46,8 +45,7 @@ function cacheBlob(url: string, blob: Blob): void {
  */
 export function prefetchImageBlob(url: string): void {
   if (blobCache.has(url)) return
-  fetch(url)
-    .then((res) => (res.ok ? res.blob() : Promise.reject(new Error(`HTTP ${res.status}`))))
+  fetchImageBlob(url)
     .then((blob) => cacheBlob(url, blob))
     .catch(() => {
       /* CORS / network failure — leave uncached; downloadImage falls back. */
@@ -56,23 +54,35 @@ export function prefetchImageBlob(url: string): void {
 
 export async function downloadImage(url: string, fallbackName = 'anh'): Promise<void> {
   const filename = resolveFilename(url, fallbackName)
+  const shouldShare = shouldUseNativeShare()
 
   // Read the blob synchronously when prefetched so navigator.share() stays
   // inside the user gesture. If the prefetch has not completed, avoid awaiting
   // here: mobile browsers can block share sheets and new tabs after an await.
-  const blob = blobCache.get(url)
+  let blob = blobCache.get(url)
   if (!blob) {
-    triggerDirectImageDownload(url, filename)
-    prefetchImageBlob(url)
+    if (shouldShare) {
+      triggerDirectImageDownload(url, filename)
+      prefetchImageBlob(url)
+      return
+    }
+
+    try {
+      blob = await fetchImageBlob(url)
+      cacheBlob(url, blob)
+      triggerBlobDownload(blob, filename)
+    } catch {
+      triggerDirectImageDownload(url, filename)
+    }
     return
   }
 
   const file = new File([blob], filename, { type: blob.type || 'image/jpeg' })
 
-  // Web Share API path (iOS Safari, Android Chrome, desktop Safari). This is
-  // the only path that actually saves an image on iOS. `canShare` may THROW
-  // (not just return false) in some Safari versions, so guard with try/catch.
-  if (canShareFiles(file)) {
+  // Web Share API path (iOS Safari, Android Chrome). This is the only path that
+  // reliably saves images on iOS. Desktop browsers should download directly
+  // because sharing is not equivalent to "Tải về".
+  if (shouldShare && canShareFiles(file)) {
     try {
       await navigator.share({ files: [file], title: filename })
       return
@@ -84,6 +94,14 @@ export async function downloadImage(url: string, fallbackName = 'anh'): Promise<
   }
 
   // Desktop fallback: synthetic <a download> on a blob URL.
+  triggerBlobDownload(blob, filename)
+}
+
+function fetchImageBlob(url: string): Promise<Blob> {
+  return fetch(url).then((res) => (res.ok ? res.blob() : Promise.reject(new Error(`HTTP ${res.status}`))))
+}
+
+function triggerBlobDownload(blob: Blob, filename: string): void {
   const objectUrl = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = objectUrl
@@ -115,6 +133,13 @@ function canShareFiles(file: File): boolean {
   } catch {
     return false
   }
+}
+
+function shouldUseNativeShare(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  const platform = navigator.platform || ''
+  return /Android/i.test(ua) || /iPad|iPhone|iPod/i.test(ua) || (platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 }
 
 /** Pick a sensible filename: the last URL path segment when it has an extension, else the fallback + `.jpg`. */

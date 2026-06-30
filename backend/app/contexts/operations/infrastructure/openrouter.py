@@ -1,9 +1,8 @@
 """OpenRouter vision client (OpenAI-compatible) for container-number OCR.
 
-Mirrors ``call_minimax_vision`` so the OCR orchestrator can treat every
-provider uniformly. OpenRouter exposes an OpenAI-compatible Chat
-Completions endpoint, so this client is a near-identical twin of the
-MiniMax client — only the host, model, and API-key settings differ.
+OpenAI-compatible Chat Completions client for container-number OCR.
+OpenRouter exposes an OpenAI-compatible endpoint similar to the Gemini
+client — only the host, model, and API-key settings differ.
 
 Uses:
     POST {OPENROUTER_BASE_URL}/chat/completions   (Authorization: Bearer <key>)
@@ -18,7 +17,7 @@ import re
 
 import httpx
 
-from app.config import settings
+from app.config import OPENROUTER_MODEL as _DEFAULT_MODEL, settings
 
 _logger = logging.getLogger(__name__)
 
@@ -73,6 +72,7 @@ async def call_openrouter_vision(
     prompt: str,
     image_bytes: bytes,
     mime_type: str = "image/jpeg",
+    model: str | None = None,
 ) -> dict:
     """Call an OpenRouter vision model via the OpenAI-compatible endpoint.
 
@@ -81,6 +81,9 @@ async def call_openrouter_vision(
     HTTP errors carry the status code + OpenRouter error message so a wrong
     model slug (404) is distinguishable from a bad key (401) or rate limit
     (429) in the OCR analytics.
+
+    ``model`` overrides ``settings.OPENROUTER_MODEL`` — used to run a second
+    (larger) OpenRouter model as a within-provider fallback before Gemini.
     """
     if not settings.OPENROUTER_API_KEY:
         return {
@@ -103,8 +106,10 @@ async def call_openrouter_vision(
             "model": None,
         }
 
+    model_slug = model or _DEFAULT_MODEL
+
     payload = {
-        "model": settings.OPENROUTER_MODEL,
+        "model": model_slug,
         "temperature": 0,
         "max_tokens": 2048,
         "messages": [
@@ -152,7 +157,7 @@ async def call_openrouter_vision(
             "text": None,
             "error": msg,
             "provider": "openrouter",
-            "model": settings.OPENROUTER_MODEL,
+            "model": model_slug,
         }
     except Exception as e:
         _logger.warning("[OpenRouter] request failed: %s: %s", type(e).__name__, e)
@@ -161,7 +166,7 @@ async def call_openrouter_vision(
             "text": None,
             "error": f"{type(e).__name__}: {e}",
             "provider": "openrouter",
-            "model": settings.OPENROUTER_MODEL,
+            "model": model_slug,
         }
 
     try:
@@ -172,7 +177,7 @@ async def call_openrouter_vision(
                 "text": None,
                 "error": "No response generated",
                 "provider": "openrouter",
-                "model": settings.OPENROUTER_MODEL,
+                "model": model_slug,
             }
         text = _extract_text(choices[0].get("message", {}).get("content"))
         if not text:
@@ -181,14 +186,14 @@ async def call_openrouter_vision(
                 "text": None,
                 "error": "Empty OpenRouter response",
                 "provider": "openrouter",
-                "model": settings.OPENROUTER_MODEL,
+                "model": model_slug,
             }
         return {
             "success": True,
             "text": text,
             "error": None,
             "provider": "openrouter",
-            "model": result.get("model") or settings.OPENROUTER_MODEL,
+            "model": result.get("model") or model_slug,
         }
     except Exception as e:
         _logger.error("[OpenRouter] response parse error: %s", e)
@@ -197,5 +202,5 @@ async def call_openrouter_vision(
             "text": None,
             "error": "Response parse failed",
             "provider": "openrouter",
-            "model": settings.OPENROUTER_MODEL,
+            "model": model_slug,
         }

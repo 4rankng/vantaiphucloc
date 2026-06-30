@@ -1,19 +1,20 @@
 """OCR service for extracting container numbers from images.
 
-OpenRouter (Qwen3-VL-8B-Instruct) is the primary OCR provider when enabled;
-Gemini is the fallback when OpenRouter errors (e.g. HTTP 429); MiniMax-M3 is
-the last-resort fallback. Each call goes through ``_available_providers()``
-(gated by the OPENROUTER_ENABLE / GEMINI_ENABLE / MINIMAX_ENABLE flags plus
-a non-empty API key) and the first provider that returns valid numbers wins.
-Enable OpenRouter + Gemini together to get automatic OpenRouter→Gemini
-failover; enable only one to run a single provider.
+OpenRouter (Qwen3-VL-32B-Instruct) is the primary OCR provider when enabled;
+if it fails (e.g. "no valid numbers") the larger Qwen3-VL-235B-A22B-Instruct
+is tried next via the same API key (when ``OPENROUTER_MODEL2`` is set and
+differs from ``OPENROUTER_MODEL``); then Gemini as the last-resort fallback.
+Each call goes through ``_available_providers()`` (gated by the
+OPENROUTER_ENABLE / GEMINI_ENABLE flags plus a non-empty API key) and the
+first provider that returns valid numbers wins. Enable OpenRouter + Gemini
+together to get automatic OpenRouter→Gemini failover; enable only one to run
+a single provider.
 
 Two Gemini keys (``GEMINI_API_KEY`` / ``GEMINI_API_KEY2``) are alternated per
 request — a round-robin counter picks the starting key so consecutive
 requests land on different keys, spreading load to avoid HTTP 429 rate
 limits. If the chosen key fails (429 or any error) the other Gemini key is
-still tried before falling through to MiniMax, which is only used when every
-earlier provider has failed.
+still tried before giving up.
 
 Driver workflow:
 1. Take photo of container
@@ -22,7 +23,7 @@ Driver workflow:
 4. If all fail → driver enters manually
 
 Accuracy techniques:
-- Structured JSON output (Gemini responseSchema; same prompt for MiniMax)
+- Structured JSON output (Gemini responseSchema; same prompt for OpenRouter)
 - Temperature 0.0 for deterministic responses
 - Image preprocessing (downscale + auto-contrast)
 - ISO 6346 check-digit auto-correction
@@ -34,12 +35,11 @@ import re
 import time
 from collections.abc import Awaitable, Callable
 
-from app.config import settings
+from app.config import OPENROUTER_MODEL, OPENROUTER_MODEL2, settings
 from app.contexts.operations.infrastructure.ai import (
     analyze_image_with_fallback,
     preprocess_image,
 )
-from app.contexts.operations.infrastructure.minimax import call_minimax_vision
 from app.contexts.operations.infrastructure.openrouter import call_openrouter_vision
 from app.utils.iso6346 import validate_check_digit, suggest_corrections
 
@@ -133,7 +133,7 @@ def _rotate_gemini_keys(keys: list[str]) -> list[str]:
     With one key the list is returned unchanged. With two keys the requests
     alternate: ``[k0, k1]`` then ``[k1, k0]`` then ``[k0, k1]`` …  The first
     element is the key this request tries first; the rest are tried in order
-    on failure before MiniMax is reached.
+    on failure before the next provider is reached.
     """
     global _gemini_rotation_index
     if len(keys) <= 1:
@@ -158,36 +158,41 @@ def _make_gemini_provider(api_key: str) -> ProviderCallable:
     return _call
 
 
-async def _call_minimax(image_bytes: bytes, mime_type: str) -> dict:
-    """MiniMax-M3 vision OCR call (last-resort provider)."""
-    return await call_minimax_vision(MULTI_CONTAINER_PROMPT, image_bytes, mime_type)
-
-
 async def _call_openrouter(image_bytes: bytes, mime_type: str) -> dict:
-    """OpenRouter (Qwen3-VL-8B-Instruct) vision OCR call."""
+    """OpenRouter (Qwen3-VL-32B-Instruct) vision OCR call."""
     return await call_openrouter_vision(MULTI_CONTAINER_PROMPT, image_bytes, mime_type)
+
+
+async def _call_openrouter2(image_bytes: bytes, mime_type: str) -> dict:
+    """OpenRouter fallback model (Qwen3-VL-235B-A22B-Instruct) vision OCR call."""
+    return await call_openrouter_vision(
+        MULTI_CONTAINER_PROMPT, image_bytes, mime_type, model=OPENROUTER_MODEL2
+    )
 
 
 def _available_providers() -> list[tuple[str, ProviderCallable]]:
     """Ordered OCR providers enabled by config (flag on AND key set).
 
-    OpenRouter (Qwen3-VL) is tried first whenever it is enabled — if it
-    errors (e.g. HTTP 429) the request falls back to Gemini. When two
-    Gemini keys are configured they alternate per request (round-robin);
-    if the first key fails the other Gemini key is still tried before
-    giving up on Gemini. MiniMax is appended last as the fallback of last
-    resort. Returns a list of ``(name, async-callable)`` pairs — Gemini may
-    appear more than once (once per key).
+    OpenRouter (Qwen3-VL-32B) is tried first whenever it is enabled — if
+    it fails the larger Qwen3-VL-235B-A22B model is tried next (when
+    ``OPENROUTER_MODEL2`` is set and differs from ``OPENROUTER_MODEL``),
+    then Gemini. When two Gemini keys are configured they alternate per
+    request (round-robin); if the first key fails the other Gemini key is
+    still tried. Returns a list of ``(name, async-callable)`` pairs —
+    Gemini may appear more than once (once per key).
     """
     providers: list[tuple[str, ProviderCallable]] = []
     if settings.OPENROUTER_ENABLE and settings.OPENROUTER_API_KEY:
         providers.append(("openrouter", _call_openrouter))
+        if (
+            OPENROUTER_MODEL2
+            and OPENROUTER_MODEL2 != OPENROUTER_MODEL
+        ):
+            providers.append(("openrouter", _call_openrouter2))
     gemini_keys = _available_gemini_keys()
     if settings.GEMINI_ENABLE and gemini_keys:
         for key in _rotate_gemini_keys(gemini_keys):
             providers.append(("gemini", _make_gemini_provider(key)))
-    if settings.MINIMAX_ENABLE and settings.MINIMAX_API_KEY:
-        providers.append(("minimax", _call_minimax))
     return providers
 
 
@@ -215,12 +220,13 @@ async def extract_container_numbers(
 ) -> dict:
     """Extract ALL container numbers using single-shot OCR.
 
-    Tries each enabled provider in order (OpenRouter first, then Gemini —
-    alternating between two keys per request to avoid 429s — then MiniMax
-    as the last resort). If OpenRouter errors (e.g. HTTP 429) the request
-    transparently falls back to Gemini. The first provider that returns ≥1
-    format-valid number wins. Numbers with invalid ISO 6346 check digits are
-    auto-corrected when a near-miss valid number exists.
+    Tries each enabled provider in order (OpenRouter 32B first, then the
+    larger OpenRouter 235B if configured, then Gemini — alternating between
+    two keys per request to avoid 429s). If OpenRouter errors (e.g. "no valid
+    numbers") the request transparently falls back to the next provider. The
+    first provider that returns ≥1 format-valid number wins. Numbers with
+    invalid ISO 6346 check digits are auto-corrected when a near-miss valid
+    number exists.
 
     Returns:
         Dict with keys:

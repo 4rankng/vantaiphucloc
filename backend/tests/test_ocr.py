@@ -1,8 +1,8 @@
 """Tests for the OCR module (single-shot container number extraction).
 
-Verifies the single-pass extraction flow (OpenRouter primary → Gemini
-fallback with round-robin key rotation → MiniMax last resort) without
-making real API calls, plus the /dashboard/ocr-stats aggregation logic.
+Verifies the single-pass extraction flow (OpenRouter primary → OpenRouter
+fallback model → Gemini with round-robin key rotation) without making real
+API calls, plus the /dashboard/ocr-stats aggregation logic.
 """
 
 import io
@@ -23,7 +23,6 @@ from app.contexts.operations.infrastructure.ocr import (
     _available_gemini_keys,
     _rotate_gemini_keys,
 )
-from app.contexts.operations.infrastructure.minimax import _extract_text
 from app.contexts.operations.infrastructure.openrouter import (
     _extract_text as _openrouter_extract_text,
     call_openrouter_vision,
@@ -53,22 +52,22 @@ async def test_extract_container_numbers_success():
             "success": True,
             "text": '{"container_numbers": ["MSKU1234565", "TCLU9876543"]}',
             "error": None,
-            "provider": "minimax",
-            "model": "MiniMax-M3",
+            "provider": "openrouter",
+            "model": "qwen/qwen3-vl-32b-instruct",
         }
 
     test_bytes = _make_test_image(800, 600)
     with patch(
         "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=[("minimax", _fake_provider)],
+        return_value=[("openrouter", _fake_provider)],
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
     assert result["success"] is True
     assert result["container_numbers"] == ["MSKU1234565", "TCLU9876543"]
     assert result["error"] is None
-    assert result["provider"] == "minimax"
-    assert result["model"] == "MiniMax-M3"
+    assert result["provider"] == "openrouter"
+    assert result["model"] == "qwen/qwen3-vl-32b-instruct"
     assert isinstance(result["latency_ms"], int)
 
 
@@ -86,14 +85,14 @@ async def test_extract_container_numbers_fail():
             "success": False,
             "text": None,
             "error": "boom",
-            "provider": "minimax",
-            "model": "MiniMax-M3",
+            "provider": "gemini",
+            "model": "gemini-flash-latest",
         }
 
     test_bytes = _make_test_image(800, 600)
     with patch(
         "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=[("minimax", _failing_provider)],
+        return_value=[("gemini", _failing_provider)],
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
@@ -101,52 +100,12 @@ async def test_extract_container_numbers_fail():
     assert result["container_numbers"] == []
     assert result["error"] == "Không nhận dạng được số cont"
     assert result["analytics_error"] == "boom"
-    assert result["provider"] == "minimax"
-
-
-@pytest.mark.asyncio
-async def test_extract_container_numbers_falls_back_to_minimax():
-    """Every Gemini key fails, MiniMax (last resort) wins."""
-
-    async def _gemini_fail(image_bytes, mime_type):
-        return {
-            "success": False,
-            "text": None,
-            "error": "429 Too Many Requests",
-            "provider": "gemini",
-            "model": "gemini-flash-latest",
-        }
-
-    async def _minimax_ok(image_bytes, mime_type):
-        return {
-            "success": True,
-            "text": '{"container_numbers": ["MSKU1234565"]}',
-            "error": None,
-            "provider": "minimax",
-            "model": "MiniMax-M3",
-        }
-
-    test_bytes = _make_test_image(800, 600)
-    with patch(
-        "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=[
-            ("gemini", _gemini_fail),
-            ("gemini", _gemini_fail),
-            ("minimax", _minimax_ok),
-        ],
-    ):
-        result = await extract_container_numbers(test_bytes, "image/jpeg")
-
-    assert result["success"] is True
-    assert result["container_numbers"] == ["MSKU1234565"]
-    assert result["provider"] == "minimax"
+    assert result["provider"] == "gemini"
 
 
 @pytest.mark.asyncio
 async def test_extract_container_numbers_no_provider_configured(monkeypatch):
     """No provider enabled → clear configuration error (not an exception)."""
-    monkeypatch.setattr(settings, "MINIMAX_ENABLE", False)
-    monkeypatch.setattr(settings, "MINIMAX_API_KEY", "")
     monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", False)
@@ -162,7 +121,7 @@ async def test_extract_container_numbers_no_provider_configured(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# _available_providers — ordering + gating (Gemini first, MiniMax last)
+# _available_providers — ordering + gating
 # ---------------------------------------------------------------------------
 
 
@@ -196,27 +155,20 @@ def test_available_providers_order_and_gating(monkeypatch):
     monkeypatch.setattr(settings, "GEMINI_ENABLE", True)
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "k1")
     monkeypatch.setattr(settings, "GEMINI_API_KEY2", "k2")
-    monkeypatch.setattr(settings, "MINIMAX_ENABLE", True)
-    monkeypatch.setattr(settings, "MINIMAX_API_KEY", "km")
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", False)
     monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "")
 
-    # Gemini first (one entry per key), MiniMax last.
-    assert [n for n, _ in _available_providers()] == ["gemini", "gemini", "minimax"]
+    # Two Gemini keys → two gemini entries.
+    assert [n for n, _ in _available_providers()] == ["gemini", "gemini"]
 
     # Only one Gemini key configured → one gemini entry.
     monkeypatch.setattr(settings, "GEMINI_API_KEY2", "")
-    assert [n for n, _ in _available_providers()] == ["gemini", "minimax"]
+    assert [n for n, _ in _available_providers()] == ["gemini"]
 
-    # Gemini disabled → only MiniMax.
+    # Gemini disabled → nothing.
     monkeypatch.setattr(settings, "GEMINI_API_KEY2", "k2")
     monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
-    assert [n for n, _ in _available_providers()] == ["minimax"]
-
-    # MiniMax disabled → only Gemini entries.
-    monkeypatch.setattr(settings, "GEMINI_ENABLE", True)
-    monkeypatch.setattr(settings, "MINIMAX_ENABLE", False)
-    assert [n for n, _ in _available_providers()] == ["gemini", "gemini"]
+    assert [n for n, _ in _available_providers()] == []
 
     # No keys at all → nothing enabled.
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
@@ -230,8 +182,6 @@ async def test_gemini_keys_round_robin_across_requests(monkeypatch):
     monkeypatch.setattr(settings, "GEMINI_ENABLE", True)
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "k1")
     monkeypatch.setattr(settings, "GEMINI_API_KEY2", "k2")
-    monkeypatch.setattr(settings, "MINIMAX_ENABLE", False)
-    monkeypatch.setattr(settings, "MINIMAX_API_KEY", "")
     ocr_mod._gemini_rotation_index = 0
 
     seen_keys: list[str | None] = []
@@ -260,13 +210,11 @@ async def test_gemini_keys_round_robin_across_requests(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_gemini_second_key_tried_before_minimax(monkeypatch):
-    """First Gemini key fails, the other Gemini key wins (no MiniMax used)."""
+async def test_gemini_second_key_tried_on_first_failure(monkeypatch):
+    """First Gemini key fails, the other Gemini key wins."""
     monkeypatch.setattr(settings, "GEMINI_ENABLE", True)
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "k1")
     monkeypatch.setattr(settings, "GEMINI_API_KEY2", "k2")
-    monkeypatch.setattr(settings, "MINIMAX_ENABLE", True)
-    monkeypatch.setattr(settings, "MINIMAX_API_KEY", "km")
     ocr_mod._gemini_rotation_index = 0  # first request starts on k1
 
     calls: list[tuple] = []
@@ -291,75 +239,58 @@ async def test_gemini_second_key_tried_before_minimax(monkeypatch):
             "model": "gemini-flash-latest",
         }
 
-    async def _minimax(prompt, image_bytes, mime_type):
-        calls.append(("minimax", None))
-        return {
-            "success": True,
-            "text": "[]",
-            "error": None,
-            "provider": "minimax",
-            "model": "M3",
-        }
-
     test_bytes = _make_test_image(800, 600)
-    with (
-        patch(
-            "app.contexts.operations.infrastructure.ocr.analyze_image_with_fallback",
-            new=_gemini,
-        ),
-        patch(
-            "app.contexts.operations.infrastructure.ocr.call_minimax_vision",
-            new=_minimax,
-        ),
+    with patch(
+        "app.contexts.operations.infrastructure.ocr.analyze_image_with_fallback",
+        new=_gemini,
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
     assert result["provider"] == "gemini"
-    assert ("minimax", None) not in calls  # MiniMax never reached
     assert ("gemini", "k1") in calls and ("gemini", "k2") in calls
 
 
 # ---------------------------------------------------------------------------
-# MiniMax response parsing
+# OpenRouter response parsing
 # ---------------------------------------------------------------------------
 
 
-def test_minimax_extract_text_string():
-    assert _extract_text("plain text") == "plain text"
+def test_openrouter_extract_text_string():
+    assert _openrouter_extract_text("plain text") == "plain text"
 
 
-def test_minimax_extract_text_blocks():
+def test_openrouter_extract_text_blocks():
     content = [
         {"type": "thinking", "thinking": "internal reasoning"},
         {"type": "text", "text": "visible answer"},
     ]
-    assert _extract_text(content) == "visible answer"
+    assert _openrouter_extract_text(content) == "visible answer"
 
 
-def test_minimax_extract_text_multiple_text_blocks():
+def test_openrouter_extract_text_multiple_text_blocks():
     content = [
         {"type": "text", "text": "a"},
         {"type": "text", "text": "b"},
     ]
-    assert _extract_text(content) == "a\nb"
+    assert _openrouter_extract_text(content) == "a\nb"
 
 
-def test_minimax_extract_text_none():
-    assert _extract_text(None) == ""
+def test_openrouter_extract_text_none():
+    assert _openrouter_extract_text(None) == ""
 
 
-def test_minimax_extract_text_strips_think_block():
-    """MiniMax-M3 emits <think>…</think> before the answer — it must be stripped."""
+def test_openrouter_extract_text_strips_think_block():
+    """Qwen reasoning models emit <think>…</think> before the answer — it must be stripped."""
     content = (
         "<think>The image shows MSKU1234565, 4 letters + 7 digits.</think>\n\n"
         '{"container_numbers": ["MSKU1234565"]}'
     )
-    assert _extract_text(content) == '{"container_numbers": ["MSKU1234565"]}'
+    assert _openrouter_extract_text(content) == '{"container_numbers": ["MSKU1234565"]}'
 
 
-def test_minimax_extract_text_strips_unclosed_think():
+def test_openrouter_extract_text_strips_unclosed_think():
     content = "<think>reasoning that got cut off"
-    assert _extract_text(content) == ""
+    assert _openrouter_extract_text(content) == ""
 
 
 # ---------------------------------------------------------------------------
@@ -495,36 +426,36 @@ async def _async_return(value):
 
 
 def test_available_providers_openrouter_enabled(monkeypatch):
-    """OpenRouter alone (Gemini/MiniMax off) → single openrouter provider."""
+    """OpenRouter alone (Gemini off, MODEL2 same as MODEL) → single openrouter provider."""
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
     monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
+    monkeypatch.setattr(ocr_mod, "OPENROUTER_MODEL", "qwen/qwen3-vl-32b-instruct")
+    monkeypatch.setattr(ocr_mod, "OPENROUTER_MODEL2", "qwen/qwen3-vl-32b-instruct")
     monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
     monkeypatch.setattr(settings, "GEMINI_API_KEY2", "")
-    monkeypatch.setattr(settings, "MINIMAX_ENABLE", False)
-    monkeypatch.setattr(settings, "MINIMAX_API_KEY", "")
     assert [n for n, _ in _available_providers()] == ["openrouter"]
 
 
 def test_available_providers_openrouter_primary_when_all_enabled(monkeypatch):
-    """With every provider on, OpenRouter is first; Gemini/MiniMax follow.
+    """With every provider on, OpenRouter is first; Gemini follows.
 
-    OpenRouter → Gemini (one entry per key) → MiniMax. OpenRouter leads so
-    a 429 (or any error) transparently falls back to Gemini.
+    OpenRouter (32B + 235B fallback) → Gemini (one entry per key).
+    OpenRouter leads so a failure transparently falls back to the next model.
     """
     ocr_mod._gemini_rotation_index = 0
     monkeypatch.setattr(settings, "GEMINI_ENABLE", True)
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "k1")
     monkeypatch.setattr(settings, "GEMINI_API_KEY2", "k2")
-    monkeypatch.setattr(settings, "MINIMAX_ENABLE", True)
-    monkeypatch.setattr(settings, "MINIMAX_API_KEY", "km")
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
     monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
+    monkeypatch.setattr(ocr_mod, "OPENROUTER_MODEL", "qwen/qwen3-vl-32b-instruct")
+    monkeypatch.setattr(ocr_mod, "OPENROUTER_MODEL2", "qwen/qwen3-vl-235b-a22b-instruct")
     assert [n for n, _ in _available_providers()] == [
+        "openrouter",
         "openrouter",
         "gemini",
         "gemini",
-        "minimax",
     ]
 
 
@@ -533,7 +464,6 @@ def test_available_providers_openrouter_no_key(monkeypatch):
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
     monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "")
     monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
-    monkeypatch.setattr(settings, "MINIMAX_ENABLE", False)
     assert "openrouter" not in [n for n, _ in _available_providers()]
 
 
@@ -641,7 +571,7 @@ async def test_first_format_valid_wins_does_not_try_next_provider():
 
 
 # ---------------------------------------------------------------------------
-# OpenRouter response parsing (mirrors MiniMax _extract_text tests)
+# OpenRouter response parsing
 # ---------------------------------------------------------------------------
 
 
@@ -786,7 +716,7 @@ async def test_ocr_stats_latency_aggregation(
     rows.append(
         OcrRequest(
             created_at=today,
-            provider="minimax",
+            provider="openrouter",
             success=True,
             container_numbers_found=2,
             latency_ms=5000,
@@ -1159,8 +1089,6 @@ async def test_ocr_container_no_provider_records_driver_failure(
     monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
     monkeypatch.setattr(settings, "GEMINI_API_KEY2", "")
-    monkeypatch.setattr(settings, "MINIMAX_ENABLE", False)
-    monkeypatch.setattr(settings, "MINIMAX_API_KEY", "")
 
     img_b64 = __import__("base64").b64encode(_make_test_image(100, 100)).decode()
     headers = await make_auth_headers("superadmin")

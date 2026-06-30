@@ -50,27 +50,23 @@ class Settings(BaseSettings):
     # AI providers. Each provider is OFF by default — both the *_ENABLE flag
     # AND a non-empty API key must be set for the provider to be used. This
     # forces an explicit opt-in so deployments don't accidentally hit paid
-    # APIs on boot. For OCR, the provider order is OpenRouter → Gemini →
-    # MiniMax: OpenRouter (Qwen3-VL-8B-Instruct) is tried first when enabled;
-    # if it errors (e.g. HTTP 429) the request falls back to Gemini, then
-    # MiniMax as last resort. Two Gemini keys are supported so OCR can
-    # alternate between them per request (round-robin) and avoid 429 rate
-    # limits; if either key 429s the other is tried before falling through
-    # further. Enable OPENROUTER_ENABLE + GEMINI_ENABLE together for
-    # automatic OpenRouter→Gemini failover, or just one to run a single
-    # provider.
+    # APIs on boot. For OCR, the provider order is OpenRouter-32B →
+    # OpenRouter-235B (fallback model) → Gemini: OpenRouter
+    # (Qwen3-VL-32B-Instruct) is tried first when enabled; if it fails
+    # (e.g. "no valid numbers") the larger Qwen3-VL-235B-A22B-Instruct is
+    # tried next via the same API key; then Gemini as the last resort. Two
+    # Gemini keys are supported so OCR can alternate between them per request
+    # (round-robin) and avoid 429 rate limits; if either key 429s the other
+    # is tried before falling through further. Set OPENROUTER_MODEL2 to
+    # empty to disable the second OpenRouter model and skip directly to
+    # Gemini on 32B failure.
     GEMINI_API_KEY: str = ""
     GEMINI_API_KEY2: str = ""
     GEMINI_ENABLE: bool = False
-    MINIMAX_API_KEY: str = ""
-    MINIMAX_ENABLE: bool = False
-    MINIMAX_BASE_URL: str = "https://api.minimax.io/v1"  # OpenAI-compatible host
-    MINIMAX_MODEL: str = "MiniMax-M3"
     # OpenRouter (OpenAI-compatible). Opt-in trial provider; off by default.
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_ENABLE: bool = False
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
-    OPENROUTER_MODEL: str = "qwen/qwen3-vl-32b-instruct"
     CHATBOT_ENABLE: int = 0
 
     # Push notifications (VAPID)
@@ -122,3 +118,9 @@ settings = Settings()
 # gemini-2.0-flash get retired and 404, so use the -latest aliases. Keep this
 # the single source of truth — import from here, don't redefine per module.
 GEMINI_MODELS: list[str] = ["gemini-flash-latest", "gemini-flash-lite-latest"]
+
+# OpenRouter OCR models. 32B is tried first; 235B-A22B (MoE, larger) is the
+# within-provider fallback before Gemini. Set OPENROUTER_MODEL2 to empty to
+# skip the second model. Code-only — not configurable via env / .env.
+OPENROUTER_MODEL: str = "qwen/qwen3-vl-32b-instruct"
+OPENROUTER_MODEL2: str = "qwen/qwen3-vl-235b-a22b-instruct"

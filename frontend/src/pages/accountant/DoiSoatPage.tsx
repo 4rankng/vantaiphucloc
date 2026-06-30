@@ -261,8 +261,8 @@ export function DoiSoatPage() {
           }
         />
       ) : (
-        <div className="flex items-center justify-end -mb-1">
-          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
+        <div className="flex items-center">
+          <MonthNavigator className="w-full" year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
         </div>
       )}
 

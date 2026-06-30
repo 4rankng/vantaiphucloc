@@ -1021,15 +1021,15 @@ async def seed_dev() -> None:
             day_date = now - timedelta(days=days_ago)
             n_reqs = rng.randint(15, 35)
             for _ in range(n_reqs):
-                provider = rng.choices(["minimax", "gemini"], weights=[85, 15])[0]
+                provider = rng.choices(["openrouter", "gemini"], weights=[85, 15])[0]
                 model = (
-                    "minimax-vision" if provider == "minimax" else "gemini-1.5-flash"
+                    "qwen/qwen3-vl-32b-instruct" if provider == "openrouter" else "gemini-1.5-flash"
                 )
                 success = rng.random() < 0.94
                 container_numbers_found = rng.choice([1, 2]) if success else 0
                 latency = (
                     rng.randint(300, 1500)
-                    if provider == "minimax"
+                    if provider == "openrouter"
                     else rng.randint(800, 2500)
                 )
                 error = (

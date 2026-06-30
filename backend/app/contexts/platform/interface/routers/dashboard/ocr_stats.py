@@ -141,7 +141,7 @@ async def get_ocr_stats(
     """OCR request analytics: total counts per day / month (model-agnostic).
 
     One row per container-photo OCR request is logged in ``ocr_requests``.
-    Counts aggregate across ALL providers (gemini, minimax, openrouter, …) so
+    Counts aggregate across ALL providers (openrouter, gemini, …) so
     the dashboard shows overall OCR volume regardless of which engine served
     the request. Returns a zero-filled daily series, a monthly roll-up derived
     from it, and overall totals with success counts over the trailing ``days``
