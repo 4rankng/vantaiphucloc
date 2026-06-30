@@ -46,9 +46,11 @@ from app.contexts.platform.interface.routers.chatbot import router as chatbot_ro
 from app.core.deps import get_current_user, get_worker_pool
 from app.models.base import User
 from app.schemas.domain import JobStatusResponse
+from app.api.v1.photos import router as photos_router
 
 router = APIRouter()
 
+router.include_router(photos_router)
 router.include_router(auth_router)
 router.include_router(contacts_router)
 router.include_router(locations_router)

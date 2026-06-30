@@ -109,9 +109,9 @@ function fetchImageBlob(url: string): Promise<Blob> {
 }
 
 function triggerDirectImageDownload(url: string, filename: string): void {
-  const absoluteUrl = resolveAbsoluteUrl(url)
+  const downloadUrl = resolveAttachmentDownloadUrl(url)
   const a = document.createElement('a')
-  a.href = absoluteUrl
+  a.href = downloadUrl
   a.download = filename
   a.target = '_blank'
   a.rel = 'noopener noreferrer'
@@ -121,15 +121,16 @@ function triggerDirectImageDownload(url: string, filename: string): void {
 }
 
 async function shareImageUrl(url: string, filename: string): Promise<void> {
+  const downloadUrl = resolveAttachmentDownloadUrl(url)
   if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
     try {
-      await navigator.share({ title: filename, url: resolveAbsoluteUrl(url) })
+      await navigator.share({ title: filename, url: resolveAbsoluteUrl(downloadUrl) })
       return
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
     }
   }
-  triggerDirectImageDownload(url, filename)
+  triggerDirectImageDownload(downloadUrl, filename)
 }
 
 function canShareFiles(file: File): boolean {
@@ -174,4 +175,16 @@ function resolveAbsoluteUrl(url: string): string {
   } catch {
     return url
   }
+}
+
+function resolveAttachmentDownloadUrl(url: string): string {
+  try {
+    const parsed = new URL(url, window.location.href)
+    if (parsed.pathname.startsWith('/photos/')) {
+      return `/api/v1/photos/download?path=${encodeURIComponent(parsed.pathname)}`
+    }
+  } catch {
+    // not a parseable URL — use it as-is
+  }
+  return url
 }
