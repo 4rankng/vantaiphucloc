@@ -179,6 +179,13 @@ test-frontend:
 	@echo "── Frontend: unit tests ─────────────────"
 	cd frontend && pnpm test -- --run 2>/dev/null || echo "(no frontend tests configured)"
 
+## ocr: Side-by-side OCR comparison — PaddleOCR PP-OCRv5 vs Qwen-VL-32B
+## Usage: make ocr IMG=path/to/photo.jpg
+IMG ?=
+ocr:
+	@if [ -z "$(IMG)" ]; then echo "Usage: make ocr IMG=path/to/photo.jpg"; exit 1; fi
+	cd backend && .venv/bin/python scripts/compare_ocr.py "$(abspath $(IMG))"
+
 # ── Production deploy ──────────────────────────────────────────────────────────
 
 ## push-backend: Build & push backend image to Docker Hub
