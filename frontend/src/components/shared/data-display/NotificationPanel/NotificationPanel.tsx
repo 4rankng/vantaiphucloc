@@ -117,7 +117,13 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
         style={{ background: 'var(--theme-bg-primary)' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--theme-border-default)' }}>
+        <div
+          className="flex items-center justify-between px-4 pb-3 border-b"
+          style={{
+            borderColor: 'var(--theme-border-default)',
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+          }}
+        >
           <div className="flex items-center gap-2">
             <h2 className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>
               Thông báo
@@ -142,6 +148,7 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
               onClick={onClose}
               className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation"
               style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+              aria-label="Đóng"
             >
               <X className="w-4 h-4" />
             </button>
@@ -213,7 +220,13 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
         </div>
 
         {/* Footer */}
-        <div className="border-t px-4 py-2.5" style={{ borderColor: 'var(--theme-border-default)' }}>
+        <div
+          className="border-t px-4 pt-2.5"
+          style={{
+            borderColor: 'var(--theme-border-default)',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 10px)',
+          }}
+        >
           <button
             onClick={onClose}
             className="w-full flex items-center justify-center py-2 rounded-xl text-xs font-semibold touch-manipulation"
