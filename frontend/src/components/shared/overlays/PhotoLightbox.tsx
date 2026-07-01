@@ -144,8 +144,6 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
   }, [zoomBy])
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'touch') return
-
     e.preventDefault()
     e.stopPropagation()
 
@@ -173,7 +171,6 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
   }, [])
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'touch') return
     if (!pointersRef.current.has(e.pointerId)) return
 
     e.preventDefault()
@@ -213,8 +210,6 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
   }, [updateTransform])
 
   const handlePointerEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'touch') return
-
     e.preventDefault()
     e.stopPropagation()
 
@@ -246,103 +241,6 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
     }
   }, [toggleZoom])
 
-  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsInteracting(true)
-
-    const touches = Array.from(e.touches).map((touch) => ({ x: touch.clientX, y: touch.clientY }))
-    if (touches.length === 1) {
-      gestureMovedRef.current = false
-      pinchStartRef.current = null
-      dragStartRef.current = {
-        point: touches[0],
-        transform: transformRef.current,
-      }
-    }
-
-    if (touches.length >= 2) {
-      const firstTwo = touches.slice(0, 2)
-      gestureMovedRef.current = true
-      dragStartRef.current = null
-      pinchStartRef.current = {
-        distance: getDistance(firstTwo[0], firstTwo[1]),
-        midpoint: getMidpoint(firstTwo[0], firstTwo[1]),
-        transform: transformRef.current,
-      }
-    }
-  }, [])
-
-  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-
-    const touches = Array.from(e.touches).map((touch) => ({ x: touch.clientX, y: touch.clientY }))
-    if (touches.length >= 2 && pinchStartRef.current) {
-      const firstTwo = touches.slice(0, 2)
-      const midpoint = getMidpoint(firstTwo[0], firstTwo[1])
-      const scale = clamp(
-        pinchStartRef.current.transform.scale * (getDistance(firstTwo[0], firstTwo[1]) / pinchStartRef.current.distance),
-        MIN_SCALE,
-        MAX_SCALE
-      )
-
-      gestureMovedRef.current = true
-      updateTransform({
-        scale,
-        x: pinchStartRef.current.transform.x + midpoint.x - pinchStartRef.current.midpoint.x,
-        y: pinchStartRef.current.transform.y + midpoint.y - pinchStartRef.current.midpoint.y,
-      })
-      return
-    }
-
-    if (touches.length === 1 && dragStartRef.current && transformRef.current.scale > MIN_SCALE) {
-      const touch = touches[0]
-      if (getDistance(touch, dragStartRef.current.point) > 8) {
-        gestureMovedRef.current = true
-      }
-
-      updateTransform({
-        scale: dragStartRef.current.transform.scale,
-        x: dragStartRef.current.transform.x + touch.x - dragStartRef.current.point.x,
-        y: dragStartRef.current.transform.y + touch.y - dragStartRef.current.point.y,
-      })
-    }
-  }, [updateTransform])
-
-  const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-
-    const touches = Array.from(e.touches).map((touch) => ({ x: touch.clientX, y: touch.clientY }))
-    const endedTouch = e.changedTouches[0]
-    const endedPoint = endedTouch ? { x: endedTouch.clientX, y: endedTouch.clientY } : null
-
-    pinchStartRef.current = null
-
-    if (touches.length === 1) {
-      setIsInteracting(true)
-      dragStartRef.current = {
-        point: touches[0],
-        transform: transformRef.current,
-      }
-      return
-    }
-
-    setIsInteracting(false)
-    dragStartRef.current = null
-
-    if (touches.length === 0 && endedPoint && !gestureMovedRef.current) {
-      const now = Date.now()
-      if (now - lastTapRef.current < 300) {
-        toggleZoom(endedPoint)
-        lastTapRef.current = 0
-        return
-      }
-      lastTapRef.current = now
-    }
-  }, [toggleZoom])
-
   return createPortal(
     <div
       role="dialog"
@@ -362,10 +260,6 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerEnd}
         onPointerCancel={handlePointerEnd}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
         onWheel={handleWheel}
         style={{ touchAction: 'none' }}
       >

@@ -122,8 +122,9 @@ function triggerDirectImageDownload(url: string, filename: string): void {
   const a = document.createElement('a')
   a.href = downloadUrl
   a.download = filename
-  a.target = '_blank'
-  a.rel = 'noopener noreferrer'
+  // No target="_blank" — it triggers popup blockers on some browsers,
+  // silently killing the download even within a user gesture.
+  // Content-Disposition: attachment from the backend ensures file download.
   document.body.appendChild(a)
   a.click()
   a.remove()
