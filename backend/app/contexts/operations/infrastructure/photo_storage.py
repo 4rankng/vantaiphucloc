@@ -116,3 +116,20 @@ def save_base64_photo(data_url: str) -> StoredPhoto:
         url=f"/photos/{date_dir}/{filename}",
         content_hash=content_hash,
     )
+
+
+def delete_photo_url(url: str) -> None:
+    """Best-effort removal for a stored local photo URL."""
+    if not url.startswith("/photos/"):
+        return
+    relative = url.removeprefix("/photos/")
+    target = (Path(settings.PHOTO_STORAGE_ROOT) / relative).resolve()
+    root = Path(settings.PHOTO_STORAGE_ROOT).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError:
+        return
+    try:
+        target.unlink(missing_ok=True)
+    except OSError:
+        return

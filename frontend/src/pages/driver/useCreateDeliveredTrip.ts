@@ -26,6 +26,13 @@ export interface SubmitError {
   failed: SubmitFailure[]
 }
 
+function submitFailureMessage(message?: string): string {
+  if (message?.includes('DeliveredTrip photo already exists')) {
+    return 'Ảnh này đã được dùng cho một chuyến khác – kiểm tra lại, không gửi trùng'
+  }
+  return message ?? 'Không gửi được – thử lại'
+}
+
 export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | null) {
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -268,20 +275,16 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
             vehiclePlate: null,
             tripDate,
             note: note.trim() || null,
+            photoDataUrl: cont.photoTaken ? cont.photoDataUrl ?? null : null,
           })
 
           if (!res.success) {
-            failed.push({ number: contNumber, reason: res.message ?? 'Không gửi được – thử lại' })
+            failed.push({ number: contNumber, reason: submitFailureMessage(res.message) })
             continue
           }
 
           succeededContNumbersRef.current.add(contNumber)
 
-          // Upload this container's own photo if it has one (best-effort)
-          if (res.data?.id && cont.photoTaken && cont.photoDataUrl) {
-            apiClient.uploadDeliveredTripPhoto(res.data.id, cont.photoDataUrl)
-              .catch(() => {})
-          }
         } catch {
           failed.push({ number: contNumber, reason: 'Mất kết nối – kiểm tra mạng và gửi lại' })
         }

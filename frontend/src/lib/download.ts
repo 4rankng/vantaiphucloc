@@ -63,11 +63,14 @@ export function prefetchImageBlob(url: string): Promise<Blob | null> {
   return pendingFetch
 }
 
-export async function downloadImage(url: string, fallbackName = 'anh'): Promise<void> {
+export async function downloadImage(url: string, fallbackName = 'anh', onStage?: (stage: string) => void): Promise<void> {
   const filename = resolveFilename(url, fallbackName)
   const shouldShare = shouldUseNativeShare()
 
   if (!shouldShare) {
+    const downloadUrl = getImageDownloadHref(url)
+    onStage?.('② Desktop: gửi link tải về')
+    console.log('[Tải về] desktop anchor →', downloadUrl)
     triggerDirectImageDownload(url, filename)
     return
   }
@@ -77,6 +80,7 @@ export async function downloadImage(url: string, fallbackName = 'anh'): Promise<
   // here: mobile browsers can block share sheets and new tabs after an await.
   const blob = blobCache.get(url)
   if (!blob) {
+    onStage?.('② Mobile: share (đang tải blob)')
     await shareImageUrl(url, filename)
     return
   }
@@ -88,20 +92,25 @@ export async function downloadImage(url: string, fallbackName = 'anh'): Promise<
     const file = new File([blob], filename, { type: blob.type || 'image/jpeg' })
     try {
       if (canShareFiles(file)) {
+        onStage?.('② Mobile: chia sẻ ảnh')
         await navigator.share({ files: [file], title: filename })
+        onStage?.('③ Đã chia sẻ')
         return
       }
     } catch (err) {
       // User dismissed the share sheet — stop. Don't fall through to the
       // anchor download, which on iOS would just open the blob in a tab.
-      if (err instanceof DOMException && err.name === 'AbortError') return
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        onStage?.('③ User huỷ')
+        return
+      }
+      onStage?.('③ Lỗi share: ' + (err instanceof Error ? `${err.name}: ${err.message}` : String(err)))
+      throw err
     }
   }
 
-  if (shouldShare) {
-    await shareImageUrl(url, filename)
-    return
-  }
+  onStage?.('② Mobile: chia sẻ link (dự phòng)')
+  await shareImageUrl(url, filename)
 }
 
 function fetchImageBlob(url: string): Promise<Blob> {

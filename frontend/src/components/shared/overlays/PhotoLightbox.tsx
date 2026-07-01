@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Download, Loader2 } from 'lucide-react'
+import { X, Download, Loader2, Check, AlertTriangle } from 'lucide-react'
 import { downloadImage, prefetchImageBlob, shouldPrepareImageDownload } from '@/lib/download'
 
 interface PhotoLightboxProps {
@@ -49,12 +49,29 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
   const lastTapRef = useRef(0)
   const [isDownloading, setIsDownloading] = useState(false)
   const [isPreparingDownload, setIsPreparingDownload] = useState(false)
+  const [dlStatus, setDlStatus] = useState<'idle' | 'working' | 'done' | 'error'>('idle')
+  const [stageMsg, setStageMsg] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
 
   const handleDownload = useCallback(async () => {
     if (isPreparingDownload) return
+    setDlStatus('working')
+    setStageMsg('① Đã bấm')
+    setErrorMsg('')
     setIsDownloading(true)
+    console.log('[Tải về] click registered, src=', src)
     try {
-      await downloadImage(src, alt)
+      await downloadImage(src, alt, (stage) => {
+        setStageMsg(stage)
+        console.log('[Tải về] stage:', stage)
+      })
+      setDlStatus('done')
+      setStageMsg('✓ Đã gửi lệnh tải')
+      console.log('[Tải về] done')
+    } catch (err) {
+      setDlStatus('error')
+      setErrorMsg(err instanceof Error ? `${err.name}: ${err.message}` : String(err))
+      console.error('[Tải về] FAILED', err)
     } finally {
       setIsDownloading(false)
     }
@@ -376,22 +393,34 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
           type="button"
           onClick={handleDownload}
           disabled={isDownloading || isPreparingDownload}
-          className="flex min-h-[48px] items-center gap-2 rounded-xl px-4 text-sm font-semibold touch-manipulation transition-colors duration-150 disabled:opacity-60"
-          style={{ color: 'rgba(255,255,255,0.9)', background: 'rgba(255,255,255,0.10)' }}
+          className={`flex min-h-[48px] items-center gap-2 rounded-xl px-4 text-sm font-semibold touch-manipulation transition-all duration-150 disabled:opacity-60 active:scale-95 ${dlStatus === 'error' ? 'ring-2 ring-red-400' : ''}`}
+          style={{
+            color: dlStatus === 'done' ? '#4ade80' : dlStatus === 'error' ? '#f87171' : 'rgba(255,255,255,0.9)',
+            background: dlStatus === 'working' ? 'rgba(96,165,250,0.25)' : dlStatus === 'done' ? 'rgba(74,222,128,0.20)' : dlStatus === 'error' ? 'rgba(248,113,113,0.20)' : 'rgba(255,255,255,0.10)',
+          }}
           onMouseEnter={(e) => {
             if (isDownloading || isPreparingDownload) return
             e.currentTarget.style.color = '#fff'
             e.currentTarget.style.background = 'rgba(255,255,255,0.18)'
           }}
           onMouseLeave={(e) => {
+            if (dlStatus !== 'idle') return
             e.currentTarget.style.color = 'rgba(255,255,255,0.9)'
             e.currentTarget.style.background = 'rgba(255,255,255,0.10)'
           }}
           aria-label="Tải về"
         >
-          {isDownloading || isPreparingDownload ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
-          <span>{isPreparingDownload ? 'Đang chuẩn bị' : 'Tải về'}</span>
+          {dlStatus === 'done' ? <Check className="h-5 w-5" />
+            : dlStatus === 'error' ? <AlertTriangle className="h-5 w-5" />
+            : (dlStatus === 'working' || isDownloading || isPreparingDownload) ? <Loader2 className="h-5 w-5 animate-spin" />
+            : <Download className="h-5 w-5" />}
+          <span>{dlStatus === 'idle' ? (isPreparingDownload ? 'Đang chuẩn bị' : 'Tải về') : stageMsg}</span>
         </button>
+        {dlStatus === 'error' && errorMsg && (
+          <div className="absolute top-[80px] left-1/2 -translate-x-1/2 z-30 max-w-[85vw] rounded-lg bg-red-900/80 px-4 py-2 text-center text-xs text-red-100 backdrop-blur-sm">
+            {errorMsg}
+          </div>
+        )}
         <button
           onClick={onClose}
           className="flex h-[52px] w-[52px] items-center justify-center rounded-xl touch-manipulation transition-colors duration-150"

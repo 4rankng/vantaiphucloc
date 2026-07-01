@@ -52,6 +52,7 @@ class DeliveredTripCreate(BaseModel):
     cont_number: str | None = None
     cont_type: str | None = None
     cont_photo_url: str | None = None
+    image_data: str | None = None
     trip_date: date | None = None
     note: str | None = None
 

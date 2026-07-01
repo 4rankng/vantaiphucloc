@@ -361,6 +361,97 @@ class TestDuplicateCheckEndpoint:
         assert body["candidates"][0]["reason"] == "photo"
         assert body["candidates"][0]["photo_match"] is True
 
+    async def test_create_with_same_photo_is_rejected_before_duplicate_row_insert(
+        self,
+        async_client,
+        db_session,
+        seeded,
+        make_auth_headers,
+    ):
+        headers = await make_auth_headers("driver")
+        driver = (
+            await db_session.execute(select(User).where(User.phone == "09driver00"))
+        ).scalar_one()
+        image_data = base64.b64encode(IMAGE_BYTES).decode()
+        payload = {
+            "client_id": seeded["client_id"],
+            "pickup_location_id": seeded["pickup_id"],
+            "dropoff_location_id": seeded["dropoff_id"],
+            "driver_id": driver.id,
+            "work_type": "CHUYEN_BAI",
+            "cont_number": "HACU1234567",
+            "cont_type": "F20",
+            "trip_date": date.today().isoformat(),
+            "image_data": image_data,
+        }
+
+        first = await async_client.post(
+            "/api/v1/delivered-trips",
+            json=payload,
+            headers=headers,
+        )
+        assert first.status_code == 201, first.text
+
+        second = await async_client.post(
+            "/api/v1/delivered-trips",
+            json=payload,
+            headers=headers,
+        )
+        assert second.status_code == 409, second.text
+
+        rows = (
+            await db_session.execute(
+                select(DeliveredTrip).where(DeliveredTrip.driver_id == driver.id)
+            )
+        ).scalars().all()
+        assert len(rows) == 1
+        assert rows[0].cont_photo_hash == PHOTO_A
+
+    async def test_uploading_same_photo_to_second_trip_is_rejected(
+        self,
+        async_client,
+        db_session,
+        seeded,
+        make_auth_headers,
+    ):
+        headers = await make_auth_headers("driver")
+        driver = (
+            await db_session.execute(select(User).where(User.phone == "09driver00"))
+        ).scalar_one()
+        first_trip = _trip(
+            client_id=seeded["client_id"],
+            pickup_id=seeded["pickup_id"],
+            dropoff_id=seeded["dropoff_id"],
+            cont_number="HACU1234567",
+            trip_date=date.today(),
+            driver_id=driver.id,
+            cont_photo_hash=PHOTO_A,
+        )
+        second_trip = _trip(
+            client_id=seeded["client_id"],
+            pickup_id=seeded["pickup_id"],
+            dropoff_id=seeded["dropoff_id"],
+            cont_number="HACU1234567",
+            trip_date=date.today(),
+            driver_id=driver.id,
+        )
+        db_session.add_all([first_trip, second_trip])
+        await db_session.flush()
+
+        response = await async_client.put(
+            f"/api/v1/delivered-trips/{second_trip.id}/photo",
+            json={"image_data": base64.b64encode(IMAGE_BYTES).decode()},
+            headers=headers,
+        )
+        assert response.status_code == 409, response.text
+
+        refreshed = (
+            await db_session.execute(
+                select(DeliveredTrip).where(DeliveredTrip.id == second_trip.id)
+            )
+        ).scalar_one()
+        assert refreshed.cont_photo_hash is None
+
     async def test_endpoint_returns_empty_when_no_match(
         self,
         async_client,

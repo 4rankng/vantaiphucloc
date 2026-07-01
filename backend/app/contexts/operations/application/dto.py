@@ -106,6 +106,7 @@ class DeliveredTripCreateInput:
     cont_number: str | None = None
     cont_type: str | None = None
     cont_photo_url: str | None = None
+    cont_photo_hash: str | None = None
     trip_date: date | None = None
     note: str | None = None
 

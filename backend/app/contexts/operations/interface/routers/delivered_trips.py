@@ -66,6 +66,7 @@ from app.core.summaries import (
 from app.schemas._ocr import ContainerOCRRequest
 from app.contexts.operations.infrastructure.ocr import extract_container_numbers
 from app.contexts.operations.infrastructure.photo_storage import (
+    delete_photo_url,
     hash_image_bytes,
     save_base64_photo,
 )
@@ -258,7 +259,11 @@ async def create_delivered_trip_endpoint(
     current_user: User = Depends(require_permission("create", "DeliveredTrip")),
     use_case: CreateDeliveredTrip = Depends(get_create_delivered_trip),
 ):
+    stored_photo = None
     try:
+        if body.image_data:
+            stored_photo = save_base64_photo(f"data:image/jpeg;base64,{body.image_data}")
+
         w = await use_case(
             DeliveredTripCreateInput(
                 client_id=body.client_id,
@@ -271,13 +276,20 @@ async def create_delivered_trip_endpoint(
                 work_type=body.work_type,
                 cont_number=body.cont_number,
                 cont_type=body.cont_type,
-                cont_photo_url=body.cont_photo_url,
+                cont_photo_url=stored_photo.url
+                if stored_photo is not None
+                else body.cont_photo_url,
+                cont_photo_hash=stored_photo.content_hash
+                if stored_photo is not None
+                else None,
                 trip_date=body.trip_date,
                 note=body.note,
             ),
             _user_ctx(current_user),
         )
     except Exception as exc:
+        if stored_photo is not None:
+            delete_photo_url(stored_photo.url)
         raise translate(exc)
 
     await _enqueue_notification(w)

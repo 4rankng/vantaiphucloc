@@ -29,6 +29,7 @@ from app.contexts.operations.application.dto import (
 from app.contexts.operations.domain.entities import DeliveredTrip
 from app.contexts.operations.domain.exceptions import (
     AlreadyMatched,
+    AlreadyExists,
     NotFound,
 )
 from app.contexts.operations.domain.repositories import DeliveredTripRepository
@@ -153,6 +154,17 @@ class CreateDeliveredTrip:
 
         driver_id = user.id if user.role == "driver" else data.driver_id
 
+        if driver_id is not None and data.cont_photo_hash:
+            matches = await self.repo.find_duplicate_candidates(
+                driver_id=driver_id,
+                photo_hash=data.cont_photo_hash,
+            )
+            if any(match.photo_match for match in matches):
+                raise AlreadyExists(
+                    "DeliveredTrip photo",
+                    {"cont_photo_hash": data.cont_photo_hash},
+                )
+
         # Auto-resolve vehicle_plate from driver's assignment when not provided
         vehicle_plate = data.vehicle_plate
         if not vehicle_plate and driver_id is not None:
@@ -192,6 +204,7 @@ class CreateDeliveredTrip:
             cont_number=data.cont_number,
             cont_type=data.cont_type,
             cont_photo_url=data.cont_photo_url,
+            cont_photo_hash=data.cont_photo_hash,
             revenue=estimated_revenue,
             driver_salary=estimated_salary,
             trip_date=data.trip_date if data.trip_date else date.today(),
@@ -260,6 +273,17 @@ class UpdateDeliveredTrip:
         if data.cont_photo_url is not None:
             w.cont_photo_url = data.cont_photo_url
         if data.cont_photo_hash is not None:
+            if w.driver_id is not None:
+                matches = await self.repo.find_duplicate_candidates(
+                    driver_id=w.driver_id,
+                    photo_hash=data.cont_photo_hash,
+                    exclude_trip_id=wid,
+                )
+                if any(match.photo_match for match in matches):
+                    raise AlreadyExists(
+                        "DeliveredTrip photo",
+                        {"cont_photo_hash": data.cont_photo_hash},
+                    )
             w.cont_photo_hash = data.cont_photo_hash
         if data.trip_date is not None:
             w.trip_date = data.trip_date

@@ -39,6 +39,7 @@ export interface DeliveredTripCreatePayload {
   contNumber?: string | null
   contType?: string | null
   contPhotoUrl?: string | null
+  photoDataUrl?: string | null
   clientId: number
   pickupLocationId: number
   dropoffLocationId: number
@@ -97,7 +98,12 @@ export function getDeliveredTrips(filters?: DeliveredTripFilters): Promise<ApiRe
 const SUBMIT_TIMEOUT = 5000
 
 export function createDeliveredTrip(data: DeliveredTripCreatePayload): Promise<ApiResponse<DeliveredTrip>> {
-  return safeRequest(() => api.post('/delivered-trips', toSnake(data), { timeout: SUBMIT_TIMEOUT }))
+  return safeRequest(() => {
+    const { photoDataUrl, ...rest } = data
+    const body = toSnake(rest)
+    if (photoDataUrl) body.image_data = stripBase64Prefix(photoDataUrl)
+    return api.post('/delivered-trips', body, { timeout: SUBMIT_TIMEOUT })
+  })
 }
 
 export interface OCRContainerResponse {
