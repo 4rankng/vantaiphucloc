@@ -16,7 +16,7 @@ interface OcrAccuracyChartProps {
  * OCR accuracy chart — compares the driver-submitted container number against
  * the matched BookedTrip's ground-truth container number. Stacked bars show
  * daily result buckets; the line shows rolling exact-match accuracy over the
- * latest 500 evaluated OCR trip snapshots.
+ * latest 100 evaluated OCR trip snapshots.
  */
 export function OcrAccuracyChart({
   days = 30,

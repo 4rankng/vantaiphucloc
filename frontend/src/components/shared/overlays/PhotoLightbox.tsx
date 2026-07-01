@@ -1,7 +1,16 @@
-import { useEffect, useCallback, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type SyntheticEvent,
+  type WheelEvent as ReactWheelEvent,
+} from 'react'
 import { createPortal } from 'react-dom'
-import { X, Download, Loader2, Check, AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Check, Download, Loader2, X } from 'lucide-react'
 import { downloadImage, prefetchImageBlob } from '@/lib/download'
+import { cn } from '@/lib/utils'
 
 interface PhotoLightboxProps {
   src: string
@@ -20,315 +29,629 @@ interface Point {
   y: number
 }
 
+interface Size {
+  width: number
+  height: number
+}
+
+type DownloadState = 'idle' | 'working' | 'done' | 'error'
+
 const MIN_SCALE = 1
 const MAX_SCALE = 5
+const DOUBLE_TAP_SCALE = 2.5
+const TAP_MOVE_LIMIT = 8
+const DOUBLE_TAP_MS = 280
+const EMPTY_TRANSFORM: Transform = { scale: 1, x: 0, y: 0 }
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
 
-function getDistance(a: Point, b: Point) {
+function distance(a: Point, b: Point) {
   return Math.hypot(a.x - b.x, a.y - b.y)
 }
 
-function getMidpoint(a: Point, b: Point) {
+function midpoint(a: Point, b: Point): Point {
   return {
     x: (a.x + b.x) / 2,
     y: (a.y + b.y) / 2,
   }
 }
 
+function containSize(image: Size, box: Size): Size {
+  if (image.width <= 0 || image.height <= 0 || box.width <= 0 || box.height <= 0) {
+    return { width: 0, height: 0 }
+  }
+
+  const ratio = Math.min(1, box.width / image.width, box.height / image.height)
+  return {
+    width: image.width * ratio,
+    height: image.height * ratio,
+  }
+}
+
+function panBounds(scale: number, viewport: Size, naturalSize: Size | null) {
+  if (scale <= MIN_SCALE || viewport.width <= 0 || viewport.height <= 0) {
+    return { x: 0, y: 0 }
+  }
+
+  const baseSize = naturalSize ? containSize(naturalSize, viewport) : viewport
+  return {
+    x: Math.max(0, (baseSize.width * scale - viewport.width) / 2),
+    y: Math.max(0, (baseSize.height * scale - viewport.height) / 2),
+  }
+}
+
+function normalizeTransform(next: Transform, viewport: Size, naturalSize: Size | null): Transform {
+  const scale = clamp(next.scale, MIN_SCALE, MAX_SCALE)
+  if (scale <= MIN_SCALE + 0.001) return EMPTY_TRANSFORM
+
+  const bounds = panBounds(scale, viewport, naturalSize)
+  return {
+    scale,
+    x: clamp(next.x, -bounds.x, bounds.x),
+    y: clamp(next.y, -bounds.y, bounds.y),
+  }
+}
+
+function pointFromEvent(e: { clientX: number; clientY: number }): Point {
+  return { x: e.clientX, y: e.clientY }
+}
+
+function pointsFromTouches(touches: TouchList): Point[] {
+  return Array.from(touches, (touch) => ({ x: touch.clientX, y: touch.clientY }))
+}
+
 export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLightboxProps) {
-  const [transform, setTransform] = useState<Transform>({ scale: 1, x: 0, y: 0 })
+  const [transform, setTransform] = useState<Transform>(EMPTY_TRANSFORM)
   const [isInteracting, setIsInteracting] = useState(false)
-  const transformRef = useRef(transform)
+  const [downloadState, setDownloadState] = useState<DownloadState>('idle')
+  const [downloadError, setDownloadError] = useState('')
+
+  const stageRef = useRef<HTMLDivElement | null>(null)
+  const transformRef = useRef<Transform>(EMPTY_TRANSFORM)
+  const viewportRef = useRef<Size>({ width: 0, height: 0 })
+  const naturalSizeRef = useRef<Size | null>(null)
   const pointersRef = useRef(new Map<number, Point>())
-  const dragStartRef = useRef<{ point: Point; transform: Transform } | null>(null)
-  const pinchStartRef = useRef<{ distance: number; midpoint: Point; transform: Transform } | null>(null)
-  const gestureMovedRef = useRef(false)
-  const lastTapRef = useRef(0)
-  const [isDownloading, setIsDownloading] = useState(false)
-  const [dlStatus, setDlStatus] = useState<'idle' | 'working' | 'done' | 'error'>('idle')
-  const [stageMsg, setStageMsg] = useState('')
-  const [errorMsg, setErrorMsg] = useState('')
+  const dragRef = useRef<{ point: Point; transform: Transform } | null>(null)
+  const pinchRef = useRef<{ distance: number; imagePoint: Point; transform: Transform } | null>(null)
+  const movedRef = useRef(false)
+  const startedOnBackdropRef = useRef(false)
+  const lastTapRef = useRef<{ time: number; point: Point } | null>(null)
+  const resetStatusTimerRef = useRef<number | null>(null)
 
-  const handleDownload = useCallback(async () => {
-    setDlStatus('working')
-    setStageMsg('① Đã bấm')
-    setErrorMsg('')
-    setIsDownloading(true)
-    console.log('[Tải về] click registered, src=', src)
-    try {
-      await downloadImage(src, alt, (stage) => {
-        setStageMsg(stage)
-        console.log('[Tải về] stage:', stage)
-      })
-      setDlStatus('done')
-      setStageMsg('✓ Đã gửi lệnh tải')
-      console.log('[Tải về] done')
-    } catch (err) {
-      setDlStatus('error')
-      setErrorMsg(err instanceof Error ? `${err.name}: ${err.message}` : String(err))
-      console.error('[Tải về] FAILED', err)
-    } finally {
-      setIsDownloading(false)
-    }
-  }, [alt, src])
-
-  const updateTransform = useCallback((next: Transform | ((current: Transform) => Transform)) => {
-    setTransform((current) => {
-      const value = typeof next === 'function' ? next(current) : next
-      const normalized = value.scale <= MIN_SCALE
-        ? { scale: MIN_SCALE, x: 0, y: 0 }
-        : { scale: clamp(value.scale, MIN_SCALE, MAX_SCALE), x: value.x, y: value.y }
-
-      transformRef.current = normalized
-      return normalized
-    })
+  const commitTransform = useCallback((next: Transform | ((current: Transform) => Transform)) => {
+    const raw = typeof next === 'function' ? next(transformRef.current) : next
+    const normalized = normalizeTransform(raw, viewportRef.current, naturalSizeRef.current)
+    transformRef.current = normalized
+    setTransform(normalized)
   }, [])
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-      if (e.key === '0') updateTransform({ scale: 1, x: 0, y: 0 })
-    },
-    [onClose, updateTransform]
-  )
+  const resetTransform = useCallback(() => {
+    commitTransform(EMPTY_TRANSFORM)
+  }, [commitTransform])
 
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [handleKeyDown])
+  const updateViewport = useCallback(() => {
+    const rect = stageRef.current?.getBoundingClientRect()
+    if (!rect) return
 
-  // Warm the blob cache on open so navigator.share({files}) can run
-  // synchronously within the tap gesture on iOS (see download.ts). This is
-  // best-effort background work — the button stays tappable regardless; if the
-  // blob isn't ready yet, downloadImage falls back to sharing the URL.
-  useEffect(() => {
-    void prefetchImageBlob(src)
-  }, [src])
+    viewportRef.current = { width: rect.width, height: rect.height }
+    commitTransform((current) => current)
+  }, [commitTransform])
 
-  const zoomBy = useCallback((delta: number) => {
-    updateTransform((current) => {
-      const scale = clamp(current.scale * delta, MIN_SCALE, MAX_SCALE)
-      return { ...current, scale }
-    })
-  }, [updateTransform])
+  const pointToStageOffset = useCallback((point: Point): Point => {
+    const rect = stageRef.current?.getBoundingClientRect()
+    if (!rect) return point
 
-  const toggleZoom = useCallback((point?: Point) => {
+    return {
+      x: point.x - rect.left - rect.width / 2,
+      y: point.y - rect.top - rect.height / 2,
+    }
+  }, [])
+
+  const zoomAt = useCallback((point: Point, nextScale: number) => {
     const current = transformRef.current
-    if (current.scale > MIN_SCALE) {
-      updateTransform({ scale: 1, x: 0, y: 0 })
+    const stagePoint = pointToStageOffset(point)
+    const imagePoint = {
+      x: (stagePoint.x - current.x) / current.scale,
+      y: (stagePoint.y - current.y) / current.scale,
+    }
+    const scale = clamp(nextScale, MIN_SCALE, MAX_SCALE)
+
+    commitTransform({
+      scale,
+      x: stagePoint.x - imagePoint.x * scale,
+      y: stagePoint.y - imagePoint.y * scale,
+    })
+  }, [commitTransform, pointToStageOffset])
+
+  const zoomFromCenter = useCallback((factor: number) => {
+    const rect = stageRef.current?.getBoundingClientRect()
+    const center = rect
+      ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+      : { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+
+    zoomAt(center, transformRef.current.scale * factor)
+  }, [zoomAt])
+
+  const toggleZoom = useCallback((point: Point) => {
+    const current = transformRef.current
+    if (current.scale > MIN_SCALE + 0.001) {
+      resetTransform()
       return
     }
 
-    updateTransform({
-      scale: 2.5,
-      x: point ? (window.innerWidth / 2 - point.x) * 0.35 : 0,
-      y: point ? (window.innerHeight / 2 - point.y) * 0.35 : 0,
-    })
-  }, [updateTransform])
+    zoomAt(point, DOUBLE_TAP_SCALE)
+  }, [resetTransform, zoomAt])
 
-  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    zoomBy(e.deltaY > 0 ? 0.9 : 1.12)
-  }, [zoomBy])
+  const clearDownloadStatusTimer = useCallback(() => {
+    if (resetStatusTimerRef.current == null) return
+    window.clearTimeout(resetStatusTimerRef.current)
+    resetStatusTimerRef.current = null
+  }, [])
 
-  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const finishDownloadStatus = useCallback((state: DownloadState) => {
+    setDownloadState(state)
+    clearDownloadStatusTimer()
+    resetStatusTimerRef.current = window.setTimeout(() => {
+      setDownloadState('idle')
+      setDownloadError('')
+      resetStatusTimerRef.current = null
+    }, state === 'done' ? 1400 : 2600)
+  }, [clearDownloadStatusTimer])
 
-    // iOS implicitly captures touch pointers to their target; calling
-    // setPointerCapture explicitly on a touch pointer BREAKS multi-touch
-    // (the second finger's pointer events stop firing), which kills pinch
-    // zoom. Only capture for mouse/pen, where it's needed for drag tracking.
-    if (e.pointerType !== 'touch') {
-      e.currentTarget.setPointerCapture(e.pointerId)
+  const handleDownload = useCallback(async () => {
+    if (downloadState === 'working') return
+
+    clearDownloadStatusTimer()
+    setDownloadState('working')
+    setDownloadError('')
+
+    try {
+      await downloadImage(src, alt)
+      finishDownloadStatus('done')
+    } catch {
+      setDownloadError('Không tải được ảnh')
+      finishDownloadStatus('error')
     }
+  }, [alt, clearDownloadStatusTimer, downloadState, finishDownloadStatus, src])
+
+  const handleImageLoad = useCallback((e: SyntheticEvent<HTMLImageElement>) => {
+    naturalSizeRef.current = {
+      width: e.currentTarget.naturalWidth,
+      height: e.currentTarget.naturalHeight,
+    }
+    commitTransform((current) => current)
+  }, [commitTransform])
+
+  const handleWheel = useCallback((e: ReactWheelEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const current = transformRef.current
+    const factor = Math.exp(-e.deltaY * 0.002)
+    zoomAt({ x: e.clientX, y: e.clientY }, current.scale * factor)
+  }, [zoomAt])
+
+  const handlePointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') return
+
+    e.preventDefault()
+    e.stopPropagation()
+
+    const point = pointFromEvent(e)
+    pointersRef.current.set(e.pointerId, point)
     setIsInteracting(true)
-    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
     const pointers = Array.from(pointersRef.current.values())
     if (pointers.length === 1) {
-      gestureMovedRef.current = false
-      dragStartRef.current = {
-        point: pointers[0],
+      movedRef.current = false
+      startedOnBackdropRef.current = e.target === e.currentTarget
+      dragRef.current = {
+        point,
         transform: transformRef.current,
       }
+      pinchRef.current = null
+      return
     }
 
     if (pointers.length === 2) {
-      gestureMovedRef.current = true
-      pinchStartRef.current = {
-        distance: getDistance(pointers[0], pointers[1]),
-        midpoint: getMidpoint(pointers[0], pointers[1]),
-        transform: transformRef.current,
+      movedRef.current = true
+      startedOnBackdropRef.current = false
+      dragRef.current = null
+
+      const startMidpoint = midpoint(pointers[0], pointers[1])
+      const stagePoint = pointToStageOffset(startMidpoint)
+      const current = transformRef.current
+      pinchRef.current = {
+        distance: Math.max(1, distance(pointers[0], pointers[1])),
+        imagePoint: {
+          x: (stagePoint.x - current.x) / current.scale,
+          y: (stagePoint.y - current.y) / current.scale,
+        },
+        transform: current,
       }
     }
-  }, [])
+  }, [pointToStageOffset])
 
-  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!pointersRef.current.has(e.pointerId)) return
-
+  const handleTouchStart = useCallback((e: TouchEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
-    const pointers = Array.from(pointersRef.current.values())
-    if (pointers.length === 2 && pinchStartRef.current) {
-      gestureMovedRef.current = true
-      const midpoint = getMidpoint(pointers[0], pointers[1])
-      const scale = clamp(
-        pinchStartRef.current.transform.scale * (getDistance(pointers[0], pointers[1]) / pinchStartRef.current.distance),
-        MIN_SCALE,
-        MAX_SCALE
-      )
+    const touches = pointsFromTouches(e.touches)
+    if (touches.length === 0) return
 
-      updateTransform({
+    setIsInteracting(true)
+
+    if (touches.length === 1) {
+      movedRef.current = false
+      startedOnBackdropRef.current = e.target === stageRef.current
+      dragRef.current = {
+        point: touches[0],
+        transform: transformRef.current,
+      }
+      pinchRef.current = null
+      return
+    }
+
+    const startMidpoint = midpoint(touches[0], touches[1])
+    const stagePoint = pointToStageOffset(startMidpoint)
+    const current = transformRef.current
+
+    movedRef.current = true
+    startedOnBackdropRef.current = false
+    dragRef.current = null
+    pinchRef.current = {
+      distance: Math.max(1, distance(touches[0], touches[1])),
+      imagePoint: {
+        x: (stagePoint.x - current.x) / current.scale,
+        y: (stagePoint.y - current.y) / current.scale,
+      },
+      transform: current,
+    }
+  }, [pointToStageOffset])
+
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const touches = pointsFromTouches(e.touches)
+    if (touches.length >= 2 && pinchRef.current) {
+      const nextMidpoint = midpoint(touches[0], touches[1])
+      const nextDistance = Math.max(1, distance(touches[0], touches[1]))
+      const nextScale = pinchRef.current.transform.scale * (nextDistance / pinchRef.current.distance)
+      const stagePoint = pointToStageOffset(nextMidpoint)
+      const scale = clamp(nextScale, MIN_SCALE, MAX_SCALE)
+
+      movedRef.current = true
+      commitTransform({
         scale,
-        x: pinchStartRef.current.transform.x + midpoint.x - pinchStartRef.current.midpoint.x,
-        y: pinchStartRef.current.transform.y + midpoint.y - pinchStartRef.current.midpoint.y,
+        x: stagePoint.x - pinchRef.current.imagePoint.x * scale,
+        y: stagePoint.y - pinchRef.current.imagePoint.y * scale,
       })
       return
     }
 
-    if (pointers.length === 1 && dragStartRef.current && transformRef.current.scale > MIN_SCALE) {
-      const pointer = pointers[0]
-      if (getDistance(pointer, dragStartRef.current.point) > 8) {
-        gestureMovedRef.current = true
-      }
+    if (touches.length !== 1 || !dragRef.current) return
 
-      updateTransform({
-        scale: dragStartRef.current.transform.scale,
-        x: dragStartRef.current.transform.x + pointer.x - dragStartRef.current.point.x,
-        y: dragStartRef.current.transform.y + pointer.y - dragStartRef.current.point.y,
-      })
+    const point = touches[0]
+    if (distance(point, dragRef.current.point) > TAP_MOVE_LIMIT) {
+      movedRef.current = true
     }
-  }, [updateTransform])
 
-  const handlePointerEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragRef.current.transform.scale <= MIN_SCALE + 0.001) return
+
+    commitTransform({
+      scale: dragRef.current.transform.scale,
+      x: dragRef.current.transform.x + point.x - dragRef.current.point.x,
+      y: dragRef.current.transform.y + point.y - dragRef.current.point.y,
+    })
+  }, [commitTransform, pointToStageOffset])
+
+  const handleTouchEnd = useCallback((e: TouchEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
-    const endedPoint = pointersRef.current.get(e.pointerId)
-    pointersRef.current.delete(e.pointerId)
-    pinchStartRef.current = null
+    const remainingTouches = pointsFromTouches(e.touches)
+    if (remainingTouches.length >= 2) {
+      const startMidpoint = midpoint(remainingTouches[0], remainingTouches[1])
+      const stagePoint = pointToStageOffset(startMidpoint)
+      const current = transformRef.current
 
-    const remainingPointers = Array.from(pointersRef.current.values())
-    if (remainingPointers.length === 1) {
-      setIsInteracting(true)
-      dragStartRef.current = {
-        point: remainingPointers[0],
+      movedRef.current = true
+      dragRef.current = null
+      pinchRef.current = {
+        distance: Math.max(1, distance(remainingTouches[0], remainingTouches[1])),
+        imagePoint: {
+          x: (stagePoint.x - current.x) / current.scale,
+          y: (stagePoint.y - current.y) / current.scale,
+        },
+        transform: current,
+      }
+      return
+    }
+
+    if (remainingTouches.length === 1) {
+      movedRef.current = true
+      pinchRef.current = null
+      dragRef.current = {
+        point: remainingTouches[0],
         transform: transformRef.current,
       }
       return
     }
 
     setIsInteracting(false)
-    dragStartRef.current = null
+    dragRef.current = null
+    pinchRef.current = null
 
-    if (remainingPointers.length === 0 && endedPoint && !gestureMovedRef.current) {
-      const now = Date.now()
-      if (now - lastTapRef.current < 280) {
-        toggleZoom(endedPoint)
-        lastTapRef.current = 0
+    const endedTouch = e.changedTouches[0]
+    if (!endedTouch || movedRef.current) return
+
+    const endedPoint = pointFromEvent(endedTouch)
+    if (startedOnBackdropRef.current) {
+      onClose()
+      return
+    }
+
+    const now = Date.now()
+    const lastTap = lastTapRef.current
+    if (lastTap && now - lastTap.time <= DOUBLE_TAP_MS && distance(lastTap.point, endedPoint) <= 40) {
+      lastTapRef.current = null
+      toggleZoom(endedPoint)
+      return
+    }
+
+    lastTapRef.current = { time: now, point: endedPoint }
+  }, [onClose, pointToStageOffset, toggleZoom])
+
+  const handlePointerMove = useCallback((e: PointerEvent) => {
+    if (!pointersRef.current.has(e.pointerId)) return
+
+    e.preventDefault()
+
+    const point = pointFromEvent(e)
+    pointersRef.current.set(e.pointerId, point)
+
+    const pointers = Array.from(pointersRef.current.values())
+    if (pointers.length === 2 && pinchRef.current) {
+      const nextMidpoint = midpoint(pointers[0], pointers[1])
+      const nextDistance = distance(pointers[0], pointers[1])
+      const nextScale = pinchRef.current.transform.scale * (nextDistance / pinchRef.current.distance)
+      const stagePoint = pointToStageOffset(nextMidpoint)
+      const scale = clamp(nextScale, MIN_SCALE, MAX_SCALE)
+
+      movedRef.current = true
+      commitTransform({
+        scale,
+        x: stagePoint.x - pinchRef.current.imagePoint.x * scale,
+        y: stagePoint.y - pinchRef.current.imagePoint.y * scale,
+      })
+      return
+    }
+
+    if (pointers.length !== 1 || !dragRef.current) return
+
+    if (distance(point, dragRef.current.point) > TAP_MOVE_LIMIT) {
+      movedRef.current = true
+    }
+
+    if (dragRef.current.transform.scale <= MIN_SCALE + 0.001) return
+
+    commitTransform({
+      scale: dragRef.current.transform.scale,
+      x: dragRef.current.transform.x + point.x - dragRef.current.point.x,
+      y: dragRef.current.transform.y + point.y - dragRef.current.point.y,
+    })
+  }, [commitTransform, pointToStageOffset])
+
+  const handlePointerEnd = useCallback((e: PointerEvent) => {
+    if (!pointersRef.current.has(e.pointerId)) return
+
+    e.preventDefault()
+
+    const endedPoint = pointersRef.current.get(e.pointerId)
+    pointersRef.current.delete(e.pointerId)
+    pinchRef.current = null
+
+    const remainingPointers = Array.from(pointersRef.current.values())
+    if (remainingPointers.length === 1) {
+      dragRef.current = {
+        point: remainingPointers[0],
+        transform: transformRef.current,
+      }
+      movedRef.current = true
+      return
+    }
+
+    setIsInteracting(false)
+    dragRef.current = null
+
+    if (!endedPoint || movedRef.current) return
+
+    if (startedOnBackdropRef.current) {
+      onClose()
+      return
+    }
+
+    const now = Date.now()
+    const lastTap = lastTapRef.current
+    if (lastTap && now - lastTap.time <= DOUBLE_TAP_MS && distance(lastTap.point, endedPoint) <= 40) {
+      lastTapRef.current = null
+      toggleZoom(endedPoint)
+      return
+    }
+
+    lastTapRef.current = { time: now, point: endedPoint }
+  }, [onClose, toggleZoom])
+
+  useEffect(() => {
+    const options: AddEventListenerOptions = { passive: false }
+    window.addEventListener('pointermove', handlePointerMove, options)
+    window.addEventListener('pointerup', handlePointerEnd, options)
+    window.addEventListener('pointercancel', handlePointerEnd, options)
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove, options)
+      window.removeEventListener('pointerup', handlePointerEnd, options)
+      window.removeEventListener('pointercancel', handlePointerEnd, options)
+    }
+  }, [handlePointerEnd, handlePointerMove])
+
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!stage) return undefined
+
+    const options: AddEventListenerOptions = { passive: false }
+    stage.addEventListener('touchstart', handleTouchStart, options)
+    stage.addEventListener('touchmove', handleTouchMove, options)
+    stage.addEventListener('touchend', handleTouchEnd, options)
+    stage.addEventListener('touchcancel', handleTouchEnd, options)
+
+    return () => {
+      stage.removeEventListener('touchstart', handleTouchStart, options)
+      stage.removeEventListener('touchmove', handleTouchMove, options)
+      stage.removeEventListener('touchend', handleTouchEnd, options)
+      stage.removeEventListener('touchcancel', handleTouchEnd, options)
+    }
+  }, [handleTouchEnd, handleTouchMove, handleTouchStart])
+
+  useEffect(() => {
+    updateViewport()
+
+    window.addEventListener('resize', updateViewport)
+    window.visualViewport?.addEventListener('resize', updateViewport)
+
+    return () => {
+      window.removeEventListener('resize', updateViewport)
+      window.visualViewport?.removeEventListener('resize', updateViewport)
+    }
+  }, [updateViewport])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
         return
       }
-      lastTapRef.current = now
+
+      if (e.key === '0') resetTransform()
+      if (e.key === '+' || e.key === '=') zoomFromCenter(1.25)
+      if (e.key === '-' || e.key === '_') zoomFromCenter(0.8)
     }
-  }, [toggleZoom])
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose, resetTransform, zoomFromCenter])
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [])
+
+  useEffect(() => {
+    pointersRef.current.clear()
+    dragRef.current = null
+    pinchRef.current = null
+    movedRef.current = false
+    lastTapRef.current = null
+    naturalSizeRef.current = null
+    transformRef.current = EMPTY_TRANSFORM
+    setTransform(EMPTY_TRANSFORM)
+    setDownloadState('idle')
+    setDownloadError('')
+    clearDownloadStatusTimer()
+    void prefetchImageBlob(src)
+  }, [clearDownloadStatusTimer, src])
+
+  useEffect(() => clearDownloadStatusTimer, [clearDownloadStatusTimer])
+
+  const canReset = transform.scale > MIN_SCALE + 0.001
+  const downloadLabel = downloadState === 'working'
+    ? 'Đang tải'
+    : downloadState === 'done'
+      ? 'Đã tải'
+      : downloadState === 'error'
+        ? 'Thử lại'
+        : 'Tải về'
 
   return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Xem ảnh toàn màn hình"
-      className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden animate-in fade-in duration-200"
-      style={{ background: '#000' }}
-      onClick={onClose}
+      className="fixed inset-0 z-[200] overflow-hidden animate-in fade-in duration-150"
+      style={{ background: 'color-mix(in srgb, var(--theme-text-primary) 96%, transparent)' }}
     >
       <div
-        className={`relative z-10 flex h-full w-full items-center justify-center select-none ${transform.scale > MIN_SCALE ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
-        onClick={(e) => {
-          e.stopPropagation()
-          if (e.target === e.currentTarget) onClose()
-        }}
+        ref={stageRef}
+        className={cn(
+          'relative z-10 flex h-[100dvh] w-screen items-center justify-center overflow-hidden select-none',
+          canReset ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'
+        )}
+        style={{ touchAction: 'none', overscrollBehavior: 'contain' }}
         onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerEnd}
-        onPointerCancel={handlePointerEnd}
         onWheel={handleWheel}
-        style={{ touchAction: 'none' }}
       >
         <img
           src={src}
           alt={alt}
-          className="max-h-[90vh] max-w-[92vw] object-contain select-none rounded-sm animate-in zoom-in-95 duration-200 will-change-transform"
+          className="max-h-[100dvh] max-w-screen object-contain select-none rounded-sm will-change-transform"
           style={{
             transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale})`,
-            transition: isInteracting ? 'none' : 'transform 120ms ease-out',
+            transition: isInteracting ? 'none' : 'transform 140ms ease-out',
           }}
           draggable={false}
+          onLoad={handleImageLoad}
         />
       </div>
 
-      {/* Top toolbar */}
       <div
-        className="absolute top-0 inset-x-0 z-20 flex items-center justify-end gap-2 px-3 pb-3 pt-[calc(env(safe-area-inset-top,0px)+12px)] sm:px-4 sm:pb-4 sm:pt-4"
+        className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-end gap-2 px-3 pb-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] sm:px-4"
         style={{
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.36) 64%, transparent 100%)',
+          background: 'linear-gradient(to bottom, color-mix(in srgb, var(--theme-text-primary) 72%, transparent), transparent)',
         }}
-        onClick={(e) => e.stopPropagation()}
       >
-        <button
-          type="button"
-          onClick={handleDownload}
-          disabled={isDownloading}
-          className={`flex min-h-[48px] items-center gap-2 rounded-xl px-4 text-sm font-semibold touch-manipulation transition-all duration-150 disabled:opacity-60 active:scale-95 ${dlStatus === 'error' ? 'ring-2 ring-red-400' : ''}`}
-          style={{
-            color: dlStatus === 'done' ? '#4ade80' : dlStatus === 'error' ? '#f87171' : 'rgba(255,255,255,0.9)',
-            background: dlStatus === 'working' ? 'rgba(96,165,250,0.25)' : dlStatus === 'done' ? 'rgba(74,222,128,0.20)' : dlStatus === 'error' ? 'rgba(248,113,113,0.20)' : 'rgba(255,255,255,0.10)',
-          }}
-          onMouseEnter={(e) => {
-            if (isDownloading) return
-            e.currentTarget.style.color = '#fff'
-            e.currentTarget.style.background = 'rgba(255,255,255,0.18)'
-          }}
-          onMouseLeave={(e) => {
-            if (dlStatus !== 'idle') return
-            e.currentTarget.style.color = 'rgba(255,255,255,0.9)'
-            e.currentTarget.style.background = 'rgba(255,255,255,0.10)'
-          }}
-          aria-label="Tải về"
-        >
-          {dlStatus === 'done' ? <Check className="h-5 w-5" />
-            : dlStatus === 'error' ? <AlertTriangle className="h-5 w-5" />
-            : (dlStatus === 'working' || isDownloading) ? <Loader2 className="h-5 w-5 animate-spin" />
-            : <Download className="h-5 w-5" />}
-          <span>{dlStatus === 'idle' ? 'Tải về' : stageMsg}</span>
-        </button>
-        {dlStatus === 'error' && errorMsg && (
-          <div className="absolute top-[80px] left-1/2 -translate-x-1/2 z-30 max-w-[85vw] rounded-lg bg-red-900/80 px-4 py-2 text-center text-xs text-red-100 backdrop-blur-sm">
-            {errorMsg}
+        <div className="pointer-events-auto flex max-w-full items-center gap-1.5 sm:gap-2">
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={downloadState === 'working'}
+            className={cn(
+              'inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-[12px] font-semibold backdrop-blur-md transition-[background,color,border-color,transform] duration-150 active:scale-95 disabled:opacity-70 sm:h-11 sm:gap-2 sm:px-3 sm:text-[13px]',
+              'border-[color-mix(in_srgb,var(--theme-bg-secondary)_18%,transparent)] bg-[color-mix(in_srgb,var(--theme-bg-secondary)_14%,transparent)] text-[var(--theme-bg-primary)] hover:bg-[color-mix(in_srgb,var(--theme-bg-secondary)_24%,transparent)]',
+              downloadState === 'done' && 'text-[var(--theme-status-success)]',
+              downloadState === 'error' && 'text-[var(--theme-status-error)]'
+            )}
+            aria-label="Tải về"
+            aria-live="polite"
+          >
+            {downloadState === 'working' ? <Loader2 className="h-5 w-5 animate-spin" />
+              : downloadState === 'done' ? <Check className="h-5 w-5" />
+                : downloadState === 'error' ? <AlertTriangle className="h-5 w-5" />
+                  : <Download className="h-5 w-5" />}
+            <span>{downloadLabel}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[color-mix(in_srgb,var(--theme-bg-secondary)_18%,transparent)] bg-[color-mix(in_srgb,var(--theme-bg-secondary)_14%,transparent)] text-[var(--theme-bg-primary)] backdrop-blur-md transition-[background,transform] duration-150 hover:bg-[color-mix(in_srgb,var(--theme-bg-secondary)_24%,transparent)] active:scale-95 sm:h-11 sm:w-11"
+            aria-label="Đóng"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {downloadState === 'error' && downloadError && (
+          <div className="pointer-events-auto absolute left-1/2 top-[calc(env(safe-area-inset-top,0px)+64px)] max-w-[min(320px,calc(100vw-32px))] -translate-x-1/2 rounded-lg bg-[var(--theme-status-error-light)] px-3 py-2 text-center text-[12px] font-semibold text-[var(--theme-status-error-text)] shadow-theme-card">
+            {downloadError}
           </div>
         )}
-        <button
-          onClick={onClose}
-          className="flex h-[52px] w-[52px] items-center justify-center rounded-xl touch-manipulation transition-colors duration-150"
-          style={{ color: '#fff', background: 'rgba(255,255,255,0.14)' }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = '#fff'
-            e.currentTarget.style.background = 'rgba(255,255,255,0.22)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = '#fff'
-            e.currentTarget.style.background = 'rgba(255,255,255,0.14)'
-          }}
-          aria-label="Đóng"
-        >
-          <X className="h-6 w-6" />
-        </button>
       </div>
     </div>,
     document.body

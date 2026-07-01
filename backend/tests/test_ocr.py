@@ -1010,6 +1010,76 @@ async def test_ocr_stats_accuracy_uses_original_container_snapshot(
     }
 
 
+@pytest.mark.asyncio
+async def test_ocr_stats_accuracy_rolling_window_uses_last_100_matched_trips(
+    db_session, async_client, make_auth_headers
+):
+    client = Client(code="OCRROLL", name="OCR Rolling Client", is_active=True)
+    pickup = Location(name="Cang OCR Rolling", is_active=True)
+    dropoff = Location(name="Kho OCR Rolling", is_active=True)
+    driver = User(
+        phone="0900999888",
+        username="ocr_rolling_driver",
+        hashed_password="unused",
+        role="driver",
+        is_active=True,
+    )
+    db_session.add_all([client, pickup, dropoff, driver])
+    await db_session.flush()
+
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    trip_day = date.today()
+    delivered_rows = []
+    for idx in range(101):
+        truth_cont = "MSKU1234565" if idx == 0 else f"MSKU{idx:07d}"
+        original_cont = truth_cont if idx == 0 else f"ABCD{9000000 + idx:07d}"
+        created_at = now + timedelta(seconds=idx)
+        booked = BookedTrip(
+            trip_date=trip_day,
+            client_id=client.id,
+            pickup_location_id=pickup.id,
+            dropoff_location_id=dropoff.id,
+            work_type="F20",
+            cont_number=truth_cont,
+            cont_type="F20",
+            created_at=created_at,
+        )
+        db_session.add(booked)
+        await db_session.flush()
+        delivered_rows.append(
+            DeliveredTrip(
+                client_id=client.id,
+                pickup_location_id=pickup.id,
+                dropoff_location_id=dropoff.id,
+                driver_id=driver.id,
+                work_type="F20",
+                cont_number=truth_cont,
+                original_cont_number=original_cont,
+                cont_type="F20",
+                trip_date=trip_day,
+                booked_trip_id=booked.id,
+                created_at=created_at,
+            )
+        )
+    db_session.add_all(delivered_rows)
+    await db_session.commit()
+
+    headers = await make_auth_headers("superadmin")
+    response = await async_client.get(
+        "/api/v1/dashboard/ocr-stats", params={"days": 7}, headers=headers
+    )
+    assert response.status_code == 200, response.text
+    today_bucket = {
+        point["date"]: point for point in response.json()["accuracy"]["daily"]
+    }[now.date().isoformat()]
+
+    assert today_bucket["evaluated"] == 101
+    assert today_bucket["exact"] == 1
+    assert today_bucket["mismatch"] == 100
+    assert today_bucket["accuracyPct"] == 1.0
+    assert today_bucket["rollingAccuracyPct"] == 0.0
+
+
 # ---------------------------------------------------------------------------
 # Per-attempt analytics — each provider LLM call recorded, incl. rescued 429s
 # ---------------------------------------------------------------------------

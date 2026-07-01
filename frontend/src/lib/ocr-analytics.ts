@@ -471,7 +471,7 @@ const EXACT_LABEL = 'Chính xác'
 const NEAR_LABEL = 'Gần đúng'
 const PARTIAL_LABEL = 'Sai chữ'
 const MISMATCH_LABEL = 'Sai hoàn toàn'
-const ROLLING_ACCURACY_LABEL = 'Tỷ lệ chính xác (500 lượt gần nhất)'
+const ROLLING_ACCURACY_LABEL = 'Độ chính xác'
 
 /** Green for exact match (same as OCR_COLOR). */
 export const OCR_ACCURACY_EXACT_COLOR = '#00B14F'
@@ -486,7 +486,7 @@ const OCR_ACCURACY_LINE_COLOR = '#1F2937'
 /**
  * OCR accuracy breakdown for the admin dashboard.
  * Stacked bars show daily result buckets; the line shows exact-match accuracy
- * over the latest 500 evaluated OCR trip snapshots up to each day.
+ * over the latest 100 evaluated OCR trip snapshots up to each day.
  */
 export function buildDailyOcrAccuracyData(
   daily: OcrAccuracyDailyPoint[],

@@ -85,7 +85,7 @@ export interface OcrAccuracyDailyPoint {
   mismatch: number
   /** Accuracy percentage (exact / evaluated); null when evaluated == 0. */
   accuracyPct: number | null
-  /** Accuracy over the latest 500 evaluated OCR trip snapshots up to this day. */
+  /** Accuracy over the latest 100 evaluated OCR trip snapshots up to this day. */
   rollingAccuracyPct: number | null
 }
 

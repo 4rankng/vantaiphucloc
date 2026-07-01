@@ -23,6 +23,7 @@ router = APIRouter()
 # for both avg and p95. Prevents noisy precision on quiet days where one slow
 # request skews the "average" by an order of magnitude.
 MIN_LATENCY_SAMPLES = 5
+ACCURACY_ROLLING_WINDOW_SIZE = 100
 HTTP_STATUS_RE = re.compile(r"\bHTTP\s+(\d{3})\b", re.IGNORECASE)
 
 
@@ -568,7 +569,7 @@ async def get_ocr_stats(
             )
             if bucket is not None:
                 rolling_window.append((str(row.dt_date)[:10], bucket))
-                if len(rolling_window) > 500:
+                if len(rolling_window) > ACCURACY_ROLLING_WINDOW_SIZE:
                     rolling_window.pop(0)
             rolling_index += 1
         if rolling_window:
