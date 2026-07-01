@@ -9,10 +9,10 @@ Run:
 Engines:
     - xiaomi/mimo-v2.5 via OpenRouter
     - qwen/qwen3-vl-32b-instruct via OpenRouter
-    - gemini-flash-latest via Google Gemini
+    - qwen/qwen3-vl-235b-a22b-instruct via OpenRouter
 
 Standalone — zero backend app imports. Request payloads mirror production
-OpenRouter/Gemini calls closely enough to compare real OCR behavior.
+OpenRouter calls closely enough to compare real OCR behavior.
 """
 
 from __future__ import annotations
@@ -53,9 +53,8 @@ DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 OPENROUTER_MODELS = [
     ("Mimo-v2.5", "xiaomi/mimo-v2.5"),
     ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
+    ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
 ]
-GEMINI_MODEL = "gemini-flash-latest"
-GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta"
 
 MULTI_CONTAINER_PROMPT = textwrap.dedent(
     """\
@@ -309,94 +308,6 @@ def run_openrouter(
     return finalize_result(res, str(content))
 
 
-def run_gemini(
-    image_name: str,
-    expected_numbers: list[str],
-    image_bytes: bytes,
-    mime_type: str,
-    api_key: str,
-    model: str = GEMINI_MODEL,
-) -> OCRResult:
-    res = OCRResult(
-        engine="Gemini Flash",
-        image=image_name,
-        expected_numbers=expected_numbers,
-        model=model,
-    )
-    if httpx is None:
-        res.error = "httpx not installed — pip install httpx"
-        return res
-    if not api_key:
-        res.error = "GEMINI_API_KEY not set in .env"
-        return res
-
-    encoded = base64.b64encode(image_bytes).decode("utf-8")
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {"text": MULTI_CONTAINER_PROMPT},
-                    {
-                        "inline_data": {
-                            "mime_type": mime_type,
-                            "data": encoded,
-                        }
-                    },
-                ]
-            }
-        ],
-        "generationConfig": {
-            "temperature": 0.0,
-            "maxOutputTokens": 4096,
-        },
-    }
-    url = f"{GEMINI_ENDPOINT}/models/{model}:generateContent?key={api_key}"
-
-    t0 = time.time()
-    try:
-        with httpx.Client(timeout=60.0) as client:
-            response = client.post(
-                url,
-                json=payload,
-                headers={"Content-Type": "application/json"},
-            )
-            response.raise_for_status()
-            data = response.json()
-    except httpx.HTTPStatusError as e:
-        status = e.response.status_code if e.response else "?"
-        detail = ""
-        if e.response is not None:
-            try:
-                detail = e.response.text[:300]
-            except Exception:
-                detail = ""
-        res.error = f"HTTP {status}: {detail}"
-        res.latency_s = time.time() - t0
-        return res
-    except Exception as e:
-        res.error = f"{type(e).__name__}: {e}"
-        res.latency_s = time.time() - t0
-        return res
-
-    res.latency_s = time.time() - t0
-    try:
-        candidates = data.get("candidates", [])
-        if not candidates:
-            res.error = "No response generated"
-            return res
-        text = (
-            candidates[0]
-            .get("content", {})
-            .get("parts", [{}])[0]
-            .get("text", "")
-            .strip()
-        )
-    except Exception as e:
-        res.error = f"Response parse failed: {e}"
-        return res
-    return finalize_result(res, text)
-
-
 def collect_images(path: Path) -> list[Path]:
     if path.is_file():
         return [path]
@@ -491,7 +402,7 @@ def result_dump(results: list[OCRResult]) -> dict[str, Any]:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Benchmark container OCR across Mimo, Qwen3-VL-32B, and Gemini Flash",
+        description="Benchmark container OCR across Mimo, Qwen3-VL-32B, and Qwen3-VL-235B",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("path", help="Path to a container photo or directory of photos")
@@ -518,7 +429,6 @@ def main():
         "OPENROUTER_BASE_URL",
         os.getenv("OPENROUTER_BASE_URL", DEFAULT_OPENROUTER_BASE_URL),
     )
-    gemini_key = env.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
 
     images = collect_images(Path(args.path))
     if not images:
@@ -528,7 +438,6 @@ def main():
     print(f"Images: {len(images)}")
     print(f"Env file: {env_path or '(environment only)'}")
     print(f"OpenRouter: {'key set' if openrouter_key else 'NO KEY'}")
-    print(f"Gemini: {'key set' if gemini_key else 'NO KEY'}")
     print("=" * 80)
 
     results: list[OCRResult] = []
@@ -554,16 +463,6 @@ def main():
             )
             print_result(result)
             results.append(result)
-
-        result = run_gemini(
-            image_path.name,
-            expected_numbers,
-            processed,
-            mime_type,
-            gemini_key,
-        )
-        print_result(result)
-        results.append(result)
 
     print_summary(results)
 

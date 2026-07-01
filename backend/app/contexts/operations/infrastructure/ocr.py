@@ -1,9 +1,9 @@
 """OCR service for extracting container numbers from images.
 
-OpenRouter (Qwen3-VL-32B-Instruct) is the primary OCR provider when enabled;
-if it fails (e.g. "no valid numbers") the larger Qwen3-VL-235B-A22B-Instruct
-is tried next via the same API key (when ``OPENROUTER_MODEL2`` is set and
-differs from ``OPENROUTER_MODEL``); then Gemini as the last-resort fallback.
+OpenRouter is the primary OCR provider when enabled. When Gemini is disabled
+or unavailable, each OCR request randomly starts with Mimo-v2.5 or
+Qwen3-VL-32B, then falls back to Qwen3-VL-235B if the first model fails.
+Gemini is the last-resort fallback when enabled.
 Each call goes through ``_available_providers()`` (gated by the
 OPENROUTER_ENABLE / GEMINI_ENABLE flags plus a non-empty API key) and the
 first provider that returns valid numbers wins. Enable OpenRouter + Gemini
@@ -31,11 +31,12 @@ Accuracy techniques:
 
 import json
 import logging
+import random
 import re
 import time
 from collections.abc import Awaitable, Callable
 
-from app.config import OPENROUTER_MODEL, OPENROUTER_MODEL2, settings
+from app.config import OPENROUTER_MODELS, settings
 from app.contexts.operations.infrastructure.ai import (
     analyze_image_with_fallback,
     preprocess_image,
@@ -158,37 +159,54 @@ def _make_gemini_provider(api_key: str) -> ProviderCallable:
     return _call
 
 
-async def _call_openrouter(image_bytes: bytes, mime_type: str) -> dict:
-    """OpenRouter (Qwen3-VL-32B-Instruct) vision OCR call."""
-    return await call_openrouter_vision(MULTI_CONTAINER_PROMPT, image_bytes, mime_type)
+def _available_openrouter_models() -> list[tuple[str, str]]:
+    seen: set[str] = set()
+    models: list[tuple[str, str]] = []
+    for label, model in OPENROUTER_MODELS:
+        if model and model not in seen:
+            models.append((label, model))
+            seen.add(model)
+    return models
 
 
-async def _call_openrouter2(image_bytes: bytes, mime_type: str) -> dict:
-    """OpenRouter fallback model (Qwen3-VL-235B-A22B-Instruct) vision OCR call."""
-    return await call_openrouter_vision(
-        MULTI_CONTAINER_PROMPT, image_bytes, mime_type, model=OPENROUTER_MODEL2
-    )
+def _openrouter_models_for_current_request() -> list[tuple[str, str]]:
+    models = _available_openrouter_models()
+    if not models:
+        return []
+    gemini_available = settings.GEMINI_ENABLE and bool(_available_gemini_keys())
+    if gemini_available:
+        return models
+    if len(models) == 1:
+        return models
+
+    primary = random.choice(models[:2])
+    fallback = [model for model in models[2:] if model[1] != primary[1]]
+    return [primary, *fallback]
+
+
+def _make_openrouter_provider(model: str) -> ProviderCallable:
+    async def _call(image_bytes: bytes, mime_type: str) -> dict:
+        return await call_openrouter_vision(
+            MULTI_CONTAINER_PROMPT, image_bytes, mime_type, model=model
+        )
+
+    return _call
 
 
 def _available_providers() -> list[tuple[str, ProviderCallable]]:
     """Ordered OCR providers enabled by config (flag on AND key set).
 
-    OpenRouter (Qwen3-VL-32B) is tried first whenever it is enabled — if
-    it fails the larger Qwen3-VL-235B-A22B model is tried next (when
-    ``OPENROUTER_MODEL2`` is set and differs from ``OPENROUTER_MODEL``),
-    then Gemini. When two Gemini keys are configured they alternate per
+    OpenRouter is tried first whenever it is enabled. With Gemini unavailable,
+    the OpenRouter chain is one random primary model followed by the large
+    fallback model. When two Gemini keys are configured they alternate per
     request (round-robin); if the first key fails the other Gemini key is
-    still tried. Returns a list of ``(name, async-callable)`` pairs —
-    Gemini may appear more than once (once per key).
+    still tried. Returns a list of ``(name, async-callable)`` pairs — Gemini
+    may appear more than once (once per key).
     """
     providers: list[tuple[str, ProviderCallable]] = []
     if settings.OPENROUTER_ENABLE and settings.OPENROUTER_API_KEY:
-        providers.append(("openrouter", _call_openrouter))
-        if (
-            OPENROUTER_MODEL2
-            and OPENROUTER_MODEL2 != OPENROUTER_MODEL
-        ):
-            providers.append(("openrouter", _call_openrouter2))
+        for _, model in _openrouter_models_for_current_request():
+            providers.append(("openrouter", _make_openrouter_provider(model)))
     gemini_keys = _available_gemini_keys()
     if settings.GEMINI_ENABLE and gemini_keys:
         for key in _rotate_gemini_keys(gemini_keys):
@@ -220,13 +238,12 @@ async def extract_container_numbers(
 ) -> dict:
     """Extract ALL container numbers using single-shot OCR.
 
-    Tries each enabled provider in order (OpenRouter 32B first, then the
-    larger OpenRouter 235B if configured, then Gemini — alternating between
-    two keys per request to avoid 429s). If OpenRouter errors (e.g. "no valid
-    numbers") the request transparently falls back to the next provider. The
-    first provider that returns ≥1 format-valid number wins. Numbers with
-    invalid ISO 6346 check digits are auto-corrected when a near-miss valid
-    number exists.
+    Tries each enabled provider in order. With Gemini unavailable, OpenRouter
+    randomly starts with Mimo-v2.5 or Qwen3-VL-32B and falls back to
+    Qwen3-VL-235B. With Gemini available, Gemini keys are tried after
+    OpenRouter and alternate per request to avoid 429s. The first provider
+    that returns ≥1 format-valid number wins. Numbers with invalid ISO 6346
+    check digits are auto-corrected when a near-miss valid number exists.
 
     Returns:
         Dict with keys:

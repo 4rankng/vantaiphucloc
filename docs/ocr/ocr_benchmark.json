@@ -1,0 +1,215 @@
+{
+  "OOCU9217153.png": {
+    "Mimo-v2.5 (OpenRouter)": {
+      "model": "xiaomi/mimo-v2.5",
+      "success": true,
+      "exact_match": true,
+      "expected_numbers": [
+        "OOCU9217153"
+      ],
+      "latency_s": 7.5832,
+      "error": null,
+      "container_numbers": [
+        "OOCU9217153"
+      ],
+      "check_digit_valid": {
+        "OOCU9217153": true
+      },
+      "raw_response": "{\"container_numbers\": [\"OOCU9217153\"]}"
+    },
+    "Qwen3-VL-32B (OpenRouter)": {
+      "model": "qwen/qwen3-vl-32b-instruct",
+      "success": true,
+      "exact_match": false,
+      "expected_numbers": [
+        "OOCU9217153"
+      ],
+      "latency_s": 0.8565,
+      "error": null,
+      "container_numbers": [],
+      "check_digit_valid": {},
+      "raw_response": "{\"container_numbers\": [\"OOCU9217154561\"]}"
+    },
+    "Qwen3-VL-235B (OpenRouter)": {
+      "model": "qwen/qwen3-vl-235b-a22b-instruct",
+      "success": true,
+      "exact_match": true,
+      "expected_numbers": [
+        "OOCU9217153"
+      ],
+      "latency_s": 2.1086,
+      "error": null,
+      "container_numbers": [
+        "OOCU9217153"
+      ],
+      "check_digit_valid": {
+        "OOCU9217153": true
+      },
+      "raw_response": "{\"container_numbers\": [\"OOCU9217153\"]}"
+    }
+  },
+  "TGBU2406421.jpg": {
+    "Mimo-v2.5 (OpenRouter)": {
+      "model": "xiaomi/mimo-v2.5",
+      "success": true,
+      "exact_match": true,
+      "expected_numbers": [
+        "TGBU2406421"
+      ],
+      "latency_s": 22.3383,
+      "error": null,
+      "container_numbers": [
+        "TGBU2406421"
+      ],
+      "check_digit_valid": {
+        "TGBU2406421": true
+      },
+      "raw_response": "{\"container_numbers\": [\"TGBU2406421\"]}"
+    },
+    "Qwen3-VL-32B (OpenRouter)": {
+      "model": "qwen/qwen3-vl-32b-instruct",
+      "success": true,
+      "exact_match": false,
+      "expected_numbers": [
+        "TGBU2406421"
+      ],
+      "latency_s": 1.2397,
+      "error": null,
+      "container_numbers": [
+        "HBCU2406421"
+      ],
+      "check_digit_valid": {
+        "HBCU2406421": false
+      },
+      "raw_response": "{\"container_numbers\": [\"HBCU2406421\"]}"
+    },
+    "Qwen3-VL-235B (OpenRouter)": {
+      "model": "qwen/qwen3-vl-235b-a22b-instruct",
+      "success": true,
+      "exact_match": true,
+      "expected_numbers": [
+        "TGBU2406421"
+      ],
+      "latency_s": 10.1099,
+      "error": null,
+      "container_numbers": [
+        "TGBU2406421"
+      ],
+      "check_digit_valid": {
+        "TGBU2406421": true
+      },
+      "raw_response": "{\n  \"container_numbers\": [\"TGBU2406421\"]\n}"
+    }
+  },
+  "ZXJU0301057-TGBU2406421.png": {
+    "Mimo-v2.5 (OpenRouter)": {
+      "model": "xiaomi/mimo-v2.5",
+      "success": true,
+      "exact_match": false,
+      "expected_numbers": [
+        "ZXJU0301057",
+        "TGBU2406421"
+      ],
+      "latency_s": 19.0263,
+      "error": null,
+      "container_numbers": [
+        "ZXJU0301057",
+        "FGBU2406421"
+      ],
+      "check_digit_valid": {
+        "ZXJU0301057": true,
+        "FGBU2406421": false
+      },
+      "raw_response": "{\"container_numbers\": [\"ZXJU0301057\", \"FGBU2406421\"]}"
+    },
+    "Qwen3-VL-32B (OpenRouter)": {
+      "model": "qwen/qwen3-vl-32b-instruct",
+      "success": true,
+      "exact_match": true,
+      "expected_numbers": [
+        "ZXJU0301057",
+        "TGBU2406421"
+      ],
+      "latency_s": 4.0455,
+      "error": null,
+      "container_numbers": [
+        "ZXJU0301057",
+        "TGBU2406421"
+      ],
+      "check_digit_valid": {
+        "ZXJU0301057": true,
+        "TGBU2406421": true
+      },
+      "raw_response": "{\"container_numbers\": [\"ZXJU0301057\", \"TGBU2406421\"]}"
+    },
+    "Qwen3-VL-235B (OpenRouter)": {
+      "model": "qwen/qwen3-vl-235b-a22b-instruct",
+      "success": true,
+      "exact_match": true,
+      "expected_numbers": [
+        "ZXJU0301057",
+        "TGBU2406421"
+      ],
+      "latency_s": 9.7081,
+      "error": null,
+      "container_numbers": [
+        "ZXJU0301057",
+        "TGBU2406421"
+      ],
+      "check_digit_valid": {
+        "ZXJU0301057": true,
+        "TGBU2406421": true
+      },
+      "raw_response": "{\n  \"container_numbers\": [\"ZXJU0301057\", \"TGBU2406421\"]\n}"
+    }
+  },
+  "ZXJU0301057.jpg": {
+    "Mimo-v2.5 (OpenRouter)": {
+      "model": "xiaomi/mimo-v2.5",
+      "success": true,
+      "exact_match": false,
+      "expected_numbers": [
+        "ZXJU0301057"
+      ],
+      "latency_s": 10.3481,
+      "error": null,
+      "container_numbers": [],
+      "check_digit_valid": {},
+      "raw_response": "{\"container_numbers\": [\"ZXJU03010557\"]}"
+    },
+    "Qwen3-VL-32B (OpenRouter)": {
+      "model": "qwen/qwen3-vl-32b-instruct",
+      "success": true,
+      "exact_match": true,
+      "expected_numbers": [
+        "ZXJU0301057"
+      ],
+      "latency_s": 0.7751,
+      "error": null,
+      "container_numbers": [
+        "ZXJU0301057"
+      ],
+      "check_digit_valid": {
+        "ZXJU0301057": true
+      },
+      "raw_response": "{\"container_numbers\": [\"ZXJU0301057\"]}"
+    },
+    "Qwen3-VL-235B (OpenRouter)": {
+      "model": "qwen/qwen3-vl-235b-a22b-instruct",
+      "success": true,
+      "exact_match": true,
+      "expected_numbers": [
+        "ZXJU0301057"
+      ],
+      "latency_s": 1.7088,
+      "error": null,
+      "container_numbers": [
+        "ZXJU0301057"
+      ],
+      "check_digit_valid": {
+        "ZXJU0301057": true
+      },
+      "raw_response": "{\n  \"container_numbers\": [\"ZXJU0301057\"]\n}"
+    }
+  }
+}

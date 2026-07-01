@@ -1,7 +1,7 @@
 """Tests for the OCR module (single-shot container number extraction).
 
-Verifies the single-pass extraction flow (OpenRouter primary → OpenRouter
-fallback model → Gemini with round-robin key rotation) without making real
+Verifies the single-pass extraction flow (OpenRouter model chain → Gemini
+with round-robin key rotation) without making real
 API calls, plus the /dashboard/ocr-stats aggregation logic.
 """
 
@@ -19,6 +19,8 @@ from app.contexts.operations.infrastructure.ocr import (
     extract_container_numbers,
     _parse_numbers_from_response,
     _auto_correct_numbers,
+    _available_openrouter_models,
+    _openrouter_models_for_current_request,
     _available_providers,
     _available_gemini_keys,
     _rotate_gemini_keys,
@@ -434,21 +436,45 @@ async def _async_return(value):
 
 
 def test_available_providers_openrouter_enabled(monkeypatch):
-    """OpenRouter alone (Gemini off, MODEL2 same as MODEL) → single openrouter provider."""
+    """OpenRouter alone (Gemini off) uses one random primary plus 235B fallback."""
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
     monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
-    monkeypatch.setattr(ocr_mod, "OPENROUTER_MODEL", "qwen/qwen3-vl-32b-instruct")
-    monkeypatch.setattr(ocr_mod, "OPENROUTER_MODEL2", "qwen/qwen3-vl-32b-instruct")
+    monkeypatch.setattr(
+        ocr_mod,
+        "OPENROUTER_MODELS",
+        [
+            ("Mimo-v2.5", "xiaomi/mimo-v2.5"),
+            ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
+            ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
+        ],
+    )
     monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
     monkeypatch.setattr(settings, "GEMINI_API_KEY2", "")
-    assert [n for n, _ in _available_providers()] == ["openrouter"]
+    monkeypatch.setattr(
+        ocr_mod.random,
+        "choice",
+        lambda models: models[1],
+    )
+    assert _available_openrouter_models() == [
+        ("Mimo-v2.5", "xiaomi/mimo-v2.5"),
+        ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
+        ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
+    ]
+    assert _openrouter_models_for_current_request() == [
+        ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
+        ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
+    ]
+    assert [n for n, _ in _available_providers()] == [
+        "openrouter",
+        "openrouter",
+    ]
 
 
 def test_available_providers_openrouter_primary_when_all_enabled(monkeypatch):
     """With every provider on, OpenRouter is first; Gemini follows.
 
-    OpenRouter (32B + 235B fallback) → Gemini (one entry per key).
+    OpenRouter model chain → Gemini (one entry per key).
     OpenRouter leads so a failure transparently falls back to the next model.
     """
     ocr_mod._gemini_rotation_index = 0
@@ -457,9 +483,17 @@ def test_available_providers_openrouter_primary_when_all_enabled(monkeypatch):
     monkeypatch.setattr(settings, "GEMINI_API_KEY2", "k2")
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
     monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
-    monkeypatch.setattr(ocr_mod, "OPENROUTER_MODEL", "qwen/qwen3-vl-32b-instruct")
-    monkeypatch.setattr(ocr_mod, "OPENROUTER_MODEL2", "qwen/qwen3-vl-235b-a22b-instruct")
+    monkeypatch.setattr(
+        ocr_mod,
+        "OPENROUTER_MODELS",
+        [
+            ("Mimo-v2.5", "xiaomi/mimo-v2.5"),
+            ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
+            ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
+        ],
+    )
     assert [n for n, _ in _available_providers()] == [
+        "openrouter",
         "openrouter",
         "openrouter",
         "gemini",
