@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Download, Loader2, Check, AlertTriangle } from 'lucide-react'
-import { downloadImage, prefetchImageBlob, shouldPrepareImageDownload } from '@/lib/download'
+import { downloadImage, prefetchImageBlob } from '@/lib/download'
 
 interface PhotoLightboxProps {
   src: string
@@ -48,13 +48,11 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
   const gestureMovedRef = useRef(false)
   const lastTapRef = useRef(0)
   const [isDownloading, setIsDownloading] = useState(false)
-  const [isPreparingDownload, setIsPreparingDownload] = useState(false)
   const [dlStatus, setDlStatus] = useState<'idle' | 'working' | 'done' | 'error'>('idle')
   const [stageMsg, setStageMsg] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
 
   const handleDownload = useCallback(async () => {
-    if (isPreparingDownload) return
     setDlStatus('working')
     setStageMsg('① Đã bấm')
     setErrorMsg('')
@@ -75,7 +73,7 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
     } finally {
       setIsDownloading(false)
     }
-  }, [alt, isPreparingDownload, src])
+  }, [alt, src])
 
   const updateTransform = useCallback((next: Transform | ((current: Transform) => Transform)) => {
     setTransform((current) => {
@@ -102,18 +100,12 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
-  // Prefetch the image bytes on open so the "Tải về" button can invoke
-  // navigator.share() synchronously within the tap gesture (see download.ts).
+  // Warm the blob cache on open so navigator.share({files}) can run
+  // synchronously within the tap gesture on iOS (see download.ts). This is
+  // best-effort background work — the button stays tappable regardless; if the
+  // blob isn't ready yet, downloadImage falls back to sharing the URL.
   useEffect(() => {
-    let active = true
-    const shouldWait = shouldPrepareImageDownload()
-    setIsPreparingDownload(shouldWait)
-    void prefetchImageBlob(src).finally(() => {
-      if (active) setIsPreparingDownload(false)
-    })
-    return () => {
-      active = false
-    }
+    void prefetchImageBlob(src)
   }, [src])
 
   const zoomBy = useCallback((delta: number) => {
@@ -147,7 +139,13 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
     e.preventDefault()
     e.stopPropagation()
 
-    e.currentTarget.setPointerCapture(e.pointerId)
+    // iOS implicitly captures touch pointers to their target; calling
+    // setPointerCapture explicitly on a touch pointer BREAKS multi-touch
+    // (the second finger's pointer events stop firing), which kills pinch
+    // zoom. Only capture for mouse/pen, where it's needed for drag tracking.
+    if (e.pointerType !== 'touch') {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    }
     setIsInteracting(true)
     pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
@@ -286,14 +284,14 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
         <button
           type="button"
           onClick={handleDownload}
-          disabled={isDownloading || isPreparingDownload}
+          disabled={isDownloading}
           className={`flex min-h-[48px] items-center gap-2 rounded-xl px-4 text-sm font-semibold touch-manipulation transition-all duration-150 disabled:opacity-60 active:scale-95 ${dlStatus === 'error' ? 'ring-2 ring-red-400' : ''}`}
           style={{
             color: dlStatus === 'done' ? '#4ade80' : dlStatus === 'error' ? '#f87171' : 'rgba(255,255,255,0.9)',
             background: dlStatus === 'working' ? 'rgba(96,165,250,0.25)' : dlStatus === 'done' ? 'rgba(74,222,128,0.20)' : dlStatus === 'error' ? 'rgba(248,113,113,0.20)' : 'rgba(255,255,255,0.10)',
           }}
           onMouseEnter={(e) => {
-            if (isDownloading || isPreparingDownload) return
+            if (isDownloading) return
             e.currentTarget.style.color = '#fff'
             e.currentTarget.style.background = 'rgba(255,255,255,0.18)'
           }}
@@ -306,9 +304,9 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
         >
           {dlStatus === 'done' ? <Check className="h-5 w-5" />
             : dlStatus === 'error' ? <AlertTriangle className="h-5 w-5" />
-            : (dlStatus === 'working' || isDownloading || isPreparingDownload) ? <Loader2 className="h-5 w-5 animate-spin" />
+            : (dlStatus === 'working' || isDownloading) ? <Loader2 className="h-5 w-5 animate-spin" />
             : <Download className="h-5 w-5" />}
-          <span>{dlStatus === 'idle' ? (isPreparingDownload ? 'Đang chuẩn bị' : 'Tải về') : stageMsg}</span>
+          <span>{dlStatus === 'idle' ? 'Tải về' : stageMsg}</span>
         </button>
         {dlStatus === 'error' && errorMsg && (
           <div className="absolute top-[80px] left-1/2 -translate-x-1/2 z-30 max-w-[85vw] rounded-lg bg-red-900/80 px-4 py-2 text-center text-xs text-red-100 backdrop-blur-sm">

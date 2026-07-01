@@ -98,14 +98,15 @@ export async function downloadImage(url: string, fallbackName = 'anh', onStage?:
         return
       }
     } catch (err) {
-      // User dismissed the share sheet — stop. Don't fall through to the
-      // anchor download, which on iOS would just open the blob in a tab.
+      // User dismissed the share sheet — stop here.
       if (err instanceof DOMException && err.name === 'AbortError') {
         onStage?.('③ User huỷ')
         return
       }
-      onStage?.('③ Lỗi share: ' + (err instanceof Error ? `${err.name}: ${err.message}` : String(err)))
-      throw err
+      // Any other failure (e.g. NotAllowedError from a lost user gesture):
+      // fall through to the URL-share / anchor fallback rather than surfacing
+      // an error — getting the image to the user matters more than diagnostics.
+      onStage?.('③ Lỗi share file → dự phòng link')
     }
   }
 
