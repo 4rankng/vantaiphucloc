@@ -110,12 +110,12 @@ export async function downloadBookedTripTemplate(): Promise<Blob> {
 }
 
 export async function exportDoiSoatExcel(
-  clientId: number,
+  clientId: number | undefined,
   dateFrom: string,
   dateTo: string,
 ): Promise<Blob> {
   const params = new URLSearchParams()
-  params.append('client_id', String(clientId))
+  if (clientId) params.append('client_id', String(clientId))
   params.append('date_from', dateFrom)
   params.append('date_to', dateTo)
   const res = await api.get(`/booked-trips/export-doi-soat?${params.toString()}`, {

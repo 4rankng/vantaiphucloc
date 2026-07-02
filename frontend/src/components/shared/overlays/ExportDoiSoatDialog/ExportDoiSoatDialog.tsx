@@ -12,7 +12,7 @@ interface Props {
   defaultDateFrom: string
   defaultDateTo: string
   isPending: boolean
-  onConfirm: (clientId: number, dateFrom: string, dateTo: string) => void
+  onConfirm: (clientId: number | undefined, dateFrom: string, dateTo: string) => void
 }
 
 /* ── Helpers ──────────────────────────────────────────────── */
@@ -137,11 +137,11 @@ export function ExportDoiSoatDialog({ open, onClose, defaultDateFrom, defaultDat
     handleMonthChange(next.year, next.month)
   }, [period, handleMonthChange])
 
-  const canConfirm = clientId !== 'ALL' && !isPending
+  const canConfirm = Boolean(dateFrom && dateTo) && !isPending
 
   const handleConfirm = useCallback(() => {
     if (!canConfirm) return
-    onConfirm(Number(clientId), dateFrom, dateTo)
+    onConfirm(clientId === 'ALL' ? undefined : Number(clientId), dateFrom, dateTo)
   }, [canConfirm, clientId, dateFrom, dateTo, onConfirm])
 
   return (
@@ -177,7 +177,7 @@ export function ExportDoiSoatDialog({ open, onClose, defaultDateFrom, defaultDat
               placeholder="Chọn chủ hàng"
               value={clientId}
               options={[
-                { value: 'ALL', label: 'Chọn chủ hàng...' },
+                { value: 'ALL', label: 'Tất cả chủ hàng' },
                 ...clients.map(c => ({
                   value: String(c.id),
                   label: c.code ? `${c.code} — ${c.name}` : c.name,

@@ -181,11 +181,11 @@ async def generate_booked_trips_excel(
 
 async def generate_doi_soat_excel(
     db: AsyncSession,
-    client_id: int,
+    client_id: int | None,
     date_from: str,
     date_to: str,
 ) -> tuple[bytes, str]:
-    """Generate reconciliation (đối soát) Excel for a specific client.
+    """Generate reconciliation (đối soát) Excel.
 
     Returns (excel_bytes, client_name) tuple.
 
@@ -211,11 +211,14 @@ async def generate_doi_soat_excel(
     STATUS_MATCHED = "Đã ghép"
     STATUS_UNMATCHED = "Chưa ghép"
 
-    # -- 1. Load client --
-    p_result = await db.execute(select(Client).where(Client.id == client_id))
-    client = p_result.scalar_one_or_none()
-    client_name = client.name if client else f"Client #{client_id}"
-    client_code = (client.code or client_name) if client else f"Client #{client_id}"
+    # -- 1. Load client label --
+    client_name = "Tất cả chủ hàng"
+    client_code = client_name
+    if client_id is not None:
+        p_result = await db.execute(select(Client).where(Client.id == client_id))
+        client = p_result.scalar_one_or_none()
+        client_name = client.name if client else f"Client #{client_id}"
+        client_code = (client.code or client_name) if client else f"Client #{client_id}"
 
     from datetime import date as date_type
 
@@ -223,27 +226,23 @@ async def generate_doi_soat_excel(
     dt = date_type.fromisoformat(date_to)
 
     # -- 2. Load BookedTrip (customer's ship file rows) --
-    bt_query = (
-        select(BookedTrip)
-        .where(
-            BookedTrip.client_id == client_id,
-            BookedTrip.trip_date >= df,
-            BookedTrip.trip_date <= dt,
-        )
-        .order_by(BookedTrip.trip_date, BookedTrip.id)
+    bt_query = select(BookedTrip).where(
+        BookedTrip.trip_date >= df,
+        BookedTrip.trip_date <= dt,
     )
+    if client_id is not None:
+        bt_query = bt_query.where(BookedTrip.client_id == client_id)
+    bt_query = bt_query.order_by(BookedTrip.trip_date, BookedTrip.id)
     booked_trips = (await db.execute(bt_query)).scalars().all()
 
     # -- 3. Load DeliveredTrip (driver's actual work) --
-    dt_query = (
-        select(DeliveredTrip)
-        .where(
-            DeliveredTrip.client_id == client_id,
-            DeliveredTrip.trip_date >= df,
-            DeliveredTrip.trip_date <= dt,
-        )
-        .order_by(DeliveredTrip.trip_date, DeliveredTrip.id)
+    dt_query = select(DeliveredTrip).where(
+        DeliveredTrip.trip_date >= df,
+        DeliveredTrip.trip_date <= dt,
     )
+    if client_id is not None:
+        dt_query = dt_query.where(DeliveredTrip.client_id == client_id)
+    dt_query = dt_query.order_by(DeliveredTrip.trip_date, DeliveredTrip.id)
     delivered_trips = (await db.execute(dt_query)).scalars().all()
 
     # -- 4. Bucket by normalized container number (preserve every trip) --
@@ -251,22 +250,22 @@ async def generate_doi_soat_excel(
     # several BookedTrips or DeliveredTrips, each trip keeps its own row so
     # duplicate trips stay visible in the reconciliation sheet (the
     # duplicate-containers endpoint exists to flag exactly these cases).
-    bt_by_cont: dict[str, list[BookedTrip]] = {}
+    bt_by_cont: dict[tuple[int | None, str], list[BookedTrip]] = {}
     bt_no_cont: list[BookedTrip] = []
     for bt in booked_trips:
         if bt.cont_number:
             bt_by_cont.setdefault(
-                normalize_container_number(bt.cont_number), []
+                (bt.client_id, normalize_container_number(bt.cont_number)), []
             ).append(bt)
         else:
             bt_no_cont.append(bt)
 
-    dt_by_cont: dict[str, list[DeliveredTrip]] = {}
+    dt_by_cont: dict[tuple[int | None, str], list[DeliveredTrip]] = {}
     dt_no_cont: list[DeliveredTrip] = []
     for trip in delivered_trips:
         if trip.cont_number:
             dt_by_cont.setdefault(
-                normalize_container_number(trip.cont_number), []
+                (trip.client_id, normalize_container_number(trip.cont_number)), []
             ).append(trip)
         else:
             dt_no_cont.append(trip)
@@ -279,6 +278,7 @@ async def generate_doi_soat_excel(
         fb = fallback
         return {
             "trip_date": source.trip_date or (fb.trip_date if fb else None),
+            "client_id": source.client_id or (fb.client_id if fb else None),
             "cont_number": source.cont_number or (fb.cont_number if fb else None) or "",
             "cont_type": source.cont_type or (fb.cont_type if fb else None),
             "vehicle_plate": source.vehicle_plate
@@ -326,7 +326,18 @@ async def generate_doi_soat_excel(
     # Sort by trip_date then container number for stable ordering
     deduped_rows.sort(key=lambda r: (r["trip_date"] or df, r["cont_number"] or ""))
 
-    # -- 6. Load location names --
+    # -- 6. Load lookup names --
+    client_ids = {row["client_id"] for row in deduped_rows if row["client_id"]}
+    client_code_by_id: dict[int, str] = {}
+    if client_ids:
+        client_result = await db.execute(
+            select(Client).where(Client.id.in_(client_ids))
+        )
+        client_code_by_id = {
+            c.id: (c.code or c.name or f"Client #{c.id}")
+            for c in client_result.scalars().all()
+        }
+
     loc_ids: set[int] = set()
     for row in deduped_rows:
         if row["pickup_location_id"]:
@@ -477,7 +488,7 @@ async def generate_doi_soat_excel(
             [
                 stt,
                 trip_date_str,
-                client_code,
+                client_code_by_id.get(row["client_id"], client_code),
                 row["cont_number"],
                 f20,
                 f40,

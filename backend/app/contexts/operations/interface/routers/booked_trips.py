@@ -258,7 +258,7 @@ async def get_distinct_trip_partners(
 
 @router.get("/booked-trips/export-doi-soat")
 async def export_doi_soat_excel(
-    client_id: int = Query(..., description="Partner (khách hàng) ID"),
+    client_id: int | None = Query(None, description="Partner (khách hàng) ID"),
     date_from: date = Query(..., description="From date (YYYY-MM-DD)"),
     date_to: date = Query(..., description="To date (YYYY-MM-DD)"),
     current_user: User = Depends(require_permission("create", "BookedTrip")),

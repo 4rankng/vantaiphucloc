@@ -146,7 +146,7 @@ export function useCommitDriverReconciliation() {
 
 export function useExportDoiSoatExcel() {
   return useMutation({
-    mutationFn: (params: { clientId: number; dateFrom: string; dateTo: string }) =>
+    mutationFn: (params: { clientId?: number; dateFrom: string; dateTo: string }) =>
       apiClient.exportDoiSoatExcel(params.clientId, params.dateFrom, params.dateTo),
   })
 }

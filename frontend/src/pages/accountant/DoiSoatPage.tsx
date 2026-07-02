@@ -175,16 +175,16 @@ export function DoiSoatPage() {
   }, [])
 
   const handleExportConfirm = useCallback(
-    (clientId: number, from: string, to: string) => {
+    (clientId: number | undefined, from: string, to: string) => {
       exportDoiSoat.mutate(
         { clientId, dateFrom: from, dateTo: to },
         {
           onSuccess: (blob) => {
-            const client = clients.find(c => c.id === clientId)
+            const client = clientId ? clients.find(c => c.id === clientId) : undefined
             const url = URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
-            a.download = `doi-soat-${client?.code ?? 'export'}-${from}-${to}.xlsx`
+            a.download = `doi-soat-${client?.code ?? 'tat-ca'}-${from}-${to}.xlsx`
             a.click()
             URL.revokeObjectURL(url)
             setShowExportDialog(false)
