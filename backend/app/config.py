@@ -50,13 +50,12 @@ class Settings(BaseSettings):
     # AI providers. Each provider is OFF by default — both the *_ENABLE flag
     # AND a non-empty API key must be set for the provider to be used. This
     # forces an explicit opt-in so deployments don't accidentally hit paid
-    # APIs on boot. For OCR, when Gemini is disabled OpenRouter randomly
-    # starts with Mimo-v2.5 or Qwen3-VL-32B, then falls back to
-    # Qwen3-VL-235B via the same API key. When Gemini is available, it remains
-    # the last-resort fallback after OpenRouter. Two
-    # Gemini keys are supported so OCR can alternate between them per request
-    # (round-robin) and avoid 429 rate limits; if either key 429s the other
-    # is tried before falling through further.
+    # APIs on boot. For OCR, OpenRouter tries its models in sequence
+    # (Qwen3-VL-32B first, then Qwen3-VL-235B) via the same API key. When
+    # Gemini is available, it remains the last-resort fallback after the
+    # OpenRouter chain. Two Gemini keys are supported so OCR can alternate
+    # between them per request (round-robin) and avoid 429 rate limits; if
+    # either key 429s the other is tried before falling through further.
     GEMINI_API_KEY: str = ""
     GEMINI_API_KEY2: str = ""
     GEMINI_ENABLE: bool = False
@@ -116,13 +115,10 @@ settings = Settings()
 # the single source of truth — import from here, don't redefine per module.
 GEMINI_MODELS: list[str] = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
-# OpenRouter OCR models. First two are the Gemini-disabled random primary
-# pool; the third is the large fallback. Code-only — not configurable via env
-# / .env.
+# OpenRouter OCR models, tried in sequence (32B first, then the large 235B
+# fallback) on every request. Code-only — not configurable via env / .env.
 OPENROUTER_MODELS: list[tuple[str, str]] = [
-    ("Mimo-v2.5", "xiaomi/mimo-v2.5"),
     ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
     ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
 ]
-OPENROUTER_MODEL: str = OPENROUTER_MODELS[0][1]
-OPENROUTER_MODEL2: str = OPENROUTER_MODELS[1][1]
+OPENROUTER_MODEL: str = OPENROUTER_MODELS[0][1]  # default for direct callers

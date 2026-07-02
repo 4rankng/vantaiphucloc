@@ -20,7 +20,6 @@ from app.contexts.operations.infrastructure.ocr import (
     _parse_numbers_from_response,
     _auto_correct_numbers,
     _available_openrouter_models,
-    _openrouter_models_for_current_request,
     _available_providers,
     _available_gemini_keys,
     _rotate_gemini_keys,
@@ -436,14 +435,13 @@ async def _async_return(value):
 
 
 def test_available_providers_openrouter_enabled(monkeypatch):
-    """OpenRouter alone (Gemini off) uses one random primary plus 235B fallback."""
+    """OpenRouter alone (Gemini off) tries models in sequence: 32B then 235B."""
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
     monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
     monkeypatch.setattr(
         ocr_mod,
         "OPENROUTER_MODELS",
         [
-            ("Mimo-v2.5", "xiaomi/mimo-v2.5"),
             ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
             ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
         ],
@@ -451,17 +449,7 @@ def test_available_providers_openrouter_enabled(monkeypatch):
     monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
     monkeypatch.setattr(settings, "GEMINI_API_KEY2", "")
-    monkeypatch.setattr(
-        ocr_mod.random,
-        "choice",
-        lambda models: models[1],
-    )
     assert _available_openrouter_models() == [
-        ("Mimo-v2.5", "xiaomi/mimo-v2.5"),
-        ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
-        ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
-    ]
-    assert _openrouter_models_for_current_request() == [
         ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
         ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
     ]
@@ -487,13 +475,11 @@ def test_available_providers_openrouter_primary_when_all_enabled(monkeypatch):
         ocr_mod,
         "OPENROUTER_MODELS",
         [
-            ("Mimo-v2.5", "xiaomi/mimo-v2.5"),
             ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
             ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
         ],
     )
     assert [n for n, _ in _available_providers()] == [
-        "openrouter",
         "openrouter",
         "openrouter",
         "gemini",
