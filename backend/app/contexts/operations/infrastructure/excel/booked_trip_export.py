@@ -352,8 +352,8 @@ async def generate_doi_soat_excel(
     # -- 7. Build Excel workbook --
     wb = openpyxl.Workbook()
     ws = wb.active
-    month_label = df.strftime("%m/%Y")
-    ws.title = f"SL T{df.month}.{str(df.year)[2:]}"
+    month_label = dt.strftime("%m/%Y")
+    ws.title = f"SL T{dt.month}.{str(dt.year)[2:]}"
 
     num_cols = 17  # A-Q
     last_col = get_column_letter(num_cols)

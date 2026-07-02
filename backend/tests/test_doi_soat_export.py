@@ -122,6 +122,41 @@ async def test_doi_soat_export_without_client_includes_all_clients(db_session):
 
 
 @pytest.mark.asyncio
+async def test_doi_soat_export_cross_month_period_uses_end_month_label(db_session):
+    client = Client(id=31, code="KH07", name="Khach Hang Thang 7", is_active=True)
+    pickup = Location(id=31, name="Cang A", is_active=True)
+    dropoff = Location(id=32, name="Kho B", is_active=True)
+    db_session.add_all([client, pickup, dropoff])
+
+    trip = DeliveredTrip(
+        id=401,
+        trip_date=date(2026, 7, 1),
+        client_id=31,
+        pickup_location_id=31,
+        dropoff_location_id=32,
+        work_type="NANG HA",
+        cont_number="JULY1234567",
+        cont_type="F20",
+        vehicle_plate="15C-77777",
+    )
+    db_session.add(trip)
+    await db_session.flush()
+
+    content, _client_name = await generate_doi_soat_excel(
+        db_session,
+        client_id=None,
+        date_from="2026-06-26",
+        date_to="2026-07-25",
+    )
+
+    wb = openpyxl.load_workbook(BytesIO(content), data_only=False)
+    assert wb.sheetnames == ["SL T7.26"]
+    ws = wb.active
+    assert ws["A5"].value == "BẢNG KÊ QUYẾT TOÁN CƯỚC VẬN CHUYỂN THÁNG 07/2026"
+    assert ws["A6"].value == "Từ ngày 26/06/2026 đến ngày 25/07/2026"
+
+
+@pytest.mark.asyncio
 async def test_doi_soat_export_all_clients_does_not_cross_match_same_container(
     db_session,
 ):
