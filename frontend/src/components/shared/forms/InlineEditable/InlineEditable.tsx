@@ -116,7 +116,7 @@ export function InlineEditable({
 
   if (editing) {
     return (
-      <div className={`flex flex-col gap-1 ${className}`}>
+      <div className={`flex w-full min-w-0 flex-col gap-1 ${className}`}>
         <div className="flex items-center gap-1.5 w-full">
           <input
             ref={inputRef}
@@ -167,13 +167,15 @@ export function InlineEditable({
   return (
     <button
       onClick={() => setEditing(true)}
-      className={`group inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 -mx-1.5 transition-colors text-left ${className}`}
+      className={`group inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md px-1.5 py-0.5 -mx-1.5 transition-colors text-left ${className}`}
       style={{ background: 'transparent' }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
       title={editLabel ?? 'Nhấn để sửa'}
     >
-      {display}
+      <span className="min-w-0 truncate">
+        {display}
+      </span>
       <span
         className="opacity-0 group-hover:opacity-100 transition-opacity"
         style={{ color: 'var(--theme-text-muted)' }}

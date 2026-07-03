@@ -276,6 +276,7 @@ async def create_delivered_trip_endpoint(
                 work_type=body.work_type,
                 cont_number=body.cont_number,
                 cont_type=body.cont_type,
+                original_cont_number=body.original_cont_number,
                 cont_photo_url=stored_photo.url
                 if stored_photo is not None
                 else body.cont_photo_url,

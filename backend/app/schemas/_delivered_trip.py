@@ -51,6 +51,11 @@ class DeliveredTripCreate(BaseModel):
     work_type: str = ""
     cont_number: str | None = None
     cont_type: str | None = None
+    # Raw OCR container string as read by the engine, BEFORE the driver or
+    # ISO-6346 auto-correct edits it. Drives the OCR-accuracy metric by being
+    # compared against the matched BookedTrip.cont_number. Only the driver
+    # submit flow supplies this; backend never derives it from cont_number.
+    original_cont_number: str | None = None
     cont_photo_url: str | None = None
     image_data: str | None = None
     trip_date: date | None = None

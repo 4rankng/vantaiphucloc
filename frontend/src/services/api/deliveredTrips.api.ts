@@ -38,6 +38,8 @@ interface DeliveredTripFilters {
 export interface DeliveredTripCreatePayload {
   contNumber?: string | null
   contType?: string | null
+  /** Raw OCR value before correction; serialized to original_cont_number. */
+  originalContNumber?: string | null
   contPhotoUrl?: string | null
   photoDataUrl?: string | null
   clientId: number

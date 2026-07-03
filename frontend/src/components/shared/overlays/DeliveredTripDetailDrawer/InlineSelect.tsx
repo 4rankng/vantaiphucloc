@@ -31,12 +31,12 @@ export function InlineSelect({
     <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setSearch('') }}>
       <PopoverTrigger asChild>
         <button
-          className="group inline-flex items-center justify-end gap-1.5 rounded-md px-2 py-1 -mx-2 text-right text-[13px] transition-colors max-w-full font-medium"
+          className="group inline-flex min-w-0 max-w-full items-center justify-end gap-1.5 rounded-md px-2 py-1 -mx-2 text-right text-[13px] transition-colors font-medium"
           style={{ background: 'transparent', color: displayValue ? 'var(--ink)' : 'var(--ink-4)' }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)' }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
         >
-          <span className={`truncate ${!displayValue ? 'italic font-normal' : ''}`}>{displayValue ?? 'chưa chọn'}</span>
+          <span className={`min-w-0 truncate ${!displayValue ? 'italic font-normal' : ''}`}>{displayValue ?? 'chưa chọn'}</span>
           <svg className="shrink-0 opacity-40" width="12" height="12" viewBox="0 0 10 10">
             <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>

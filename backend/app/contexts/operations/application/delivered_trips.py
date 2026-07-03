@@ -203,13 +203,13 @@ class CreateDeliveredTrip:
             work_type=work_type,
             cont_number=data.cont_number,
             cont_type=data.cont_type,
+            original_cont_number=data.original_cont_number,
             cont_photo_url=data.cont_photo_url,
             cont_photo_hash=data.cont_photo_hash,
             revenue=estimated_revenue,
             driver_salary=estimated_salary,
             trip_date=data.trip_date if data.trip_date else date.today(),
             original_trip_date=data.trip_date if data.trip_date else date.today(),
-            original_cont_number=data.cont_number,
             note=data.note,
         )
 
@@ -415,6 +415,7 @@ class BatchCreateDeliveredTrips:
                             work_type=work_type,
                             cont_number=item.cont_number,
                             cont_type=item.cont_type,
+                            original_cont_number=item.original_cont_number,
                             revenue=revenue_map.get(i, 0),
                             driver_salary=salary_map.get(i, 0),
                             trip_date=item.trip_date
@@ -423,7 +424,6 @@ class BatchCreateDeliveredTrips:
                             original_trip_date=item.trip_date
                             if item.trip_date
                             else date.today(),
-                            original_cont_number=item.cont_number,
                             note=item.note,
                         )
                         saved = await self.repo.add(w)

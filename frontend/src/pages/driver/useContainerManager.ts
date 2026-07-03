@@ -15,6 +15,12 @@ import { CONT_TYPES } from '@/data/domain'
  */
 export interface ContainerForm {
   containerNumber: string
+  /** Raw OCR string captured the instant this row was created from a scan.
+   *  Immutable thereafter — every later mutation (ISO auto-correct, manual
+   *  edit, suggestion-apply) only rewrites `containerNumber`, never this — so
+   *  it survives as the pre-correction value submitted as original_cont_number
+   *  for the OCR-accuracy metric. Undefined for manually-entered rows. */
+  rawOcrNumber?: string
   contType: ContType | null
   workType: WorkType | null
   photoTaken: boolean
@@ -162,6 +168,8 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
             const scanPhoto = prev[idx]?.photoDataUrl
             const newContainers: ContainerForm[] = newNumbers.map((n, ni) => ({
               containerNumber: n,
+              // Freeze the raw OCR value per row BEFORE any correction runs.
+              rawOcrNumber: n,
               contType: currentContType,
               workType: currentWorkType,
               photoTaken: ni === 0 && !!scanPhoto,

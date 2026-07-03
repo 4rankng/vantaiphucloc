@@ -267,6 +267,9 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
             contNumber: contNumber || null,
             contType: cont.contType ?? null,
             workType: cont.workType ?? null,
+            // rawOcrNumber is frozen at scan time and untouched by every
+            // correction; submit it as the pre-edit snapshot for OCR accuracy.
+            originalContNumber: cont.rawOcrNumber ?? null,
             clientId: Number(clientId),
             pickupLocationId: pickupId,
             dropoffLocationId: dropoffId,
