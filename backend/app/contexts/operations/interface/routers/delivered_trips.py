@@ -262,7 +262,9 @@ async def create_delivered_trip_endpoint(
     stored_photo = None
     try:
         if body.image_data:
-            stored_photo = save_base64_photo(f"data:image/jpeg;base64,{body.image_data}")
+            stored_photo = save_base64_photo(
+                f"data:image/jpeg;base64,{body.image_data}"
+            )
 
         w = await use_case(
             DeliveredTripCreateInput(

@@ -1,6 +1,6 @@
 # Fix OCR accuracy metric — capture raw OCR value before correction
 
-**Status:** PLANNING — awaiting approval
+**Status:** DONE — implemented, verified (4 new tests + 57 shared-contract tests green), code-reviewed (DONE, no Critical/High; M1 doc comment applied). Selection-bias caveat recorded below. Awaiting user commit decision.
 **Branch:** main (edits directly, per [[feedback_no_worktree]])
 **Origin:** `ck:predict` verdict CAUTION → 5 recommendations; user confirmed import-path treatment = NULL.
 

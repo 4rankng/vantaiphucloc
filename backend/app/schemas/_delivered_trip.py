@@ -71,6 +71,10 @@ class DeliveredTripCreate(BaseModel):
 
 
 class DeliveredTripUpdate(BaseModel):
+    # original_cont_number is INTENTIONALLY absent: it is a write-once raw-OCR
+    # snapshot captured at create time and must never be overwritten by edits
+    # (the OCR-accuracy metric compares it against the matched BookedTrip). Do
+    # not add it here without also re-deriving the metric semantics.
     client_id: int | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
