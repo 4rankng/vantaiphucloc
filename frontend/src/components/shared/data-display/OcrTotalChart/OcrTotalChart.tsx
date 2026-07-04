@@ -5,14 +5,15 @@ import { OcrViewToggle, type ViewMode } from '@/components/shared/data-display/O
 import { useOcrStats } from '@/hooks/queries/ocr-stats'
 import {
   buildDailyLineData,
+  buildHourlyLineData,
   buildMonthlyBarData,
   hasOcrData,
 } from '@/lib/ocr-analytics'
 
 interface OcrTotalChartProps {
-  /** Window for the "day" view; the "month" view always uses 365 days. */
+  /** Window for the "day" view; hour uses today and month uses 365 days. */
   days?: number
-  /** Show the day/month segmented toggle. Hidden on compact dashboard tiles. */
+  /** Show the hour/day/month dropdown. Hidden on compact dashboard tiles. */
   showToggle?: boolean
   className?: string
   title?: string
@@ -32,10 +33,12 @@ export function OcrTotalChart({
   title = 'Tổng lượt OCR',
 }: OcrTotalChartProps) {
   const [view, setView] = useState<ViewMode>('day')
+  const isHour = showToggle && view === 'hour'
   const isMonth = showToggle && view === 'month'
-  const effectiveDays = isMonth ? 365 : days
-  const { data: stats, isLoading } = useOcrStats(effectiveDays)
+  const effectiveDays = isMonth ? 365 : isHour ? 2 : days
+  const { data: stats, isLoading } = useOcrStats(effectiveDays, isHour)
 
+  const hourlyData = useMemo(() => buildHourlyLineData(stats?.hourly ?? []), [stats])
   const dailyData = useMemo(() => buildDailyLineData(stats?.daily ?? []), [stats])
   const monthlyData = useMemo(() => buildMonthlyBarData(stats?.monthly ?? []), [stats])
 
@@ -75,7 +78,7 @@ export function OcrTotalChart({
         />
       ) : (
         <LineChartWidget
-          data={dailyData}
+          data={isHour ? hourlyData : dailyData}
           height={240}
           options={{
             plugins: {

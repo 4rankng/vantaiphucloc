@@ -2,11 +2,11 @@ import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { queryKeys } from '../query-keys'
 
-export function useOcrStats(days = 30) {
+export function useOcrStats(days = 30, includeHourly = false) {
   return useQuery({
-    queryKey: queryKeys.ocrStats(days),
+    queryKey: queryKeys.ocrStats(days, includeHourly),
     queryFn: async () => {
-      const res = await apiClient.getOcrStats(days)
+      const res = await apiClient.getOcrStats(days, includeHourly)
       return res.success ? res.data : null
     },
     // Admin analytics; a 60-second stale window is plenty.

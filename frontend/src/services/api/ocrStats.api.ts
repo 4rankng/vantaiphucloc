@@ -22,6 +22,17 @@ export interface OcrDailyPoint {
   latencyP95Ms: number | null
 }
 
+export interface OcrHourlyPoint {
+  hour: string // YYYY-MM-DDTHH:00:00Z
+  total: number
+  success: number
+  failed: number
+  /** Average latency in milliseconds; null when no samples in this hour. */
+  latencyAvgMs: number | null
+  /** 95th-percentile latency in milliseconds; null when no samples. */
+  latencyP95Ms: number | null
+}
+
 export interface OcrMonthlyPoint {
   month: string // YYYY-MM
   total: number
@@ -57,6 +68,15 @@ export interface OcrDriverDailyPoint {
   latencyP95Ms: number | null
 }
 
+export interface OcrDriverHourlyPoint {
+  hour: string // YYYY-MM-DDTHH:00:00Z
+  requests: number
+  success: number
+  failed: number
+  latencyAvgMs: number | null
+  latencyP95Ms: number | null
+}
+
 export interface OcrDriverMonthlyPoint {
   month: string // YYYY-MM
   requests: number
@@ -66,6 +86,7 @@ export interface OcrDriverMonthlyPoint {
 }
 
 export interface OcrDriverExperience {
+  hourly: OcrDriverHourlyPoint[]
   daily: OcrDriverDailyPoint[]
   monthly: OcrDriverMonthlyPoint[]
   totals: {
@@ -107,6 +128,7 @@ export interface OcrAccuracy {
 export interface OcrStats {
   days: number
   endDate: string
+  hourly: OcrHourlyPoint[]
   daily: OcrDailyPoint[]
   monthly: OcrMonthlyPoint[]
   providerErrors: OcrErrorBucket[]
@@ -123,9 +145,12 @@ export interface OcrStats {
   accuracy: OcrAccuracy
 }
 
-export function getOcrStats(days = 30): Promise<ApiResponse<OcrStats>> {
+export function getOcrStats(
+  days = 30,
+  includeHourly = false,
+): Promise<ApiResponse<OcrStats>> {
   return safeRequest(
-    () => api.get('/dashboard/ocr-stats', { params: { days } }),
+    () => api.get('/dashboard/ocr-stats', { params: { days, include_hourly: includeHourly } }),
     (res) => toCamel<OcrStats>(res.data),
   )
 }

@@ -5,6 +5,7 @@ import { OcrViewToggle, type ViewMode } from '@/components/shared/data-display/O
 import { useOcrStats } from '@/hooks/queries/ocr-stats'
 import {
   buildDailyDriverExperienceData,
+  buildHourlyDriverExperienceData,
   buildMonthlyDriverExperienceData,
   driverSuccess,
   driverTotal,
@@ -36,32 +37,39 @@ export function OcrDriverChart({
   title = 'Trải nghiệm tài xế',
 }: OcrDriverChartProps) {
   const [view, setView] = useState<ViewMode>('day')
+  const isHour = showToggle && view === 'hour'
   const isMonth = showToggle && view === 'month'
-  const effectiveDays = isMonth ? 365 : days
-  const { data: stats, isLoading } = useOcrStats(effectiveDays)
+  const effectiveDays = isMonth ? 365 : isHour ? 2 : days
+  const { data: stats, isLoading } = useOcrStats(effectiveDays, isHour)
 
+  const driverHourly = stats?.driverExperience.hourly ?? []
   const driverDaily = stats?.driverExperience.daily ?? []
   const driverMonthly = stats?.driverExperience.monthly ?? []
+  const hourlyData = useMemo(
+    () => buildHourlyDriverExperienceData(driverHourly),
+    [driverHourly],
+  )
   const dailyData = useMemo(() => buildDailyDriverExperienceData(driverDaily), [driverDaily])
   const monthlyData = useMemo(
     () => buildMonthlyDriverExperienceData(driverMonthly),
     [driverMonthly],
   )
 
-  const total = driverTotal(stats)
-  const successPct = stats ? successRate(driverTotal(stats), driverSuccess(stats)) : 0
-  const baseSubtitle = isMonth
-    ? 'Lượt tải ảnh và độ trễ cảm nhận theo tháng'
-    : `Lượt tải ảnh và độ trễ cảm nhận · ${effectiveDays} ngày gần nhất`
+  const hourlyTotal = driverHourly.reduce((sum, point) => sum + point.requests, 0)
+  const hourlySuccess = driverHourly.reduce((sum, point) => sum + point.success, 0)
+  const total = isHour ? hourlyTotal : driverTotal(stats)
+  const successCount = isHour ? hourlySuccess : driverSuccess(stats)
+  const successPct = stats ? successRate(total, successCount) : 0
+  const baseSubtitle = isHour ? '48 giờ' : isMonth ? '12 tháng' : `${effectiveDays} ngày`
   const latencySubtitle = hasDriverLatencyData(stats)
     ? ` · TB ${formatLatencyMs(stats?.driverExperience.totals.latencyAvgMs ?? null)} · p95 ${formatLatencyMs(stats?.driverExperience.totals.latencyP95Ms ?? null)}`
     : ''
   const subtitle = hasDriverData(stats)
-    ? `${baseSubtitle} · ${total.toLocaleString('vi-VN')} lượt · thành công ${successPct}%${latencySubtitle}`
-    : baseSubtitle
+    ? `${baseSubtitle} · ${total.toLocaleString('vi-VN')} lượt · đạt ${successPct}%${latencySubtitle}`
+    : `${baseSubtitle} · Chưa có dữ liệu`
 
   const actions = showToggle ? <OcrViewToggle value={view} onChange={setView} /> : undefined
-  const chartData = isMonth ? monthlyData : dailyData
+  const chartData = isHour ? hourlyData : isMonth ? monthlyData : dailyData
 
   return (
     <ChartCard
@@ -110,6 +118,11 @@ export function OcrDriverChart({
             scales: {
               x: {
                 stacked: true,
+                ticks: {
+                  autoSkip: true,
+                  maxRotation: 0,
+                  maxTicksLimit: isHour ? 8 : isMonth ? 12 : 7,
+                },
               },
               y: {
                 stacked: true,

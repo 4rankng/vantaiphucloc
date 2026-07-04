@@ -24,11 +24,11 @@ export function ChartCard({ title, subtitle, actions, children, loading, classNa
         border: '1px solid var(--line)',
       }}
     >
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="min-w-0">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
           {/* typo-h1: 17px / 700 / display font */}
           <p
-            className="typo-h1 truncate"
+            className="typo-h1 leading-tight"
             style={{ letterSpacing: '-0.02em' }}
           >
             {title}
@@ -37,7 +37,7 @@ export function ChartCard({ title, subtitle, actions, children, loading, classNa
             <p className="typo-meta mt-0.5">{subtitle}</p>
           )}
         </div>
-        {actions && <div className="shrink-0">{actions}</div>}
+        {actions && <div className="w-full shrink-0 sm:w-auto">{actions}</div>}
       </div>
 
       {loading ? (

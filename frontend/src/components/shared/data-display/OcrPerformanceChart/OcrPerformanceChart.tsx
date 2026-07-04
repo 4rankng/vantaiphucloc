@@ -5,6 +5,7 @@ import { OcrViewToggle, type ViewMode } from '@/components/shared/data-display/O
 import { useOcrStats } from '@/hooks/queries/ocr-stats'
 import {
   buildDailyOcrPerformanceData,
+  buildHourlyOcrPerformanceData,
   buildMonthlyOcrPerformanceData,
   driverFailedTotal,
   driverTotal,
@@ -29,10 +30,15 @@ export function OcrPerformanceChart({
   title = 'Hiệu suất OCR',
 }: OcrPerformanceChartProps) {
   const [view, setView] = useState<ViewMode>('day')
+  const isHour = showToggle && view === 'hour'
   const isMonth = showToggle && view === 'month'
-  const effectiveDays = isMonth ? 365 : days
-  const { data: stats, isLoading } = useOcrStats(effectiveDays)
+  const effectiveDays = isMonth ? 365 : isHour ? 2 : days
+  const { data: stats, isLoading } = useOcrStats(effectiveDays, isHour)
 
+  const hourlyData = useMemo(
+    () => buildHourlyOcrPerformanceData(stats?.hourly ?? []),
+    [stats],
+  )
   const dailyData = useMemo(
     () => buildDailyOcrPerformanceData(stats?.daily ?? []),
     [stats],
@@ -42,20 +48,21 @@ export function OcrPerformanceChart({
     [stats],
   )
 
-  const total = grandTotal(stats)
-  const successPct = stats ? successRate(stats.totals.total, stats.totals.success) : 0
-  const baseSubtitle = isMonth
-    ? 'Số lượt OCR và độ trễ trung bình theo tháng'
-    : `Số lượt OCR và độ trễ · ${effectiveDays} ngày gần nhất`
+  const hourlyTotal = stats?.hourly.reduce((sum, point) => sum + point.total, 0) ?? 0
+  const hourlySuccess = stats?.hourly.reduce((sum, point) => sum + point.success, 0) ?? 0
+  const total = isHour ? hourlyTotal : grandTotal(stats)
+  const successCount = isHour ? hourlySuccess : stats?.totals.success ?? 0
+  const successPct = stats ? successRate(total, successCount) : 0
+  const baseSubtitle = isHour ? '48 giờ' : isMonth ? '12 tháng' : `${effectiveDays} ngày`
   const latencySubtitle = hasLatencyData(stats)
     ? ` · TB ${formatLatencyMs(stats?.totals.latencyAvgMs ?? null)} · p95 ${formatLatencyMs(stats?.totals.latencyP95Ms ?? null)}`
     : ''
   const subtitle = hasOcrData(stats)
-    ? `${baseSubtitle} · ${total.toLocaleString('vi-VN')} lượt · thành công ${successPct}%${latencySubtitle}`
-    : baseSubtitle
+    ? `${baseSubtitle} · ${total.toLocaleString('vi-VN')} lượt · đạt ${successPct}%${latencySubtitle}`
+    : `${baseSubtitle} · Chưa có dữ liệu`
 
   const actions = showToggle ? <OcrViewToggle value={view} onChange={setView} /> : undefined
-  const chartData = isMonth ? monthlyData : dailyData
+  const chartData = isHour ? hourlyData : isMonth ? monthlyData : dailyData
   const providerErrors = stats?.providerErrors ?? []
   const topErrors = providerErrors.slice(0, 5)
   const driverFailed = driverFailedTotal(stats)
@@ -108,6 +115,11 @@ export function OcrPerformanceChart({
             scales: {
               x: {
                 stacked: true,
+                ticks: {
+                  autoSkip: true,
+                  maxRotation: 0,
+                  maxTicksLimit: isHour ? 8 : isMonth ? 12 : 7,
+                },
               },
               y: {
                 stacked: true,

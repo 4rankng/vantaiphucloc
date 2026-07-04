@@ -3,7 +3,9 @@ import type {
   OcrAccuracyDailyPoint,
   OcrDailyPoint,
   OcrDriverDailyPoint,
+  OcrDriverHourlyPoint,
   OcrDriverMonthlyPoint,
+  OcrHourlyPoint,
   OcrMonthlyPoint,
   OcrStats,
 } from '@/services/api/ocrStats.api'
@@ -30,6 +32,10 @@ const TOTAL_LABEL = 'Tổng số lượt OCR'
 const SUCCESS_LABEL = 'Thành công'
 const FAILED_LABEL = 'Thất bại'
 const LATENCY_P95_LABEL = 'p95'
+
+function hourLabel(hour: string): string {
+  return `${hour.slice(5, 10)} ${hour.slice(11, 16)}`
+}
 
 /** One filled line dataset sharing the OCR chart's gradient + point styling. */
 function lineDataset(data: number[], label: string = TOTAL_LABEL): ChartDataset<'line'> {
@@ -58,6 +64,14 @@ function lineDataset(data: number[], label: string = TOTAL_LABEL): ChartDataset<
   }
 }
 
+/** Hourly OCR request count for the current day. */
+export function buildHourlyLineData(hourly: OcrHourlyPoint[]): ChartData<'line'> {
+  return {
+    labels: hourly.map((h) => hourLabel(h.hour)),
+    datasets: [lineDataset(hourly.map((h) => h.total))],
+  }
+}
+
 /** Daily OCR request count as a single total line across all providers. */
 export function buildDailyLineData(daily: OcrDailyPoint[]): ChartData<'line'> {
   return {
@@ -76,6 +90,79 @@ export function buildMonthlyBarData(monthly: OcrMonthlyPoint[]): ChartData<'bar'
         data: monthly.map((m) => m.total),
         backgroundColor: OCR_COLOR,
         borderRadius: 4,
+      },
+    ],
+  }
+}
+
+/** Hourly version of the admin combo chart. */
+export function buildHourlyOcrPerformanceData(
+  hourly: OcrHourlyPoint[],
+): ChartData<'bar' | 'line'> {
+  return {
+    labels: hourly.map((h) => hourLabel(h.hour)),
+    datasets: [
+      {
+        type: 'bar',
+        label: SUCCESS_LABEL,
+        data: hourly.map((h) => h.success),
+        backgroundColor: `${OCR_COLOR}B3`,
+        borderColor: OCR_COLOR,
+        borderWidth: 1,
+        borderRadius: 4,
+        stack: 'requests',
+        yAxisID: 'y',
+        order: 2,
+      },
+      {
+        type: 'bar',
+        label: FAILED_LABEL,
+        data: hourly.map((h) => h.failed),
+        backgroundColor: `${OCR_FAILED_COLOR}B3`,
+        borderColor: OCR_FAILED_COLOR,
+        borderWidth: 1,
+        borderRadius: 4,
+        stack: 'requests',
+        yAxisID: 'y',
+        order: 2,
+      },
+      {
+        type: 'line',
+        label: 'Độ trễ TB',
+        data: hourly.map((h) =>
+          h.latencyAvgMs === null ? null : Number((h.latencyAvgMs / 1000).toFixed(3)),
+        ),
+        borderColor: OCR_LATENCY_AVG_COLOR,
+        backgroundColor: OCR_LATENCY_AVG_COLOR,
+        tension: 0.4,
+        spanGaps: true,
+        borderWidth: 2.5,
+        pointRadius: 3,
+        pointBackgroundColor: '#ffffff',
+        pointBorderColor: OCR_LATENCY_AVG_COLOR,
+        pointBorderWidth: 2,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: OCR_LATENCY_AVG_COLOR,
+        yAxisID: 'yLatency',
+        order: 1,
+      },
+      {
+        type: 'line',
+        label: LATENCY_P95_LABEL,
+        data: hourly.map((h) =>
+          h.latencyP95Ms === null ? null : Number((h.latencyP95Ms / 1000).toFixed(3)),
+        ),
+        borderColor: OCR_LATENCY_P95_COLOR,
+        backgroundColor: OCR_LATENCY_P95_COLOR,
+        tension: 0.4,
+        spanGaps: true,
+        borderWidth: 2,
+        borderDash: [6, 4],
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: OCR_LATENCY_P95_COLOR,
+        yAxisID: 'yLatency',
+        order: 0,
       },
     ],
   }
@@ -228,7 +315,7 @@ export function grandTotal(stats: OcrStats | null | undefined): number {
 /** True when there is any OCR data to chart (at least one daily point or a non-zero total). */
 export function hasOcrData(stats: OcrStats | null | undefined): boolean {
   if (!stats) return false
-  return stats.daily.length > 0 || grandTotal(stats) > 0
+  return stats.hourly.length > 0 || stats.daily.length > 0 || grandTotal(stats) > 0
 }
 
 // ---------------------------------------------------------------------------
@@ -238,7 +325,10 @@ export function hasOcrData(stats: OcrStats | null | undefined): boolean {
 /** True when at least one daily bucket has a latency sample. */
 export function hasLatencyData(stats: OcrStats | null | undefined): boolean {
   if (!stats) return false
-  return stats.daily.some((d) => d.latencyAvgMs !== null)
+  return (
+    stats.hourly.some((h) => h.latencyAvgMs !== null) ||
+    stats.daily.some((d) => d.latencyAvgMs !== null)
+  )
 }
 
 /**
@@ -277,6 +367,16 @@ export function buildDailyDriverVolumeData(
   }
 }
 
+/** Hourly driver photo-upload count for the current day. */
+export function buildHourlyDriverVolumeData(
+  driverHourly: OcrDriverHourlyPoint[],
+): ChartData<'line'> {
+  return {
+    labels: driverHourly.map((h) => hourLabel(h.hour)),
+    datasets: [lineDataset(driverHourly.map((h) => h.requests), DRIVER_TOTAL_LABEL)],
+  }
+}
+
 /** Monthly driver photo-upload count as a single total bar series. */
 export function buildMonthlyDriverVolumeData(
   driverMonthly: OcrDriverMonthlyPoint[],
@@ -289,6 +389,79 @@ export function buildMonthlyDriverVolumeData(
         data: driverMonthly.map((m) => m.requests),
         backgroundColor: OCR_COLOR,
         borderRadius: 4,
+      },
+    ],
+  }
+}
+
+/** Hourly version of the driver-experience combo chart. */
+export function buildHourlyDriverExperienceData(
+  driverHourly: OcrDriverHourlyPoint[],
+): ChartData<'bar' | 'line'> {
+  return {
+    labels: driverHourly.map((h) => hourLabel(h.hour)),
+    datasets: [
+      {
+        type: 'bar',
+        label: SUCCESS_LABEL,
+        data: driverHourly.map((h) => h.success),
+        backgroundColor: `${OCR_COLOR}B3`,
+        borderColor: OCR_COLOR,
+        borderWidth: 1,
+        borderRadius: 4,
+        stack: 'requests',
+        yAxisID: 'y',
+        order: 2,
+      },
+      {
+        type: 'bar',
+        label: FAILED_LABEL,
+        data: driverHourly.map((h) => h.failed),
+        backgroundColor: `${OCR_FAILED_COLOR}B3`,
+        borderColor: OCR_FAILED_COLOR,
+        borderWidth: 1,
+        borderRadius: 4,
+        stack: 'requests',
+        yAxisID: 'y',
+        order: 2,
+      },
+      {
+        type: 'line',
+        label: 'Độ trễ TB',
+        data: driverHourly.map((h) =>
+          h.latencyAvgMs === null ? null : Number((h.latencyAvgMs / 1000).toFixed(3)),
+        ),
+        borderColor: OCR_LATENCY_AVG_COLOR,
+        backgroundColor: OCR_LATENCY_AVG_COLOR,
+        tension: 0.4,
+        spanGaps: true,
+        borderWidth: 2.5,
+        pointRadius: 3,
+        pointBackgroundColor: '#ffffff',
+        pointBorderColor: OCR_LATENCY_AVG_COLOR,
+        pointBorderWidth: 2,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: OCR_LATENCY_AVG_COLOR,
+        yAxisID: 'yLatency',
+        order: 1,
+      },
+      {
+        type: 'line',
+        label: LATENCY_P95_LABEL,
+        data: driverHourly.map((h) =>
+          h.latencyP95Ms === null ? null : Number((h.latencyP95Ms / 1000).toFixed(3)),
+        ),
+        borderColor: OCR_LATENCY_P95_COLOR,
+        backgroundColor: OCR_LATENCY_P95_COLOR,
+        tension: 0.4,
+        spanGaps: true,
+        borderWidth: 2,
+        borderDash: [6, 4],
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: OCR_LATENCY_P95_COLOR,
+        yAxisID: 'yLatency',
+        order: 0,
       },
     ],
   }
@@ -454,13 +627,20 @@ export function driverFailedTotal(stats: OcrStats | null | undefined): number {
 /** True when there is any driver-upload data to chart. */
 export function hasDriverData(stats: OcrStats | null | undefined): boolean {
   if (!stats) return false
-  return stats.driverExperience.daily.length > 0 || driverTotal(stats) > 0
+  return (
+    stats.driverExperience.hourly.length > 0 ||
+    stats.driverExperience.daily.length > 0 ||
+    driverTotal(stats) > 0
+  )
 }
 
 /** True when at least one driver daily bucket has an e2e latency sample. */
 export function hasDriverLatencyData(stats: OcrStats | null | undefined): boolean {
   if (!stats) return false
-  return stats.driverExperience.daily.some((d) => d.latencyAvgMs !== null)
+  return (
+    stats.driverExperience.hourly.some((h) => h.latencyAvgMs !== null) ||
+    stats.driverExperience.daily.some((d) => d.latencyAvgMs !== null)
+  )
 }
 
 // ---------------------------------------------------------------------------

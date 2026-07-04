@@ -161,6 +161,9 @@ async def get_ocr_stats(
     days: int = Query(
         30, ge=1, le=730, description="Trailing days including today (UTC)"
     ),
+    include_hourly: bool = Query(
+        False, description="Include trailing 48 hourly buckets ending at the current UTC hour"
+    ),
     current_user: User = Depends(require_roles("superadmin", "director", "accountant")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -193,8 +196,21 @@ async def get_ocr_stats(
     can_view_latency = current_user.role == "superadmin"
 
     end_date = datetime.now(_tz.utc).date()
+    end_hour = datetime.now(_tz.utc).replace(minute=0, second=0, microsecond=0)
     start_date = end_date - timedelta(days=days - 1)
     day_labels = [start_date + timedelta(days=i) for i in range(days)]
+    hour_labels = [
+        end_hour - timedelta(hours=47)
+        + timedelta(hours=i)
+        for i in range(48)
+    ]
+
+    def hour_key(dt: datetime) -> str:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=_tz.utc)
+        return dt.astimezone(_tz.utc).replace(minute=0, second=0, microsecond=0).strftime(
+            "%Y-%m-%dT%H:00:00Z"
+        )
 
     day_expr = func.date(OcrRequest.created_at)
 
@@ -318,6 +334,58 @@ async def get_ocr_stats(
     overall_avg, overall_p95 = (
         _summarize_latency(overall_latency) if can_view_latency else (None, None)
     )
+
+    hourly = []
+    if include_hourly:
+        hour_start = hour_labels[0]
+        hour_end = hour_labels[-1] + timedelta(hours=1)
+        hourly_count_map = {
+            hour_key(label): {"total": 0, "success": 0, "failed": 0}
+            for label in hour_labels
+        }
+        hourly_latency_map: dict[str, list[int]] = {}
+        hourly_rows = (
+            await db.execute(
+                select(
+                    OcrRequest.created_at,
+                    OcrRequest.success,
+                    OcrRequest.latency_ms,
+                ).where(
+                    OcrRequest.created_at >= hour_start,
+                    OcrRequest.created_at < hour_end,
+                )
+            )
+        ).all()
+        for created_at, success, latency in hourly_rows:
+            key = hour_key(created_at)
+            if key not in hourly_count_map:
+                continue
+            bucket = hourly_count_map[key]
+            bucket["total"] += 1
+            if success:
+                bucket["success"] += 1
+            else:
+                bucket["failed"] += 1
+            if can_view_latency and latency is not None:
+                hourly_latency_map.setdefault(key, []).append(int(latency))
+
+        for label in hour_labels:
+            key = hour_key(label)
+            counts = hourly_count_map[key]
+            latencies = hourly_latency_map.get(key, [])
+            h_avg_ms, h_p95_ms = (
+                _summarize_latency(latencies) if can_view_latency else (None, None)
+            )
+            hourly.append(
+                {
+                    "hour": key,
+                    "total": counts["total"],
+                    "success": counts["success"],
+                    "failed": counts["failed"],
+                    "latencyAvgMs": h_avg_ms,
+                    "latencyP95Ms": h_p95_ms,
+                }
+            )
 
     error_breakdown = []
     if can_view_latency:
@@ -464,7 +532,60 @@ async def get_ocr_stats(
         _summarize_latency(driver_overall_latency) if can_view_latency else (None, None)
     )
 
+    driver_hourly = []
+    if include_hourly:
+        hour_start = hour_labels[0]
+        hour_end = hour_labels[-1] + timedelta(hours=1)
+        driver_hourly_count_map = {
+            hour_key(label): {"total": 0, "success": 0, "failed": 0}
+            for label in hour_labels
+        }
+        driver_hourly_latency: dict[str, list[int]] = {}
+        driver_hourly_rows = (
+            await db.execute(
+                select(
+                    OcrDriverRequest.created_at,
+                    OcrDriverRequest.success,
+                    OcrDriverRequest.latency_ms,
+                ).where(
+                    OcrDriverRequest.created_at >= hour_start,
+                    OcrDriverRequest.created_at < hour_end,
+                )
+            )
+        ).all()
+        for created_at, success, latency in driver_hourly_rows:
+            key = hour_key(created_at)
+            if key not in driver_hourly_count_map:
+                continue
+            bucket = driver_hourly_count_map[key]
+            bucket["total"] += 1
+            if success:
+                bucket["success"] += 1
+            else:
+                bucket["failed"] += 1
+            if can_view_latency and latency is not None:
+                driver_hourly_latency.setdefault(key, []).append(int(latency))
+
+        for label in hour_labels:
+            key = hour_key(label)
+            counts = driver_hourly_count_map[key]
+            lats = driver_hourly_latency.get(key, [])
+            h_avg_ms, h_p95_ms = (
+                _summarize_latency(lats) if can_view_latency else (None, None)
+            )
+            driver_hourly.append(
+                {
+                    "hour": key,
+                    "requests": counts["total"],
+                    "success": counts["success"],
+                    "failed": counts["failed"],
+                    "latencyAvgMs": h_avg_ms,
+                    "latencyP95Ms": h_p95_ms,
+                }
+            )
+
     driver_experience = {
+        "hourly": driver_hourly,
         "daily": driver_daily,
         "monthly": driver_monthly,
         "totals": {
@@ -602,6 +723,7 @@ async def get_ocr_stats(
     return {
         "days": days,
         "endDate": end_date.isoformat(),
+        "hourly": hourly,
         "daily": daily,
         "monthly": monthly,
         "providerErrors": error_breakdown,
