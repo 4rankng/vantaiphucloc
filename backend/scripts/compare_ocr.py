@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-compare_ocr.py — benchmark container OCR across vision LLMs.
+compare_ocr.py — benchmark container OCR across Qwen vision LLMs.
 
 Run:
     python backend/scripts/compare_ocr.py docs/ocr
     python backend/scripts/compare_ocr.py docs/ocr/00.jpeg --env backend/.env
 
-Engines:
-    - xiaomi/mimo-v2.5 via OpenRouter
-    - qwen/qwen3-vl-32b-instruct via OpenRouter
-    - qwen/qwen3-vl-235b-a22b-instruct via OpenRouter
+Prompt A/B (compare the built-in prompt vs a challenger):
+    python backend/scripts/compare_ocr.py docs/ocr --new-prompt backend/scripts/new_prompt.txt
+    make ocr IMG=docs/ocr PROMPT=scripts/new_prompt.txt
+
+Models (via OpenRouter):
+    - qwen/qwen3-vl-32b-instruct
+    - qwen/qwen3-vl-235b-a22b-instruct
 
 Standalone — zero backend app imports. Request payloads mirror production
 OpenRouter calls closely enough to compare real OCR behavior.
@@ -50,8 +53,7 @@ _CONTAINER_RE = re.compile(r"[A-Z]{4}\d{7}")
 
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
 DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-OPENROUTER_MODELS = [
-    ("Mimo-v2.5", "xiaomi/mimo-v2.5"),
+QWEN_MODELS = [
     ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
     ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
 ]
@@ -97,6 +99,7 @@ class OCRResult:
     image: str
     expected_numbers: list[str] = field(default_factory=list)
     model: str | None = None
+    prompt: str | None = None
     raw_response: str | None = None
     container_numbers: list[str] = field(default_factory=list)
     check_digit_valid: dict[str, bool] = field(default_factory=dict)
@@ -231,12 +234,15 @@ def run_openrouter(
     base_url: str,
     label: str,
     model: str,
+    prompt: str,
+    prompt_label: str,
 ) -> OCRResult:
     res = OCRResult(
-        engine=f"{label} (OpenRouter)",
+        engine=f"{label} · {prompt_label}",
         image=image_name,
         expected_numbers=expected_numbers,
         model=model,
+        prompt=prompt_label,
     )
     if httpx is None:
         res.error = "httpx not installed — pip install httpx"
@@ -254,7 +260,7 @@ def run_openrouter(
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": MULTI_CONTAINER_PROMPT},
+                    {"type": "text", "text": prompt},
                     {
                         "type": "image_url",
                         "image_url": {"url": f"data:{mime_type};base64,{encoded}"},
@@ -388,6 +394,7 @@ def result_dump(results: list[OCRResult]) -> dict[str, Any]:
     for result in results:
         dump.setdefault(result.image, {})[result.engine] = {
             "model": result.model,
+            "prompt": result.prompt,
             "success": result.success,
             "exact_match": result.exact_match,
             "expected_numbers": result.expected_numbers,
@@ -400,13 +407,30 @@ def result_dump(results: list[OCRResult]) -> dict[str, Any]:
     return dump
 
 
+def load_new_prompt(path: str) -> str:
+    """Load and validate the challenger prompt file for --new-prompt."""
+    p = Path(path)
+    if not p.is_file():
+        sys.exit(f"--new-prompt file not found: {path}")
+    text = p.read_text("utf-8").strip()
+    if not text:
+        sys.exit(f"--new-prompt file is empty: {path}")
+    return text
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Benchmark container OCR across Mimo, Qwen3-VL-32B, and Qwen3-VL-235B",
+        description="Benchmark container OCR across Qwen3-VL-32B and Qwen3-VL-235B",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("path", help="Path to a container photo or directory of photos")
     parser.add_argument("--env", default=None, help="Path to .env file")
+    parser.add_argument(
+        "--new-prompt",
+        default=None,
+        help="Path to a challenger prompt file. When set, each model runs with both "
+        "the built-in (old) prompt and this new one for A/B comparison.",
+    )
     args = parser.parse_args()
 
     if _MISSING:
@@ -435,9 +459,14 @@ def main():
         print(f"No images found under {args.path}", file=sys.stderr)
         sys.exit(1)
 
+    prompts: list[tuple[str, str]] = [("old", MULTI_CONTAINER_PROMPT)]
+    if args.new_prompt:
+        prompts.append(("new", load_new_prompt(args.new_prompt)))
+
     print(f"Images: {len(images)}")
     print(f"Env file: {env_path or '(environment only)'}")
     print(f"OpenRouter: {'key set' if openrouter_key else 'NO KEY'}")
+    print(f"Prompts: {', '.join(label for label, _ in prompts)}")
     print("=" * 80)
 
     results: list[OCRResult] = []
@@ -450,19 +479,22 @@ def main():
             f"({len(raw_bytes) // 1024} KB -> {len(processed) // 1024} KB, {mime_type})"
         )
         print(f"  Expected: {', '.join(expected_numbers) if expected_numbers else '(none)'}")
-        for label, model in OPENROUTER_MODELS:
-            result = run_openrouter(
-                image_path.name,
-                expected_numbers,
-                processed,
-                mime_type,
-                openrouter_key,
-                openrouter_base_url,
-                label,
-                model,
-            )
-            print_result(result)
-            results.append(result)
+        for label, model in QWEN_MODELS:
+            for prompt_label, prompt_text in prompts:
+                result = run_openrouter(
+                    image_path.name,
+                    expected_numbers,
+                    processed,
+                    mime_type,
+                    openrouter_key,
+                    openrouter_base_url,
+                    label,
+                    model,
+                    prompt_text,
+                    prompt_label,
+                )
+                print_result(result)
+                results.append(result)
 
     print_summary(results)
 

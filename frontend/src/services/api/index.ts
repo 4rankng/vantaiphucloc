@@ -141,6 +141,7 @@ export const apiClient = {
   getKpiTrends: dashboardApi.getKpiTrends,
   getNotifications: dashboardApi.getNotifications,
   getOcrStats: ocrStatsApi.getOcrStats,
+  getOcrFailures: ocrStatsApi.getOcrFailures,
 
   // Users
   getUsers: usersApi.getUsers,

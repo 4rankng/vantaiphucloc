@@ -172,7 +172,8 @@ async def get_ocr_stats(
         30, ge=1, le=730, description="Trailing days including today (UTC)"
     ),
     include_hourly: bool = Query(
-        False, description="Include trailing 7 days of hourly buckets ending at the current UTC hour"
+        False,
+        description="Include trailing 7 days of hourly buckets ending at the current UTC hour",
     ),
     current_user: User = Depends(require_roles("superadmin", "director", "accountant")),
     db: AsyncSession = Depends(get_db),
@@ -210,16 +211,17 @@ async def get_ocr_stats(
     start_date = end_date - timedelta(days=days - 1)
     day_labels = [start_date + timedelta(days=i) for i in range(days)]
     hour_labels = [
-        end_hour - timedelta(hours=HOURLY_BUCKET_COUNT - 1)
-        + timedelta(hours=i)
+        end_hour - timedelta(hours=HOURLY_BUCKET_COUNT - 1) + timedelta(hours=i)
         for i in range(HOURLY_BUCKET_COUNT)
     ]
 
     def hour_key(dt: datetime) -> str:
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=_tz.utc)
-        return dt.astimezone(_tz.utc).replace(minute=0, second=0, microsecond=0).strftime(
-            "%Y-%m-%dT%H:00:00Z"
+        return (
+            dt.astimezone(_tz.utc)
+            .replace(minute=0, second=0, microsecond=0)
+            .strftime("%Y-%m-%dT%H:00:00Z")
         )
 
     day_expr = func.date(OcrRequest.created_at)
@@ -643,9 +645,7 @@ async def get_ocr_stats(
     daily_acc: dict[str, dict[str, int]] = {}
     totals_acc = {"exact": 0, "near": 0, "partial": 0, "mismatch": 0}
     for row in acc_rows:
-        bucket = _classify_ocr_accuracy(
-            row.original_cont_number, row.cont_number
-        )
+        bucket = _classify_ocr_accuracy(row.original_cont_number, row.cont_number)
         if bucket is None:
             continue
         d = str(row.dt_date)[:10]
@@ -691,9 +691,7 @@ async def get_ocr_stats(
             and str(rolling_rows[rolling_index].dt_date)[:10] <= d
         ):
             row = rolling_rows[rolling_index]
-            bucket = _classify_ocr_accuracy(
-                row.original_cont_number, row.cont_number
-            )
+            bucket = _classify_ocr_accuracy(row.original_cont_number, row.cont_number)
             if bucket is not None:
                 rolling_window.append((str(row.dt_date)[:10], bucket))
                 if len(rolling_window) > ACCURACY_ROLLING_WINDOW_SIZE:
@@ -744,4 +742,65 @@ async def get_ocr_stats(
             "totals": accuracy_totals,
             "daily": accuracy_daily,
         },
+    }
+
+
+@router.get("/ocr-failures")
+async def get_ocr_failures(
+    days: int = Query(
+        30, ge=1, le=365, description="Trailing days including today (UTC)"
+    ),
+    current_user: User = Depends(require_roles("superadmin")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Failed-OCR uploads that have a captured photo, for admin diagnosis.
+
+    Returns ``ocr_driver_requests`` rows where the driver saw a failure
+    (``success=false``) AND a photo was captured (``cont_photo_url`` is not
+    null), newest first. Each item carries the photo URL so the dashboard can
+    preview/download the actual image that defeated OCR. Superadmin-only — the
+    underlying photos are sensitive (driver container captures).
+    """
+    from datetime import timezone as _tz
+
+    end = datetime.now(_tz.utc)
+    start = end - timedelta(days=days)
+    rows = (
+        await db.execute(
+            select(
+                OcrDriverRequest.id,
+                OcrDriverRequest.created_at,
+                OcrDriverRequest.user_id,
+                OcrDriverRequest.attempts,
+                OcrDriverRequest.numbers_found,
+                OcrDriverRequest.provider,
+                OcrDriverRequest.cont_photo_url,
+                User.full_name.label("driver_name"),
+            )
+            .select_from(OcrDriverRequest)
+            .outerjoin(User, OcrDriverRequest.user_id == User.id)
+            .where(
+                OcrDriverRequest.success.is_(False),
+                OcrDriverRequest.cont_photo_url.is_not(None),
+                OcrDriverRequest.created_at >= start,
+                OcrDriverRequest.created_at <= end,
+            )
+            .order_by(OcrDriverRequest.created_at.desc())
+            .limit(50)
+        )
+    ).all()
+    return {
+        "items": [
+            {
+                "id": r.id,
+                "createdAt": r.created_at.isoformat() if r.created_at else None,
+                "userId": r.user_id,
+                "driverName": r.driver_name,
+                "attempts": r.attempts,
+                "numbersFound": r.numbers_found,
+                "provider": r.provider,
+                "contPhotoUrl": r.cont_photo_url,
+            }
+            for r in rows
+        ]
     }

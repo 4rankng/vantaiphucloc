@@ -21,6 +21,7 @@ from httpx import AsyncClient
 from PIL import Image
 from sqlalchemy import select
 
+from app.config import settings
 from app.models.domain import OcrDriverRequest, OcrRequest
 
 pytestmark = pytest.mark.asyncio
@@ -199,3 +200,48 @@ async def test_no_provider_configured_still_writes_driver_row(
     stats = await _stats(async_client, headers)
     totals = stats["driverExperience"]["totals"]
     assert totals["requests"] - totals["success"] >= 1
+
+
+async def test_failed_ocr_persists_photo(
+    async_client: AsyncClient, make_auth_headers, db_session, tmp_path, monkeypatch
+):
+    """A failed OCR run persists its photo so the admin can preview/download it."""
+    monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path))
+    headers = await make_auth_headers("superadmin")
+    with _patch_ocr(EXHAUSTED):
+        resp = await async_client.post(
+            OCR_CONTAINER_URL,
+            json={"image_data": _b64_image()},
+            headers=headers,
+        )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["success"] is False
+
+    rows = (await db_session.execute(select(OcrDriverRequest))).scalars().all()
+    assert len(rows) == 1
+    url = rows[0].cont_photo_url
+    assert url is not None and url.startswith("/photos/")
+    # The image actually landed on disk under the storage root.
+    assert (tmp_path / url.removeprefix("/photos/")).is_file()
+
+
+async def test_successful_ocr_does_not_persist_photo(
+    async_client: AsyncClient, make_auth_headers, db_session, tmp_path, monkeypatch
+):
+    """Successful OCR runs never write a photo — storage stays bounded to failures."""
+    monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path))
+    headers = await make_auth_headers("superadmin")
+    with _patch_ocr(RESCUED):
+        resp = await async_client.post(
+            OCR_CONTAINER_URL,
+            json={"image_data": _b64_image()},
+            headers=headers,
+        )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["success"] is True
+
+    rows = (await db_session.execute(select(OcrDriverRequest))).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].cont_photo_url is None
+    # Nothing was written under the storage root.
+    assert not any(tmp_path.iterdir())

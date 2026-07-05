@@ -154,3 +154,28 @@ export function getOcrStats(
     (res) => toCamel<OcrStats>(res.data),
   )
 }
+
+/**
+ * One failed-OCR upload that has a captured photo. Superadmin-only; powers the
+ * admin failure-image viewer. `contPhotoUrl` is the actual container capture
+ * that defeated OCR — preview/download via PhotoLightbox.
+ */
+export interface OcrFailureItem {
+  id: number
+  createdAt: string
+  userId: number | null
+  driverName: string | null
+  attempts: number
+  numbersFound: number
+  provider: string | null
+  contPhotoUrl: string
+}
+
+export function getOcrFailures(
+  days = 30,
+): Promise<ApiResponse<{ items: OcrFailureItem[] }>> {
+  return safeRequest(
+    () => api.get('/dashboard/ocr-failures', { params: { days } }),
+    (res) => toCamel<{ items: OcrFailureItem[] }>(res.data),
+  )
+}

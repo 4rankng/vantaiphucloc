@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { ChevronRight } from 'lucide-react'
 import { ChartCard } from '@/components/shared/data-display/ChartCard'
 import { MixedChartWidget } from '@/components/shared/data-display/Charts'
 import { OcrViewToggle, type ViewMode } from '@/components/shared/data-display/OcrViewToggle/OcrViewToggle'
+import { OcrFailureDrawer } from '@/components/shared/overlays/OcrFailureDrawer'
 import { useOcrStats } from '@/hooks/queries/ocr-stats'
 import {
   buildDailyOcrPerformanceData,
@@ -30,10 +32,14 @@ export function OcrPerformanceChart({
   title = 'Hiệu suất OCR',
 }: OcrPerformanceChartProps) {
   const [view, setView] = useState<ViewMode>('day')
+  const [failuresOpen, setFailuresOpen] = useState(false)
   const isHour = showToggle && view === 'hour'
   const isMonth = showToggle && view === 'month'
   const effectiveDays = isMonth ? 365 : isHour ? 7 : days
   const { data: stats, isLoading } = useOcrStats(effectiveDays, isHour)
+
+  const openFailures = useCallback(() => setFailuresOpen(true), [])
+  const closeFailures = useCallback(() => setFailuresOpen(false), [])
 
   const hourlyData = useMemo(
     () => buildHourlyOcrPerformanceData(stats?.hourly ?? []),
@@ -166,14 +172,25 @@ export function OcrPerformanceChart({
                 {driverFailed.toLocaleString('vi-VN')} / {uploads.toLocaleString('vi-VN')} lượt tải ảnh
               </p>
             </div>
-            <p
+            <div
               className="text-[11px] leading-snug"
               style={{ color: driverFailed > 0 ? 'var(--theme-status-error)' : 'var(--theme-text-muted)' }}
             >
-              {driverFailed > 0
-                ? `${driverFailed.toLocaleString('vi-VN')} ảnh không nhận được số cont.`
-                : 'Không có tài xế nào gặp lỗi — mọi ảnh tải lên đều nhận được số cont.'}
-            </p>
+              {driverFailed > 0 ? (
+                <button
+                  type="button"
+                  onClick={openFailures}
+                  className="inline-flex items-center gap-0.5 rounded font-semibold underline-offset-2 transition-colors hover:underline focus:outline-none focus-visible:ring-2"
+                  style={{ color: 'var(--theme-status-error)' }}
+                  aria-label={`Xem ${driverFailed} ảnh OCR lỗi`}
+                >
+                  {`${driverFailed.toLocaleString('vi-VN')} ảnh không nhận được số cont.`}
+                  <ChevronRight className="h-3 w-3" aria-hidden />
+                </button>
+              ) : (
+                'Không có tài xế nào gặp lỗi — mọi ảnh tải lên đều nhận được số cont.'
+              )}
+            </div>
           </div>
 
           {/* Provider errors — operational detail. Each item is one provider
@@ -226,6 +243,7 @@ export function OcrPerformanceChart({
           )}
         </div>
       )}
+      <OcrFailureDrawer open={failuresOpen} onClose={closeFailures} days={effectiveDays} />
     </ChartCard>
   )
 }

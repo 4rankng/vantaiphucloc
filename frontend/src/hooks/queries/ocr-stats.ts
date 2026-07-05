@@ -13,3 +13,15 @@ export function useOcrStats(days = 30, includeHourly = false) {
     staleTime: 60_000,
   })
 }
+
+export function useOcrFailures(days = 30, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.ocrFailures(days),
+    queryFn: async () => {
+      const res = await apiClient.getOcrFailures(days)
+      return res.success ? res.data.items : []
+    },
+    staleTime: 60_000,
+    enabled,
+  })
+}

@@ -215,6 +215,18 @@ async def ocr_container(
     # silently drop the row. A logging failure must never break the OCR
     # response for the driver.
     attempts = result.get("attempts") or []
+    # Persist the photo ONLY when the driver saw a failure (no provider
+    # rescued a number), so the admin can preview/download the actual image
+    # that defeated OCR. Successful runs never touch disk for the photo. A
+    # save failure must not break the OCR response or the analytics write:
+    # on error we leave the URL None and that failure simply isn't viewable.
+    failed_photo_url: str | None = None
+    if not result.get("success"):
+        try:
+            data_url = f"data:{body.mime_type};base64,{body.image_data}"
+            failed_photo_url = save_base64_photo(data_url).url
+        except Exception:
+            _logger.exception("[OCR] failed to persist failed-OCR photo")
     try:
         db.add(
             OcrDriverRequest(
@@ -224,6 +236,7 @@ async def ocr_container(
                 numbers_found=len(result.get("container_numbers", [])),
                 latency_ms=end_to_end_ms,
                 provider=result.get("provider"),
+                cont_photo_url=failed_photo_url,
             )
         )
         for attempt in attempts:

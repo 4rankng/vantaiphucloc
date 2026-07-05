@@ -88,6 +88,7 @@ export const queryKeys = {
     ['kpi-trends', days, endDate] as const,
   ocrStats: (days: number, includeHourly = false) =>
     ['ocr-stats', days, includeHourly] as const,
+  ocrFailures: (days: number) => ['ocr-failures', days] as const,
   monthlyPnL: (startDate: string, endDate: string) =>
     ['monthly-pnl', startDate, endDate] as const,
   vehiclePnL: (dateFrom: string, dateTo: string, vehicleId?: number) =>

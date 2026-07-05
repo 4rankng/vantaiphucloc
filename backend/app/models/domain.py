@@ -626,5 +626,10 @@ class OcrDriverRequest(Base):
     numbers_found = Column(Integer, nullable=False, default=0)
     latency_ms = Column(Integer, nullable=True)  # end-to-end, driver-perceived
     provider = Column(String(16), nullable=True)  # winning provider, if any
+    # Photo captured ONLY when OCR failed (no provider rescued a number), so
+    # the admin can preview/download the actual image that defeated OCR.
+    # NULL for successful runs and for failures captured before this column
+    # shipped. See POST /delivered-trips/ocr-container.
+    cont_photo_url = Column(String(256), nullable=True)
 
     __table_args__ = (Index("ix_ocr_driver_requests_created_at", "created_at"),)
