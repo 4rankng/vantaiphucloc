@@ -19,11 +19,13 @@ from app.utils.iso6346 import normalize_container_number
 router = APIRouter()
 
 
-# Daily latency buckets with fewer than this many non-null samples return null
-# for both avg and p95. Prevents noisy precision on quiet days where one slow
-# request skews the "average" by an order of magnitude.
+# Latency buckets always expose average latency when at least one sample exists.
+# P95 still needs enough samples to avoid turning a single request into a fake
+# percentile.
 MIN_LATENCY_SAMPLES = 5
 ACCURACY_ROLLING_WINDOW_SIZE = 100
+HOURLY_WINDOW_DAYS = 7
+HOURLY_BUCKET_COUNT = HOURLY_WINDOW_DAYS * 24
 HTTP_STATUS_RE = re.compile(r"\bHTTP\s+(\d{3})\b", re.IGNORECASE)
 
 
@@ -125,12 +127,20 @@ def _avg(values: list[int]) -> float:
 def _summarize_latency(values: list[int]) -> tuple[Optional[float], Optional[float]]:
     """Return (avg_ms, p95_ms) for a non-empty ``values`` list.
 
-    Buckets with fewer than MIN_LATENCY_SAMPLES samples return (None, None) so
-    quiet days render as a gap instead of a misleading single-request spike.
+    Average latency is useful even for quiet buckets, so it is calculated from
+    every available sample. P95 is hidden until the bucket has enough samples.
     """
-    if len(values) < MIN_LATENCY_SAMPLES:
+    if not values:
         return None, None
-    return _avg(values), _percentile_p95(values)
+    p95 = _percentile_p95(values) if len(values) >= MIN_LATENCY_SAMPLES else None
+    return _avg(values), p95
+
+
+def _summarize_hourly_avg(values: list[int]) -> Optional[float]:
+    positive_values = [value for value in values if value > 0]
+    if not positive_values:
+        return None
+    return _avg(positive_values)
 
 
 def _classify_ocr_accuracy(ocr_cn: str, truth_cn: str) -> str | None:
@@ -162,7 +172,7 @@ async def get_ocr_stats(
         30, ge=1, le=730, description="Trailing days including today (UTC)"
     ),
     include_hourly: bool = Query(
-        False, description="Include trailing 48 hourly buckets ending at the current UTC hour"
+        False, description="Include trailing 7 days of hourly buckets ending at the current UTC hour"
     ),
     current_user: User = Depends(require_roles("superadmin", "director", "accountant")),
     db: AsyncSession = Depends(get_db),
@@ -183,13 +193,13 @@ async def get_ocr_stats(
     - ``daily[i].latencyAvgMs`` / ``daily[i].latencyP95Ms`` per day
     - ``monthly[i].latencyAvgMs`` per month (no p95 by design)
 
-    Buckets with fewer than ``MIN_LATENCY_SAMPLES`` latency rows return null
-    so a single slow request does not skew an otherwise quiet day. Rows with
-    ``latency_ms IS NULL`` (legacy rows or near-failures where the provider
-    never returned) are excluded from latency aggregation but are still
-    counted in ``totals.total`` so request counts stay aligned with the rest
-    of the system. Non-admin roles still receive the request-count analytics,
-    but latency fields are returned as ``null``.
+    ``latencyAvgMs`` is calculated from every available non-null latency sample
+    in the same bucket as the request-count bar. ``latencyP95Ms`` is still
+    hidden for tiny buckets. Rows with ``latency_ms IS NULL`` (legacy rows or
+    near-failures where the provider never returned) are excluded from latency
+    aggregation but are still counted in ``totals.total`` so request counts stay
+    aligned with the rest of the system. Non-admin roles still receive the
+    request-count analytics, but latency fields are returned as ``null``.
     """
     from datetime import timezone as _tz
 
@@ -200,9 +210,9 @@ async def get_ocr_stats(
     start_date = end_date - timedelta(days=days - 1)
     day_labels = [start_date + timedelta(days=i) for i in range(days)]
     hour_labels = [
-        end_hour - timedelta(hours=47)
+        end_hour - timedelta(hours=HOURLY_BUCKET_COUNT - 1)
         + timedelta(hours=i)
-        for i in range(48)
+        for i in range(HOURLY_BUCKET_COUNT)
     ]
 
     def hour_key(dt: datetime) -> str:
@@ -297,7 +307,7 @@ async def get_ocr_stats(
             # the per-day sample counts we already know.
             # Sample count for the day is len(daily_latency_map[date]).
             n = len(daily_latency_map.get(point["date"], []))
-            if n >= MIN_LATENCY_SAMPLES:
+            if n > 0:
                 bucket["latencies"].append((n, point["latencyAvgMs"]))
 
     monthly: list[dict] = []
@@ -373,9 +383,7 @@ async def get_ocr_stats(
             key = hour_key(label)
             counts = hourly_count_map[key]
             latencies = hourly_latency_map.get(key, [])
-            h_avg_ms, h_p95_ms = (
-                _summarize_latency(latencies) if can_view_latency else (None, None)
-            )
+            h_avg_ms = _summarize_hourly_avg(latencies) if can_view_latency else None
             hourly.append(
                 {
                     "hour": key,
@@ -383,7 +391,7 @@ async def get_ocr_stats(
                     "success": counts["success"],
                     "failed": counts["failed"],
                     "latencyAvgMs": h_avg_ms,
-                    "latencyP95Ms": h_p95_ms,
+                    "latencyP95Ms": None,
                 }
             )
 
@@ -496,7 +504,7 @@ async def get_ocr_stats(
         bucket["failed"] += point["failed"]
         if can_view_latency and point["latencyAvgMs"] is not None:
             n = len(driver_daily_latency.get(point["date"], []))
-            if n >= MIN_LATENCY_SAMPLES:
+            if n > 0:
                 bucket["latencies"].append((n, point["latencyAvgMs"]))
 
     driver_monthly: list[dict] = []
@@ -570,9 +578,7 @@ async def get_ocr_stats(
             key = hour_key(label)
             counts = driver_hourly_count_map[key]
             lats = driver_hourly_latency.get(key, [])
-            h_avg_ms, h_p95_ms = (
-                _summarize_latency(lats) if can_view_latency else (None, None)
-            )
+            h_avg_ms = _summarize_hourly_avg(lats) if can_view_latency else None
             driver_hourly.append(
                 {
                     "hour": key,
@@ -580,7 +586,7 @@ async def get_ocr_stats(
                     "success": counts["success"],
                     "failed": counts["failed"],
                     "latencyAvgMs": h_avg_ms,
-                    "latencyP95Ms": h_p95_ms,
+                    "latencyP95Ms": None,
                 }
             )
 

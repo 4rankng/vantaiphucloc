@@ -662,7 +662,7 @@ async def test_ocr_stats_latency_aggregation(
 ):
     """Seed a deterministic fixture and verify avg/p95 + zero-fill behaviour."""
     # Day 0: 10 samples with latencies 100..1000 ms in steps of 100
-    # Day 1: 4 samples (below MIN_LATENCY_SAMPLES=5) — should yield null
+    # Day 1: 4 samples — avg uses available samples, p95 stays null
     # Day 2: no rows — should yield null but total=0
     # Legacy rows: latency_ms IS NULL — excluded from latency stats, counted in total
     # Today: high-latency outlier to verify p95 placement
@@ -685,7 +685,7 @@ async def test_ocr_stats_latency_aggregation(
                 user_id=None,
             )
         )
-    # Day 1 — only 4 samples (under floor) → null latency
+    # Day 1 — only 4 samples: avg present, p95 hidden
     for i, latency in enumerate([200, 400, 600, 800]):
         rows.append(
             OcrRequest(
@@ -734,8 +734,8 @@ async def test_ocr_stats_latency_aggregation(
     payload = response.json()
 
     # 15 latency samples overall: yesterday (10) + two_days_ago (4) + today (1)
-    # Daily-bucket floor only suppresses per-day summaries; the overall
-    # latency aggregate includes every non-null sample in the window.
+    # Bucket averages and the overall latency aggregate include every non-null
+    # sample in the window.
     latency_samples = list(range(100, 1100, 100)) + [200, 400, 600, 800] + [5000]
     expected_avg = sum(latency_samples) / len(latency_samples)
     expected_p95 = statistics.quantiles(latency_samples, n=20, method="inclusive")[18]
@@ -753,7 +753,7 @@ async def test_ocr_stats_latency_aggregation(
     yesterday_iso = yesterday.date().isoformat()
     two_days_iso = two_days_ago.date().isoformat()
 
-    # Day 0 (yesterday) — 10 latency samples + 3 null = 13 total, latency qualifies
+    # Day 0 (yesterday) — 10 latency samples + 3 null = 13 total
     assert daily_by_date[yesterday_iso]["total"] == 13
     assert daily_by_date[yesterday_iso]["success"] == 10
     assert daily_by_date[yesterday_iso]["failed"] == 3
@@ -762,18 +762,18 @@ async def test_ocr_stats_latency_aggregation(
     )
     assert daily_by_date[yesterday_iso]["latencyP95Ms"] is not None
 
-    # Day 1 (two_days_ago) — 4 latency samples, below floor → null
+    # Day 1 (two_days_ago) — 4 latency samples: avg present, p95 hidden
     assert daily_by_date[two_days_iso]["total"] == 4
     assert daily_by_date[two_days_iso]["success"] == 4
     assert daily_by_date[two_days_iso]["failed"] == 0
-    assert daily_by_date[two_days_iso]["latencyAvgMs"] is None
+    assert daily_by_date[two_days_iso]["latencyAvgMs"] == pytest.approx(500, abs=0.01)
     assert daily_by_date[two_days_iso]["latencyP95Ms"] is None
 
-    # Today — 1 latency sample, below floor → null (would skew the average)
+    # Today — 1 latency sample: avg is that bucket's only sample, p95 hidden
     assert daily_by_date[today_iso]["total"] == 1
     assert daily_by_date[today_iso]["success"] == 1
     assert daily_by_date[today_iso]["failed"] == 0
-    assert daily_by_date[today_iso]["latencyAvgMs"] is None
+    assert daily_by_date[today_iso]["latencyAvgMs"] == pytest.approx(5000, abs=0.01)
     assert daily_by_date[today_iso]["latencyP95Ms"] is None
 
 
@@ -888,6 +888,62 @@ async def test_ocr_stats_empty_window(db_session, async_client, make_auth_header
     assert payload["monthly"] == [] or all(
         m["latencyAvgMs"] is None for m in payload["monthly"]
     )
+
+
+@pytest.mark.asyncio
+async def test_ocr_stats_hourly_window_covers_last_seven_days(
+    db_session, async_client, make_auth_headers
+):
+    six_days_ago = datetime.now(timezone.utc).replace(
+        minute=0, second=0, microsecond=0
+    ) - timedelta(days=6)
+    db_session.add_all(
+        [
+            OcrRequest(
+                created_at=six_days_ago,
+                provider="gemini",
+                success=True,
+                container_numbers_found=1,
+                latency_ms=800,
+                user_id=None,
+            ),
+            OcrDriverRequest(
+                created_at=six_days_ago,
+                success=True,
+                attempts=1,
+                numbers_found=1,
+                latency_ms=900,
+                provider="gemini",
+                user_id=None,
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    headers = await make_auth_headers("superadmin")
+    response = await async_client.get(
+        "/api/v1/dashboard/ocr-stats",
+        params={"days": 7, "include_hourly": True},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+
+    assert len(payload["hourly"]) == 7 * 24
+    assert len(payload["driverExperience"]["hourly"]) == 7 * 24
+    hour_key = six_days_ago.strftime("%Y-%m-%dT%H:00:00Z")
+    provider_by_hour = {point["hour"]: point for point in payload["hourly"]}
+    driver_by_hour = {
+        point["hour"]: point for point in payload["driverExperience"]["hourly"]
+    }
+    assert provider_by_hour[hour_key]["total"] == 1
+    assert provider_by_hour[hour_key]["success"] == 1
+    assert provider_by_hour[hour_key]["latencyAvgMs"] == 800
+    assert provider_by_hour[hour_key]["latencyP95Ms"] is None
+    assert driver_by_hour[hour_key]["requests"] == 1
+    assert driver_by_hour[hour_key]["success"] == 1
+    assert driver_by_hour[hour_key]["latencyAvgMs"] == 900
+    assert driver_by_hour[hour_key]["latencyP95Ms"] is None
 
 
 @pytest.mark.asyncio
@@ -1304,8 +1360,9 @@ async def test_ocr_stats_driver_experience(db_session, async_client, make_auth_h
     assert by_date[today_iso]["requests"] == 7
     assert by_date[today_iso]["success"] == 6
     assert by_date[today_iso]["failed"] == 1
-    # 6 latency samples ≥ MIN_LATENCY_SAMPLES → per-day latency present
-    assert by_date[today_iso]["latencyAvgMs"] is not None
+    assert by_date[today_iso]["latencyAvgMs"] == pytest.approx(
+        sum([800, 900, 1000, 1100, 1200, 1300]) / 6, abs=0.01
+    )
 
 
 @pytest.mark.asyncio

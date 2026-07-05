@@ -22,19 +22,41 @@ export const OCR_COLOR = '#00B14F'
 
 export const OCR_FAILED_COLOR = '#DC2626'
 
-/** Accent for the latency p95 series — distinct from the avg + count colors. */
-export const OCR_LATENCY_P95_COLOR = '#F59E0B'
-
-/** Accent for the latency average series. */
 export const OCR_LATENCY_AVG_COLOR = '#0EA5E9'
 
 const TOTAL_LABEL = 'Tổng số lượt OCR'
 const SUCCESS_LABEL = 'Thành công'
 const FAILED_LABEL = 'Thất bại'
-const LATENCY_P95_LABEL = 'p95'
+const LATENCY_AVG_LABEL = 'Độ trễ TB'
 
 function hourLabel(hour: string): string {
   return `${hour.slice(5, 10)} ${hour.slice(11, 16)}`
+}
+
+function latencySeconds(ms: number | null): number | null {
+  if (ms === null || ms <= 0) return null
+  return Number((ms / 1000).toFixed(3))
+}
+
+function latencyLineDataset(data: Array<number | null>): ChartDataset<'line'> {
+  return {
+    type: 'line',
+    label: LATENCY_AVG_LABEL,
+    data,
+    borderColor: OCR_LATENCY_AVG_COLOR,
+    backgroundColor: OCR_LATENCY_AVG_COLOR,
+    tension: 0.35,
+    spanGaps: true,
+    borderWidth: 2.5,
+    pointRadius: 2,
+    pointHoverRadius: 5,
+    pointBackgroundColor: '#ffffff',
+    pointBorderColor: OCR_LATENCY_AVG_COLOR,
+    pointBorderWidth: 2,
+    pointHoverBackgroundColor: OCR_LATENCY_AVG_COLOR,
+    yAxisID: 'yLatency',
+    order: 1,
+  }
 }
 
 /** One filled line dataset sharing the OCR chart's gradient + point styling. */
@@ -64,38 +86,65 @@ function lineDataset(data: number[], label: string = TOTAL_LABEL): ChartDataset<
   }
 }
 
-/** Hourly OCR request count for the current day. */
-export function buildHourlyLineData(hourly: OcrHourlyPoint[]): ChartData<'line'> {
+/** Hourly total OCR volume bars. */
+export function buildHourlyTotalData(hourly: OcrHourlyPoint[]): ChartData<'bar'> {
   return {
     labels: hourly.map((h) => hourLabel(h.hour)),
-    datasets: [lineDataset(hourly.map((h) => h.total))],
-  }
-}
-
-/** Daily OCR request count as a single total line across all providers. */
-export function buildDailyLineData(daily: OcrDailyPoint[]): ChartData<'line'> {
-  return {
-    labels: daily.map((d) => d.date.slice(5)), // MM-DD
-    datasets: [lineDataset(daily.map((d) => d.total))],
-  }
-}
-
-/** Monthly OCR request count as a single total bar series. */
-export function buildMonthlyBarData(monthly: OcrMonthlyPoint[]): ChartData<'bar'> {
-  return {
-    labels: monthly.map((m) => m.month),
     datasets: [
       {
+        type: 'bar',
         label: TOTAL_LABEL,
-        data: monthly.map((m) => m.total),
-        backgroundColor: OCR_COLOR,
+        data: hourly.map((h) => h.total),
+        backgroundColor: `${OCR_COLOR}99`,
+        borderColor: OCR_COLOR,
+        borderWidth: 1,
         borderRadius: 4,
+        yAxisID: 'y',
+        order: 2,
       },
     ],
   }
 }
 
-/** Hourly version of the admin combo chart. */
+/** Daily total OCR volume bars. */
+export function buildDailyTotalData(daily: OcrDailyPoint[]): ChartData<'bar'> {
+  return {
+    labels: daily.map((d) => d.date.slice(5)),
+    datasets: [
+      {
+        type: 'bar',
+        label: TOTAL_LABEL,
+        data: daily.map((d) => d.total),
+        backgroundColor: `${OCR_COLOR}99`,
+        borderColor: OCR_COLOR,
+        borderWidth: 1,
+        borderRadius: 4,
+        yAxisID: 'y',
+        order: 2,
+      },
+    ],
+  }
+}
+
+/** Monthly total OCR volume bars. */
+export function buildMonthlyTotalData(monthly: OcrMonthlyPoint[]): ChartData<'bar'> {
+  return {
+    labels: monthly.map((m) => m.month),
+    datasets: [
+      {
+        type: 'bar',
+        label: TOTAL_LABEL,
+        data: monthly.map((m) => m.total),
+        backgroundColor: OCR_COLOR,
+        borderRadius: 4,
+        yAxisID: 'y',
+        order: 2,
+      },
+    ],
+  }
+}
+
+/** Hourly admin volume bars with bucket-average latency line. */
 export function buildHourlyOcrPerformanceData(
   hourly: OcrHourlyPoint[],
 ): ChartData<'bar' | 'line'> {
@@ -106,7 +155,7 @@ export function buildHourlyOcrPerformanceData(
         type: 'bar',
         label: SUCCESS_LABEL,
         data: hourly.map((h) => h.success),
-        backgroundColor: `${OCR_COLOR}B3`,
+        backgroundColor: `${OCR_COLOR}99`,
         borderColor: OCR_COLOR,
         borderWidth: 1,
         borderRadius: 4,
@@ -118,7 +167,7 @@ export function buildHourlyOcrPerformanceData(
         type: 'bar',
         label: FAILED_LABEL,
         data: hourly.map((h) => h.failed),
-        backgroundColor: `${OCR_FAILED_COLOR}B3`,
+        backgroundColor: `${OCR_FAILED_COLOR}99`,
         borderColor: OCR_FAILED_COLOR,
         borderWidth: 1,
         borderRadius: 4,
@@ -126,52 +175,15 @@ export function buildHourlyOcrPerformanceData(
         yAxisID: 'y',
         order: 2,
       },
-      {
-        type: 'line',
-        label: 'Độ trễ TB',
-        data: hourly.map((h) =>
-          h.latencyAvgMs === null ? null : Number((h.latencyAvgMs / 1000).toFixed(3)),
-        ),
-        borderColor: OCR_LATENCY_AVG_COLOR,
-        backgroundColor: OCR_LATENCY_AVG_COLOR,
-        tension: 0.4,
-        spanGaps: true,
-        borderWidth: 2.5,
-        pointRadius: 3,
-        pointBackgroundColor: '#ffffff',
-        pointBorderColor: OCR_LATENCY_AVG_COLOR,
-        pointBorderWidth: 2,
-        pointHoverRadius: 5,
-        pointHoverBackgroundColor: OCR_LATENCY_AVG_COLOR,
-        yAxisID: 'yLatency',
-        order: 1,
-      },
-      {
-        type: 'line',
-        label: LATENCY_P95_LABEL,
-        data: hourly.map((h) =>
-          h.latencyP95Ms === null ? null : Number((h.latencyP95Ms / 1000).toFixed(3)),
-        ),
-        borderColor: OCR_LATENCY_P95_COLOR,
-        backgroundColor: OCR_LATENCY_P95_COLOR,
-        tension: 0.4,
-        spanGaps: true,
-        borderWidth: 2,
-        borderDash: [6, 4],
-        pointRadius: 0,
-        pointHoverRadius: 4,
-        pointHoverBackgroundColor: OCR_LATENCY_P95_COLOR,
-        yAxisID: 'yLatency',
-        order: 0,
-      },
+      latencyLineDataset(hourly.map((h) => latencySeconds(h.latencyAvgMs))),
     ],
   }
 }
 
 /**
  * Combined OCR operations chart for admin dashboards:
- * - bars: request count on the left axis
- * - line: average latency in seconds on the right axis
+ * - bars: request count
+ * - line: average latency for the same bucket as each bar
  */
 export function buildDailyOcrPerformanceData(
   daily: OcrDailyPoint[],
@@ -203,44 +215,7 @@ export function buildDailyOcrPerformanceData(
         yAxisID: 'y',
         order: 2,
       },
-      {
-        type: 'line',
-        label: 'Độ trễ TB',
-        data: daily.map((d) =>
-          d.latencyAvgMs === null ? null : Number((d.latencyAvgMs / 1000).toFixed(3)),
-        ),
-        borderColor: OCR_LATENCY_AVG_COLOR,
-        backgroundColor: OCR_LATENCY_AVG_COLOR,
-        tension: 0.4,
-        spanGaps: true,
-        borderWidth: 2.5,
-        pointRadius: 3,
-        pointBackgroundColor: '#ffffff',
-        pointBorderColor: OCR_LATENCY_AVG_COLOR,
-        pointBorderWidth: 2,
-        pointHoverRadius: 5,
-        pointHoverBackgroundColor: OCR_LATENCY_AVG_COLOR,
-        yAxisID: 'yLatency',
-        order: 1,
-      },
-      {
-        type: 'line',
-        label: LATENCY_P95_LABEL,
-        data: daily.map((d) =>
-          d.latencyP95Ms === null ? null : Number((d.latencyP95Ms / 1000).toFixed(3)),
-        ),
-        borderColor: OCR_LATENCY_P95_COLOR,
-        backgroundColor: OCR_LATENCY_P95_COLOR,
-        tension: 0.4,
-        spanGaps: true,
-        borderWidth: 2,
-        borderDash: [6, 4],
-        pointRadius: 0,
-        pointHoverRadius: 4,
-        pointHoverBackgroundColor: OCR_LATENCY_P95_COLOR,
-        yAxisID: 'yLatency',
-        order: 0,
-      },
+      latencyLineDataset(daily.map((d) => latencySeconds(d.latencyAvgMs))),
     ],
   }
 }
@@ -276,26 +251,7 @@ export function buildMonthlyOcrPerformanceData(
         yAxisID: 'y',
         order: 2,
       },
-      {
-        type: 'line',
-        label: 'Độ trễ TB',
-        data: monthly.map((m) =>
-          m.latencyAvgMs === null ? null : Number((m.latencyAvgMs / 1000).toFixed(3)),
-        ),
-        borderColor: OCR_LATENCY_AVG_COLOR,
-        backgroundColor: OCR_LATENCY_AVG_COLOR,
-        tension: 0.4,
-        spanGaps: true,
-        borderWidth: 2.5,
-        pointRadius: 3,
-        pointBackgroundColor: '#ffffff',
-        pointBorderColor: OCR_LATENCY_AVG_COLOR,
-        pointBorderWidth: 2,
-        pointHoverRadius: 5,
-        pointHoverBackgroundColor: OCR_LATENCY_AVG_COLOR,
-        yAxisID: 'yLatency',
-        order: 1,
-      },
+      latencyLineDataset(monthly.map((m) => latencySeconds(m.latencyAvgMs))),
     ],
   }
 }
@@ -394,7 +350,7 @@ export function buildMonthlyDriverVolumeData(
   }
 }
 
-/** Hourly version of the driver-experience combo chart. */
+/** Hourly driver volume bars with bucket-average latency line. */
 export function buildHourlyDriverExperienceData(
   driverHourly: OcrDriverHourlyPoint[],
 ): ChartData<'bar' | 'line'> {
@@ -405,7 +361,7 @@ export function buildHourlyDriverExperienceData(
         type: 'bar',
         label: SUCCESS_LABEL,
         data: driverHourly.map((h) => h.success),
-        backgroundColor: `${OCR_COLOR}B3`,
+        backgroundColor: `${OCR_COLOR}99`,
         borderColor: OCR_COLOR,
         borderWidth: 1,
         borderRadius: 4,
@@ -417,7 +373,7 @@ export function buildHourlyDriverExperienceData(
         type: 'bar',
         label: FAILED_LABEL,
         data: driverHourly.map((h) => h.failed),
-        backgroundColor: `${OCR_FAILED_COLOR}B3`,
+        backgroundColor: `${OCR_FAILED_COLOR}99`,
         borderColor: OCR_FAILED_COLOR,
         borderWidth: 1,
         borderRadius: 4,
@@ -425,54 +381,17 @@ export function buildHourlyDriverExperienceData(
         yAxisID: 'y',
         order: 2,
       },
-      {
-        type: 'line',
-        label: 'Độ trễ TB',
-        data: driverHourly.map((h) =>
-          h.latencyAvgMs === null ? null : Number((h.latencyAvgMs / 1000).toFixed(3)),
-        ),
-        borderColor: OCR_LATENCY_AVG_COLOR,
-        backgroundColor: OCR_LATENCY_AVG_COLOR,
-        tension: 0.4,
-        spanGaps: true,
-        borderWidth: 2.5,
-        pointRadius: 3,
-        pointBackgroundColor: '#ffffff',
-        pointBorderColor: OCR_LATENCY_AVG_COLOR,
-        pointBorderWidth: 2,
-        pointHoverRadius: 5,
-        pointHoverBackgroundColor: OCR_LATENCY_AVG_COLOR,
-        yAxisID: 'yLatency',
-        order: 1,
-      },
-      {
-        type: 'line',
-        label: LATENCY_P95_LABEL,
-        data: driverHourly.map((h) =>
-          h.latencyP95Ms === null ? null : Number((h.latencyP95Ms / 1000).toFixed(3)),
-        ),
-        borderColor: OCR_LATENCY_P95_COLOR,
-        backgroundColor: OCR_LATENCY_P95_COLOR,
-        tension: 0.4,
-        spanGaps: true,
-        borderWidth: 2,
-        borderDash: [6, 4],
-        pointRadius: 0,
-        pointHoverRadius: 4,
-        pointHoverBackgroundColor: OCR_LATENCY_P95_COLOR,
-        yAxisID: 'yLatency',
-        order: 0,
-      },
+      latencyLineDataset(driverHourly.map((h) => latencySeconds(h.latencyAvgMs))),
     ],
   }
 }
 
 /**
  * Driver-experience combo chart for the admin dashboard:
- * - bars: photo-upload count (success/failed) on the left axis
- * - line: end-to-end perceived latency (avg + p95) on the right axis
+ * - bars: photo-upload count (success/failed)
+ * - line: average latency for the same bucket as each bar
  * Distinct from buildDailyOcrPerformanceData, which plots per-provider-call
- * volume + provider-call latency.
+ * volume.
  */
 export function buildDailyDriverExperienceData(
   driverDaily: OcrDriverDailyPoint[],
@@ -504,49 +423,12 @@ export function buildDailyDriverExperienceData(
         yAxisID: 'y',
         order: 2,
       },
-      {
-        type: 'line',
-        label: 'Độ trễ TB',
-        data: driverDaily.map((d) =>
-          d.latencyAvgMs === null ? null : Number((d.latencyAvgMs / 1000).toFixed(3)),
-        ),
-        borderColor: OCR_LATENCY_AVG_COLOR,
-        backgroundColor: OCR_LATENCY_AVG_COLOR,
-        tension: 0.4,
-        spanGaps: true,
-        borderWidth: 2.5,
-        pointRadius: 3,
-        pointBackgroundColor: '#ffffff',
-        pointBorderColor: OCR_LATENCY_AVG_COLOR,
-        pointBorderWidth: 2,
-        pointHoverRadius: 5,
-        pointHoverBackgroundColor: OCR_LATENCY_AVG_COLOR,
-        yAxisID: 'yLatency',
-        order: 1,
-      },
-      {
-        type: 'line',
-        label: LATENCY_P95_LABEL,
-        data: driverDaily.map((d) =>
-          d.latencyP95Ms === null ? null : Number((d.latencyP95Ms / 1000).toFixed(3)),
-        ),
-        borderColor: OCR_LATENCY_P95_COLOR,
-        backgroundColor: OCR_LATENCY_P95_COLOR,
-        tension: 0.4,
-        spanGaps: true,
-        borderWidth: 2,
-        borderDash: [6, 4],
-        pointRadius: 0,
-        pointHoverRadius: 4,
-        pointHoverBackgroundColor: OCR_LATENCY_P95_COLOR,
-        yAxisID: 'yLatency',
-        order: 0,
-      },
+      latencyLineDataset(driverDaily.map((d) => latencySeconds(d.latencyAvgMs))),
     ],
   }
 }
 
-/** Monthly version of the driver-experience combo chart (no p95 by design). */
+/** Monthly version of the driver-experience combo chart. */
 export function buildMonthlyDriverExperienceData(
   driverMonthly: OcrDriverMonthlyPoint[],
 ): ChartData<'bar' | 'line'> {
@@ -577,26 +459,7 @@ export function buildMonthlyDriverExperienceData(
         yAxisID: 'y',
         order: 2,
       },
-      {
-        type: 'line',
-        label: 'Độ trễ TB',
-        data: driverMonthly.map((m) =>
-          m.latencyAvgMs === null ? null : Number((m.latencyAvgMs / 1000).toFixed(3)),
-        ),
-        borderColor: OCR_LATENCY_AVG_COLOR,
-        backgroundColor: OCR_LATENCY_AVG_COLOR,
-        tension: 0.4,
-        spanGaps: true,
-        borderWidth: 2.5,
-        pointRadius: 3,
-        pointBackgroundColor: '#ffffff',
-        pointBorderColor: OCR_LATENCY_AVG_COLOR,
-        pointBorderWidth: 2,
-        pointHoverRadius: 5,
-        pointHoverBackgroundColor: OCR_LATENCY_AVG_COLOR,
-        yAxisID: 'yLatency',
-        order: 1,
-      },
+      latencyLineDataset(driverMonthly.map((m) => latencySeconds(m.latencyAvgMs))),
     ],
   }
 }

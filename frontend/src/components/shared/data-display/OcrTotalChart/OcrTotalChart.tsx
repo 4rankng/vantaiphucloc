@@ -1,17 +1,17 @@
 import { useMemo, useState } from 'react'
 import { ChartCard } from '@/components/shared/data-display/ChartCard'
-import { BarChartWidget, LineChartWidget } from '@/components/shared/data-display/Charts'
+import { BarChartWidget } from '@/components/shared/data-display/Charts'
 import { OcrViewToggle, type ViewMode } from '@/components/shared/data-display/OcrViewToggle/OcrViewToggle'
 import { useOcrStats } from '@/hooks/queries/ocr-stats'
 import {
-  buildDailyLineData,
-  buildHourlyLineData,
-  buildMonthlyBarData,
+  buildDailyTotalData,
+  buildHourlyTotalData,
+  buildMonthlyTotalData,
   hasOcrData,
 } from '@/lib/ocr-analytics'
 
 interface OcrTotalChartProps {
-  /** Window for the "day" view; hour uses today and month uses 365 days. */
+  /** Window for the "day" view; hour uses 7 days and month uses 365 days. */
   days?: number
   /** Show the hour/day/month dropdown. Hidden on compact dashboard tiles. */
   showToggle?: boolean
@@ -35,18 +35,24 @@ export function OcrTotalChart({
   const [view, setView] = useState<ViewMode>('day')
   const isHour = showToggle && view === 'hour'
   const isMonth = showToggle && view === 'month'
-  const effectiveDays = isMonth ? 365 : isHour ? 2 : days
+  const effectiveDays = isMonth ? 365 : isHour ? 7 : days
   const { data: stats, isLoading } = useOcrStats(effectiveDays, isHour)
 
-  const hourlyData = useMemo(() => buildHourlyLineData(stats?.hourly ?? []), [stats])
-  const dailyData = useMemo(() => buildDailyLineData(stats?.daily ?? []), [stats])
-  const monthlyData = useMemo(() => buildMonthlyBarData(stats?.monthly ?? []), [stats])
+  const hourlyData = useMemo(() => buildHourlyTotalData(stats?.hourly ?? []), [stats])
+  const dailyData = useMemo(() => buildDailyTotalData(stats?.daily ?? []), [stats])
+  const monthlyData = useMemo(() => buildMonthlyTotalData(stats?.monthly ?? []), [stats])
 
   const actions = showToggle ? <OcrViewToggle value={view} onChange={setView} /> : undefined
+  const baseSubtitle = isHour ? '7 ngày' : isMonth ? '12 tháng' : `${effectiveDays} ngày`
+  const total = stats?.totals.total ?? 0
+  const subtitle = hasOcrData(stats)
+    ? `${baseSubtitle} · ${total.toLocaleString('vi-VN')} lượt`
+    : `${baseSubtitle} · Chưa có dữ liệu`
 
   return (
     <ChartCard
       title={title}
+      subtitle={subtitle}
       actions={actions}
       loading={isLoading}
       className={className}
@@ -57,28 +63,9 @@ export function OcrTotalChart({
             Chưa có dữ liệu
           </p>
         </div>
-      ) : isMonth ? (
-        <BarChartWidget
-          data={monthlyData}
-          height={240}
-          options={{
-            plugins: {
-              legend: {
-                display: true,
-                labels: {
-                  usePointStyle: true,
-                  pointStyle: 'circle',
-                  boxWidth: 6,
-                  boxHeight: 6,
-                  padding: 15,
-                },
-              },
-            },
-          }}
-        />
       ) : (
-        <LineChartWidget
-          data={isHour ? hourlyData : dailyData}
+        <BarChartWidget
+          data={isHour ? hourlyData : isMonth ? monthlyData : dailyData}
           height={240}
           options={{
             plugins: {
@@ -92,11 +79,39 @@ export function OcrTotalChart({
                   padding: 15,
                 },
               },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const label = ctx.dataset.label ?? ''
+                    const value = ctx.parsed.y
+                    return `${label}: ${Number(value).toLocaleString('vi-VN')} lượt`
+                  },
+                },
+              },
             },
-            interaction: { mode: 'index', intersect: false },
+            scales: {
+              x: {
+                ticks: {
+                  autoSkip: true,
+                  maxRotation: 0,
+                  maxTicksLimit: isHour ? 8 : isMonth ? 12 : 7,
+                },
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: 'Lượt OCR',
+                },
+                ticks: {
+                  precision: 0,
+                  callback: (value) => Number(value).toLocaleString('vi-VN'),
+                },
+              },
+            },
           }}
         />
       )}
     </ChartCard>
   )
 }
+

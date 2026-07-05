@@ -4,15 +4,23 @@
  */
 import {
   Chart as ChartJS,
-  CategoryScale, LinearScale, BarElement, LineElement, PointElement,
-  ArcElement, Tooltip, Legend, Filler,
+  CategoryScale, LinearScale,
+  BarController, LineController, DoughnutController,
+  BarElement, LineElement, PointElement, ArcElement,
+  Tooltip, Legend, Filler,
   type ChartData, type ChartOptions,
 } from 'chart.js'
 import { Bar, Line, Doughnut, Chart } from 'react-chartjs-2'
 
+// Register controllers explicitly. The generic <Chart type=...> wrapper used by
+// MixedChartWidget does not auto-register controllers (only the named <Bar/>,
+// <Line/> etc. do), so a mixed bar+line chart crashes at render with
+// '"line" is not a registered controller' when no <Line/> sibling is mounted.
 ChartJS.register(
-  CategoryScale, LinearScale, BarElement, LineElement, PointElement,
-  ArcElement, Tooltip, Legend, Filler,
+  CategoryScale, LinearScale,
+  BarController, LineController, DoughnutController,
+  BarElement, LineElement, PointElement, ArcElement,
+  Tooltip, Legend, Filler,
 )
 
 // ─── Shared defaults ──────────────────────────────────────────────────────────

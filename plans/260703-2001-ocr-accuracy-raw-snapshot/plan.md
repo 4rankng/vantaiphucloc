@@ -1,6 +1,8 @@
 # Fix OCR accuracy metric — capture raw OCR value before correction
 
-**Status:** DONE — implemented, verified (4 new tests + 57 shared-contract tests green), code-reviewed (DONE, no Critical/High; M1 doc comment applied). Selection-bias caveat recorded below. Awaiting user commit decision.
+**Status:** DONE — implemented, verified (4 new tests + 57 shared-contract tests green), code-reviewed (DONE, no Critical/High; M1 doc comment applied). Frontend `rawOcrNumber` capture + backend write paths committed in HEAD. Selection-bias caveat recorded below.
+
+**Follow-on (2026-07-03) — nullify pre-fix rows, shipped:** migration `0017_null_original_cont` (`UPDATE delivered_trips SET original_cont_number=NULL WHERE IS NOT NULL`) excludes the meaningless 0016 backfill from the metric denominator. Committed `310a43a1`, deployed to prod via `make deploy`: prod `alembic_head=0017`, 3738 rows / 807 matched / **0 non-null** `original_cont_number`. Dev repaired to the same state after a verification mishap. The 30-day age-out plan was superseded by active nullification. Authoring gotcha: first revision slug was 41 chars and failed the VARCHAR(32) stamp — see [[project_alembic_ops]].
 **Branch:** main (edits directly, per [[feedback_no_worktree]])
 **Origin:** `ck:predict` verdict CAUTION → 5 recommendations; user confirmed import-path treatment = NULL.
 

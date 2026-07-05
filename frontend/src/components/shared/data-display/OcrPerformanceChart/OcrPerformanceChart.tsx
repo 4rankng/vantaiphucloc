@@ -32,7 +32,7 @@ export function OcrPerformanceChart({
   const [view, setView] = useState<ViewMode>('day')
   const isHour = showToggle && view === 'hour'
   const isMonth = showToggle && view === 'month'
-  const effectiveDays = isMonth ? 365 : isHour ? 2 : days
+  const effectiveDays = isMonth ? 365 : isHour ? 7 : days
   const { data: stats, isLoading } = useOcrStats(effectiveDays, isHour)
 
   const hourlyData = useMemo(
@@ -53,9 +53,9 @@ export function OcrPerformanceChart({
   const total = isHour ? hourlyTotal : grandTotal(stats)
   const successCount = isHour ? hourlySuccess : stats?.totals.success ?? 0
   const successPct = stats ? successRate(total, successCount) : 0
-  const baseSubtitle = isHour ? '48 giờ' : isMonth ? '12 tháng' : `${effectiveDays} ngày`
+  const baseSubtitle = isHour ? '7 ngày' : isMonth ? '12 tháng' : `${effectiveDays} ngày`
   const latencySubtitle = hasLatencyData(stats)
-    ? ` · TB ${formatLatencyMs(stats?.totals.latencyAvgMs ?? null)} · p95 ${formatLatencyMs(stats?.totals.latencyP95Ms ?? null)}`
+    ? ` · TB ${formatLatencyMs(stats?.totals.latencyAvgMs ?? null)}`
     : ''
   const subtitle = hasOcrData(stats)
     ? `${baseSubtitle} · ${total.toLocaleString('vi-VN')} lượt · đạt ${successPct}%${latencySubtitle}`
@@ -133,6 +133,10 @@ export function OcrPerformanceChart({
                 },
               },
               yLatency: {
+                position: 'right',
+                grid: {
+                  drawOnChartArea: false,
+                },
                 title: {
                   display: true,
                   text: 'Độ trễ',

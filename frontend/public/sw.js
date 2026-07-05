@@ -4,7 +4,7 @@
 //  - HTML navigations: network-first → fresh app on every deploy, cached fallback offline.
 //  - Vite hashed assets (JS/CSS/imgs): cache-first → immutable; new deploys ship new hashes.
 //  - API calls (/api/*) + cross-origin: never cached → live trip data always hits network.
-const CACHE = 'ttransport-shell-v1'
+const CACHE = 'ttransport-shell-v2'
 
 self.addEventListener('install', (event) => {
   // No precache: runtime fetch handler seeds the cache on first online load

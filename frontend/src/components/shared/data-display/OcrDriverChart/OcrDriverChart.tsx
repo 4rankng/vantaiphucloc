@@ -25,10 +25,8 @@ interface OcrDriverChartProps {
 /**
  * Driver-experience OCR chart — the human grain, distinct from the per-provider
  * performance chart. Bars count how many times drivers uploaded a photo (one
- * per upload, regardless of fallback calls); the lines plot the end-to-end
- * latency the driver actually waited (upload → numbers returned), not any
- * single provider's call time. Latency is superadmin-only, so for other roles
- * the lines render empty but the upload counts remain.
+ * per upload, regardless of fallback calls); the latency line shows the
+ * average wait time inside each visible chart bucket.
  */
 export function OcrDriverChart({
   days = 30,
@@ -39,30 +37,30 @@ export function OcrDriverChart({
   const [view, setView] = useState<ViewMode>('day')
   const isHour = showToggle && view === 'hour'
   const isMonth = showToggle && view === 'month'
-  const effectiveDays = isMonth ? 365 : isHour ? 2 : days
+  const effectiveDays = isMonth ? 365 : isHour ? 7 : days
   const { data: stats, isLoading } = useOcrStats(effectiveDays, isHour)
 
-  const driverHourly = stats?.driverExperience.hourly ?? []
-  const driverDaily = stats?.driverExperience.daily ?? []
-  const driverMonthly = stats?.driverExperience.monthly ?? []
   const hourlyData = useMemo(
-    () => buildHourlyDriverExperienceData(driverHourly),
-    [driverHourly],
+    () => buildHourlyDriverExperienceData(stats?.driverExperience.hourly ?? []),
+    [stats?.driverExperience.hourly],
   )
-  const dailyData = useMemo(() => buildDailyDriverExperienceData(driverDaily), [driverDaily])
+  const dailyData = useMemo(
+    () => buildDailyDriverExperienceData(stats?.driverExperience.daily ?? []),
+    [stats?.driverExperience.daily],
+  )
   const monthlyData = useMemo(
-    () => buildMonthlyDriverExperienceData(driverMonthly),
-    [driverMonthly],
+    () => buildMonthlyDriverExperienceData(stats?.driverExperience.monthly ?? []),
+    [stats?.driverExperience.monthly],
   )
 
-  const hourlyTotal = driverHourly.reduce((sum, point) => sum + point.requests, 0)
-  const hourlySuccess = driverHourly.reduce((sum, point) => sum + point.success, 0)
+  const hourlyTotal = stats?.driverExperience.hourly.reduce((sum, point) => sum + point.requests, 0) ?? 0
+  const hourlySuccess = stats?.driverExperience.hourly.reduce((sum, point) => sum + point.success, 0) ?? 0
   const total = isHour ? hourlyTotal : driverTotal(stats)
   const successCount = isHour ? hourlySuccess : driverSuccess(stats)
   const successPct = stats ? successRate(total, successCount) : 0
-  const baseSubtitle = isHour ? '48 giờ' : isMonth ? '12 tháng' : `${effectiveDays} ngày`
+  const baseSubtitle = isHour ? '7 ngày' : isMonth ? '12 tháng' : `${effectiveDays} ngày`
   const latencySubtitle = hasDriverLatencyData(stats)
-    ? ` · TB ${formatLatencyMs(stats?.driverExperience.totals.latencyAvgMs ?? null)} · p95 ${formatLatencyMs(stats?.driverExperience.totals.latencyP95Ms ?? null)}`
+    ? ` · TB ${formatLatencyMs(stats?.driverExperience.totals.latencyAvgMs ?? null)}`
     : ''
   const subtitle = hasDriverData(stats)
     ? `${baseSubtitle} · ${total.toLocaleString('vi-VN')} lượt · đạt ${successPct}%${latencySubtitle}`
@@ -136,6 +134,10 @@ export function OcrDriverChart({
                 },
               },
               yLatency: {
+                position: 'right',
+                grid: {
+                  drawOnChartArea: false,
+                },
                 title: {
                   display: true,
                   text: 'Độ trễ',
