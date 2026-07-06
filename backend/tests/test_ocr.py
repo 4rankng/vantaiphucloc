@@ -496,6 +496,54 @@ def test_available_providers_openrouter_no_key(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_openrouter_235b_uses_best_guess_prompt(monkeypatch):
+    captured_prompts: list[str] = []
+
+    async def _capture(prompt, image_bytes, mime_type, model=None):
+        captured_prompts.append(prompt)
+        return {
+            "success": True,
+            "text": '{"container_numbers": ["TIIX1230001"]}',
+            "error": None,
+            "provider": "openrouter",
+            "model": model,
+        }
+
+    monkeypatch.setattr(ocr_mod, "call_openrouter_vision", _capture)
+
+    provider = ocr_mod._make_openrouter_provider("qwen/qwen3-vl-235b-a22b-instruct")
+    await provider(b"img", "image/jpeg")
+
+    assert len(captured_prompts) == 1
+    assert "Last-Guard Best Guess Mode" in captured_prompts[0]
+    assert "single best 11-character guess" in captured_prompts[0]
+    assert "Do not use special placeholder characters" in captured_prompts[0]
+
+
+@pytest.mark.asyncio
+async def test_openrouter_32b_keeps_strict_prompt(monkeypatch):
+    captured_prompts: list[str] = []
+
+    async def _capture(prompt, image_bytes, mime_type, model=None):
+        captured_prompts.append(prompt)
+        return {
+            "success": True,
+            "text": '{"container_numbers": ["MSKU1234565"]}',
+            "error": None,
+            "provider": "openrouter",
+            "model": model,
+        }
+
+    monkeypatch.setattr(ocr_mod, "call_openrouter_vision", _capture)
+
+    provider = ocr_mod._make_openrouter_provider("qwen/qwen3-vl-32b-instruct")
+    await provider(b"img", "image/jpeg")
+
+    assert len(captured_prompts) == 1
+    assert "Last-Guard Best Guess Mode" not in captured_prompts[0]
+
+
+@pytest.mark.asyncio
 async def test_extract_container_numbers_openrouter_success():
     """OpenRouter returns valid numbers → provider == openrouter."""
 

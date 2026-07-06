@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from httpx import AsyncClient
 
+from app.config import settings
 from app.models.domain import OcrDriverRequest
 
 pytestmark = pytest.mark.asyncio
@@ -24,6 +25,7 @@ async def _add_row(
     *,
     success: bool,
     photo_url: str | None,
+    photo_hash: str | None = None,
     age_seconds: int = 0,
 ) -> None:
     db_session.add(
@@ -36,6 +38,7 @@ async def _add_row(
             latency_ms=1100,
             provider="gemini",
             cont_photo_url=photo_url,
+            cont_photo_hash=photo_hash,
         )
     )
     await db_session.flush()
@@ -106,3 +109,83 @@ async def test_window_excludes_old_failures(
     resp = await async_client.get(OCR_FAILURES_URL, params={"days": 1}, headers=headers)
     assert resp.status_code == 200, resp.text
     assert resp.json()["items"] == []
+
+
+async def test_failures_are_deduplicated_by_stored_photo_hash(
+    async_client: AsyncClient, make_auth_headers, db_session
+):
+    same_hash = "a" * 64
+    await _add_row(
+        db_session,
+        success=False,
+        photo_url="/photos/2026/07/05/older-duplicate.jpg",
+        photo_hash=same_hash,
+        age_seconds=20,
+    )
+    await _add_row(
+        db_session,
+        success=False,
+        photo_url="/photos/2026/07/05/newer-duplicate.jpg",
+        photo_hash=same_hash,
+        age_seconds=10,
+    )
+    await _add_row(
+        db_session,
+        success=False,
+        photo_url="/photos/2026/07/05/unique.jpg",
+        photo_hash="b" * 64,
+        age_seconds=30,
+    )
+
+    headers = await make_auth_headers("superadmin")
+    resp = await async_client.get(
+        OCR_FAILURES_URL, params={"days": 30}, headers=headers
+    )
+
+    assert resp.status_code == 200, resp.text
+    assert [i["contPhotoUrl"] for i in resp.json()["items"]] == [
+        "/photos/2026/07/05/newer-duplicate.jpg",
+        "/photos/2026/07/05/unique.jpg",
+    ]
+
+
+async def test_failures_are_deduplicated_by_file_hash_for_historical_rows(
+    async_client: AsyncClient, make_auth_headers, db_session, tmp_path, monkeypatch
+):
+    monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path))
+    photo_dir = tmp_path / "2026" / "07" / "05"
+    photo_dir.mkdir(parents=True)
+    duplicate_bytes = b"same historical failed OCR photo"
+    (photo_dir / "older.jpg").write_bytes(duplicate_bytes)
+    (photo_dir / "newer.jpg").write_bytes(duplicate_bytes)
+    (photo_dir / "unique.jpg").write_bytes(b"different historical failed OCR photo")
+
+    await _add_row(
+        db_session,
+        success=False,
+        photo_url="/photos/2026/07/05/older.jpg",
+        age_seconds=20,
+    )
+    await _add_row(
+        db_session,
+        success=False,
+        photo_url="/photos/2026/07/05/newer.jpg",
+        age_seconds=10,
+    )
+    await _add_row(
+        db_session,
+        success=False,
+        photo_url="/photos/2026/07/05/unique.jpg",
+        age_seconds=30,
+    )
+
+    headers = await make_auth_headers("superadmin")
+    resp = await async_client.get(
+        OCR_FAILURES_URL, params={"days": 30}, headers=headers
+    )
+
+    assert resp.status_code == 200, resp.text
+    assert [i["contPhotoUrl"] for i in resp.json()["items"]] == [
+        "/photos/2026/07/05/newer.jpg",
+        "/photos/2026/07/05/unique.jpg",
+    ]

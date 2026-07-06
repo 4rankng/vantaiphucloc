@@ -8,29 +8,11 @@
       "expected_numbers": [
         "OOCU9217153"
       ],
-      "latency_s": 1.0457,
+      "latency_s": 1.897,
       "error": null,
       "container_numbers": [],
       "check_digit_valid": {},
       "raw_response": "{\"container_numbers\": [\"OOCU9217154561\"]}"
-    },
-    "Qwen3-VL-32B · new": {
-      "model": "qwen/qwen3-vl-32b-instruct",
-      "prompt": "new",
-      "success": true,
-      "exact_match": true,
-      "expected_numbers": [
-        "OOCU9217153"
-      ],
-      "latency_s": 2.8925,
-      "error": null,
-      "container_numbers": [
-        "OOCU9217153"
-      ],
-      "check_digit_valid": {
-        "OOCU9217153": true
-      },
-      "raw_response": "{\n  \"container_numbers\": [\"OOCU9217153\"]\n}"
     },
     "Qwen3-VL-235B · old": {
       "model": "qwen/qwen3-vl-235b-a22b-instruct",
@@ -40,7 +22,7 @@
       "expected_numbers": [
         "OOCU9217153"
       ],
-      "latency_s": 1.2516,
+      "latency_s": 3.1579,
       "error": null,
       "container_numbers": [
         "OOCU9217153"
@@ -50,15 +32,15 @@
       },
       "raw_response": "{\"container_numbers\": [\"OOCU9217153\"]}"
     },
-    "Qwen3-VL-235B · new": {
-      "model": "qwen/qwen3-vl-235b-a22b-instruct",
-      "prompt": "new",
+    "Qwen3.7-Plus · old": {
+      "model": "qwen/qwen3.7-plus",
+      "prompt": "old",
       "success": true,
       "exact_match": true,
       "expected_numbers": [
         "OOCU9217153"
       ],
-      "latency_s": 5.0897,
+      "latency_s": 4.4437,
       "error": null,
       "container_numbers": [
         "OOCU9217153"
@@ -66,7 +48,7 @@
       "check_digit_valid": {
         "OOCU9217153": true
       },
-      "raw_response": "{\n  \"container_numbers\": [\"OOCU9217153\"]\n}"
+      "raw_response": "{\n\"container_numbers\": [\n    \"OOCU9217153\"\n  ]\n}"
     }
   },
   "TGBU2406421.jpg": {
@@ -78,7 +60,7 @@
       "expected_numbers": [
         "TGBU2406421"
       ],
-      "latency_s": 0.6878,
+      "latency_s": 0.5503,
       "error": null,
       "container_numbers": [
         "HBCU2406421"
@@ -88,24 +70,6 @@
       },
       "raw_response": "{\"container_numbers\": [\"HBCU2406421\"]}"
     },
-    "Qwen3-VL-32B · new": {
-      "model": "qwen/qwen3-vl-32b-instruct",
-      "prompt": "new",
-      "success": true,
-      "exact_match": false,
-      "expected_numbers": [
-        "TGBU2406421"
-      ],
-      "latency_s": 0.8375,
-      "error": null,
-      "container_numbers": [
-        "HBCU2406421"
-      ],
-      "check_digit_valid": {
-        "HBCU2406421": false
-      },
-      "raw_response": "{\n  \"container_numbers\": [\"HBCU2406421\"]\n}"
-    },
     "Qwen3-VL-235B · old": {
       "model": "qwen/qwen3-vl-235b-a22b-instruct",
       "prompt": "old",
@@ -114,25 +78,7 @@
       "expected_numbers": [
         "TGBU2406421"
       ],
-      "latency_s": 2.5146,
-      "error": null,
-      "container_numbers": [
-        "TGBU2406421"
-      ],
-      "check_digit_valid": {
-        "TGBU2406421": true
-      },
-      "raw_response": "{\"container_numbers\": [\"TGBU2406421\"]}"
-    },
-    "Qwen3-VL-235B · new": {
-      "model": "qwen/qwen3-vl-235b-a22b-instruct",
-      "prompt": "new",
-      "success": true,
-      "exact_match": true,
-      "expected_numbers": [
-        "TGBU2406421"
-      ],
-      "latency_s": 1.8815,
+      "latency_s": 1.5229,
       "error": null,
       "container_numbers": [
         "TGBU2406421"
@@ -141,6 +87,128 @@
         "TGBU2406421": true
       },
       "raw_response": "{\n  \"container_numbers\": [\"TGBU2406421\"]\n}"
+    },
+    "Qwen3.7-Plus · old": {
+      "model": "qwen/qwen3.7-plus",
+      "prompt": "old",
+      "success": true,
+      "exact_match": true,
+      "expected_numbers": [
+        "TGBU2406421"
+      ],
+      "latency_s": 7.8337,
+      "error": null,
+      "container_numbers": [
+        "TGBU2406421"
+      ],
+      "check_digit_valid": {
+        "TGBU2406421": true
+      },
+      "raw_response": "{\n\"container_numbers\": [\n    \"TGBU2406421\"\n  ]\n}"
+    }
+  },
+  "TIIU6746012.jpg": {
+    "Qwen3-VL-32B · old": {
+      "model": "qwen/qwen3-vl-32b-instruct",
+      "prompt": "old",
+      "success": true,
+      "exact_match": false,
+      "expected_numbers": [
+        "TIIU6746012"
+      ],
+      "latency_s": 0.7117,
+      "error": null,
+      "container_numbers": [
+        "TITU6746012"
+      ],
+      "check_digit_valid": {
+        "TITU6746012": false
+      },
+      "raw_response": "{\"container_numbers\": [\"TITU6746012\"]}"
+    },
+    "Qwen3-VL-235B · old": {
+      "model": "qwen/qwen3-vl-235b-a22b-instruct",
+      "prompt": "old",
+      "success": true,
+      "exact_match": false,
+      "expected_numbers": [
+        "TIIU6746012"
+      ],
+      "latency_s": 1.3425,
+      "error": null,
+      "container_numbers": [
+        "TIUU6746012"
+      ],
+      "check_digit_valid": {
+        "TIUU6746012": false
+      },
+      "raw_response": "{\n  \"container_numbers\": [\"TIUU6746012\"]\n}"
+    },
+    "Qwen3.7-Plus · old": {
+      "model": "qwen/qwen3.7-plus",
+      "prompt": "old",
+      "success": true,
+      "exact_match": true,
+      "expected_numbers": [
+        "TIIU6746012"
+      ],
+      "latency_s": 10.5474,
+      "error": null,
+      "container_numbers": [
+        "TIIU6746012"
+      ],
+      "check_digit_valid": {
+        "TIIU6746012": true
+      },
+      "raw_response": "{\n  \"container_numbers\": [\n    \"TIIU6746012\"\n  ]\n}"
+    }
+  },
+  "XLAU7735411.jpg": {
+    "Qwen3-VL-32B · old": {
+      "model": "qwen/qwen3-vl-32b-instruct",
+      "prompt": "old",
+      "success": true,
+      "exact_match": false,
+      "expected_numbers": [
+        "XLAU7735411"
+      ],
+      "latency_s": 0.6891,
+      "error": null,
+      "container_numbers": [],
+      "check_digit_valid": {},
+      "raw_response": "{\"container_numbers\": [\"U773541\"]}"
+    },
+    "Qwen3-VL-235B · old": {
+      "model": "qwen/qwen3-vl-235b-a22b-instruct",
+      "prompt": "old",
+      "success": true,
+      "exact_match": false,
+      "expected_numbers": [
+        "XLAU7735411"
+      ],
+      "latency_s": 14.6894,
+      "error": null,
+      "container_numbers": [],
+      "check_digit_valid": {},
+      "raw_response": "{\n  \"container_numbers\": [\"AU7735411\"]\n}"
+    },
+    "Qwen3.7-Plus · old": {
+      "model": "qwen/qwen3.7-plus",
+      "prompt": "old",
+      "success": true,
+      "exact_match": false,
+      "expected_numbers": [
+        "XLAU7735411"
+      ],
+      "latency_s": 73.7451,
+      "error": null,
+      "container_numbers": [
+        "CAIU7735411"
+      ],
+      "check_digit_valid": {
+        "CAIU7735411": false
+      },
+      "raw_response": "{\n  \"container_numbers\": [\n    \"CAIU7735411\"\n  ]\n}"
     }
   },
   "ZXJU0301057-TGBU2406421.png": {
@@ -153,7 +221,7 @@
         "ZXJU0301057",
         "TGBU2406421"
       ],
-      "latency_s": 4.6892,
+      "latency_s": 1.5543,
       "error": null,
       "container_numbers": [
         "ZXJU0301057",
@@ -165,27 +233,6 @@
       },
       "raw_response": "{\"container_numbers\": [\"ZXJU0301057\", \"TGBU2406421\"]}"
     },
-    "Qwen3-VL-32B · new": {
-      "model": "qwen/qwen3-vl-32b-instruct",
-      "prompt": "new",
-      "success": true,
-      "exact_match": true,
-      "expected_numbers": [
-        "ZXJU0301057",
-        "TGBU2406421"
-      ],
-      "latency_s": 1.6552,
-      "error": null,
-      "container_numbers": [
-        "ZXJU0301057",
-        "TGBU2406421"
-      ],
-      "check_digit_valid": {
-        "ZXJU0301057": true,
-        "TGBU2406421": true
-      },
-      "raw_response": "{\n\"container_numbers\": [\"ZXJU0301057\", \"TGBU2406421\"]\n}"
-    },
     "Qwen3-VL-235B · old": {
       "model": "qwen/qwen3-vl-235b-a22b-instruct",
       "prompt": "old",
@@ -195,7 +242,7 @@
         "ZXJU0301057",
         "TGBU2406421"
       ],
-      "latency_s": 2.765,
+      "latency_s": 14.3135,
       "error": null,
       "container_numbers": [
         "ZXJU0301057",
@@ -207,16 +254,16 @@
       },
       "raw_response": "{\n  \"container_numbers\": [\"ZXJU0301057\", \"TGBU2406421\"]\n}"
     },
-    "Qwen3-VL-235B · new": {
-      "model": "qwen/qwen3-vl-235b-a22b-instruct",
-      "prompt": "new",
+    "Qwen3.7-Plus · old": {
+      "model": "qwen/qwen3.7-plus",
+      "prompt": "old",
       "success": true,
       "exact_match": true,
       "expected_numbers": [
         "ZXJU0301057",
         "TGBU2406421"
       ],
-      "latency_s": 5.4041,
+      "latency_s": 8.3652,
       "error": null,
       "container_numbers": [
         "ZXJU0301057",
@@ -226,7 +273,7 @@
         "ZXJU0301057": true,
         "TGBU2406421": true
       },
-      "raw_response": "{\n  \"container_numbers\": [\"ZXJU0301057\", \"TGBU2406421\"]\n}"
+      "raw_response": "{\n  \"container_numbers\": [\n    \"ZXJU0301057\",\n    \"TGBU2406421\"\n  ]\n}"
     }
   },
   "ZXJU0301057.jpg": {
@@ -238,7 +285,7 @@
       "expected_numbers": [
         "ZXJU0301057"
       ],
-      "latency_s": 0.6278,
+      "latency_s": 0.8152,
       "error": null,
       "container_numbers": [
         "ZXJU0301057"
@@ -248,20 +295,6 @@
       },
       "raw_response": "{\"container_numbers\": [\"ZXJU0301057\"]}"
     },
-    "Qwen3-VL-32B · new": {
-      "model": "qwen/qwen3-vl-32b-instruct",
-      "prompt": "new",
-      "success": true,
-      "exact_match": false,
-      "expected_numbers": [
-        "ZXJU0301057"
-      ],
-      "latency_s": 0.92,
-      "error": null,
-      "container_numbers": [],
-      "check_digit_valid": {},
-      "raw_response": "{\n  \"container_numbers\": [\"ZXU0301057\"]\n}"
-    },
     "Qwen3-VL-235B · old": {
       "model": "qwen/qwen3-vl-235b-a22b-instruct",
       "prompt": "old",
@@ -270,7 +303,7 @@
       "expected_numbers": [
         "ZXJU0301057"
       ],
-      "latency_s": 3.6652,
+      "latency_s": 5.308,
       "error": null,
       "container_numbers": [
         "ZXJU0301057"
@@ -280,15 +313,15 @@
       },
       "raw_response": "{\n  \"container_numbers\": [\"ZXJU0301057\"]\n}"
     },
-    "Qwen3-VL-235B · new": {
-      "model": "qwen/qwen3-vl-235b-a22b-instruct",
-      "prompt": "new",
+    "Qwen3.7-Plus · old": {
+      "model": "qwen/qwen3.7-plus",
+      "prompt": "old",
       "success": true,
       "exact_match": true,
       "expected_numbers": [
         "ZXJU0301057"
       ],
-      "latency_s": 1.1497,
+      "latency_s": 4.8623,
       "error": null,
       "container_numbers": [
         "ZXJU0301057"
@@ -296,7 +329,7 @@
       "check_digit_valid": {
         "ZXJU0301057": true
       },
-      "raw_response": "{\n  \"container_numbers\": [\"ZXJU0301057\"]\n}"
+      "raw_response": "{\n  \"container_numbers\": [\n    \"ZXJU0301057\"\n  ]\n}"
     }
   }
 }

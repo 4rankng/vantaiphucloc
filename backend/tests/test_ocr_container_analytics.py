@@ -13,6 +13,7 @@ no-provider-configured edge case still writes a row, and the persisted
 """
 
 import base64
+import hashlib
 from io import BytesIO
 from unittest.mock import AsyncMock, patch
 
@@ -221,8 +222,11 @@ async def test_failed_ocr_persists_photo(
     assert len(rows) == 1
     url = rows[0].cont_photo_url
     assert url is not None and url.startswith("/photos/")
+    assert rows[0].cont_photo_hash is not None
     # The image actually landed on disk under the storage root.
-    assert (tmp_path / url.removeprefix("/photos/")).is_file()
+    stored_path = tmp_path / url.removeprefix("/photos/")
+    assert stored_path.is_file()
+    assert rows[0].cont_photo_hash == hashlib.sha256(stored_path.read_bytes()).hexdigest()
 
 
 async def test_successful_ocr_does_not_persist_photo(

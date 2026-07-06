@@ -2,7 +2,7 @@
 
 OpenRouter is the primary OCR provider when enabled. Each OCR request tries
 the OpenRouter models in sequence — Qwen3-VL-32B first, then
-Qwen3-VL-235B if the first model fails. Gemini is the last-resort fallback
+Qwen3.7-Plus if the first model fails. Gemini is the last-resort fallback
 when enabled.
 Each call goes through ``_available_providers()`` (gated by the
 OPENROUTER_ENABLE / GEMINI_ENABLE flags plus a non-empty API key) and the
@@ -175,7 +175,7 @@ def _available_providers() -> list[tuple[str, ProviderCallable]]:
     """Ordered OCR providers enabled by config (flag on AND key set).
 
     OpenRouter is tried first whenever it is enabled — its models are tried
-    in sequence (32B then 235B). When two Gemini keys are configured they alternate per
+    in sequence (32B then Qwen3.7-Plus). When two Gemini keys are configured they alternate per
     request (round-robin); if the first key fails the other Gemini key is
     still tried. Returns a list of ``(name, async-callable)`` pairs — Gemini
     may appear more than once (once per key).
@@ -216,7 +216,7 @@ async def extract_container_numbers(
     """Extract ALL container numbers using single-shot OCR.
 
     Tries each enabled provider in order. OpenRouter tries Qwen3-VL-32B
-    first and falls back to Qwen3-VL-235B. With Gemini available, Gemini keys are tried after
+    first and falls back to Qwen3.7-Plus. With Gemini available, Gemini keys are tried after
     OpenRouter and alternate per request to avoid 429s. The first provider
     that returns ≥1 format-valid number wins. Numbers with invalid ISO 6346
     check digits are auto-corrected when a near-miss valid number exists.

@@ -1,8 +1,10 @@
 """Dashboard OCR analytics endpoint."""
 
+import hashlib
 import re
 import statistics
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -12,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.domain import BookedTrip, DeliveredTrip, OcrDriverRequest, OcrRequest
 from app.models.base import User
 from app.core.deps import require_roles
+from app.config import settings
 from app.database import get_db
 from app.utils.fuzzy import container_edit_distance
 from app.utils.iso6346 import normalize_container_number
@@ -27,6 +30,21 @@ ACCURACY_ROLLING_WINDOW_SIZE = 100
 HOURLY_WINDOW_DAYS = 7
 HOURLY_BUCKET_COUNT = HOURLY_WINDOW_DAYS * 24
 HTTP_STATUS_RE = re.compile(r"\bHTTP\s+(\d{3})\b", re.IGNORECASE)
+
+
+def _photo_hash_from_url(url: str | None) -> str | None:
+    if not url or not url.startswith("/photos/"):
+        return None
+    root = Path(settings.PHOTO_STORAGE_ROOT).resolve()
+    target = (root / url.removeprefix("/photos/")).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError:
+        return None
+    try:
+        return hashlib.sha256(target.read_bytes()).hexdigest()
+    except OSError:
+        return None
 
 
 def _http_action(status: int) -> str:
@@ -775,6 +793,7 @@ async def get_ocr_failures(
                 OcrDriverRequest.numbers_found,
                 OcrDriverRequest.provider,
                 OcrDriverRequest.cont_photo_url,
+                OcrDriverRequest.cont_photo_hash,
                 User.full_name.label("driver_name"),
             )
             .select_from(OcrDriverRequest)
@@ -786,11 +805,23 @@ async def get_ocr_failures(
                 OcrDriverRequest.created_at <= end,
             )
             .order_by(OcrDriverRequest.created_at.desc())
-            .limit(50)
+            .limit(250)
         )
     ).all()
-    return {
-        "items": [
+    items = []
+    seen_hashes: set[str] = set()
+    seen_urls: set[str] = set()
+    for r in rows:
+        photo_hash = r.cont_photo_hash or _photo_hash_from_url(r.cont_photo_url)
+        if photo_hash:
+            if photo_hash in seen_hashes:
+                continue
+            seen_hashes.add(photo_hash)
+        elif r.cont_photo_url:
+            if r.cont_photo_url in seen_urls:
+                continue
+            seen_urls.add(r.cont_photo_url)
+        items.append(
             {
                 "id": r.id,
                 "createdAt": r.created_at.isoformat() if r.created_at else None,
@@ -801,6 +832,9 @@ async def get_ocr_failures(
                 "provider": r.provider,
                 "contPhotoUrl": r.cont_photo_url,
             }
-            for r in rows
-        ]
+        )
+        if len(items) >= 50:
+            break
+    return {
+        "items": items
     }

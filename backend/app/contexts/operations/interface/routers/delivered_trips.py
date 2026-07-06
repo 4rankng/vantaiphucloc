@@ -221,10 +221,13 @@ async def ocr_container(
     # save failure must not break the OCR response or the analytics write:
     # on error we leave the URL None and that failure simply isn't viewable.
     failed_photo_url: str | None = None
+    failed_photo_hash: str | None = None
     if not result.get("success"):
         try:
             data_url = f"data:{body.mime_type};base64,{body.image_data}"
-            failed_photo_url = save_base64_photo(data_url).url
+            failed_photo = save_base64_photo(data_url)
+            failed_photo_url = failed_photo.url
+            failed_photo_hash = failed_photo.content_hash
         except Exception:
             _logger.exception("[OCR] failed to persist failed-OCR photo")
     try:
@@ -237,6 +240,7 @@ async def ocr_container(
                 latency_ms=end_to_end_ms,
                 provider=result.get("provider"),
                 cont_photo_url=failed_photo_url,
+                cont_photo_hash=failed_photo_hash,
             )
         )
         for attempt in attempts:

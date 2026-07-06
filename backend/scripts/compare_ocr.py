@@ -53,6 +53,7 @@ _CONTAINER_RE = re.compile(r"[A-Z]{4}\d{7}")
 
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
 DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_OCR_TEMPERATURE = 0.2
 QWEN_MODELS = [
     ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
     ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
@@ -254,7 +255,7 @@ def run_openrouter(
     encoded = base64.b64encode(image_bytes).decode("utf-8")
     payload = {
         "model": model,
-        "temperature": 0,
+        "temperature": OPENROUTER_OCR_TEMPERATURE,
         "max_tokens": 2048,
         "messages": [
             {
@@ -418,6 +419,19 @@ def load_new_prompt(path: str) -> str:
     return text
 
 
+def parse_model_arg(value: str) -> tuple[str, str]:
+    """Parse --model into a (label, model_id) pair.
+
+    Accepts either 'Label:provider/id' or a bare 'provider/id'. A bare id
+    derives its label from the final path segment so OpenRouter ids keep
+    their ':free' style suffixes intact (those contain a colon, not a slash).
+    """
+    if ":" in value and "/" not in value.split(":", 1)[0]:
+        label, model = value.split(":", 1)
+        return label.strip(), model.strip()
+    return value.split("/")[-1], value.strip()
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Benchmark container OCR across Qwen3-VL-32B and Qwen3-VL-235B",
@@ -430,6 +444,16 @@ def main():
         default=None,
         help="Path to a challenger prompt file. When set, each model runs with both "
         "the built-in (old) prompt and this new one for A/B comparison.",
+    )
+    parser.add_argument(
+        "-m",
+        "--model",
+        action="append",
+        default=[],
+        metavar="LABEL:MODEL_ID",
+        help="Extra candidate model to benchmark (repeatable). Format "
+        "'Label:provider/id', or a bare 'provider/id' to auto-derive the "
+        "label. Appended to the built-in Qwen models.",
     )
     args = parser.parse_args()
 
@@ -463,10 +487,15 @@ def main():
     if args.new_prompt:
         prompts.append(("new", load_new_prompt(args.new_prompt)))
 
+    models: list[tuple[str, str]] = list(QWEN_MODELS)
+    for raw_model in args.model:
+        models.append(parse_model_arg(raw_model))
+
     print(f"Images: {len(images)}")
     print(f"Env file: {env_path or '(environment only)'}")
     print(f"OpenRouter: {'key set' if openrouter_key else 'NO KEY'}")
     print(f"Prompts: {', '.join(label for label, _ in prompts)}")
+    print(f"Models: {', '.join(label for label, _ in models)}")
     print("=" * 80)
 
     results: list[OCRResult] = []
@@ -479,7 +508,7 @@ def main():
             f"({len(raw_bytes) // 1024} KB -> {len(processed) // 1024} KB, {mime_type})"
         )
         print(f"  Expected: {', '.join(expected_numbers) if expected_numbers else '(none)'}")
-        for label, model in QWEN_MODELS:
+        for label, model in models:
             for prompt_label, prompt_text in prompts:
                 result = run_openrouter(
                     image_path.name,

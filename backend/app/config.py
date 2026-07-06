@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     # AND a non-empty API key must be set for the provider to be used. This
     # forces an explicit opt-in so deployments don't accidentally hit paid
     # APIs on boot. For OCR, OpenRouter tries its models in sequence
-    # (Qwen3-VL-32B first, then Qwen3-VL-235B) via the same API key. When
+    # (Qwen3-VL-32B first, then Qwen3.7-Plus) via the same API key. When
     # Gemini is available, it remains the last-resort fallback after the
     # OpenRouter chain. Two Gemini keys are supported so OCR can alternate
     # between them per request (round-robin) and avoid 429 rate limits; if
@@ -115,10 +115,10 @@ settings = Settings()
 # the single source of truth — import from here, don't redefine per module.
 GEMINI_MODELS: list[str] = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
-# OpenRouter OCR models, tried in sequence (32B first, then the large 235B
+# OpenRouter OCR models, tried in sequence (32B first, then Qwen3.7-Plus as
 # fallback) on every request. Code-only — not configurable via env / .env.
 OPENROUTER_MODELS: list[tuple[str, str]] = [
     ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
-    ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
+    ("Qwen3.7-Plus", "qwen/qwen3.7-plus"),
 ]
 OPENROUTER_MODEL: str = OPENROUTER_MODELS[0][1]  # default for direct callers

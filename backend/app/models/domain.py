@@ -631,5 +631,6 @@ class OcrDriverRequest(Base):
     # NULL for successful runs and for failures captured before this column
     # shipped. See POST /delivered-trips/ocr-container.
     cont_photo_url = Column(String(256), nullable=True)
+    cont_photo_hash = Column(String(64), nullable=True, index=True)
 
     __table_args__ = (Index("ix_ocr_driver_requests_created_at", "created_at"),)
