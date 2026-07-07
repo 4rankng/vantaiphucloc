@@ -1,34 +1,36 @@
 """OCR service for extracting container numbers from images.
 
-OpenRouter is the primary OCR provider when enabled. Each OCR request tries
-the OpenRouter models in sequence — Qwen3-VL-32B first, then
-Qwen3.7-Plus if the first model fails. Gemini is the last-resort fallback
-when enabled.
-Each call goes through ``_available_providers()`` (gated by the
-OPENROUTER_ENABLE / GEMINI_ENABLE flags plus a non-empty API key) and the
-first provider that returns valid numbers wins. Enable OpenRouter + Gemini
-together to get automatic OpenRouter→Gemini failover; enable only one to run
-a single provider.
+OpenRouter is the sole OCR provider. Each request tries the OpenRouter models
+in sequence (Qwen3-VL-32B then Qwen3.7-Plus); the first model that returns a
+valid number wins.
 
-Two Gemini keys (``GEMINI_API_KEY`` / ``GEMINI_API_KEY2``) are alternated per
-request — a round-robin counter picks the starting key so consecutive
-requests land on different keys, spreading load to avoid HTTP 429 rate
-limits. If the chosen key fails (429 or any error) the other Gemini key is
-still tried before giving up.
+SLA: the whole provider chain is bounded by ``settings.OCR_DEADLINE_SECONDS``
+(wall-clock budget for every attempt combined) and each individual call is
+additionally capped by ``settings.OCR_PER_CALL_TIMEOUT_SECONDS``. This keeps
+the endpoint inside the frontend's 60s axios timeout — a single hung model
+can no longer eat the entire budget. When no model returns a clean read (and
+salvage cannot recover one), the service returns ``"Không nhận diện được số
+cont"`` instead of letting axios abort the request.
 
 Driver workflow:
 1. Take photo of container
 2. AI single-shot OCR (temperature 0.0 = deterministic)
 3. Backend auto-corrects near-miss numbers via ISO 6346 check digit
-4. If all fail → driver enters manually
+4. If no provider returns a clean 4-letter+7-digit read, salvage partial
+   reads: keep the digits (usually reliable) and stub-pad missing owner-code
+   letters with 'A' (e.g. U7735411 -> AAAU7735411) so the driver gets an
+   editable candidate instead of a blank field.
+5. Driver visually confirms/edits on-screen
 
 Accuracy techniques:
-- Structured JSON output (Gemini responseSchema; same prompt for OpenRouter)
+- Structured JSON output (same prompt across models)
 - Temperature 0.0 for deterministic responses
 - Image preprocessing (downscale + auto-contrast)
 - ISO 6346 check-digit auto-correction
+- Stub-pad salvage of partial reads (digits trusted, letters stubbed)
 """
 
+import asyncio
 import json
 import logging
 import re
@@ -36,10 +38,7 @@ import time
 from collections.abc import Awaitable, Callable
 
 from app.config import OPENROUTER_MODELS, settings
-from app.contexts.operations.infrastructure.ai import (
-    analyze_image_with_fallback,
-    preprocess_image,
-)
+from app.contexts.operations.infrastructure.ai import preprocess_image
 from app.contexts.operations.infrastructure.openrouter import call_openrouter_vision
 from app.utils.iso6346 import validate_check_digit, suggest_corrections
 
@@ -54,35 +53,39 @@ _logger = logging.getLogger(__name__)
 
 MAX_DETECT = 10
 
-# JSON schema enforced at the Gemini engine level
-_CONTAINER_SCHEMA = {
-    "type": "OBJECT",
-    "properties": {
-        "container_numbers": {
-            "type": "ARRAY",
-            "description": "List of all valid ISO 6346 container numbers found in the image.",
-            "items": {
-                "type": "STRING",
-                "pattern": "^[A-Z]{4}\\d{7}$",
-            },
-        }
-    },
-    "required": ["container_numbers"],
-}
+MULTI_CONTAINER_PROMPT = """You are reading ISO shipping container numbers from a photo.
 
-MULTI_CONTAINER_PROMPT = """Role: You are an expert logistics OCR assistant specializing in shipping containers. Examine the provided image and extract all standard ISO shipping container numbers.
+Return a JSON array of container numbers.
 
-Extraction Rules:
+A container number is 11 characters:
+- first 4 characters are uppercase letters A-Z
+- last 7 characters are digits 0-9
+- spaces, dashes, vertical layout, or line breaks between characters should be removed
 
-Format: A valid container number ALWAYS consists of exactly 4 uppercase letters followed by exactly 7 digits (e.g., MSKU1234567 or ALLU5216535).
+Critical instruction:
+If you can see any plausible container number, return your best 11-character reading.
+Do NOT return an empty array just because some characters are blurry, partially hidden, low contrast, or the ISO check digit may be invalid.
+A visually reasonable best guess is better than [].
 
-Layout: The letters and digits may be separated by spaces, dashes, or printed across multiple lines. Concatenate them into a single, continuous 11-character alphanumeric string without spaces.
+Only return [] when there is truly no visible container number-like text anywhere in the image.
 
-Exclusions: Strictly ignore ISO size/type codes (e.g., 22G1, 45G1, 42G1), company names, and weight/capacity specifications (e.g., MAX GW, TARE, NET, CU CAP, KG, LB).
+How to read:
+1. Scan the whole visible container: door panels, top/bottom edges, vertical markings, and nearby repeated markings.
+2. Look for a group with 4 letters followed by 6 or 7 digits, even if split across lines.
+3. Normalize it into exactly 4 letters + 7 digits.
+4. The first 4 positions must be letters. If a character in the first 4 positions looks like a digit, convert it to the most visually similar letter when reasonable:
+   0→O, 1→I, 2→Z, 5→S, 6→G, 8→B.
+5. The last 7 positions must be digits. If a character in the last 7 positions looks like a letter, convert it to the most visually similar digit when reasonable:
+   O/Q→0, I/L/T→1, Z→2, S→5, G→6, B→8.
+6. Ignore ISO size/type codes such as 22G1, 42G1, 45G1, company names, MAX GW, TARE, NET, CU CAP, KG, and LB.
+7. If several readings are possible, return the single most visually likely container number first. If two different container numbers are visible, return both.
 
-Common Errors: Pay close attention to characters that look similar (e.g., distinguish the letter O from the number 0, the letter Q from O, and the letter S from the number 5). Remember: the first 4 characters are always letters, and the last 7 are always numbers.
-
-Output: Return ONLY a clean JSON array containing the recognized container numbers. Do not include any conversational text. Example: {"container_numbers": ["ALLU5216535", "LSQU1077376"]}"""
+Output rules:
+- Return ONLY a JSON array.
+- Do not explain.
+- Do not include confidence.
+- Do not include markdown.
+- Example output: ["MSKU1234567"]"""
 
 
 # Pre-compiled container-number pattern — used across multiple functions
@@ -90,7 +93,7 @@ _CONTAINER_RE = re.compile(r"[A-Z]{4}\d{7}")
 
 
 def _parse_numbers_from_response(text: str) -> list[str]:
-    """Extract container numbers from Gemini response (JSON or fallback regex)."""
+    """Extract container numbers from a provider response (JSON or fallback regex)."""
     # Try structured JSON first
     try:
         data = json.loads(text)
@@ -113,53 +116,67 @@ def _parse_numbers_from_response(text: str) -> list[str]:
     return list(dict.fromkeys(_CONTAINER_RE.findall(cleaned)))
 
 
-# Round-robin index across the available Gemini keys. Consecutive OCR
-# requests start on a different key so load is spread across keys and a
-# single key is less likely to hit a 429. asyncio runs single-threaded per
-# event loop, so the read-modify-write below is atomic between awaits; in a
-# multi-worker deployment each worker keeps its own counter, which still
-# balances roughly across keys.
-_gemini_rotation_index = 0
+_STUB_LETTER = "A"
+# A letter run followed by a 7+ digit run — the signature of a container
+# number whose owner code may be partly occluded or over-read.
+_SALVAGE_RE = re.compile(r"([A-Z]+)(\d{7,})")
 
 
-def _available_gemini_keys() -> list[str]:
-    """Non-empty Gemini API keys configured for OCR, in fixed order."""
-    return [k for k in (settings.GEMINI_API_KEY, settings.GEMINI_API_KEY2) if k]
-
-
-def _rotate_gemini_keys(keys: list[str]) -> list[str]:
-    """Order ``keys`` so this request starts on the next key (round-robin).
-
-    With one key the list is returned unchanged. With two keys the requests
-    alternate: ``[k0, k1]`` then ``[k1, k0]`` then ``[k0, k1]`` …  The first
-    element is the key this request tries first; the rest are tried in order
-    on failure before the next provider is reached.
+def _salvage_tokens(text: str) -> list[str]:
+    """Split a VLM response into individual candidate strings so each is
+    salvaged in isolation. Without this, a JSON object key like
+    ``container_numbers`` would glue onto the value and corrupt the owner
+    code. Returns the array values from a JSON object/array; falls back to the
+    whole text as a single token when the response is not valid JSON.
     """
-    global _gemini_rotation_index
-    if len(keys) <= 1:
-        return list(keys)
-    start = _gemini_rotation_index % len(keys)
-    _gemini_rotation_index += 1
-    return keys[start:] + keys[:start]
+    try:
+        data = json.loads(text)
+    except (json.JSONDecodeError, TypeError):
+        return [text] if text else []
+    if isinstance(data, dict):
+        vals = data.get("container_numbers")
+        if isinstance(vals, list):
+            return [str(v) for v in vals if isinstance(v, (str, int))]
+    if isinstance(data, list):
+        return [str(v) for v in data if isinstance(v, (str, int))]
+    return [text] if text else []
 
 
-def _make_gemini_provider(api_key: str) -> ProviderCallable:
-    """Build an OCR provider callable pinned to a specific Gemini key."""
+def _salvage_container_numbers(text: str) -> list[str]:
+    """Last-resort salvage of partial container reads.
 
-    async def _call(image_bytes: bytes, mime_type: str) -> dict:
-        return await analyze_image_with_fallback(
-            MULTI_CONTAINER_PROMPT,
-            image_bytes,
-            mime_type,
-            response_schema=_CONTAINER_SCHEMA,
-            api_key=api_key,
-        )
+    Reached only when no provider returned a clean ``[A-Z]{4}\\d{7}`` number.
+    The VLM usually reads the serial (digits) reliably even when owner-code
+    letters are occluded or split across the stencil, so the digits are kept
+    and missing owner-code letters are stub-padded with 'A'. This gives the
+    driver an editable candidate (e.g. ``U7735411`` -> ``AAAU7735411``)
+    instead of a blank field. Digits are treated as trustworthy; letters are
+    not, so salvaged numbers are NOT run through ISO 6346 check-digit
+    auto-correction (the stub letters guarantee a bad check digit and
+    "correcting" it would only corrupt the reliable serial).
 
-    return _call
+    Recovered shapes:
+    - too few letters + >=7 digits: pad letters to 4 with a leading 'A'
+      (visible letters are kept at the end, nearest the serial, since the
+      category letter is what the VLM most often catches)
+    - 4+ letters + >7 digits: truncate the digit run to the first 7
+    """
+    salvaged: list[str] = []
+    for token in _salvage_tokens(text):
+        cleaned = re.sub(r"[^A-Z0-9]", "", token.upper())
+        for m in _SALVAGE_RE.finditer(cleaned):
+            letters = m.group(1)[-4:].rjust(4, _STUB_LETTER)
+            digits = m.group(2)[:7]
+            salvaged.append(letters + digits)
+    return list(dict.fromkeys(salvaged))
 
 
-def _available_openrouter_models() -> list[tuple[str, str]]:
-    return [(label, model) for label, model in OPENROUTER_MODELS if model]
+def _available_openrouter_models() -> list[tuple[str, str, float]]:
+    return [
+        (label, model, timeout)
+        for label, model, timeout in OPENROUTER_MODELS
+        if model
+    ]
 
 
 def _make_openrouter_provider(model: str) -> ProviderCallable:
@@ -171,23 +188,21 @@ def _make_openrouter_provider(model: str) -> ProviderCallable:
     return _call
 
 
-def _available_providers() -> list[tuple[str, ProviderCallable]]:
-    """Ordered OCR providers enabled by config (flag on AND key set).
+def _available_providers() -> list[tuple[str, str | None, float, ProviderCallable]]:
+    """Ordered OCR providers enabled by config, as ``(name, model, timeout, callable)``.
 
-    OpenRouter is tried first whenever it is enabled — its models are tried
-    in sequence (32B then Qwen3.7-Plus). When two Gemini keys are configured they alternate per
-    request (round-robin); if the first key fails the other Gemini key is
-    still tried. Returns a list of ``(name, async-callable)`` pairs — Gemini
-    may appear more than once (once per key).
+    OpenRouter only — Gemini has been retired from the OCR chain. When enabled,
+    its models are tried in sequence (Qwen3-VL-32B then Qwen3.7-Plus), each
+    with its own per-call timeout. The ``model`` hint is carried alongside each
+    callable so a timed-out call can still attribute the failure to the right
+    model in analytics.
     """
-    providers: list[tuple[str, ProviderCallable]] = []
+    providers: list[tuple[str, str | None, float, ProviderCallable]] = []
     if settings.OPENROUTER_ENABLE and settings.OPENROUTER_API_KEY:
-        for _, model in _available_openrouter_models():
-            providers.append(("openrouter", _make_openrouter_provider(model)))
-    gemini_keys = _available_gemini_keys()
-    if settings.GEMINI_ENABLE and gemini_keys:
-        for key in _rotate_gemini_keys(gemini_keys):
-            providers.append(("gemini", _make_gemini_provider(key)))
+        for _, model, timeout in _available_openrouter_models():
+            providers.append(
+                ("openrouter", model, timeout, _make_openrouter_provider(model))
+            )
     return providers
 
 
@@ -215,11 +230,16 @@ async def extract_container_numbers(
 ) -> dict:
     """Extract ALL container numbers using single-shot OCR.
 
-    Tries each enabled provider in order. OpenRouter tries Qwen3-VL-32B
-    first and falls back to Qwen3.7-Plus. With Gemini available, Gemini keys are tried after
-    OpenRouter and alternate per request to avoid 429s. The first provider
-    that returns ≥1 format-valid number wins. Numbers with invalid ISO 6346
-    check digits are auto-corrected when a near-miss valid number exists.
+    Tries each OpenRouter model in sequence (Qwen3-VL-32B then Qwen3.7-Plus);
+    the first model that returns ≥1 format-valid number wins. Numbers with
+    invalid ISO 6346 check digits are auto-corrected when a near-miss valid
+    number exists.
+
+    SLA: the chain is bounded by ``settings.OCR_DEADLINE_SECONDS`` of wall-clock
+    time and each call is capped by ``settings.OCR_PER_CALL_TIMEOUT_SECONDS``.
+    A timeout counts as a failed attempt; the next model is tried only if
+    budget remains, otherwise the chain stops and falls through to salvage /
+    the no-answer error — never exceeding the frontend's 60s axios timeout.
 
     Returns:
         Dict with keys:
@@ -232,8 +252,8 @@ async def extract_container_numbers(
         - attempts: list[dict] — one entry per provider LLM call tried, each
           {provider, model, success, latency_ms, error, container_numbers_found}.
           A fail-then-fallback request yields one entry per attempt, so every
-          429 / "no valid numbers" / success is visible to analytics even when
-          a later provider rescued the request.
+          timeout / "no valid numbers" / success is visible to analytics even
+          when a later model rescued the request.
     """
     try:
         image_bytes, mime_type = preprocess_image(image_bytes)
@@ -268,10 +288,58 @@ async def extract_container_numbers(
     # the caller can log a row per attempt — every 429 and every fallback is
     # then visible to analytics, not just the winning provider.
     attempts: list[dict] = []
+    # Raw VLM text from each provider that returned a response — kept so the
+    # last-resort salvage can stub-pad partial reads if nobody returns a clean
+    # 4-letter+7-digit number.
+    salvage_texts: list[str] = []
 
-    for name, call_fn in providers:
+    # Wall-clock backstop matching the frontend axios timeout (60s). Each model
+    # already carries its own per-call timeout (see OPENROUTER_MODELS), sized so
+    # the two-model chain sums to the SLA (10s + 50s); this deadline only bites
+    # if a future model is added or a cap is raised past the budget. monotonic()
+    # is immune to system-clock jumps across the awaits below.
+    deadline = time.monotonic() + settings.OCR_DEADLINE_SECONDS
+
+    for name, model_hint, per_model_timeout, call_fn in providers:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            _logger.warning(
+                "[OCR] %ss deadline reached before %s — stopping chain",
+                settings.OCR_DEADLINE_SECONDS,
+                name,
+            )
+            break
+        call_cap = min(per_model_timeout, remaining)
         t0 = time.perf_counter()
-        result = await call_fn(image_bytes, mime_type)
+        try:
+            result = await asyncio.wait_for(
+                call_fn(image_bytes, mime_type), timeout=call_cap
+            )
+        except asyncio.TimeoutError:
+            latency_ms = int((time.perf_counter() - t0) * 1000)
+            last = {
+                "provider": name,
+                "model": model_hint,
+                "latency_ms": latency_ms,
+                "error": f"timeout ({call_cap:.1f}s)",
+            }
+            attempts.append(
+                {
+                    "provider": name,
+                    "model": model_hint,
+                    "success": False,
+                    "latency_ms": latency_ms,
+                    "error": f"timeout ({call_cap:.1f}s)",
+                    "container_numbers_found": 0,
+                }
+            )
+            _logger.warning(
+                "[OCR] %s (%s) timed out after %.1fs — trying next model",
+                name,
+                model_hint,
+                call_cap,
+            )
+            continue
         latency_ms = int((time.perf_counter() - t0) * 1000)
         provider_label = result.get("provider") or name
 
@@ -300,6 +368,7 @@ async def extract_container_numbers(
             )
             continue
 
+        salvage_texts.append(result.get("text") or "")
         merged = _parse_numbers_from_response(result["text"])
         valid = [n for n in merged if _CONTAINER_RE.fullmatch(n)]
 
@@ -360,10 +429,37 @@ async def extract_container_numbers(
         }
 
     _logger.info("[OCR] all providers exhausted, no valid numbers found")
+
+    # Last resort: no clean 4-letter+7-digit read from any provider. Salvage
+    # partial reads from the raw VLM text — keep the digits, stub-pad missing
+    # owner-code letters with 'A'. The driver gets an editable candidate
+    # instead of a blank field. Salvaged numbers skip ISO 6346 auto-correction
+    # (stub letters guarantee a bad check digit; see _salvage_container_numbers).
+    salvaged: list[str] = []
+    for raw in salvage_texts:
+        salvaged.extend(_salvage_container_numbers(raw))
+    salvaged = list(dict.fromkeys(salvaged))
+    if salvaged:
+        salvaged = salvaged[:MAX_DETECT]
+        _logger.info(
+            "[OCR] salvaged %d partial read(s): %s",
+            len(salvaged),
+            ", ".join(salvaged),
+        )
+        return {
+            "success": True,
+            "container_numbers": salvaged,
+            "error": None,
+            "provider": last["provider"],
+            "model": last["model"],
+            "latency_ms": last["latency_ms"],
+            "attempts": attempts,
+        }
+
     return {
         "success": False,
         "container_numbers": [],
-        "error": "Không nhận dạng được số cont",
+        "error": "Không nhận diện được số cont",
         "analytics_error": last["error"],
         "provider": last["provider"],
         "model": last["model"],

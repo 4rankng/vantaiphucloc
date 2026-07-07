@@ -116,10 +116,17 @@ export interface OCRContainerResponse {
 
 export async function ocrContainer(imageDataUrl: string): Promise<OCRContainerResponse> {
   const base64 = stripBase64Prefix(imageDataUrl)
-  const res = await api.post('/delivered-trips/ocr-container', {
-    image_data: base64,
-    mime_type: 'image/jpeg',
-  })
+  // OCR is the one long endpoint: the backend model chain (32B 15s → Plus 55s)
+  // plus the analytics DB write can run up to ~70s, so wait past the default
+  // 60s axios timeout. Targeted override — other endpoints keep the 60s default.
+  const res = await api.post(
+    '/delivered-trips/ocr-container',
+    {
+      image_data: base64,
+      mime_type: 'image/jpeg',
+    },
+    { timeout: 75000 },
+  )
   return {
     success: res.data.success,
     containerNumbers: res.data.container_numbers ?? [],

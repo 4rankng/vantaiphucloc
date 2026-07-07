@@ -47,15 +47,6 @@ class Settings(BaseSettings):
     WORKER_TIMEOUT: int = 600
     WORKER_MAX_TRIES: int = 3
 
-    # AI providers. Each provider is OFF by default — both the *_ENABLE flag
-    # AND a non-empty API key must be set for the provider to be used. This
-    # forces an explicit opt-in so deployments don't accidentally hit paid
-    # APIs on boot. For OCR, OpenRouter tries its models in sequence
-    # (Qwen3-VL-32B first, then Qwen3.7-Plus) via the same API key. When
-    # Gemini is available, it remains the last-resort fallback after the
-    # OpenRouter chain. Two Gemini keys are supported so OCR can alternate
-    # between them per request (round-robin) and avoid 429 rate limits; if
-    # either key 429s the other is tried before falling through further.
     GEMINI_API_KEY: str = ""
     GEMINI_API_KEY2: str = ""
     GEMINI_ENABLE: bool = False
@@ -63,6 +54,18 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_ENABLE: bool = False
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+
+    # OCR SLA. The frontend axios client waits 75s for OCR (see ocrContainer in
+    # deliveredTrips.api.ts). Each OpenRouter model carries its own per-call
+    # timeout (see OPENROUTER_MODELS): the fast 32B model gives up at 15s and
+    # hands off to the heavier fallback which gets 55s. OCR_DEADLINE_SECONDS is
+    # a wall-clock backstop (70s = 15 + 55) that never clips the configured
+    # two-model chain but keeps a future third model from running past the
+    # budget; the 5s gap to the 75s axios limit covers the analytics DB write.
+    # When every model comes back empty or times out, the endpoint returns
+    # "Không nhận diện được số cont" instead of letting axios abort.
+    OCR_DEADLINE_SECONDS: float = 70.0
+
     CHATBOT_ENABLE: int = 0
 
     # Push notifications (VAPID)
@@ -115,10 +118,13 @@ settings = Settings()
 # the single source of truth — import from here, don't redefine per module.
 GEMINI_MODELS: list[str] = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
-# OpenRouter OCR models, tried in sequence (32B first, then Qwen3.7-Plus as
-# fallback) on every request. Code-only — not configurable via env / .env.
-OPENROUTER_MODELS: list[tuple[str, str]] = [
-    ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
-    ("Qwen3.7-Plus", "qwen/qwen3.7-plus"),
+# OpenRouter OCR models tried in sequence on every request. Each entry is
+# (label, model_slug, per_call_timeout_seconds). The fast 32B model gets a
+# short timeout so a hung call fails fast and hands off to the fallback; the
+# heavier model gets the remainder of the 75s SLA. Code-only — not configurable
+# via env / .env.
+OPENROUTER_MODELS: list[tuple[str, str, float]] = [
+    ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct", 15.0),
+    ("Qwen3.7-Plus", "qwen/qwen3.7-plus", 55.0),
 ]
 OPENROUTER_MODEL: str = OPENROUTER_MODELS[0][1]  # default for direct callers

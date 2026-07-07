@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ScanLine, Sparkles, Cpu, Zap } from 'lucide-react'
+import { ScanLine, Sparkles } from 'lucide-react'
 import { animate, stagger, createScope } from 'animejs'
 
 interface AIScanningOverlayProps {
@@ -25,12 +25,10 @@ export function AIScanningOverlay({
   detectedNumbers = [],
 }: AIScanningOverlayProps) {
   const [tick, setTick] = useState(0)
-  const [scanProgress, setScanProgress] = useState(0)
   const scopeRef = useRef<HTMLDivElement>(null)
   const scanLineRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
   const bracketRefs = useRef<(HTMLSpanElement | null)[]>([])
-  const progressRef = useRef({ val: 0 })
 
   useEffect(() => {
     if (!visible) return
@@ -64,9 +62,6 @@ export function AIScanningOverlay({
         loop: true,
         alternate: true,
         ease: 'inOutSine',
-        onUpdate: (anim) => {
-          setScanProgress(Math.round(anim.progress))
-        },
       })
 
       // Horizontal radar sweep
@@ -118,16 +113,6 @@ export function AIScanningOverlay({
         ease: 'inOutSine',
       })
 
-      // Floating icons
-      animate('[data-float-icon]', {
-        translateY: [-6, 6],
-        rotate: [-5, 5],
-        duration: 3000,
-        loop: true,
-        alternate: true,
-        ease: 'inOutSine',
-      })
-
       // Hex reticle rotation
       animate('[data-hex]', {
         rotate: 360,
@@ -161,25 +146,18 @@ export function AIScanningOverlay({
         ease: 'outQuad',
       })
 
-      // Progress
-      animate(progressRef.current, {
-        val: 100,
-        duration: 8000,
-        ease: 'linear',
-        onUpdate: () => {
-          setScanProgress(Math.round(progressRef.current.val))
-        },
+      animate('[data-ocr-signal]', {
+        opacity: [0.35, 1],
+        scale: [0.75, 1.15],
+        duration: 900,
+        loop: true,
+        alternate: true,
+        delay: stagger(140),
+        ease: 'inOutSine',
       })
     })
 
     return () => scope.revert()
-  }, [visible])
-
-  useEffect(() => {
-    if (!visible) {
-      progressRef.current.val = 0
-      setScanProgress(0)
-    }
   }, [visible])
 
   const particles = useMemo(
@@ -239,33 +217,6 @@ export function AIScanningOverlay({
       aria-live="polite"
       aria-label={title}
     >
-      {/* Floating AI icons */}
-      <div
-        data-float-icon
-        className="mb-3 flex items-center gap-2"
-        style={{ willChange: 'transform' }}
-      >
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{
-            background: `color-mix(in srgb, ${CYAN} 20%, transparent)`,
-            border: `1px solid color-mix(in srgb, ${CYAN} 40%, transparent)`,
-            boxShadow: `0 0 20px color-mix(in srgb, ${CYAN} 30%, transparent)`,
-          }}
-        >
-          <Cpu className="w-5 h-5" style={{ color: CYAN }} />
-        </div>
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{
-            background: `color-mix(in srgb, ${CYAN} 15%, transparent)`,
-            border: `1px solid color-mix(in srgb, ${CYAN} 35%, transparent)`,
-          }}
-        >
-          <Zap className="w-5 h-5" style={{ color: CYAN }} />
-        </div>
-      </div>
-
       {/* Data stream entrance lines */}
       {[0, 1, 2, 3].map(i => (
         <div
@@ -518,20 +469,30 @@ export function AIScanningOverlay({
             />
           ))}
 
-          {/* Progress badge */}
+          {/* OCR activity signal */}
           <div
-            className="absolute top-3 right-3 px-2 py-1 rounded-lg pointer-events-none"
+            className="absolute top-3 right-3 h-9 px-2.5 rounded-lg pointer-events-none flex items-center gap-1.5"
             style={{
               background: 'rgba(0,0,0,0.6)',
               border: `1px solid color-mix(in srgb, ${CYAN} 40%, transparent)`,
+              boxShadow: `0 0 14px color-mix(in srgb, ${CYAN} 22%, transparent)`,
             }}
+            aria-hidden="true"
           >
-            <span
-              className="text-[11px] font-bold tabular-nums"
-              style={{ color: CYAN }}
-            >
-              {scanProgress}%
-            </span>
+            {[0, 1, 2].map(i => (
+              <span
+                key={i}
+                data-ocr-signal
+                className="block rounded-full"
+                style={{
+                  width: 5,
+                  height: 5,
+                  background: CYAN,
+                  boxShadow: `0 0 8px ${CYAN}`,
+                  willChange: 'transform, opacity',
+                }}
+              />
+            ))}
           </div>
 
           {/* Data ticker strip at bottom */}
@@ -615,7 +576,7 @@ export function AIScanningOverlay({
         </div>
 
         <div
-          className="mt-3 h-1 rounded-full overflow-hidden"
+          className="mt-3 h-1 rounded-full overflow-hidden relative"
           style={{
             background: `color-mix(in srgb, ${CYAN} 15%, transparent)`,
             width: 200,
@@ -624,18 +585,17 @@ export function AIScanningOverlay({
           }}
         >
           <div
-            className="h-full rounded-full"
+            className="absolute inset-y-0 rounded-full animate-[ai-ocr-sweep_1.35s_ease-in-out_infinite]"
             style={{
-              width: `${scanProgress}%`,
+              width: 72,
               background: `linear-gradient(90deg, ${CYAN}, color-mix(in srgb, ${CYAN} 70%, #fff))`,
               boxShadow: `0 0 8px ${CYAN}`,
-              transition: 'width 0.3s ease-out',
             }}
           />
         </div>
       </div>
 
-      {/* Inline keyframes for number reveal */}
+      {/* Inline keyframes for scan overlay motion */}
       <style>{`
         @keyframes ai-number-reveal {
           0% {
@@ -647,6 +607,22 @@ export function AIScanningOverlay({
             opacity: 1;
             transform: translateY(0) scale(1);
             filter: blur(0);
+          }
+        }
+        @keyframes ai-ocr-sweep {
+          0% {
+            left: -80px;
+            opacity: 0;
+          }
+          18% {
+            opacity: 1;
+          }
+          82% {
+            opacity: 1;
+          }
+          100% {
+            left: 208px;
+            opacity: 0;
           }
         }
       `}</style>

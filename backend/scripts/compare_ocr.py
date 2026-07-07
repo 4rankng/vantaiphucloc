@@ -10,10 +10,6 @@ Prompt A/B (compare the built-in prompt vs a challenger):
     python backend/scripts/compare_ocr.py docs/ocr --new-prompt backend/scripts/new_prompt.txt
     make ocr IMG=docs/ocr PROMPT=scripts/new_prompt.txt
 
-Models (via OpenRouter):
-    - qwen/qwen3-vl-32b-instruct
-    - qwen/qwen3-vl-235b-a22b-instruct
-
 Standalone — zero backend app imports. Request payloads mirror production
 OpenRouter calls closely enough to compare real OCR behavior.
 """
@@ -455,6 +451,14 @@ def main():
         "'Label:provider/id', or a bare 'provider/id' to auto-derive the "
         "label. Appended to the built-in Qwen models.",
     )
+    parser.add_argument(
+        "--only-model",
+        action="append",
+        default=[],
+        metavar="SUBSTRING",
+        help="Restrict the run to models whose id or label contains this "
+        "substring (repeatable, case-insensitive). Default: run all.",
+    )
     args = parser.parse_args()
 
     if _MISSING:
@@ -490,6 +494,15 @@ def main():
     models: list[tuple[str, str]] = list(QWEN_MODELS)
     for raw_model in args.model:
         models.append(parse_model_arg(raw_model))
+    if args.only_model:
+        wanted = [w.lower() for w in args.only_model]
+        models = [
+            (label, model)
+            for label, model in models
+            if any(w in model.lower() or w in label.lower() for w in wanted)
+        ]
+        if not models:
+            sys.exit("--only-model matched no models in the roster")
 
     print(f"Images: {len(images)}")
     print(f"Env file: {env_path or '(environment only)'}")

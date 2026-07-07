@@ -1,10 +1,11 @@
 """Tests for the OCR module (single-shot container number extraction).
 
-Verifies the single-pass extraction flow (OpenRouter model chain → Gemini
-with round-robin key rotation) without making real
-API calls, plus the /dashboard/ocr-stats aggregation logic.
+Verifies the single-pass extraction flow (OpenRouter model chain: 32B →
+Qwen3.7-Plus, bounded by a wall-clock SLA deadline and a per-call timeout)
+without making real API calls, plus the /dashboard/ocr-stats aggregation logic.
 """
 
+import asyncio
 import io
 import statistics
 from datetime import date, datetime, timedelta, timezone
@@ -18,11 +19,10 @@ from app.contexts.operations.infrastructure import ocr as ocr_mod
 from app.contexts.operations.infrastructure.ocr import (
     extract_container_numbers,
     _parse_numbers_from_response,
+    _salvage_container_numbers,
     _auto_correct_numbers,
     _available_openrouter_models,
     _available_providers,
-    _available_gemini_keys,
-    _rotate_gemini_keys,
 )
 from app.contexts.operations.infrastructure.openrouter import (
     _extract_text as _openrouter_extract_text,
@@ -68,7 +68,7 @@ async def test_extract_container_numbers_success():
     test_bytes = _make_test_image(800, 600)
     with patch(
         "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=[("openrouter", _fake_provider)],
+        return_value=[("openrouter", "qwen/qwen3-vl-32b-instruct", 30.0, _fake_provider)],
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
@@ -94,22 +94,22 @@ async def test_extract_container_numbers_fail():
             "success": False,
             "text": None,
             "error": "boom",
-            "provider": "gemini",
-            "model": "gemini-flash-latest",
+            "provider": "openrouter",
+            "model": "qwen/qwen3-vl-32b-instruct",
         }
 
     test_bytes = _make_test_image(800, 600)
     with patch(
         "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=[("gemini", _failing_provider)],
+        return_value=[("openrouter", "qwen/qwen3-vl-32b-instruct", 30.0, _failing_provider)],
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
     assert result["success"] is False
     assert result["container_numbers"] == []
-    assert result["error"] == "Không nhận dạng được số cont"
+    assert result["error"] == "Không nhận diện được số cont"
     assert result["analytics_error"] == "boom"
-    assert result["provider"] == "gemini"
+    assert result["provider"] == "openrouter"
 
 
 @pytest.mark.asyncio
@@ -130,133 +130,39 @@ async def test_extract_container_numbers_no_provider_configured(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# _available_providers — ordering + gating
+# _available_providers — OpenRouter-only ordering + gating
 # ---------------------------------------------------------------------------
 
 
-def test_available_gemini_keys(monkeypatch):
-    monkeypatch.setattr(settings, "GEMINI_API_KEY", "k1")
-    monkeypatch.setattr(settings, "GEMINI_API_KEY2", "k2")
-    assert _available_gemini_keys() == ["k1", "k2"]
-
-    monkeypatch.setattr(settings, "GEMINI_API_KEY2", "")
-    assert _available_gemini_keys() == ["k1"]
-
-    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
-    assert _available_gemini_keys() == []
-
-
-def test_rotate_gemini_keys_alternates():
-    ocr_mod._gemini_rotation_index = 0
-    keys = ["k1", "k2"]
-    # Round-robin: start index advances by one each call.
-    assert _rotate_gemini_keys(keys) == ["k1", "k2"]
-    assert _rotate_gemini_keys(keys) == ["k2", "k1"]
-    assert _rotate_gemini_keys(keys) == ["k1", "k2"]
-    assert _rotate_gemini_keys(keys) == ["k2", "k1"]
-
-    # Single key is returned unchanged (no rotation needed).
-    assert _rotate_gemini_keys(["only"]) == ["only"]
-
-
 def test_available_providers_order_and_gating(monkeypatch):
-    ocr_mod._gemini_rotation_index = 0
-    monkeypatch.setattr(settings, "GEMINI_ENABLE", True)
-    monkeypatch.setattr(settings, "GEMINI_API_KEY", "k1")
-    monkeypatch.setattr(settings, "GEMINI_API_KEY2", "k2")
-    monkeypatch.setattr(settings, "OPENROUTER_ENABLE", False)
+    """OpenRouter is the sole provider: one entry per configured model, in sequence."""
+    monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
+    monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
+    monkeypatch.setattr(
+        ocr_mod,
+        "OPENROUTER_MODELS",
+        [
+            ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct", 15.0),
+            ("Qwen3.7-Plus", "qwen/qwen3.7-plus", 55.0),
+        ],
+    )
+
+    providers = _available_providers()
+    assert [name for name, _, _, _ in providers] == ["openrouter", "openrouter"]
+    assert [model for _, model, _, _ in providers] == [
+        "qwen/qwen3-vl-32b-instruct",
+        "qwen/qwen3.7-plus",
+    ]
+    assert [timeout for _, _, timeout, _ in providers] == [15.0, 55.0]
+
+    # Flag on but key empty → no providers.
     monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "")
+    assert _available_providers() == []
 
-    # Two Gemini keys → two gemini entries.
-    assert [n for n, _ in _available_providers()] == ["gemini", "gemini"]
-
-    # Only one Gemini key configured → one gemini entry.
-    monkeypatch.setattr(settings, "GEMINI_API_KEY2", "")
-    assert [n for n, _ in _available_providers()] == ["gemini"]
-
-    # Gemini disabled → nothing.
-    monkeypatch.setattr(settings, "GEMINI_API_KEY2", "k2")
-    monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
-    assert [n for n, _ in _available_providers()] == []
-
-    # No keys at all → nothing enabled.
-    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
-    monkeypatch.setattr(settings, "GEMINI_API_KEY2", "")
-    assert [n for n, _ in _available_providers()] == []
-
-
-@pytest.mark.asyncio
-async def test_gemini_keys_round_robin_across_requests(monkeypatch):
-    """Consecutive OCR requests start on alternating Gemini keys."""
-    monkeypatch.setattr(settings, "GEMINI_ENABLE", True)
-    monkeypatch.setattr(settings, "GEMINI_API_KEY", "k1")
-    monkeypatch.setattr(settings, "GEMINI_API_KEY2", "k2")
-    ocr_mod._gemini_rotation_index = 0
-
-    seen_keys: list[str | None] = []
-
-    async def _capture(
-        prompt, image_bytes, mime_type, response_schema=None, api_key=None
-    ):
-        seen_keys.append(api_key)
-        return {
-            "success": True,
-            "text": '{"container_numbers": ["MSKU1234565"]}',
-            "error": None,
-            "provider": "gemini",
-            "model": "gemini-flash-latest",
-        }
-
-    test_bytes = _make_test_image(800, 600)
-    with patch(
-        "app.contexts.operations.infrastructure.ocr.analyze_image_with_fallback",
-        new=_capture,
-    ):
-        for _ in range(4):
-            await extract_container_numbers(test_bytes, "image/jpeg")
-
-    assert seen_keys == ["k1", "k2", "k1", "k2"]
-
-
-@pytest.mark.asyncio
-async def test_gemini_second_key_tried_on_first_failure(monkeypatch):
-    """First Gemini key fails, the other Gemini key wins."""
-    monkeypatch.setattr(settings, "GEMINI_ENABLE", True)
-    monkeypatch.setattr(settings, "GEMINI_API_KEY", "k1")
-    monkeypatch.setattr(settings, "GEMINI_API_KEY2", "k2")
-    ocr_mod._gemini_rotation_index = 0  # first request starts on k1
-
-    calls: list[tuple] = []
-
-    async def _gemini(
-        prompt, image_bytes, mime_type, response_schema=None, api_key=None
-    ):
-        calls.append(("gemini", api_key))
-        if api_key == "k1":
-            return {
-                "success": False,
-                "text": None,
-                "error": "429 Too Many Requests",
-                "provider": "gemini",
-                "model": "gemini-flash-latest",
-            }
-        return {
-            "success": True,
-            "text": '{"container_numbers": ["MSKU1234565"]}',
-            "error": None,
-            "provider": "gemini",
-            "model": "gemini-flash-latest",
-        }
-
-    test_bytes = _make_test_image(800, 600)
-    with patch(
-        "app.contexts.operations.infrastructure.ocr.analyze_image_with_fallback",
-        new=_gemini,
-    ):
-        result = await extract_container_numbers(test_bytes, "image/jpeg")
-
-    assert result["provider"] == "gemini"
-    assert ("gemini", "k1") in calls and ("gemini", "k2") in calls
+    # Flag off → no providers.
+    monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
+    monkeypatch.setattr(settings, "OPENROUTER_ENABLE", False)
+    assert _available_providers() == []
 
 
 # ---------------------------------------------------------------------------
@@ -339,6 +245,103 @@ def test_parse_garbage_input():
 def test_parse_regex_deduplicates():
     text = "MSKU1234565 MSKU1234565"
     assert _parse_numbers_from_response(text) == ["MSKU1234565"]
+
+
+# ---------------------------------------------------------------------------
+# _salvage_container_numbers — last-resort stub-pad of partial reads
+# ---------------------------------------------------------------------------
+
+
+def test_salvage_pads_missing_owner_letters_from_array():
+    # Only the category letter survived (occluded owner code); digits are kept,
+    # missing leading letters stub-padded with 'A'.
+    assert _salvage_container_numbers('["U7735411"]') == ["AAAU7735411"]
+
+
+def test_salvage_pads_missing_owner_letters_from_object():
+    assert (
+        _salvage_container_numbers('{"container_numbers": ["U7735411"]}')
+        == ["AAAU7735411"]
+    )
+
+
+def test_salvage_keeps_partial_owner_letters():
+    # Two of four owner letters visible -> stub only the missing leading ones.
+    assert _salvage_container_numbers('["AU7735411"]') == ["AAAU7735411"]
+
+
+def test_salvage_truncates_overread_digits():
+    # Owner code complete but the VLM over-read extra digits -> keep first 7.
+    assert _salvage_container_numbers('["OOCU9217154561"]') == ["OOCU9217154"]
+
+
+def test_salvage_handles_two_numbers_in_one_response():
+    assert _salvage_container_numbers('["U7735411", "OOCU9217154561"]') == [
+        "AAAU7735411",
+        "OOCU9217154",
+    ]
+
+
+def test_salvage_returns_empty_without_digit_run():
+    assert _salvage_container_numbers("nothing here") == []
+    # A 4-digit weight is not a container serial.
+    assert _salvage_container_numbers('["TARE2280"]') == []
+
+
+def test_salvage_dedupes():
+    assert _salvage_container_numbers('["U7735411", "U7735411"]') == ["AAAU7735411"]
+
+
+@pytest.mark.asyncio
+async def test_extract_salvages_when_no_clean_read():
+    """All providers return only a partial read (occluded owner code). No clean
+    4-letter+7-digit number is found, so the last-resort salvage stub-pads the
+    missing letters and returns success — the driver gets an editable candidate
+    instead of a blank field."""
+
+    async def _partial(image_bytes, mime_type):
+        return {
+            "success": True,
+            "text": '["U7735411"]',
+            "error": None,
+            "provider": "openrouter",
+            "model": "qwen/qwen3-vl-32b-instruct",
+        }
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=[("openrouter", "qwen/qwen3-vl-32b-instruct", 30.0, _partial)],
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert result["success"] is True
+    assert result["container_numbers"] == ["AAAU7735411"]
+
+
+@pytest.mark.asyncio
+async def test_extract_strict_read_wins_over_salvage():
+    """A clean read from the first provider wins immediately; salvage is a
+    last resort only when no provider returns a clean number."""
+
+    async def _clean(image_bytes, mime_type):
+        return {
+            "success": True,
+            "text": '{"container_numbers": ["MSKU1234565"]}',
+            "error": None,
+            "provider": "openrouter",
+            "model": "qwen/qwen3-vl-32b-instruct",
+        }
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=[("openrouter", "qwen/qwen3-vl-32b-instruct", 30.0, _clean)],
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert result["success"] is True
+    assert result["container_numbers"] == ["MSKU1234565"]  # not stub-padded
 
 
 # ---------------------------------------------------------------------------
@@ -434,56 +437,19 @@ async def _async_return(value):
 # ---------------------------------------------------------------------------
 
 
-def test_available_providers_openrouter_enabled(monkeypatch):
-    """OpenRouter alone (Gemini off) tries models in sequence: 32B then 235B."""
-    monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
-    monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
+def test_available_openrouter_models_in_sequence(monkeypatch):
+    """Configured OpenRouter models are listed in their defined sequence."""
     monkeypatch.setattr(
         ocr_mod,
         "OPENROUTER_MODELS",
         [
-            ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
-            ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
+            ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct", 15.0),
+            ("Qwen3.7-Plus", "qwen/qwen3.7-plus", 55.0),
         ],
     )
-    monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
-    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
-    monkeypatch.setattr(settings, "GEMINI_API_KEY2", "")
     assert _available_openrouter_models() == [
-        ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
-        ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
-    ]
-    assert [n for n, _ in _available_providers()] == [
-        "openrouter",
-        "openrouter",
-    ]
-
-
-def test_available_providers_openrouter_primary_when_all_enabled(monkeypatch):
-    """With every provider on, OpenRouter is first; Gemini follows.
-
-    OpenRouter model chain → Gemini (one entry per key).
-    OpenRouter leads so a failure transparently falls back to the next model.
-    """
-    ocr_mod._gemini_rotation_index = 0
-    monkeypatch.setattr(settings, "GEMINI_ENABLE", True)
-    monkeypatch.setattr(settings, "GEMINI_API_KEY", "k1")
-    monkeypatch.setattr(settings, "GEMINI_API_KEY2", "k2")
-    monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
-    monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
-    monkeypatch.setattr(
-        ocr_mod,
-        "OPENROUTER_MODELS",
-        [
-            ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct"),
-            ("Qwen3-VL-235B", "qwen/qwen3-vl-235b-a22b-instruct"),
-        ],
-    )
-    assert [n for n, _ in _available_providers()] == [
-        "openrouter",
-        "openrouter",
-        "gemini",
-        "gemini",
+        ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct", 15.0),
+        ("Qwen3.7-Plus", "qwen/qwen3.7-plus", 55.0),
     ]
 
 
@@ -491,41 +457,16 @@ def test_available_providers_openrouter_no_key(monkeypatch):
     """Flag on but key empty → OpenRouter absent."""
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
     monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "")
-    monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
-    assert "openrouter" not in [n for n, _ in _available_providers()]
+    assert _available_providers() == []
 
 
 @pytest.mark.asyncio
-async def test_openrouter_235b_uses_best_guess_prompt(monkeypatch):
-    captured_prompts: list[str] = []
+async def test_openrouter_provider_uses_multi_container_prompt(monkeypatch):
+    """Every OpenRouter model is called with the same MULTI_CONTAINER_PROMPT."""
+    captured: list[str] = []
 
     async def _capture(prompt, image_bytes, mime_type, model=None):
-        captured_prompts.append(prompt)
-        return {
-            "success": True,
-            "text": '{"container_numbers": ["TIIX1230001"]}',
-            "error": None,
-            "provider": "openrouter",
-            "model": model,
-        }
-
-    monkeypatch.setattr(ocr_mod, "call_openrouter_vision", _capture)
-
-    provider = ocr_mod._make_openrouter_provider("qwen/qwen3-vl-235b-a22b-instruct")
-    await provider(b"img", "image/jpeg")
-
-    assert len(captured_prompts) == 1
-    assert "Last-Guard Best Guess Mode" in captured_prompts[0]
-    assert "single best 11-character guess" in captured_prompts[0]
-    assert "Do not use special placeholder characters" in captured_prompts[0]
-
-
-@pytest.mark.asyncio
-async def test_openrouter_32b_keeps_strict_prompt(monkeypatch):
-    captured_prompts: list[str] = []
-
-    async def _capture(prompt, image_bytes, mime_type, model=None):
-        captured_prompts.append(prompt)
+        captured.append(prompt)
         return {
             "success": True,
             "text": '{"container_numbers": ["MSKU1234565"]}',
@@ -536,11 +477,13 @@ async def test_openrouter_32b_keeps_strict_prompt(monkeypatch):
 
     monkeypatch.setattr(ocr_mod, "call_openrouter_vision", _capture)
 
-    provider = ocr_mod._make_openrouter_provider("qwen/qwen3-vl-32b-instruct")
-    await provider(b"img", "image/jpeg")
+    for slug in ("qwen/qwen3-vl-32b-instruct", "qwen/qwen3.7-plus"):
+        provider = ocr_mod._make_openrouter_provider(slug)
+        await provider(b"img", "image/jpeg")
 
-    assert len(captured_prompts) == 1
-    assert "Last-Guard Best Guess Mode" not in captured_prompts[0]
+    assert len(captured) == 2
+    for prompt in captured:
+        assert prompt is ocr_mod.MULTI_CONTAINER_PROMPT
 
 
 @pytest.mark.asyncio
@@ -559,7 +502,7 @@ async def test_extract_container_numbers_openrouter_success():
     test_bytes = _make_test_image(800, 600)
     with patch(
         "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=[("openrouter", _openrouter_provider)],
+        return_value=[("openrouter", "qwen/qwen3-vl-8b-instruct", 30.0, _openrouter_provider)],
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
@@ -570,80 +513,156 @@ async def test_extract_container_numbers_openrouter_success():
 
 
 @pytest.mark.asyncio
-async def test_extract_container_numbers_openrouter_fails_back_to_gemini():
-    """OpenRouter is primary; on a 429 (or any error) it falls back to Gemini."""
+async def test_extract_container_numbers_openrouter_falls_back_to_second_model():
+    """32B failing (e.g. 429) falls through to the next OpenRouter model."""
 
-    async def _openrouter_fail(image_bytes, mime_type):
+    async def _32b_fail(image_bytes, mime_type):
         return {
             "success": False,
             "text": None,
             "error": "HTTP 429: rate limit exceeded",
             "provider": "openrouter",
-            "model": "qwen/qwen3-vl-8b-instruct",
+            "model": "qwen/qwen3-vl-32b-instruct",
         }
 
-    async def _gemini_ok(image_bytes, mime_type):
-        return {
-            "success": True,
-            "text": '{"container_numbers": ["MSKU1234565"]}',
-            "error": None,
-            "provider": "gemini",
-            "model": "gemini-flash-latest",
-        }
-
-    test_bytes = _make_test_image(800, 600)
-    with patch(
-        "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=[("openrouter", _openrouter_fail), ("gemini", _gemini_ok)],
-    ):
-        result = await extract_container_numbers(test_bytes, "image/jpeg")
-
-    assert result["success"] is True
-    assert result["provider"] == "gemini"
-    assert result["container_numbers"] == ["MSKU1234565"]
-
-
-@pytest.mark.asyncio
-async def test_first_format_valid_wins_does_not_try_next_provider():
-    """A format-valid answer from the first provider ends the chain — the
-    next provider is never called. Locks the first-valid-wins invariant the
-    one-active-at-a-time toggle design relies on."""
-
-    calls: list[str] = []
-
-    async def _openrouter_valid_but_wrong(image_bytes, mime_type):
-        calls.append("openrouter")
+    async def _plus_ok(image_bytes, mime_type):
         return {
             "success": True,
             "text": '{"container_numbers": ["MSKU1234565"]}',
             "error": None,
             "provider": "openrouter",
-            "model": "qwen/qwen3-vl-8b-instruct",
-        }
-
-    async def _gemini_would_succeed(image_bytes, mime_type):
-        calls.append("gemini")
-        return {
-            "success": True,
-            "text": '{"container_numbers": ["TCLU9876543"]}',
-            "error": None,
-            "provider": "gemini",
-            "model": "gemini-flash-latest",
+            "model": "qwen/qwen3.7-plus",
         }
 
     test_bytes = _make_test_image(800, 600)
     with patch(
         "app.contexts.operations.infrastructure.ocr._available_providers",
         return_value=[
-            ("openrouter", _openrouter_valid_but_wrong),
-            ("gemini", _gemini_would_succeed),
+            ("openrouter", "qwen/qwen3-vl-32b-instruct", 30.0, _32b_fail),
+            ("openrouter", "qwen/qwen3.7-plus", 30.0, _plus_ok),
+        ],
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert result["success"] is True
+    assert result["provider"] == "openrouter"
+    assert result["model"] == "qwen/qwen3.7-plus"
+    assert result["container_numbers"] == ["MSKU1234565"]
+
+
+@pytest.mark.asyncio
+async def test_first_format_valid_wins_does_not_try_next_provider():
+    """A format-valid answer from the first model ends the chain — the next
+    model is never called. Locks the first-valid-wins invariant."""
+
+    calls: list[str] = []
+
+    async def _32b_valid(image_bytes, mime_type):
+        calls.append("32b")
+        return {
+            "success": True,
+            "text": '{"container_numbers": ["MSKU1234565"]}',
+            "error": None,
+            "provider": "openrouter",
+            "model": "qwen/qwen3-vl-32b-instruct",
+        }
+
+    async def _plus_would_succeed(image_bytes, mime_type):
+        calls.append("plus")
+        return {
+            "success": True,
+            "text": '{"container_numbers": ["TCLU9876543"]}',
+            "error": None,
+            "provider": "openrouter",
+            "model": "qwen/qwen3.7-plus",
+        }
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=[
+            ("openrouter", "qwen/qwen3-vl-32b-instruct", 30.0, _32b_valid),
+            ("openrouter", "qwen/qwen3.7-plus", 30.0, _plus_would_succeed),
         ],
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
     assert result["provider"] == "openrouter"
+    assert result["model"] == "qwen/qwen3-vl-32b-instruct"
     assert result["container_numbers"] == ["MSKU1234565"]
-    assert calls == ["openrouter"]  # gemini never reached
+    assert calls == ["32b"]  # second model never reached
+
+
+# ---------------------------------------------------------------------------
+# SLA — per-call timeout + wall-clock deadline keep the endpoint under 60s
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_extract_per_call_timeout_counts_as_failed_attempt(monkeypatch):
+    """A model exceeding OCR_PER_CALL_TIMEOUT_SECONDS is recorded as a timed-out
+    attempt and the chain moves on; with no model answering, the overall result
+    is the no-answer error (never an unbounded hang past the axios SLA)."""
+    monkeypatch.setattr(settings, "OCR_DEADLINE_SECONDS", 50.0)
+
+    async def _slow(image_bytes, mime_type):
+        await asyncio.sleep(5)  # far exceeds the 0.1s per-model cap below
+        return {
+            "success": True,
+            "text": '{"container_numbers": ["MSKU1234565"]}',
+            "error": None,
+            "provider": "openrouter",
+            "model": "slow",
+        }
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=[
+            ("openrouter", "qwen/qwen3-vl-32b-instruct", 0.1, _slow),
+            ("openrouter", "qwen/qwen3.7-plus", 0.1, _slow),
+        ],
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert result["success"] is False
+    assert result["error"] == "Không nhận diện được số cont"
+    assert len(result["attempts"]) == 2
+    for attempt in result["attempts"]:
+        assert attempt["success"] is False
+        assert attempt["error"].startswith("timeout")
+        assert isinstance(attempt["latency_ms"], int)
+
+
+@pytest.mark.asyncio
+async def test_extract_deadline_stops_chain_before_later_models(monkeypatch):
+    """When the wall-clock deadline has already elapsed before a model's turn,
+    that model (and the rest) are skipped entirely — no provider call is made."""
+    monkeypatch.setattr(settings, "OCR_DEADLINE_SECONDS", -1.0)
+
+    calls: list[str] = []
+
+    async def _provider(image_bytes, mime_type):
+        calls.append("called")
+        return {
+            "success": True,
+            "text": "[]",
+            "error": None,
+            "provider": "openrouter",
+            "model": "m",
+        }
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=[("openrouter", "m", 30.0, _provider)],
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert calls == []  # never reached because the deadline already expired
+    assert result["success"] is False
+    assert result["error"] == "Không nhận diện được số cont"
+    assert result["attempts"] == []
 
 
 # ---------------------------------------------------------------------------
@@ -1211,54 +1230,59 @@ async def test_ocr_stats_accuracy_rolling_window_uses_last_100_matched_trips(
 
 @pytest.mark.asyncio
 async def test_extract_container_numbers_returns_attempt_per_provider_call():
-    """Each provider LLM call yields one entry in ``attempts``.
+    """Each model LLM call yields one entry in ``attempts``.
 
-    A 429 rescued by Gemini produces 2 attempts (openrouter fail, gemini
+    A 429 on 32B rescued by Qwen3.7-Plus produces 2 attempts (32B fail, Plus
     success), so the 429 is visible to analytics even though the request
     overall succeeded — the undercounting that the per-attempt refactor fixes.
     """
 
-    async def _openrouter_429(image_bytes, mime_type):
+    async def _32b_429(image_bytes, mime_type):
         return {
             "success": False,
             "text": None,
             "error": "HTTP 429: rate limit exceeded",
             "provider": "openrouter",
-            "model": "qwen/qwen3-vl-8b-instruct",
+            "model": "qwen/qwen3-vl-32b-instruct",
         }
 
-    async def _gemini_ok(image_bytes, mime_type):
+    async def _plus_ok(image_bytes, mime_type):
         return {
             "success": True,
             "text": '{"container_numbers": ["MSKU1234565"]}',
             "error": None,
-            "provider": "gemini",
-            "model": "gemini-flash-latest",
+            "provider": "openrouter",
+            "model": "qwen/qwen3.7-plus",
         }
 
     test_bytes = _make_test_image(800, 600)
     with patch(
         "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=[("openrouter", _openrouter_429), ("gemini", _gemini_ok)],
+        return_value=[
+            ("openrouter", "qwen/qwen3-vl-32b-instruct", 30.0, _32b_429),
+            ("openrouter", "qwen/qwen3.7-plus", 30.0, _plus_ok),
+        ],
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
     assert result["success"] is True
-    assert result["provider"] == "gemini"
+    assert result["provider"] == "openrouter"
     attempts = result["attempts"]
     assert len(attempts) == 2
 
-    or_attempt, gem_attempt = attempts
-    assert or_attempt["provider"] == "openrouter"
-    assert or_attempt["success"] is False
-    assert or_attempt["error"] == "HTTP 429: rate limit exceeded"
-    assert or_attempt["container_numbers_found"] == 0
-    assert isinstance(or_attempt["latency_ms"], int)
+    first, second = attempts
+    assert first["provider"] == "openrouter"
+    assert first["model"] == "qwen/qwen3-vl-32b-instruct"
+    assert first["success"] is False
+    assert first["error"] == "HTTP 429: rate limit exceeded"
+    assert first["container_numbers_found"] == 0
+    assert isinstance(first["latency_ms"], int)
 
-    assert gem_attempt["provider"] == "gemini"
-    assert gem_attempt["success"] is True
-    assert gem_attempt["error"] is None
-    assert gem_attempt["container_numbers_found"] == 1
+    assert second["provider"] == "openrouter"
+    assert second["model"] == "qwen/qwen3.7-plus"
+    assert second["success"] is True
+    assert second["error"] is None
+    assert second["container_numbers_found"] == 1
 
 
 @pytest.mark.asyncio
@@ -1266,33 +1290,36 @@ async def test_ocr_container_logs_driver_request_and_per_attempt_rows(
     db_session, async_client, make_auth_headers
 ):
     """ocr_container writes ONE ocr_driver_requests row (the photo upload) plus
-    one ocr_requests row per provider attempt. A 429 rescued by the Gemini
-    fallback is captured as a failed ocr_requests row."""
+    one ocr_requests row per model attempt. A 429 on 32B rescued by
+    Qwen3.7-Plus is captured as a failed ocr_requests row."""
     from sqlalchemy import select
 
-    async def _openrouter_429(image_bytes, mime_type):
+    async def _32b_429(image_bytes, mime_type):
         return {
             "success": False,
             "text": None,
             "error": "HTTP 429: rate limit exceeded",
             "provider": "openrouter",
-            "model": "qwen/qwen3-vl-8b-instruct",
+            "model": "qwen/qwen3-vl-32b-instruct",
         }
 
-    async def _gemini_ok(image_bytes, mime_type):
+    async def _plus_ok(image_bytes, mime_type):
         return {
             "success": True,
             "text": '{"container_numbers": ["MSKU1234565"]}',
             "error": None,
-            "provider": "gemini",
-            "model": "gemini-flash-latest",
+            "provider": "openrouter",
+            "model": "qwen/qwen3.7-plus",
         }
 
     img_b64 = __import__("base64").b64encode(_make_test_image(200, 200)).decode()
     headers = await make_auth_headers("superadmin")
     with patch(
         "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=[("openrouter", _openrouter_429), ("gemini", _gemini_ok)],
+        return_value=[
+            ("openrouter", "qwen/qwen3-vl-32b-instruct", 30.0, _32b_429),
+            ("openrouter", "qwen/qwen3.7-plus", 30.0, _plus_ok),
+        ],
     ):
         response = await async_client.post(
             "/api/v1/delivered-trips/ocr-container",
@@ -1303,7 +1330,7 @@ async def test_ocr_container_logs_driver_request_and_per_attempt_rows(
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["success"] is True
-    assert body["provider"] == "gemini"
+    assert body["provider"] == "openrouter"
 
     driver_rows = (await db_session.execute(select(OcrDriverRequest))).scalars().all()
     attempt_rows = (await db_session.execute(select(OcrRequest))).scalars().all()
@@ -1311,17 +1338,17 @@ async def test_ocr_container_logs_driver_request_and_per_attempt_rows(
     assert len(driver_rows) == 1
     driver = driver_rows[0]
     assert driver.success is True
-    assert driver.attempts == 2  # openrouter + gemini
+    assert driver.attempts == 2  # 32B + Plus
     assert driver.numbers_found == 1
-    assert driver.provider == "gemini"
+    assert driver.provider == "openrouter"
     assert driver.latency_ms is not None and driver.latency_ms >= 0
 
     assert len(attempt_rows) == 2
-    by_provider = {r.provider: r for r in attempt_rows}
-    assert by_provider["openrouter"].success is False
-    assert "HTTP 429" in by_provider["openrouter"].error
-    assert by_provider["gemini"].success is True
-    assert by_provider["gemini"].container_numbers_found == 1
+    by_model = {r.model: r for r in attempt_rows}
+    assert by_model["qwen/qwen3-vl-32b-instruct"].success is False
+    assert "HTTP 429" in by_model["qwen/qwen3-vl-32b-instruct"].error
+    assert by_model["qwen/qwen3.7-plus"].success is True
+    assert by_model["qwen/qwen3.7-plus"].container_numbers_found == 1
 
 
 @pytest.mark.asyncio
