@@ -41,6 +41,7 @@ export const VehicleGroupCard = memo(function VehicleGroupCard({
               value={plate}
               onSave={onEditPlate}
               editLabel="Sửa biển số"
+              displayClassName="shrink-0 whitespace-nowrap"
             />
           ) : (
             <Plate>{plate}</Plate>

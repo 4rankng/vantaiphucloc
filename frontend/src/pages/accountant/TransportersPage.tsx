@@ -263,10 +263,10 @@ function FleetSection() {
               ) : (
                 <>
                   <div className="nepo-table-scroll overflow-x-auto">
-                    <table className="nepo-table w-full" style={{ minWidth: 400, borderCollapse: 'collapse' }}>
+                    <table className="nepo-table w-full" style={{ minWidth: 520, borderCollapse: 'collapse' }}>
                       <thead>
                         <tr>
-                          <th className="text-left" style={{ width: 120 }}>Biển số</th>
+                          <th className="text-left" style={{ width: 168 }}>Biển số</th>
                           <th className="text-left">Lái xe</th>
                           <th className="w-10" />
                         </tr>
@@ -281,6 +281,7 @@ function FleetSection() {
                                 onSave={(plate) => updateVehiclePlate(g.vehicleId, plate.toUpperCase())}
                                 editLabel="Sửa biển số"
                                 className="min-w-0"
+                                displayClassName="shrink-0 whitespace-nowrap"
                               />
                             </td>
                             <td>

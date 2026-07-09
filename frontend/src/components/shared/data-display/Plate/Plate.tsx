@@ -7,7 +7,7 @@ export interface PlateProps {
 export function Plate({ children, className = '' }: PlateProps) {
   return (
     <span
-      className={`inline-block rounded font-mono font-semibold text-[12.5px] ${className}`}
+      className={`inline-block whitespace-nowrap rounded font-mono font-semibold text-[12.5px] ${className}`}
       style={{
         background: 'var(--surface-3)',
         color: 'var(--ink-2)',

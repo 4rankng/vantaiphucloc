@@ -8,6 +8,7 @@ interface InlineEditableProps {
   inputType?: 'text' | 'number' | 'date'
   placeholder?: string
   className?: string
+  displayClassName?: string
   editLabel?: string
   validate?: (value: string) => string | null | Promise<string | null>
 }
@@ -19,6 +20,7 @@ export function InlineEditable({
   inputType = 'text',
   placeholder = '',
   className = '',
+  displayClassName = 'min-w-0 truncate',
   editLabel,
   validate,
 }: InlineEditableProps) {
@@ -173,7 +175,7 @@ export function InlineEditable({
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
       title={editLabel ?? 'Nhấn để sửa'}
     >
-      <span className="min-w-0 truncate">
+      <span className={displayClassName}>
         {display}
       </span>
       <span

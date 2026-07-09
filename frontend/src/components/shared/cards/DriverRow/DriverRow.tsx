@@ -55,10 +55,18 @@ export const DriverRow = memo(function DriverRow({
                   e.stopPropagation()
                   onResetPassword()
                 }}
-                className="p-1 rounded hover:bg-gray-100 transition-colors"
+                className="flex min-h-[44px] min-w-[44px] h-8 w-8 items-center justify-center rounded-lg border transition-colors hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-brand-primary)]"
+                style={{
+                  background: 'var(--surface-2)',
+                  borderColor: 'var(--line)',
+                }}
                 title="Đổi mật khẩu"
+                aria-label={`Đổi mật khẩu ${driver.fullName || driver.username}`}
               >
-                <Key className="h-3.5 w-3.5" style={{ color: 'var(--ink-3)' }} />
+                <Key
+                  className="h-3.5 w-3.5"
+                  style={{ color: 'var(--theme-brand-primary, var(--ink))' }}
+                />
               </button>
             )}
             {onDelete && (
