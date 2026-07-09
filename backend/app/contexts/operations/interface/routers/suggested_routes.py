@@ -1,4 +1,4 @@
-"""Driver route suggestions — frequency × recency scoring with GPS proximity bonus.
+"""Driver route suggestions ordered by recently used customer routes.
 
 Returns personalised route suggestions for the logged-in driver.
 If the driver has no history, falls back to global top routes (most popular
@@ -117,7 +117,7 @@ _DRIVER_ROUTES_SQL = text("""
     JOIN locations dl ON dl.id = wo.dropoff_location_id
     WHERE wo.driver_id = :driver_id
     GROUP BY p.id, pl.id, dl.id
-    ORDER BY frequency DESC, last_used DESC
+    ORDER BY last_used DESC, frequency DESC
     LIMIT :limit
 """)
 
@@ -139,7 +139,7 @@ _GLOBAL_POPULAR_SQL = text("""
     JOIN locations pl ON pl.id = wo.pickup_location_id
     JOIN locations dl ON dl.id = wo.dropoff_location_id
     GROUP BY p.id, pl.id, dl.id
-    ORDER BY frequency DESC, last_used DESC
+    ORDER BY last_used DESC, frequency DESC
     LIMIT :limit
 """)
 
@@ -151,7 +151,7 @@ async def _compute_suggestions(
     lng: float | None,
     limit: int,
 ) -> list[dict]:
-    """Return up to *limit* suggested routes for *driver_id*."""
+    """Return up to *limit* suggested routes for *driver_id*, newest first."""
 
     # 1. Driver's own history
     rows = (
@@ -194,8 +194,7 @@ async def _compute_suggestions(
             )
         )
 
-    # Sort by score descending
-    results.sort(key=lambda x: x.score, reverse=True)
+    results.sort(key=lambda x: (x.last_used, x.frequency), reverse=True)
     driver_results = results[:limit]
 
     if len(driver_results) >= limit:
@@ -257,7 +256,7 @@ async def _compute_suggestions(
 async def suggested_routes(
     lat: float | None = Query(None, description="Driver GPS latitude"),
     lng: float | None = Query(None, description="Driver GPS longitude"),
-    limit: int = Query(5, ge=1, le=10),
+    limit: int = Query(50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
 ):
     if current_user.role != "driver":

@@ -175,7 +175,7 @@ export async function exportDeliveredTripsExcel(filters?: {
 export function getSuggestedRoutes(
   lat?: number | null,
   lng?: number | null,
-  limit = 5,
+  limit = 100,
 ): Promise<ApiResponse<SuggestedRoute[]>> {
   return safeRequest(() => {
     const params: Record<string, string> = { limit: String(limit) }

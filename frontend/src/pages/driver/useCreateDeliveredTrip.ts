@@ -10,8 +10,10 @@ import { toISODate, shiftISODate, formatISODate } from '@/lib/salaryPeriod'
 import { invalidateDeliveredTripDeps } from '@/hooks/query-keys'
 import { useContainerManager } from './useContainerManager'
 import { migrateWorkType } from './useContainerManager'
-import type { DuplicateCheckCandidate } from '@/services/api/deliveredTrips.api'
+import type { DuplicateCheckCandidate, SuggestedRoute } from '@/services/api/deliveredTrips.api'
 import { checkBackendHealth } from '@/lib/backend-health'
+
+const RECENT_ROUTE_SUGGESTION_LIMIT = 100
 
 /** One container the backend did NOT confirm during submit. */
 export interface SubmitFailure {
@@ -57,7 +59,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
 
   // ─── Reference data ───────────────────────────────────────────────────────
   const [clients, setClients] = useState<Client[]>([])
-  const [recentOrders, setRecentOrders] = useState<DeliveredTrip[]>([])
+  const [recentOrders, setRecentOrders] = useState<SuggestedRoute[]>([])
   const { data: locations = [] } = useLocations()
 
   // Recent vessel values (per-driver, stored in localStorage)
@@ -124,7 +126,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     setSuggestionLoading(true)
 
     const fetchSuggestions = async () => {
-      const res = await apiClient.getSuggestedRoutes(undefined, undefined, 5)
+      const res = await apiClient.getSuggestedRoutes(undefined, undefined, RECENT_ROUTE_SUGGESTION_LIMIT)
       if (!cancelled && res.success) {
         setRecentOrders(res.data)
       }
