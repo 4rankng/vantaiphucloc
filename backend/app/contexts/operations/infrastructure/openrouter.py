@@ -12,8 +12,10 @@ Thinking emits large ``<think>`` blocks that can truncate before an answer).
 """
 
 import base64
+from email.utils import parsedate_to_datetime
 import logging
 import re
+from datetime import datetime, timezone
 
 import httpx
 
@@ -66,6 +68,24 @@ def _extract_text(content) -> str:
     else:
         raw = str(content)
     return _strip_think(raw)
+
+
+def _parse_retry_after(value: str | None) -> float | None:
+    if not value:
+        return None
+    value = value.strip()
+    try:
+        seconds = float(value)
+        return max(0.0, seconds)
+    except ValueError:
+        pass
+    try:
+        retry_at = parsedate_to_datetime(value)
+        if retry_at.tzinfo is None:
+            retry_at = retry_at.replace(tzinfo=timezone.utc)
+        return max(0.0, (retry_at - datetime.now(timezone.utc)).total_seconds())
+    except (TypeError, ValueError, IndexError, OverflowError):
+        return None
 
 
 async def call_openrouter_vision(
@@ -151,6 +171,11 @@ async def call_openrouter_vision(
             except Exception:
                 detail = ""
         msg = f"HTTP {status}" + (f": {detail}" if detail else "")
+        retry_after_seconds = (
+            _parse_retry_after(e.response.headers.get("Retry-After"))
+            if e.response is not None
+            else None
+        )
         _logger.warning("[OpenRouter] request failed: %s", msg)
         return {
             "success": False,
@@ -158,6 +183,9 @@ async def call_openrouter_vision(
             "error": msg,
             "provider": "openrouter",
             "model": model_slug,
+            "status_code": status if isinstance(status, int) else None,
+            "rate_limited": status == 429,
+            "retry_after_seconds": retry_after_seconds,
         }
     except Exception as e:
         _logger.warning("[OpenRouter] request failed: %s: %s", type(e).__name__, e)

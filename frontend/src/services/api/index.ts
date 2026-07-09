@@ -69,6 +69,8 @@ export const apiClient = {
   updateDeliveredTrip: deliveredTripsApi.updateDeliveredTrip,
   deleteDeliveredTrip: deliveredTripsApi.deleteDeliveredTrip,
   ocrContainer: deliveredTripsApi.ocrContainer,
+  submitOcrContainer: deliveredTripsApi.submitOcrContainer,
+  getOcrJobStatus: deliveredTripsApi.getOcrJobStatus,
   validateContainer: deliveredTripsApi.validateContainer,
   getSuggestedRoutes: deliveredTripsApi.getSuggestedRoutes,
   bulkImportAndMatch: deliveredTripsApi.bulkImportAndMatch,

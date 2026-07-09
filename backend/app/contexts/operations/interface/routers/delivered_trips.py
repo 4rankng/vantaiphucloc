@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import io
 import logging
 import math
-import time
-from datetime import date
+from datetime import date, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
+from PIL import Image, UnidentifiedImageError
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.contexts.operations.application import (
     CheckDeliveredTripDuplicate,
     CreateDeliveredTrip,
@@ -44,7 +47,7 @@ from app.contexts.operations.interface.error_translation import translate
 from app.core.deps import get_current_user, require_permission
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import OcrDriverRequest, OcrRequest
+from app.models.domain import OcrJob, OcrRequest
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import (
     DeliveredTripCreate,
@@ -63,8 +66,12 @@ from app.core.summaries import (
     get_client_summary,
     get_vendor_summary,
 )
-from app.schemas._ocr import ContainerOCRRequest
-from app.contexts.operations.infrastructure.ocr import extract_container_numbers
+from app.schemas._ocr import (
+    ContainerOCRJobResponse,
+    ContainerOCRRequest,
+    OCRJobStatusResponse,
+    OCRMetricsResponse,
+)
 from app.contexts.operations.infrastructure.photo_storage import (
     delete_photo_url,
     hash_image_bytes,
@@ -75,6 +82,18 @@ from app.utils.iso6346 import normalize_container_number as _norm
 _logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+OCR_ACTIVE_OR_DONE_STATUSES = ("queued", "processing", "retrying", "succeeded")
+OCR_TERMINAL_STATUSES = {"succeeded", "failed"}
+OCR_VISIBLE_TO_ALL_ROLES = {"superadmin", "director", "accountant"}
+OCR_ALLOWED_MIME_TYPES = {
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -143,6 +162,122 @@ def _user_ctx(u: User) -> CurrentUserContext:
     return CurrentUserContext(id=u.id, role=u.role)
 
 
+def _aware_utc(dt):
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _seconds_since(dt) -> float:
+    aware = _aware_utc(dt)
+    if aware is None:
+        return 0.0
+    return (datetime_now_utc() - aware).total_seconds()
+
+
+def datetime_now_utc():
+    from app.utils.dates import utcnow
+
+    return utcnow()
+
+
+def _decode_ocr_image(body: ContainerOCRRequest) -> bytes:
+    mime_type = body.mime_type.lower().strip()
+    if mime_type not in OCR_ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=415, detail="Định dạng ảnh không hỗ trợ")
+    try:
+        image_bytes = base64.b64decode(body.image_data, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(
+            status_code=400, detail="Ảnh gửi lên không hợp lệ"
+        ) from None
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="Ảnh gửi lên bị rỗng")
+    if len(image_bytes) > settings.OCR_UPLOAD_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Ảnh vượt quá dung lượng cho phép")
+    try:
+        with Image.open(io.BytesIO(image_bytes)) as img:
+            width, height = img.size
+    except (UnidentifiedImageError, OSError, ValueError):
+        raise HTTPException(status_code=400, detail="Không đọc được ảnh") from None
+    if width <= 0 or height <= 0:
+        raise HTTPException(status_code=400, detail="Kích thước ảnh không hợp lệ")
+    if width * height > settings.OCR_IMAGE_MAX_PIXELS:
+        raise HTTPException(status_code=413, detail="Ảnh quá lớn để xử lý OCR")
+    return image_bytes
+
+
+def _can_view_ocr_job(user: User, job: OcrJob) -> bool:
+    return user.role in OCR_VISIBLE_TO_ALL_ROLES or job.user_id == user.id
+
+
+def _job_container_numbers(job: OcrJob) -> list[str]:
+    payload = job.result_payload if isinstance(job.result_payload, dict) else {}
+    numbers = payload.get("container_numbers")
+    if isinstance(numbers, list):
+        return [str(n) for n in numbers if str(n).strip()]
+    if job.result_text:
+        return [line.strip() for line in job.result_text.splitlines() if line.strip()]
+    return []
+
+
+def _ocr_job_status_response(job: OcrJob) -> OCRJobStatusResponse:
+    return OCRJobStatusResponse(
+        job_id=int(job.id),
+        status=job.status,
+        result_text=job.result_text,
+        container_numbers=_job_container_numbers(job),
+        error_message=job.error_message,
+        attempt_count=job.attempt_count,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        finished_at=job.finished_at,
+        next_retry_at=job.next_retry_at,
+    )
+
+
+def _mark_stale_ocr_job_failed(job: OcrJob) -> bool:
+    now = datetime_now_utc()
+    if job.status in {"queued", "retrying"}:
+        if _seconds_since(job.created_at) <= settings.OCR_QUEUE_TIMEOUT_SECONDS:
+            return False
+        job.status = "failed"
+        job.error_message = "OCR job timed out in queue"
+        job.finished_at = now
+        job.next_retry_at = None
+        job.dead_lettered_at = now
+        return True
+    if job.status == "processing" and job.started_at is not None:
+        if _seconds_since(job.started_at) <= settings.OCR_JOB_TIMEOUT_SECONDS + 30:
+            return False
+        job.status = "failed"
+        job.error_message = "OCR job timed out while processing"
+        job.finished_at = now
+        job.dead_lettered_at = now
+        return True
+    return False
+
+
+async def _current_ocr_job_for_hash(
+    db: AsyncSession,
+    user_id: int,
+    image_hash: str,
+) -> OcrJob | None:
+    result = await db.execute(
+        select(OcrJob)
+        .where(
+            OcrJob.user_id == user_id,
+            OcrJob.image_hash == image_hash,
+            OcrJob.status.in_(OCR_ACTIVE_OR_DONE_STATUSES),
+        )
+        .order_by(OcrJob.created_at.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
 async def _enqueue_notification(w: DeliveredTrip) -> None:
     try:
         from app.workers import enqueue
@@ -188,86 +323,144 @@ async def validate_container(
     }
 
 
-@router.post("/delivered-trips/ocr-container")
+@router.post(
+    "/delivered-trips/ocr-container",
+    response_model=ContainerOCRJobResponse,
+)
 async def ocr_container(
     body: ContainerOCRRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    t_start = time.perf_counter()
-    image_bytes = base64.b64decode(body.image_data)
-    result = await extract_container_numbers(image_bytes, body.mime_type)
-    # End-to-end latency the driver perceived: decode + preprocess + every
-    # provider attempt (including fallbacks) + postprocess. Distinct from each
-    # attempt's own provider-call latency_ms.
-    end_to_end_ms = int((time.perf_counter() - t_start) * 1000)
-
-    # Analytics — two grains back two charts:
-    # - ocr_driver_requests: ONE row per photo upload (the driver action),
-    #   written ALWAYS — even when no provider ran (e.g. OCR not configured,
-    #   empty attempts) — so the driver-seen failure count stays faithful.
-    #   Carries the upload count + end-to-end perceived latency.
-    # - ocr_requests: ONE row per provider LLM call (every attempt, including
-    #   429s and "no valid numbers" that a later provider rescued); carries
-    #   provider-call latency + the error/429 breakdown. Only written when at
-    #   least one provider actually ran.
-    # Truncate errors so a long provider message can't overflow the column and
-    # silently drop the row. A logging failure must never break the OCR
-    # response for the driver.
-    attempts = result.get("attempts") or []
-    # Persist the photo ONLY when the driver saw a failure (no provider
-    # rescued a number), so the admin can preview/download the actual image
-    # that defeated OCR. Successful runs never touch disk for the photo. A
-    # save failure must not break the OCR response or the analytics write:
-    # on error we leave the URL None and that failure simply isn't viewable.
-    failed_photo_url: str | None = None
-    failed_photo_hash: str | None = None
-    if not result.get("success"):
-        try:
-            data_url = f"data:{body.mime_type};base64,{body.image_data}"
-            failed_photo = save_base64_photo(data_url)
-            failed_photo_url = failed_photo.url
-            failed_photo_hash = failed_photo.content_hash
-        except Exception:
-            _logger.exception("[OCR] failed to persist failed-OCR photo")
-    try:
-        db.add(
-            OcrDriverRequest(
-                user_id=current_user.id,
-                success=bool(result.get("success")),
-                attempts=len(attempts),
-                numbers_found=len(result.get("container_numbers", [])),
-                latency_ms=end_to_end_ms,
-                provider=result.get("provider"),
-                cont_photo_url=failed_photo_url,
-                cont_photo_hash=failed_photo_hash,
+    _decode_ocr_image(body)
+    stored_photo = save_base64_photo(f"data:{body.mime_type};base64,{body.image_data}")
+    existing = await _current_ocr_job_for_hash(
+        db,
+        int(current_user.id),
+        stored_photo.content_hash,
+    )
+    if existing is not None:
+        if not _mark_stale_ocr_job_failed(existing):
+            delete_photo_url(stored_photo.url)
+            return ContainerOCRJobResponse(
+                job_id=int(existing.id),
+                status=existing.status,
+                duplicate=True,
+                message="Ảnh này đang có OCR hoặc đã có kết quả",
             )
-        )
-        for attempt in attempts:
-            db.add(
-                OcrRequest(
-                    provider=attempt["provider"],
-                    model=attempt.get("model"),
-                    success=bool(attempt.get("success")),
-                    container_numbers_found=int(
-                        attempt.get("container_numbers_found", 0)
-                    ),
-                    latency_ms=attempt.get("latency_ms"),
-                    error=(attempt.get("error") or "")[:512] or None,
-                    user_id=current_user.id,
+        await db.flush()
+
+    job = OcrJob(
+        user_id=current_user.id,
+        image_path=stored_photo.url,
+        image_hash=stored_photo.content_hash,
+        status="queued",
+    )
+    db.add(job)
+    await db.flush()
+    await db.commit()
+
+    try:
+        from app.workers import enqueue_ocr_job
+
+        await enqueue_ocr_job(int(job.id), attempt_count=0)
+    except Exception as exc:
+        _logger.exception("[OCR] failed to enqueue job %s", job.id)
+        job.status = "failed"
+        job.error_message = "OCR queue unavailable"
+        job.finished_at = datetime_now_utc()
+        job.dead_lettered_at = job.finished_at
+        await db.commit()
+        raise HTTPException(
+            status_code=503,
+            detail="Hàng đợi OCR chưa sẵn sàng, vui lòng thử lại sau",
+        ) from exc
+
+    queue_depth = await db.scalar(
+        select(func.count())
+        .select_from(OcrJob)
+        .where(OcrJob.status.in_(("queued", "retrying")))
+    )
+    _logger.info(
+        "[OCR] queued job=%s user=%s queue_depth=%s image_hash=%s",
+        job.id,
+        current_user.id,
+        queue_depth or 0,
+        stored_photo.content_hash,
+    )
+    return ContainerOCRJobResponse(job_id=int(job.id), status="queued")
+
+
+@router.get("/ocr/jobs/{job_id}", response_model=OCRJobStatusResponse)
+async def get_ocr_job_status(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    job = await db.get(OcrJob, job_id)
+    if job is None or not _can_view_ocr_job(current_user, job):
+        raise HTTPException(status_code=404, detail="Không tìm thấy OCR job")
+    if _mark_stale_ocr_job_failed(job):
+        await db.flush()
+    return _ocr_job_status_response(job)
+
+
+@router.get("/ocr/metrics", response_model=OCRMetricsResponse)
+async def get_ocr_metrics(
+    minutes: int = Query(60, ge=1, le=1440),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if current_user.role not in OCR_VISIBLE_TO_ALL_ROLES:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền xem chỉ số OCR")
+    cutoff = datetime_now_utc() - timedelta(minutes=minutes)
+    recent_jobs = (
+        (await db.execute(select(OcrJob).where(OcrJob.created_at >= cutoff)))
+        .scalars()
+        .all()
+    )
+    current_jobs = (
+        (
+            await db.execute(
+                select(OcrJob).where(
+                    OcrJob.status.in_(("queued", "processing", "retrying"))
                 )
             )
-        await db.commit()
-    except Exception:
-        _logger.exception("[OCR] failed to log ocr analytics rows")
-        await db.rollback()
-
-    return {
-        "success": result["success"],
-        "container_numbers": result.get("container_numbers", []),
-        "error": result.get("error"),
-        "provider": result.get("provider"),
-    }
+        )
+        .scalars()
+        .all()
+    )
+    recent_attempts = (
+        (await db.execute(select(OcrRequest).where(OcrRequest.created_at >= cutoff)))
+        .scalars()
+        .all()
+    )
+    waits = [
+        (_aware_utc(j.started_at) - _aware_utc(j.created_at)).total_seconds() * 1000
+        for j in recent_jobs
+        if j.started_at is not None
+    ]
+    processing_times = [
+        (_aware_utc(j.finished_at) - _aware_utc(j.started_at)).total_seconds() * 1000
+        for j in recent_jobs
+        if j.started_at is not None and j.finished_at is not None
+    ]
+    return OCRMetricsResponse(
+        minutes=minutes,
+        queue_depth=sum(1 for j in current_jobs if j.status in {"queued", "retrying"}),
+        processing=sum(1 for j in current_jobs if j.status == "processing"),
+        retrying=sum(1 for j in current_jobs if j.status == "retrying"),
+        succeeded=sum(1 for j in recent_jobs if j.status == "succeeded"),
+        failed=sum(1 for j in recent_jobs if j.status == "failed"),
+        openrouter_429_count=sum(
+            1 for r in recent_attempts if r.error and "HTTP 429" in r.error
+        ),
+        retry_count=sum(max(0, int(j.attempt_count) - 1) for j in recent_jobs),
+        avg_wait_ms=(sum(waits) / len(waits)) if waits else None,
+        avg_processing_ms=(sum(processing_times) / len(processing_times))
+        if processing_times
+        else None,
+    )
 
 
 @router.post("/delivered-trips", response_model=DeliveredTripOut, status_code=201)

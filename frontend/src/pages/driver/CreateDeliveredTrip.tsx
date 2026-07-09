@@ -85,6 +85,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
   // backend runs OCR. We pick the first one rather than tracking which row
   // started scanning because OCR is one-at-a-time in practice.
   const scanningContainer = containers.find(c => c.ocrLoading)
+  const scanningStatusText = getOcrStatusText(scanningContainer?.ocrStatus)
 
   const handleConfirmSubmit = () => {
     void confirmSubmit()
@@ -367,6 +368,9 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
             <div className="space-y-1.5">
               {stagingError && <Hint tone="error" text={stagingError} />}
               {forceManualEntry && <Hint tone="warning" text="Vui lòng nhập tay số cont" />}
+              {scanningContainer && scanningStatusText && (
+                <Hint tone="warning" text={scanningStatusText} />
+              )}
               {containers.some(c => c.ocrError) && !scanningContainer && (
                 <Hint tone="warning" text={`${containers.find(c => c.ocrError)?.ocrError} — nhập tay hoặc quét lại`} />
               )}
@@ -623,6 +627,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
       <AIScanningOverlay
         visible={!!scanningContainer}
         imageSrc={scanningContainer?.photoDataUrl ?? null}
+        subtitle={scanningStatusText ?? 'Vui lòng đợi trong giây lát'}
         detectedNumbers={containers.filter(c => c.containerNumber.trim() && !c.ocrLoading).map(c => c.containerNumber)}
       />
 
@@ -722,6 +727,13 @@ function Hint({ tone, text }: { tone: 'warning' | 'error'; text: string }) {
       <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {text}
     </p>
   )
+}
+
+function getOcrStatusText(status?: string): string | null {
+  if (status === 'queued') return 'OCR đang xếp hàng, hệ thống sẽ xử lý tự động'
+  if (status === 'processing') return 'OCR đang nhận diện số container'
+  if (status === 'retrying') return 'OpenRouter đang giới hạn tốc độ, hệ thống đang chờ để thử lại'
+  return null
 }
 
 /**

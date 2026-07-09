@@ -6,11 +6,11 @@ valid number wins.
 
 SLA: the whole provider chain is bounded by ``settings.OCR_DEADLINE_SECONDS``
 (wall-clock budget for every attempt combined) and each individual call is
-additionally capped by ``settings.OCR_PER_CALL_TIMEOUT_SECONDS``. This keeps
-the endpoint inside the frontend's 60s axios timeout — a single hung model
-can no longer eat the entire budget. When no model returns a clean read (and
-salvage cannot recover one), the service returns ``"Không nhận diện được số
-cont"`` instead of letting axios abort the request.
+additionally capped by the per-model timeout in ``OPENROUTER_MODELS``. OCR now
+runs from the arq worker, so this deadline protects worker capacity rather than
+an upload request. When no model returns a clean read (and salvage cannot
+recover one), the service returns ``"Không nhận diện được số cont"`` for the
+job result.
 
 Driver workflow:
 1. Take photo of container
@@ -173,9 +173,7 @@ def _salvage_container_numbers(text: str) -> list[str]:
 
 def _available_openrouter_models() -> list[tuple[str, str, float]]:
     return [
-        (label, model, timeout)
-        for label, model, timeout in OPENROUTER_MODELS
-        if model
+        (label, model, timeout) for label, model, timeout in OPENROUTER_MODELS if model
     ]
 
 
@@ -344,22 +342,43 @@ async def extract_container_numbers(
         provider_label = result.get("provider") or name
 
         if not result["success"]:
+            is_rate_limited = bool(result.get("rate_limited"))
             last = {
                 "provider": provider_label,
                 "model": result.get("model"),
                 "latency_ms": latency_ms,
                 "error": result.get("error"),
             }
-            attempts.append(
-                {
+            attempt = {
+                "provider": provider_label,
+                "model": result.get("model"),
+                "success": False,
+                "latency_ms": latency_ms,
+                "error": result.get("error"),
+                "container_numbers_found": 0,
+                "status_code": result.get("status_code"),
+                "rate_limited": is_rate_limited,
+                "retry_after_seconds": result.get("retry_after_seconds"),
+            }
+            attempts.append(attempt)
+            if is_rate_limited:
+                _logger.warning(
+                    "[OCR] %s rate limited (%s); deferring retry instead of trying next model",
+                    provider_label,
+                    result.get("error"),
+                )
+                return {
+                    "success": False,
+                    "container_numbers": [],
+                    "error": "OpenRouter đang giới hạn tốc độ, hệ thống sẽ tự thử lại",
+                    "analytics_error": result.get("error"),
                     "provider": provider_label,
                     "model": result.get("model"),
-                    "success": False,
                     "latency_ms": latency_ms,
-                    "error": result.get("error"),
-                    "container_numbers_found": 0,
+                    "attempts": attempts,
+                    "rate_limited": True,
+                    "retry_after_seconds": result.get("retry_after_seconds"),
                 }
-            )
             _logger.warning(
                 "[OCR] %s failed (%s): %s — trying next provider",
                 provider_label,

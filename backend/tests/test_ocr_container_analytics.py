@@ -1,6 +1,6 @@
 """Invariant tests for the OCR analytics two-grain split.
 
-The ``/delivered-trips/ocr-container`` endpoint writes:
+The OCR worker writes:
 - ONE ``OcrDriverRequest`` per photo upload (the driver-seen grain), ALWAYS —
   even when no provider ran — so the driver-seen failure count is faithful.
 - ONE ``OcrRequest`` per provider attempt (the provider-error grain), only when
@@ -14,8 +14,8 @@ no-provider-configured edge case still writes a row, and the persisted
 
 import base64
 import hashlib
+from contextlib import asynccontextmanager
 from io import BytesIO
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -23,7 +23,8 @@ from PIL import Image
 from sqlalchemy import select
 
 from app.config import settings
-from app.models.domain import OcrDriverRequest, OcrRequest
+from app.models.domain import OcrDriverRequest, OcrJob, OcrRequest
+from app.workers.tasks import ocr as ocr_task
 
 pytestmark = pytest.mark.asyncio
 
@@ -31,19 +32,14 @@ OCR_CONTAINER_URL = "/api/v1/delivered-trips/ocr-container"
 OCR_STATS_URL = "/api/v1/dashboard/ocr-stats"
 
 
-def _b64_image() -> str:
+def _image_bytes() -> bytes:
     buf = BytesIO()
     Image.new("RGB", (8, 8), "red").save(buf, format="JPEG")
-    return base64.b64encode(buf.getvalue()).decode()
+    return buf.getvalue()
 
 
-def _patch_ocr(result: dict):
-    """Patch the OCR call imported into the delivered_trips router module."""
-    return patch(
-        "app.contexts.operations.interface.routers.delivered_trips"
-        ".extract_container_numbers",
-        new=AsyncMock(return_value=result),
-    )
+def _b64_image() -> str:
+    return base64.b64encode(_image_bytes()).decode()
 
 
 # OpenRouter fails ("no valid numbers") but Gemini rescues the upload.
@@ -121,22 +117,60 @@ async def _stats(async_client: AsyncClient, headers: dict) -> dict:
     return resp.json()
 
 
+async def _run_ocr_worker(
+    db_session,
+    monkeypatch,
+    tmp_path,
+    result: dict,
+) -> tuple[OcrJob, dict]:
+    class _FakeRedis:
+        async def eval(self, *_args):
+            return 1
+
+    @asynccontextmanager
+    async def _test_session():
+        try:
+            yield db_session
+            await db_session.commit()
+        except Exception:
+            await db_session.rollback()
+            raise
+
+    async def _fake_extract(_image_bytes, _mime_type):
+        return result
+
+    monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setattr(ocr_task, "get_session", _test_session)
+    monkeypatch.setattr(ocr_task, "extract_container_numbers", _fake_extract)
+
+    content = _image_bytes()
+    image_path = tmp_path / "ocr-test.jpg"
+    image_path.write_bytes(content)
+    job = OcrJob(
+        image_path="/photos/ocr-test.jpg",
+        image_hash=hashlib.sha256(content).hexdigest(),
+        status="queued",
+    )
+    db_session.add(job)
+    await db_session.commit()
+
+    worker_result = await ocr_task.process_ocr_job_task(
+        {"redis": _FakeRedis()},
+        int(job.id),
+    )
+    return job, worker_result
+
+
 async def test_rescued_upload_counts_as_driver_success(
-    async_client: AsyncClient, make_auth_headers, db_session
+    async_client: AsyncClient, make_auth_headers, db_session, monkeypatch, tmp_path
 ):
     headers = await make_auth_headers("superadmin")
-    with _patch_ocr(RESCUED):
-        resp = await async_client.post(
-            OCR_CONTAINER_URL,
-            json={"image_data": _b64_image()},
-            headers=headers,
-        )
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["success"] is True
+    _, worker_result = await _run_ocr_worker(db_session, monkeypatch, tmp_path, RESCUED)
+    assert worker_result["status"] == "succeeded"
 
     driver_rows = (await db_session.execute(select(OcrDriverRequest))).scalars().all()
     assert len(driver_rows) == 1
-    # Risk C: persisted success agrees with the response the driver received.
+    # Risk C: persisted success agrees with the terminal result the driver receives.
     assert driver_rows[0].success is True
 
     # One provider-error row per attempt (the rescued OR failure is still logged).
@@ -153,17 +187,13 @@ async def test_rescued_upload_counts_as_driver_success(
 
 
 async def test_all_exhausted_counts_as_driver_failure(
-    async_client: AsyncClient, make_auth_headers, db_session
+    async_client: AsyncClient, make_auth_headers, db_session, monkeypatch, tmp_path
 ):
     headers = await make_auth_headers("superadmin")
-    with _patch_ocr(EXHAUSTED):
-        resp = await async_client.post(
-            OCR_CONTAINER_URL,
-            json={"image_data": _b64_image()},
-            headers=headers,
-        )
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["success"] is False
+    _, worker_result = await _run_ocr_worker(
+        db_session, monkeypatch, tmp_path, EXHAUSTED
+    )
+    assert worker_result["status"] == "failed"
 
     driver_rows = (await db_session.execute(select(OcrDriverRequest))).scalars().all()
     assert len(driver_rows) == 1
@@ -176,18 +206,17 @@ async def test_all_exhausted_counts_as_driver_failure(
 
 
 async def test_no_provider_configured_still_writes_driver_row(
-    async_client: AsyncClient, make_auth_headers, db_session
+    async_client: AsyncClient, make_auth_headers, db_session, monkeypatch, tmp_path
 ):
     """Risk A: empty attempts must still produce a driver-seen failure row."""
     headers = await make_auth_headers("superadmin")
-    with _patch_ocr(NO_PROVIDER):
-        resp = await async_client.post(
-            OCR_CONTAINER_URL,
-            json={"image_data": _b64_image()},
-            headers=headers,
-        )
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["success"] is False
+    _, worker_result = await _run_ocr_worker(
+        db_session,
+        monkeypatch,
+        tmp_path,
+        NO_PROVIDER,
+    )
+    assert worker_result["status"] == "failed"
 
     driver_rows = (await db_session.execute(select(OcrDriverRequest))).scalars().all()
     assert len(driver_rows) == 1, "no-provider failure must still be recorded"
@@ -207,16 +236,8 @@ async def test_failed_ocr_persists_photo(
     async_client: AsyncClient, make_auth_headers, db_session, tmp_path, monkeypatch
 ):
     """A failed OCR run persists its photo so the admin can preview/download it."""
-    monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path))
-    headers = await make_auth_headers("superadmin")
-    with _patch_ocr(EXHAUSTED):
-        resp = await async_client.post(
-            OCR_CONTAINER_URL,
-            json={"image_data": _b64_image()},
-            headers=headers,
-        )
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["success"] is False
+    await make_auth_headers("superadmin")
+    await _run_ocr_worker(db_session, monkeypatch, tmp_path, EXHAUSTED)
 
     rows = (await db_session.execute(select(OcrDriverRequest))).scalars().all()
     assert len(rows) == 1
@@ -226,26 +247,26 @@ async def test_failed_ocr_persists_photo(
     # The image actually landed on disk under the storage root.
     stored_path = tmp_path / url.removeprefix("/photos/")
     assert stored_path.is_file()
-    assert rows[0].cont_photo_hash == hashlib.sha256(stored_path.read_bytes()).hexdigest()
+    assert (
+        rows[0].cont_photo_hash == hashlib.sha256(stored_path.read_bytes()).hexdigest()
+    )
 
 
 async def test_successful_ocr_does_not_persist_photo(
     async_client: AsyncClient, make_auth_headers, db_session, tmp_path, monkeypatch
 ):
-    """Successful OCR runs never write a photo — storage stays bounded to failures."""
-    monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path))
-    headers = await make_auth_headers("superadmin")
-    with _patch_ocr(RESCUED):
-        resp = await async_client.post(
-            OCR_CONTAINER_URL,
-            json={"image_data": _b64_image()},
-            headers=headers,
-        )
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["success"] is True
+    """Successful OCR runs do not attach the staging photo to failure analytics."""
+    await make_auth_headers("superadmin")
+    job, worker_result = await _run_ocr_worker(
+        db_session,
+        monkeypatch,
+        tmp_path,
+        RESCUED,
+    )
+    assert worker_result["status"] == "succeeded"
 
     rows = (await db_session.execute(select(OcrDriverRequest))).scalars().all()
     assert len(rows) == 1
     assert rows[0].cont_photo_url is None
-    # Nothing was written under the storage root.
-    assert not any(tmp_path.iterdir())
+    stored_path = tmp_path / job.image_path.removeprefix("/photos/")
+    assert stored_path.is_file()

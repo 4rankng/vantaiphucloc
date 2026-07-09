@@ -114,23 +114,111 @@ export interface OCRContainerResponse {
   error: string | null
 }
 
-export async function ocrContainer(imageDataUrl: string): Promise<OCRContainerResponse> {
+export type OCRJobStatus = 'queued' | 'processing' | 'retrying' | 'succeeded' | 'failed'
+
+export interface OCRJobSubmitResponse {
+  jobId: number
+  status: OCRJobStatus
+  duplicate: boolean
+  message?: string | null
+}
+
+export interface OCRJobStatusResponse {
+  jobId: number
+  status: OCRJobStatus
+  resultText: string | null
+  containerNumbers: string[]
+  errorMessage: string | null
+  attemptCount: number
+  createdAt: string
+  startedAt: string | null
+  finishedAt: string | null
+  nextRetryAt: string | null
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => window.setTimeout(resolve, ms))
+}
+
+function mapOcrJobSubmit(raw: Record<string, unknown>): OCRJobSubmitResponse {
+  return {
+    jobId: Number(raw.job_id),
+    status: raw.status as OCRJobStatus,
+    duplicate: Boolean(raw.duplicate),
+    message: typeof raw.message === 'string' ? raw.message : null,
+  }
+}
+
+function mapOcrJobStatus(raw: Record<string, unknown>): OCRJobStatusResponse {
+  return {
+    jobId: Number(raw.job_id),
+    status: raw.status as OCRJobStatus,
+    resultText: typeof raw.result_text === 'string' ? raw.result_text : null,
+    containerNumbers: Array.isArray(raw.container_numbers)
+      ? raw.container_numbers.map(String)
+      : [],
+    errorMessage: typeof raw.error_message === 'string' ? raw.error_message : null,
+    attemptCount: Number(raw.attempt_count ?? 0),
+    createdAt: String(raw.created_at),
+    startedAt: typeof raw.started_at === 'string' ? raw.started_at : null,
+    finishedAt: typeof raw.finished_at === 'string' ? raw.finished_at : null,
+    nextRetryAt: typeof raw.next_retry_at === 'string' ? raw.next_retry_at : null,
+  }
+}
+
+export async function submitOcrContainer(imageDataUrl: string): Promise<OCRJobSubmitResponse> {
   const base64 = stripBase64Prefix(imageDataUrl)
-  // OCR is the one long endpoint: the backend model chain (32B 15s → Plus 55s)
-  // plus the analytics DB write can run up to ~70s, so wait past the default
-  // 60s axios timeout. Targeted override — other endpoints keep the 60s default.
   const res = await api.post(
     '/delivered-trips/ocr-container',
     {
       image_data: base64,
       mime_type: 'image/jpeg',
     },
-    { timeout: 75000 },
+    { timeout: 10000 },
   )
+  return mapOcrJobSubmit(res.data)
+}
+
+export async function getOcrJobStatus(jobId: number): Promise<OCRJobStatusResponse> {
+  const res = await api.get(`/ocr/jobs/${jobId}`, { timeout: 10000 })
+  return mapOcrJobStatus(res.data)
+}
+
+const OCR_POLL_INTERVAL_MS = 1500
+const OCR_MAX_CLIENT_WAIT_MS = 5 * 60 * 1000
+
+export async function ocrContainer(
+  imageDataUrl: string,
+  onStatus?: (status: OCRJobStatus) => void,
+): Promise<OCRContainerResponse> {
+  const submitted = await submitOcrContainer(imageDataUrl)
+  onStatus?.(submitted.status)
+  const startedAt = Date.now()
+
+  while (Date.now() - startedAt < OCR_MAX_CLIENT_WAIT_MS) {
+    const status = await getOcrJobStatus(submitted.jobId)
+    onStatus?.(status.status)
+    if (status.status === 'succeeded') {
+      return {
+        success: true,
+        containerNumbers: status.containerNumbers,
+        error: null,
+      }
+    }
+    if (status.status === 'failed') {
+      return {
+        success: false,
+        containerNumbers: [],
+        error: status.errorMessage ?? 'Không nhận diện được',
+      }
+    }
+    await sleep(OCR_POLL_INTERVAL_MS)
+  }
+
   return {
-    success: res.data.success,
-    containerNumbers: res.data.container_numbers ?? [],
-    error: res.data.error,
+    success: false,
+    containerNumbers: [],
+    error: 'OCR đang chờ trong hàng đợi, vui lòng thử lại sau',
   }
 }
 

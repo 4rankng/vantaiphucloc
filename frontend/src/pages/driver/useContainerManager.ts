@@ -3,6 +3,7 @@ import { apiClient } from '@/services/api'
 import type { PhotoMeta } from '@/components/shared/overlays/ContainerScanner'
 import type { ContType, WorkType, DeliveredTrip } from '@/data/domain'
 import { CONT_TYPES } from '@/data/domain'
+import type { OCRJobStatus } from '@/services/api/deliveredTrips.api'
 
 /**
  * ContainerForm — per-container row of the create-trip form.
@@ -29,6 +30,7 @@ export interface ContainerForm {
   photoLng?: number | null
   photoTimestamp?: string | null
   ocrLoading: boolean
+  ocrStatus?: OCRJobStatus
   ocrError?: string
 }
 
@@ -147,7 +149,11 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
       i === idx ? { ...c, ocrLoading: true, ocrError: undefined, photoTaken: true, photoDataUrl: imageSrc } : c
     ))
 
-    apiClient.ocrContainer(imageSrc)
+    apiClient.ocrContainer(imageSrc, (status) => {
+      setContainers(prev => prev.map((c, i) =>
+        i === idx ? { ...c, ocrStatus: status } : c
+      ))
+    })
       .then((result) => {
         if (result.success && result.containerNumbers.length > 0) {
           setConsecutiveOCRFailures(0)
@@ -175,6 +181,7 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
               photoTaken: ni === 0 && !!scanPhoto,
               photoDataUrl: ni === 0 ? scanPhoto : undefined,
               ocrLoading: false,
+              ocrStatus: undefined,
             }))
 
             // Remove the placeholder container at [idx] if it was empty
@@ -217,7 +224,7 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
           setConsecutiveOCRFailures(prev => prev + 1)
           setContainers(prev => prev.map((c, i) =>
             i === idx
-              ? { ...c, ocrLoading: false, ocrError: result.error ?? 'Không nhận diện được' }
+              ? { ...c, ocrLoading: false, ocrStatus: undefined, ocrError: result.error ?? 'Không nhận diện được' }
               : c
           ))
         }
@@ -241,7 +248,7 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
         }
 
         setContainers(prev => prev.map((c, i) =>
-          i === idx ? { ...c, ocrLoading: false, ocrError } : c
+          i === idx ? { ...c, ocrLoading: false, ocrStatus: undefined, ocrError } : c
         ))
       })
   }, [activeContIdx, applyValidationResult])

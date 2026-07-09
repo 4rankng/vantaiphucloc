@@ -55,16 +55,22 @@ class Settings(BaseSettings):
     OPENROUTER_ENABLE: bool = False
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
 
-    # OCR SLA. The frontend axios client waits 75s for OCR (see ocrContainer in
-    # deliveredTrips.api.ts). Each OpenRouter model carries its own per-call
-    # timeout (see OPENROUTER_MODELS): the fast 32B model gives up at 15s and
-    # hands off to the heavier fallback which gets 55s. OCR_DEADLINE_SECONDS is
-    # a wall-clock backstop (70s = 15 + 55) that never clips the configured
-    # two-model chain but keeps a future third model from running past the
-    # budget; the 5s gap to the 75s axios limit covers the analytics DB write.
-    # When every model comes back empty or times out, the endpoint returns
-    # "Không nhận diện được số cont" instead of letting axios abort.
+    # OCR worker limits. Each OpenRouter model carries its own per-call timeout
+    # in OPENROUTER_MODELS; OCR_DEADLINE_SECONDS is the wall-clock backstop for
+    # one worker attempt. The upload endpoint only stores the image and enqueues
+    # an OCR job; the frontend polls the job status endpoint for the result.
     OCR_DEADLINE_SECONDS: float = 70.0
+    OCR_UPLOAD_MAX_BYTES: int = 5_242_880
+    OCR_IMAGE_MAX_PIXELS: int = 30_000_000
+    OCR_OPENROUTER_GLOBAL_CONCURRENCY: int = 3
+    OCR_PER_USER_CONCURRENCY: int = 1
+    OCR_MAX_RETRIES: int = 3
+    OCR_RETRY_INITIAL_DELAY_SECONDS: float = 2.0
+    OCR_RETRY_MAX_DELAY_SECONDS: float = 30.0
+    OCR_QUEUE_RETRY_DELAY_SECONDS: float = 2.0
+    OCR_QUEUE_TIMEOUT_SECONDS: int = 900
+    OCR_JOB_TIMEOUT_SECONDS: int = 90
+    OCR_CONCURRENCY_SLOT_TTL_SECONDS: int = 180
 
     CHATBOT_ENABLE: int = 0
 

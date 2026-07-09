@@ -2,6 +2,7 @@ import hashlib
 import logging
 
 from app.core.worker import get_arq_pool
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,39 @@ async def enqueue(function_name: str, _job_id: str | None = None, **kwargs) -> s
             f"Failed to enqueue job '{function_name}' — worker may not be running"
         )
     logger.info("Enqueued job %s (id=%s)", function_name, job.job_id)
+    return job.job_id
+
+
+def ocr_worker_job_id(job_id: int, attempt_count: int) -> str:
+    return f"ocr:{job_id}:attempt:{attempt_count}"
+
+
+async def enqueue_ocr_job(
+    job_id: int,
+    *,
+    attempt_count: int = 0,
+    defer_by: float = 0,
+    unique: bool = True,
+) -> str:
+    pool = get_arq_pool()
+    worker_job_id = ocr_worker_job_id(job_id, attempt_count) if unique else None
+    job = await pool.enqueue_job(
+        "process_ocr_job_task",
+        job_id,
+        _job_id=worker_job_id,
+        _defer_by=defer_by if defer_by > 0 else None,
+        _expires=settings.OCR_QUEUE_TIMEOUT_SECONDS,
+    )
+    if job is None:
+        if worker_job_id is not None:
+            return worker_job_id
+        raise RuntimeError(f"Failed to enqueue OCR job '{job_id}'")
+    logger.info(
+        "Enqueued OCR job %s (worker_id=%s defer_by=%.2fs)",
+        job_id,
+        job.job_id,
+        defer_by,
+    )
     return job.job_id
 
 

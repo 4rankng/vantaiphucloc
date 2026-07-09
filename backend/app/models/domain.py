@@ -20,6 +20,7 @@ from sqlalchemy import (
     Integer,
     JSON,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -634,3 +635,39 @@ class OcrDriverRequest(Base):
     cont_photo_hash = Column(String(64), nullable=True, index=True)
 
     __table_args__ = (Index("ix_ocr_driver_requests_created_at", "created_at"),)
+
+
+# ---------------------------------------------------------------------------
+# OcrJob — persistent async OCR queue/status record
+# ---------------------------------------------------------------------------
+
+
+class OcrJob(Base):
+    """Tracks one queued container-photo OCR job from upload through result."""
+
+    __tablename__ = "ocr_jobs"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    image_path = Column(String(256), nullable=False)
+    image_hash = Column(String(64), nullable=False, index=True)
+    status = Column(String(16), nullable=False, default="queued", index=True)
+    result_text = Column(Text, nullable=True)
+    result_payload = Column(JSON_TYPE, nullable=True)
+    error_message = Column(String(1024), nullable=True)
+    attempt_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    finished_at = Column(DateTime(timezone=True), nullable=True)
+    next_retry_at = Column(DateTime(timezone=True), nullable=True)
+    dead_lettered_at = Column(DateTime(timezone=True), nullable=True)
+    updated_at = Column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_ocr_jobs_status_created_at", "status", "created_at"),
+        Index("ix_ocr_jobs_user_hash_status", "user_id", "image_hash", "status"),
+    )

@@ -8,6 +8,7 @@ without making real API calls, plus the /dashboard/ocr-stats aggregation logic.
 import asyncio
 import io
 import statistics
+from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta, timezone
 from unittest.mock import patch
 
@@ -35,6 +36,7 @@ from app.models.domain import (
     DeliveredTrip,
     Location,
     OcrDriverRequest,
+    OcrJob,
     OcrRequest,
 )
 
@@ -68,7 +70,9 @@ async def test_extract_container_numbers_success():
     test_bytes = _make_test_image(800, 600)
     with patch(
         "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=[("openrouter", "qwen/qwen3-vl-32b-instruct", 30.0, _fake_provider)],
+        return_value=[
+            ("openrouter", "qwen/qwen3-vl-32b-instruct", 30.0, _fake_provider)
+        ],
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
@@ -101,7 +105,9 @@ async def test_extract_container_numbers_fail():
     test_bytes = _make_test_image(800, 600)
     with patch(
         "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=[("openrouter", "qwen/qwen3-vl-32b-instruct", 30.0, _failing_provider)],
+        return_value=[
+            ("openrouter", "qwen/qwen3-vl-32b-instruct", 30.0, _failing_provider)
+        ],
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
@@ -259,10 +265,9 @@ def test_salvage_pads_missing_owner_letters_from_array():
 
 
 def test_salvage_pads_missing_owner_letters_from_object():
-    assert (
-        _salvage_container_numbers('{"container_numbers": ["U7735411"]}')
-        == ["AAAU7735411"]
-    )
+    assert _salvage_container_numbers('{"container_numbers": ["U7735411"]}') == [
+        "AAAU7735411"
+    ]
 
 
 def test_salvage_keeps_partial_owner_letters():
@@ -502,7 +507,9 @@ async def test_extract_container_numbers_openrouter_success():
     test_bytes = _make_test_image(800, 600)
     with patch(
         "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=[("openrouter", "qwen/qwen3-vl-8b-instruct", 30.0, _openrouter_provider)],
+        return_value=[
+            ("openrouter", "qwen/qwen3-vl-8b-instruct", 30.0, _openrouter_provider)
+        ],
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
@@ -513,19 +520,26 @@ async def test_extract_container_numbers_openrouter_success():
 
 
 @pytest.mark.asyncio
-async def test_extract_container_numbers_openrouter_falls_back_to_second_model():
-    """32B failing (e.g. 429) falls through to the next OpenRouter model."""
+async def test_extract_container_numbers_openrouter_429_stops_for_retry():
+    """HTTP 429 stops the provider chain so the worker can retry later."""
+
+    calls: list[str] = []
 
     async def _32b_fail(image_bytes, mime_type):
+        calls.append("32b")
         return {
             "success": False,
             "text": None,
             "error": "HTTP 429: rate limit exceeded",
             "provider": "openrouter",
             "model": "qwen/qwen3-vl-32b-instruct",
+            "status_code": 429,
+            "rate_limited": True,
+            "retry_after_seconds": 4.0,
         }
 
     async def _plus_ok(image_bytes, mime_type):
+        calls.append("plus")
         return {
             "success": True,
             "text": '{"container_numbers": ["MSKU1234565"]}',
@@ -544,10 +558,13 @@ async def test_extract_container_numbers_openrouter_falls_back_to_second_model()
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
-    assert result["success"] is True
+    assert result["success"] is False
     assert result["provider"] == "openrouter"
-    assert result["model"] == "qwen/qwen3.7-plus"
-    assert result["container_numbers"] == ["MSKU1234565"]
+    assert result["model"] == "qwen/qwen3-vl-32b-instruct"
+    assert result["rate_limited"] is True
+    assert result["retry_after_seconds"] == 4.0
+    assert result["container_numbers"] == []
+    assert calls == ["32b"]
 
 
 @pytest.mark.asyncio
@@ -1138,9 +1155,9 @@ async def test_ocr_stats_accuracy_uses_original_container_snapshot(
         "accuracyPct": 25.0,
         "acceptedPct": 75.0,
     }
-    today_bucket = {
-        point["date"]: point for point in accuracy["daily"]
-    }[today.date().isoformat()]
+    today_bucket = {point["date"]: point for point in accuracy["daily"]}[
+        today.date().isoformat()
+    ]
     assert today_bucket == {
         "date": today.date().isoformat(),
         "evaluated": 4,
@@ -1224,7 +1241,7 @@ async def test_ocr_stats_accuracy_rolling_window_uses_last_100_matched_trips(
 
 
 # ---------------------------------------------------------------------------
-# Per-attempt analytics — each provider LLM call recorded, incl. rescued 429s
+# Per-attempt analytics — each provider LLM call recorded, incl. 429s
 # ---------------------------------------------------------------------------
 
 
@@ -1232,21 +1249,28 @@ async def test_ocr_stats_accuracy_rolling_window_uses_last_100_matched_trips(
 async def test_extract_container_numbers_returns_attempt_per_provider_call():
     """Each model LLM call yields one entry in ``attempts``.
 
-    A 429 on 32B rescued by Qwen3.7-Plus produces 2 attempts (32B fail, Plus
-    success), so the 429 is visible to analytics even though the request
-    overall succeeded — the undercounting that the per-attempt refactor fixes.
+    A 429 on 32B produces one failed attempt and stops the chain. The worker
+    schedules a later retry instead of immediately sending another OpenRouter
+    request to the fallback model.
     """
 
+    calls: list[str] = []
+
     async def _32b_429(image_bytes, mime_type):
+        calls.append("32b")
         return {
             "success": False,
             "text": None,
             "error": "HTTP 429: rate limit exceeded",
             "provider": "openrouter",
             "model": "qwen/qwen3-vl-32b-instruct",
+            "status_code": 429,
+            "rate_limited": True,
+            "retry_after_seconds": 2.0,
         }
 
     async def _plus_ok(image_bytes, mime_type):
+        calls.append("plus")
         return {
             "success": True,
             "text": '{"container_numbers": ["MSKU1234565"]}',
@@ -1265,80 +1289,179 @@ async def test_extract_container_numbers_returns_attempt_per_provider_call():
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
-    assert result["success"] is True
+    assert result["success"] is False
+    assert result["rate_limited"] is True
     assert result["provider"] == "openrouter"
     attempts = result["attempts"]
-    assert len(attempts) == 2
+    assert len(attempts) == 1
+    assert calls == ["32b"]
 
-    first, second = attempts
+    first = attempts[0]
     assert first["provider"] == "openrouter"
     assert first["model"] == "qwen/qwen3-vl-32b-instruct"
     assert first["success"] is False
     assert first["error"] == "HTTP 429: rate limit exceeded"
     assert first["container_numbers_found"] == 0
+    assert first["status_code"] == 429
+    assert first["rate_limited"] is True
+    assert first["retry_after_seconds"] == 2.0
     assert isinstance(first["latency_ms"], int)
-
-    assert second["provider"] == "openrouter"
-    assert second["model"] == "qwen/qwen3.7-plus"
-    assert second["success"] is True
-    assert second["error"] is None
-    assert second["container_numbers_found"] == 1
 
 
 @pytest.mark.asyncio
-async def test_ocr_container_logs_driver_request_and_per_attempt_rows(
-    db_session, async_client, make_auth_headers
+async def test_ocr_container_creates_queued_job_without_provider_call(
+    db_session, async_client, make_auth_headers, monkeypatch, tmp_path
 ):
-    """ocr_container writes ONE ocr_driver_requests row (the photo upload) plus
-    one ocr_requests row per model attempt. A 429 on 32B rescued by
-    Qwen3.7-Plus is captured as a failed ocr_requests row."""
     from sqlalchemy import select
+    from app import workers as workers_mod
 
-    async def _32b_429(image_bytes, mime_type):
-        return {
-            "success": False,
-            "text": None,
-            "error": "HTTP 429: rate limit exceeded",
-            "provider": "openrouter",
-            "model": "qwen/qwen3-vl-32b-instruct",
-        }
+    enqueued: list[tuple[int, int, float]] = []
 
-    async def _plus_ok(image_bytes, mime_type):
-        return {
-            "success": True,
-            "text": '{"container_numbers": ["MSKU1234565"]}',
-            "error": None,
-            "provider": "openrouter",
-            "model": "qwen/qwen3.7-plus",
-        }
+    async def _fake_enqueue(
+        job_id: int, *, attempt_count: int = 0, defer_by: float = 0
+    ):
+        enqueued.append((job_id, attempt_count, defer_by))
+        return f"ocr:{job_id}:attempt:{attempt_count}"
 
+    monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setattr(workers_mod, "enqueue_ocr_job", _fake_enqueue)
     img_b64 = __import__("base64").b64encode(_make_test_image(200, 200)).decode()
     headers = await make_auth_headers("superadmin")
-    with patch(
-        "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=[
-            ("openrouter", "qwen/qwen3-vl-32b-instruct", 30.0, _32b_429),
-            ("openrouter", "qwen/qwen3.7-plus", 30.0, _plus_ok),
-        ],
-    ):
-        response = await async_client.post(
-            "/api/v1/delivered-trips/ocr-container",
-            json={"image_data": img_b64, "mime_type": "image/jpeg"},
-            headers=headers,
-        )
+    response = await async_client.post(
+        "/api/v1/delivered-trips/ocr-container",
+        json={"image_data": img_b64, "mime_type": "image/jpeg"},
+        headers=headers,
+    )
 
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["success"] is True
-    assert body["provider"] == "openrouter"
+    assert body["status"] == "queued"
+    assert body["duplicate"] is False
+    assert enqueued == [(body["job_id"], 0, 0)]
+
+    jobs = (await db_session.execute(select(OcrJob))).scalars().all()
+    assert len(jobs) == 1
+    assert jobs[0].status == "queued"
+    assert jobs[0].image_hash
+    assert jobs[0].image_path.startswith("/photos/")
+    assert (await db_session.execute(select(OcrDriverRequest))).scalars().all() == []
+    assert (await db_session.execute(select(OcrRequest))).scalars().all() == []
+
+
+@pytest.mark.asyncio
+async def test_ocr_container_dedupes_active_image_job(
+    db_session, async_client, make_auth_headers, monkeypatch, tmp_path
+):
+    from sqlalchemy import select
+    from app import workers as workers_mod
+
+    enqueued: list[int] = []
+
+    async def _fake_enqueue(
+        job_id: int, *, attempt_count: int = 0, defer_by: float = 0
+    ):
+        enqueued.append(job_id)
+        return f"ocr:{job_id}:attempt:{attempt_count}"
+
+    monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setattr(workers_mod, "enqueue_ocr_job", _fake_enqueue)
+    img_b64 = __import__("base64").b64encode(_make_test_image(200, 200)).decode()
+    headers = await make_auth_headers("superadmin")
+
+    first = await async_client.post(
+        "/api/v1/delivered-trips/ocr-container",
+        json={"image_data": img_b64, "mime_type": "image/jpeg"},
+        headers=headers,
+    )
+    second = await async_client.post(
+        "/api/v1/delivered-trips/ocr-container",
+        json={"image_data": img_b64, "mime_type": "image/jpeg"},
+        headers=headers,
+    )
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert second.json()["duplicate"] is True
+    assert second.json()["job_id"] == first.json()["job_id"]
+    assert enqueued == [first.json()["job_id"]]
+    jobs = (await db_session.execute(select(OcrJob))).scalars().all()
+    assert len(jobs) == 1
+
+
+@pytest.mark.asyncio
+async def test_process_ocr_job_records_driver_request_and_per_attempt_rows(
+    db_session, monkeypatch, tmp_path
+):
+    from sqlalchemy import select
+    from app.workers.tasks import ocr as ocr_task
+
+    class _FakeRedis:
+        async def eval(self, *_args):
+            return 1
+
+    @asynccontextmanager
+    async def _test_session():
+        try:
+            yield db_session
+            await db_session.commit()
+        except Exception:
+            await db_session.rollback()
+            raise
+
+    async def _fake_extract(_image_bytes, _mime_type):
+        return {
+            "success": True,
+            "container_numbers": ["MSKU1234565"],
+            "error": None,
+            "provider": "openrouter",
+            "model": "qwen/qwen3.7-plus",
+            "attempts": [
+                {
+                    "provider": "openrouter",
+                    "model": "qwen/qwen3-vl-32b-instruct",
+                    "success": False,
+                    "latency_ms": 10,
+                    "error": "no valid numbers",
+                    "container_numbers_found": 0,
+                },
+                {
+                    "provider": "openrouter",
+                    "model": "qwen/qwen3.7-plus",
+                    "success": True,
+                    "latency_ms": 20,
+                    "error": None,
+                    "container_numbers_found": 1,
+                },
+            ],
+        }
+
+    monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setattr(ocr_task, "get_session", _test_session)
+    monkeypatch.setattr(ocr_task, "extract_container_numbers", _fake_extract)
+
+    image_path = tmp_path / "ocr-test.jpg"
+    image_path.write_bytes(_make_test_image(100, 100))
+    job = OcrJob(
+        image_path="/photos/ocr-test.jpg",
+        image_hash="hash-1",
+        status="queued",
+    )
+    db_session.add(job)
+    await db_session.commit()
+
+    result = await ocr_task.process_ocr_job_task({"redis": _FakeRedis()}, int(job.id))
+    assert result["status"] == "succeeded"
 
     driver_rows = (await db_session.execute(select(OcrDriverRequest))).scalars().all()
     attempt_rows = (await db_session.execute(select(OcrRequest))).scalars().all()
+    refreshed = await db_session.get(OcrJob, int(job.id))
+    assert refreshed.status == "succeeded"
+    assert refreshed.result_text == "MSKU1234565"
 
     assert len(driver_rows) == 1
     driver = driver_rows[0]
     assert driver.success is True
-    assert driver.attempts == 2  # 32B + Plus
+    assert driver.attempts == 2
     assert driver.numbers_found == 1
     assert driver.provider == "openrouter"
     assert driver.latency_ms is not None and driver.latency_ms >= 0
@@ -1346,41 +1469,92 @@ async def test_ocr_container_logs_driver_request_and_per_attempt_rows(
     assert len(attempt_rows) == 2
     by_model = {r.model: r for r in attempt_rows}
     assert by_model["qwen/qwen3-vl-32b-instruct"].success is False
-    assert "HTTP 429" in by_model["qwen/qwen3-vl-32b-instruct"].error
     assert by_model["qwen/qwen3.7-plus"].success is True
     assert by_model["qwen/qwen3.7-plus"].container_numbers_found == 1
 
 
 @pytest.mark.asyncio
-async def test_ocr_container_no_provider_records_driver_failure(
-    db_session, async_client, make_auth_headers, monkeypatch
+async def test_process_ocr_job_dead_letters_when_retry_after_exceeds_queue_timeout(
+    db_session, monkeypatch, tmp_path
 ):
-    """OCR unconfigured → no provider ran, but the upload still counts as a
-    driver-seen failure: one ``OcrDriverRequest`` row, zero per-attempt rows."""
     from sqlalchemy import select
+    from app import workers as workers_mod
+    from app.workers.tasks import ocr as ocr_task
 
-    monkeypatch.setattr(settings, "OPENROUTER_ENABLE", False)
-    monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "")
-    monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
-    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
-    monkeypatch.setattr(settings, "GEMINI_API_KEY2", "")
+    class _FakeRedis:
+        async def eval(self, *_args):
+            return 1
 
-    img_b64 = __import__("base64").b64encode(_make_test_image(100, 100)).decode()
-    headers = await make_auth_headers("superadmin")
-    response = await async_client.post(
-        "/api/v1/delivered-trips/ocr-container",
-        json={"image_data": img_b64, "mime_type": "image/jpeg"},
-        headers=headers,
+    @asynccontextmanager
+    async def _test_session():
+        try:
+            yield db_session
+            await db_session.commit()
+        except Exception:
+            await db_session.rollback()
+            raise
+
+    async def _fake_extract(_image_bytes, _mime_type):
+        return {
+            "success": False,
+            "container_numbers": [],
+            "error": "OpenRouter đang giới hạn tốc độ, hệ thống sẽ tự thử lại",
+            "analytics_error": "HTTP 429: rate limit exceeded",
+            "provider": "openrouter",
+            "model": "qwen/qwen3-vl-32b-instruct",
+            "rate_limited": True,
+            "retry_after_seconds": 10.0,
+            "attempts": [
+                {
+                    "provider": "openrouter",
+                    "model": "qwen/qwen3-vl-32b-instruct",
+                    "success": False,
+                    "latency_ms": 10,
+                    "error": "HTTP 429: rate limit exceeded",
+                    "container_numbers_found": 0,
+                    "status_code": 429,
+                    "rate_limited": True,
+                    "retry_after_seconds": 10.0,
+                }
+            ],
+        }
+
+    async def _unexpected_enqueue(*_args, **_kwargs):
+        raise AssertionError("OCR retry should not be enqueued past queue timeout")
+
+    monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setattr(settings, "OCR_QUEUE_TIMEOUT_SECONDS", 5)
+    monkeypatch.setattr(ocr_task, "get_session", _test_session)
+    monkeypatch.setattr(ocr_task, "extract_container_numbers", _fake_extract)
+    monkeypatch.setattr(workers_mod, "enqueue_ocr_job", _unexpected_enqueue)
+
+    image_path = tmp_path / "ocr-test.jpg"
+    image_path.write_bytes(_make_test_image(100, 100))
+    job = OcrJob(
+        image_path="/photos/ocr-test.jpg",
+        image_hash="hash-timeout",
+        status="queued",
     )
-    assert response.status_code == 200
-    assert response.json()["success"] is False
+    db_session.add(job)
+    await db_session.commit()
+
+    result = await ocr_task.process_ocr_job_task({"redis": _FakeRedis()}, int(job.id))
+    assert result["status"] == "failed"
+
+    refreshed = await db_session.get(OcrJob, int(job.id))
+    assert refreshed.status == "failed"
+    assert refreshed.error_message == "OCR retry would exceed queue timeout"
+    assert refreshed.dead_lettered_at is not None
+    assert refreshed.next_retry_at is None
+    assert refreshed.attempt_count == 1
 
     driver_rows = (await db_session.execute(select(OcrDriverRequest))).scalars().all()
     attempt_rows = (await db_session.execute(select(OcrRequest))).scalars().all()
     assert len(driver_rows) == 1
     assert driver_rows[0].success is False
-    assert driver_rows[0].attempts == 0
-    assert attempt_rows == []
+    assert driver_rows[0].attempts == 1
+    assert len(attempt_rows) == 1
+    assert attempt_rows[0].error == "HTTP 429: rate limit exceeded"
 
 
 @pytest.mark.asyncio
