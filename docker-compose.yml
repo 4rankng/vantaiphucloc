@@ -69,6 +69,8 @@ services:
     environment:
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./data/photos:/opt/vantaiphucloc/data/photos
     command: ["arq", "app.workers.worker.WorkerSettings"]
     depends_on:
       redis:

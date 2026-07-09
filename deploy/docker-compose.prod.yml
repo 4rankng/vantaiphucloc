@@ -47,6 +47,8 @@ services:
       - "8000"
     ports:
       - "127.0.0.1:8000:8000"
+    volumes:
+      - /opt/vantaiphucloc/data/photos:/opt/vantaiphucloc/data/photos
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,6 +65,8 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql://vantaiphucloc:Admin123@postgres:5432/vantaihanghoa
     command: ["arq", "app.workers.worker.WorkerSettings"]
+    volumes:
+      - /opt/vantaiphucloc/data/photos:/opt/vantaiphucloc/data/photos
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,4 +91,3 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-
