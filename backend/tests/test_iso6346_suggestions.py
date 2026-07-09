@@ -4,10 +4,13 @@ import pytest
 
 from app.utils.iso6346 import (
     calculate_check_digit,
+    normalize_container_number,
     suggest_corrections,
     validate_check_digit,
-    validate_format,
+    validate_container_identifier,
     validate_container_number,
+    validate_format,
+    validate_special_container_format,
 )
 
 
@@ -78,6 +81,29 @@ def test_normalizes_input_before_processing():
     a = suggest_corrections("hlxu-235297-4")
     b = suggest_corrections("HLXU2352974")
     assert a == b
+
+
+def test_normalizes_spaces_for_special_codes():
+    assert normalize_container_number("hcwt 0006") == "HCWT0006"
+
+
+def test_special_container_format_accepts_hcwt_code():
+    assert validate_special_container_format("HCWT 0006")
+    valid, err = validate_container_identifier("HCWT 0006")
+    assert valid and err == ""
+
+
+def test_special_container_format_requires_exactly_four_digits():
+    assert not validate_special_container_format("HCWT 000611")
+    valid, err = validate_container_identifier("HCWT 000611")
+    assert not valid
+    assert "định dạng" in err
+
+
+def test_special_container_does_not_mask_bad_iso_check_digit():
+    valid, err = validate_container_identifier("MSKU1234567")
+    assert not valid
+    assert "kiểm tra" in err
 
 
 def test_falls_back_to_two_edit_when_single_edit_insufficient():

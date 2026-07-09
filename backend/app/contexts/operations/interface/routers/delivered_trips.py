@@ -305,10 +305,10 @@ async def validate_container(
 ):
     from app.utils.iso6346 import (
         suggest_corrections,
-        validate_container_number,
+        validate_container_identifier,
     )
 
-    valid, error = validate_container_number(container_number)
+    valid, error = validate_container_identifier(container_number)
     # Only compute suggestions when the format is right but the check digit is
     # wrong — that's the recoverable case where a 1-2 digit typo is likely.
     # For format errors there's too much guesswork (e.g. wrong length).

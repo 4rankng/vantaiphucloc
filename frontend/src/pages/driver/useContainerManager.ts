@@ -43,6 +43,7 @@ const EMPTY_CONT: ContainerForm = {
 }
 
 const CONT_TYPE_SET: ReadonlySet<string> = new Set(CONT_TYPES)
+const SPECIAL_CONTAINER_RE = /^[A-Z]{4}\d{4}$/
 
 /** Backward-compat: if workType historically held a ContType, treat it as contType instead. */
 export function migrateWorkType(contType: ContType | null, workType: WorkType | null): [ContType | null, WorkType | null] {
@@ -56,20 +57,29 @@ function omitKey<V>(obj: Record<number, V>, k: number): Record<number, V> {
   return rest
 }
 
-/** Client-side ISO 6346 container number validation. Returns error message or null. */
+export function normalizeContainerNumber(num: string): string {
+  return num.replace(/[-\s]+/g, '').toUpperCase().trim()
+}
+
+function isSpecialContainerNumber(raw: string): boolean {
+  return SPECIAL_CONTAINER_RE.test(raw)
+}
+
+/** Client-side container identifier validation. Returns error message or null. */
 export function validateContainerFormat(num: string): string | null {
-  const raw = num.replace(/-/g, '').toUpperCase().trim()
+  const raw = normalizeContainerNumber(num)
   if (!raw) return null
-  if (raw.length < 11) return 'Cần 4 chữ cái + 7 số (vd: MSKU1234567)'
-  if (raw.length > 11) return 'Quá dài — đúng 11 ký tự (4 chữ cái + 7 số)'
-  if (!/^[A-Z]{4}\d{7}$/.test(raw)) return 'Sai định dạng. Đúng: 4 chữ cái + 7 số (vd: MSKU1234567)'
+  if (isSpecialContainerNumber(raw)) return null
+  if (raw.length < 8) return 'Cần mã ISO 4 chữ + 7 số hoặc mã đặc biệt như HCWT0006'
+  if (raw.length > 11) return 'Quá dài — kiểm tra lại số cont'
+  if (!/^[A-Z]{4}\d{7}$/.test(raw)) return 'Sai định dạng. Nhập mã ISO 4 chữ + 7 số hoặc mã đặc biệt như HCWT0006'
   return null
 }
 
 function woToContainers(wo: DeliveredTrip): ContainerForm[] {
   const [contType, workType] = migrateWorkType(wo.contType ?? null, wo.workType ?? null)
   return [{
-    containerNumber: wo.contNumber ?? '',
+    containerNumber: normalizeContainerNumber(wo.contNumber ?? ''),
     contType,
     workType,
     photoTaken: false,
@@ -260,9 +270,9 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
     field: K,
     value: ContainerForm[K],
   ) => {
-    // Normalize container numbers on input — strip hyphens, uppercase
+    // Normalize container numbers on input — strip separators, uppercase
     const normalizedValue: ContainerForm[K] = field === 'containerNumber' && typeof value === 'string'
-      ? (value.replace(/-/g, '').toUpperCase() as ContainerForm[K])
+      ? (normalizeContainerNumber(value) as ContainerForm[K])
       : value
     setContainers(prev => prev.map((c, i) =>
       i === idx ? { ...c, [field]: normalizedValue } : c,
@@ -299,7 +309,7 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
   const validateContainerOnBlur = useCallback((idx: number) => {
     const cont = containers[idx]
     if (!cont) return
-    const raw = cont.containerNumber.trim()
+    const raw = normalizeContainerNumber(cont.containerNumber)
     const fmtErr = validateContainerFormat(raw)
     if (fmtErr) {
       setContainerErrors(prev => ({ ...prev, [idx]: fmtErr }))
@@ -381,6 +391,7 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
 
   /** Commit a number as a new container badge (fills empty slot or appends). */
   const addContainerWithNumber = useCallback((number: string) => {
+    const normalizedNumber = normalizeContainerNumber(number)
     const emptyIdx = containers.findIndex(c => !c.containerNumber.trim())
     const targetIdx = emptyIdx >= 0 ? emptyIdx : containers.length
     setContainers(prev => {
@@ -388,13 +399,13 @@ export function useContainerManager(existingDeliveredTrip?: DeliveredTrip | null
       const workType = prev[0]?.workType ?? null
       if (emptyIdx >= 0) {
         return prev.map((c, i) =>
-          i === emptyIdx ? { ...c, containerNumber: number, contType, workType } : c
+          i === emptyIdx ? { ...c, containerNumber: normalizedNumber, contType, workType } : c
         )
       }
-      return [...prev, { ...EMPTY_CONT, containerNumber: number, contType, workType }]
+      return [...prev, { ...EMPTY_CONT, containerNumber: normalizedNumber, contType, workType }]
     })
     setContainerIsoValidating(prev => ({ ...prev, [targetIdx]: true }))
-    apiClient.validateContainer(number).then(res => {
+    apiClient.validateContainer(normalizedNumber).then(res => {
       applyValidationResult(targetIdx, res)
     }).catch(() => {
       setContainerIsoValidating(prev => omitKey(prev, targetIdx))

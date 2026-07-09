@@ -17,7 +17,7 @@ These are the authoritative English names used in code and database. UI labels a
 | **BookedTrip** | Yêu cầu điều xe | What the client ordered/intended. Imported from client Excel or created manually. |
 | **DeliveredTrip** | Chuyến xe hoàn thành | What the driver actually executed. Created by driver app or bulk import. |
 | **Reconciliation** | Đối soát | The act of matching a BookedTrip to a DeliveredTrip to confirm alignment. |
-| **Container** | Container | A shipping container identified by ISO 6346 number (e.g., HACU1234567). |
+| **Container** | Container | A shipping container identified by ISO 6346 number (e.g., HACU1234567), or by a short special painted code when no ISO number is present (e.g., HCWT0006). |
 | **Client** | Chủ hàng | A shipping company that books container transport (e.g., Hai An Port, Glory Logistics). |
 | **Vendor** | Xe ngoài | An external truck operator that hauls containers on Phuc Loc's behalf. |
 

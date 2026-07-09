@@ -2,7 +2,7 @@
 
 OpenRouter is the sole OCR provider. Each request tries the OpenRouter models
 in sequence (Qwen3-VL-32B then Qwen3.7-Plus); the first model that returns a
-valid number wins.
+valid identifier wins.
 
 SLA: the whole provider chain is bounded by ``settings.OCR_DEADLINE_SECONDS``
 (wall-clock budget for every attempt combined) and each individual call is
@@ -15,7 +15,7 @@ job result.
 Driver workflow:
 1. Take photo of container
 2. AI single-shot OCR (temperature 0.0 = deterministic)
-3. Backend auto-corrects near-miss numbers via ISO 6346 check digit
+3. Backend auto-corrects near-miss ISO numbers via ISO 6346 check digit
 4. If no provider returns a clean 4-letter+7-digit read, salvage partial
    reads: keep the digits (usually reliable) and stub-pad missing owner-code
    letters with 'A' (e.g. U7735411 -> AAAU7735411) so the driver gets an
@@ -40,7 +40,13 @@ from collections.abc import Awaitable, Callable
 from app.config import OPENROUTER_MODELS, settings
 from app.contexts.operations.infrastructure.ai import preprocess_image
 from app.contexts.operations.infrastructure.openrouter import call_openrouter_vision
-from app.utils.iso6346 import validate_check_digit, suggest_corrections
+from app.utils.iso6346 import (
+    normalize_container_number,
+    suggest_corrections,
+    validate_check_digit,
+    validate_format,
+    validate_special_container_format,
+)
 
 ProviderCallable = Callable[[bytes, str], Awaitable[dict]]
 
@@ -53,43 +59,78 @@ _logger = logging.getLogger(__name__)
 
 MAX_DETECT = 10
 
-MULTI_CONTAINER_PROMPT = """You are reading ISO shipping container numbers from a photo.
+MULTI_CONTAINER_PROMPT = """You are reading shipping container identifiers from a photo.
 
-Return a JSON array of container numbers.
+Return a JSON array of container identifiers.
 
-A container number is 11 characters:
+Most container numbers are ISO numbers with 11 characters:
 - first 4 characters are uppercase letters A-Z
 - last 7 characters are digits 0-9
 - spaces, dashes, vertical layout, or line breaks between characters should be removed
 
+Some special containers have a short painted code instead:
+- first 4 characters are uppercase letters A-Z
+- last 4 characters are digits 0-9
+- example: HCWT 0006 should be returned as HCWT0006
+
 Critical instruction:
-If you can see any plausible container number, return your best 11-character reading.
+If you can see any plausible container identifier, return your best reading.
 Do NOT return an empty array just because some characters are blurry, partially hidden, low contrast, or the ISO check digit may be invalid.
 A visually reasonable best guess is better than [].
 
-Only return [] when there is truly no visible container number-like text anywhere in the image.
+Only return [] when there is truly no visible container identifier-like text anywhere in the image.
 
 How to read:
 1. Scan the whole visible container: door panels, top/bottom edges, vertical markings, and nearby repeated markings.
-2. Look for a group with 4 letters followed by 6 or 7 digits, even if split across lines.
-3. Normalize it into exactly 4 letters + 7 digits.
-4. The first 4 positions must be letters. If a character in the first 4 positions looks like a digit, convert it to the most visually similar letter when reasonable:
+2. First look for ISO numbers: 4 letters followed by 7 digits, even if split across lines.
+3. If an ISO number is visible, return only the ISO number(s).
+4. If no ISO number is visible, look for a special code: 4 letters followed by exactly 4 digits.
+5. Normalize spaces, dashes, vertical layout, or line breaks into 4 letters + digits.
+6. The first 4 positions must be letters. If a character in the first 4 positions looks like a digit, convert it to the most visually similar letter when reasonable:
    0→O, 1→I, 2→Z, 5→S, 6→G, 8→B.
-5. The last 7 positions must be digits. If a character in the last 7 positions looks like a letter, convert it to the most visually similar digit when reasonable:
+7. The digit positions must be digits. If a character in the digit positions looks like a letter, convert it to the most visually similar digit when reasonable:
    O/Q→0, I/L/T→1, Z→2, S→5, G→6, B→8.
-6. Ignore ISO size/type codes such as 22G1, 42G1, 45G1, company names, MAX GW, TARE, NET, CU CAP, KG, and LB.
-7. If several readings are possible, return the single most visually likely container number first. If two different container numbers are visible, return both.
+8. Ignore ISO size/type codes such as 22G1, 42G1, 45G1, company names, KG, and LB.
+9. If several readings are possible, return the single most visually likely container identifier first. If two different container identifiers are visible, return both.
 
 Output rules:
 - Return ONLY a JSON array.
 - Do not explain.
 - Do not include confidence.
 - Do not include markdown.
-- Example output: ["MSKU1234567"]"""
+- Example output: ["MSKU1234567"]
+- Example special-code output: ["HCWT0006"]"""
 
 
-# Pre-compiled container-number pattern — used across multiple functions
+# Pre-compiled container-number patterns — used across multiple functions
 _CONTAINER_RE = re.compile(r"[A-Z]{4}\d{7}")
+_CONTAINER_TOKEN_RE = re.compile(
+    r"(?<![A-Z0-9])(?:[A-Z]{4}[-\s]*\d{7}|[A-Z]{4}[-\s]*\d{4})(?![A-Z0-9])"
+)
+
+
+def _is_container_identifier(value: str) -> bool:
+    normalized = normalize_container_number(value)
+    return bool(_CONTAINER_RE.fullmatch(normalized)) or validate_special_container_format(
+        normalized
+    )
+
+
+def _json_container_candidates(data: object) -> list[object]:
+    if isinstance(data, dict):
+        nums = data.get("container_numbers")
+        return nums if isinstance(nums, list) else []
+    if isinstance(data, list):
+        return data
+    return []
+
+
+def _prefer_iso_identifiers(candidates: list[str]) -> list[str]:
+    deduped = list(dict.fromkeys(candidates))
+    iso = [n for n in deduped if _CONTAINER_RE.fullmatch(n)]
+    if iso:
+        return iso
+    return [n for n in deduped if validate_special_container_format(n)]
 
 
 def _parse_numbers_from_response(text: str) -> list[str]:
@@ -97,23 +138,25 @@ def _parse_numbers_from_response(text: str) -> list[str]:
     # Try structured JSON first
     try:
         data = json.loads(text)
-        if isinstance(data, dict) and "container_numbers" in data:
-            nums = data["container_numbers"]
-            if isinstance(nums, list):
-                return [
-                    str(n).upper().strip()
-                    for n in nums
-                    if isinstance(n, (str, int))
-                    and _CONTAINER_RE.fullmatch(str(n).upper())
-                ]
+        nums = _json_container_candidates(data)
+        if nums:
+            normalized = [
+                normalize_container_number(str(n))
+                for n in nums
+                if isinstance(n, (str, int))
+            ]
+            return _prefer_iso_identifiers(
+                [n for n in normalized if _is_container_identifier(n)]
+            )
     except (json.JSONDecodeError, TypeError):
         pass
 
     # Fallback: regex extraction from free-text response
-    cleaned = re.sub(r"[`\"'\n\r]", "", text).strip().upper()
+    cleaned = re.sub(r"[`\"'\n\r]", " ", text).strip().upper()
     if cleaned == "NONE":
         return []
-    return list(dict.fromkeys(_CONTAINER_RE.findall(cleaned)))
+    matches = [normalize_container_number(m) for m in _CONTAINER_TOKEN_RE.findall(cleaned)]
+    return _prefer_iso_identifiers([m for m in matches if _is_container_identifier(m)])
 
 
 _STUB_LETTER = "A"
@@ -208,6 +251,9 @@ def _auto_correct_numbers(numbers: list[str]) -> list[str]:
     """Auto-correct numbers with bad check digits using ISO 6346 suggestions."""
     corrected: list[str] = []
     for n in numbers:
+        if not validate_format(n):
+            corrected.append(n)
+            continue
         if validate_check_digit(n):
             corrected.append(n)
         else:
@@ -226,12 +272,12 @@ async def extract_container_numbers(
     image_bytes: bytes,
     mime_type: str = "image/jpeg",
 ) -> dict:
-    """Extract ALL container numbers using single-shot OCR.
+    """Extract ALL container identifiers using single-shot OCR.
 
     Tries each OpenRouter model in sequence (Qwen3-VL-32B then Qwen3.7-Plus);
-    the first model that returns ≥1 format-valid number wins. Numbers with
-    invalid ISO 6346 check digits are auto-corrected when a near-miss valid
-    number exists.
+    the first model that returns ≥1 accepted identifier wins. ISO numbers with
+    invalid check digits are auto-corrected when a near-miss valid number
+    exists. Short special codes are returned as-is after format filtering.
 
     SLA: the chain is bounded by ``settings.OCR_DEADLINE_SECONDS`` of wall-clock
     time and each call is capped by ``settings.OCR_PER_CALL_TIMEOUT_SECONDS``.
@@ -242,7 +288,7 @@ async def extract_container_numbers(
     Returns:
         Dict with keys:
         - success: bool
-        - container_numbers: list[str] — all valid ISO 6346 numbers found
+        - container_numbers: list[str] — all accepted container identifiers found
         - error: str | None
         - provider: str | None — provider that produced the result
         - model: str | None
@@ -271,11 +317,10 @@ async def extract_container_numbers(
             "attempts": [],
         }
 
-    # Validate FORMAT only (4 letters + 7 digits).  We intentionally skip the
-    # ISO 6346 check-digit verification here because VLMs often misread 1-2
-    # characters (O↔Q, 5↔6, 0↔O).  The driver visually confirms the numbers
-    # on-screen, and the frontend's validate-container endpoint can flag
-    # check-digit mismatches as a warning.
+    # Validate accepted shapes only. We intentionally skip ISO 6346 check-digit
+    # verification here because VLMs often misread 1-2 characters (O↔Q, 5↔6,
+    # 0↔O). The driver visually confirms the numbers on-screen, and the
+    # validate-container endpoint can flag check-digit mismatches as a warning.
     last: dict = {
         "provider": None,
         "model": None,
@@ -287,8 +332,8 @@ async def extract_container_numbers(
     # then visible to analytics, not just the winning provider.
     attempts: list[dict] = []
     # Raw VLM text from each provider that returned a response — kept so the
-    # last-resort salvage can stub-pad partial reads if nobody returns a clean
-    # 4-letter+7-digit number.
+    # last-resort salvage can stub-pad partial reads if nobody returns an
+    # accepted identifier.
     salvage_texts: list[str] = []
 
     # Wall-clock backstop matching the frontend axios timeout (60s). Each model
@@ -389,7 +434,7 @@ async def extract_container_numbers(
 
         salvage_texts.append(result.get("text") or "")
         merged = _parse_numbers_from_response(result["text"])
-        valid = [n for n in merged if _CONTAINER_RE.fullmatch(n)]
+        valid = [n for n in merged if _is_container_identifier(n)]
 
         if not valid:
             last = {

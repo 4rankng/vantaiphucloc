@@ -224,6 +224,20 @@ def test_parse_json_with_container_numbers():
     assert _parse_numbers_from_response(text) == ["MSKU1234565", "TCLU9876543"]
 
 
+def test_parse_json_with_special_container_code():
+    text = '{"container_numbers": ["HCWT 0006"]}'
+    assert _parse_numbers_from_response(text) == ["HCWT0006"]
+
+
+def test_parse_json_prioritizes_iso_over_special_code():
+    text = '{"container_numbers": ["HCWT 0006", "MSKU1234565"]}'
+    assert _parse_numbers_from_response(text) == ["MSKU1234565"]
+
+
+def test_parse_json_array_with_special_container_code():
+    assert _parse_numbers_from_response('["HCWT 0006"]') == ["HCWT0006"]
+
+
 def test_parse_json_with_mixed_types():
     """Integer values are converted to strings and filtered by format regex."""
     text = '{"container_numbers": ["MSKU1234565", 999]}'
@@ -240,6 +254,16 @@ def test_parse_regex_fallback():
     assert _parse_numbers_from_response(text) == ["MSKU1234565", "TCLU9876543"]
 
 
+def test_parse_regex_fallback_special_container_code():
+    text = "Found special code HCWT 0006 painted on the container"
+    assert _parse_numbers_from_response(text) == ["HCWT0006"]
+
+
+def test_parse_regex_fallback_prioritizes_iso_over_special_code():
+    text = "Found HCWT 0006 and ISO number MSKU1234565 in the image"
+    assert _parse_numbers_from_response(text) == ["MSKU1234565"]
+
+
 def test_parse_none_response():
     assert _parse_numbers_from_response("NONE") == []
 
@@ -251,6 +275,24 @@ def test_parse_garbage_input():
 def test_parse_regex_deduplicates():
     text = "MSKU1234565 MSKU1234565"
     assert _parse_numbers_from_response(text) == ["MSKU1234565"]
+
+
+@pytest.mark.asyncio
+async def test_validate_container_endpoint_accepts_special_code(
+    async_client, make_auth_headers
+):
+    headers = await make_auth_headers("driver")
+    response = await async_client.get(
+        "/api/v1/delivered-trips/validate-container",
+        params={"container_number": "HCWT 0006"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is True
+    assert body["normalized"] == "HCWT0006"
+    assert body["suggestions"] == []
 
 
 # ---------------------------------------------------------------------------
@@ -347,6 +389,30 @@ async def test_extract_strict_read_wins_over_salvage():
 
     assert result["success"] is True
     assert result["container_numbers"] == ["MSKU1234565"]  # not stub-padded
+
+
+@pytest.mark.asyncio
+async def test_extract_special_container_code_success():
+    """Short special codes such as HCWT0006 are accepted without ISO padding."""
+
+    async def _special(image_bytes, mime_type):
+        return {
+            "success": True,
+            "text": '["HCWT 0006"]',
+            "error": None,
+            "provider": "openrouter",
+            "model": "qwen/qwen3-vl-32b-instruct",
+        }
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=[("openrouter", "qwen/qwen3-vl-32b-instruct", 30.0, _special)],
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert result["success"] is True
+    assert result["container_numbers"] == ["HCWT0006"]
 
 
 # ---------------------------------------------------------------------------

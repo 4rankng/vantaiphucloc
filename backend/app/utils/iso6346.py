@@ -16,6 +16,7 @@ Check digit calculation:
 """
 
 import logging
+import re
 
 _logger = logging.getLogger(__name__)
 
@@ -52,18 +53,19 @@ LETTER_MAP = {
 
 # Powers of 2 for each position (0-9 for 10 characters)
 POWERS_2 = [2**i for i in range(10)]
+SPECIAL_CONTAINER_RE = re.compile(r"^[A-Z]{4}\d{4}$")
 
 
 def normalize_container_number(container_number: str) -> str:
-    """Remove hyphens and convert to uppercase.
+    """Remove separators and convert to uppercase.
 
     Args:
-        container_number: Container number (may include hyphens)
+        container_number: Container number (may include spaces or hyphens)
 
     Returns:
-        Normalized container number (uppercase, no hyphens)
+        Normalized container number (uppercase, no spaces or hyphens)
     """
-    return container_number.replace("-", "").upper().strip()
+    return re.sub(r"[-\s]+", "", container_number).upper().strip()
 
 
 def validate_format(container_number: str) -> bool:
@@ -72,6 +74,12 @@ def validate_format(container_number: str) -> bool:
     return (
         len(normalized) == 11 and normalized[:4].isalpha() and normalized[4:].isdigit()
     )
+
+
+def validate_special_container_format(container_number: str) -> bool:
+    """Validate non-ISO short container identifiers such as HCWT0006."""
+    normalized = normalize_container_number(container_number)
+    return bool(SPECIAL_CONTAINER_RE.fullmatch(normalized))
 
 
 def calculate_check_digit(container_number: str) -> int:
@@ -171,6 +179,25 @@ def validate_container_number(container_number: str) -> tuple[bool, str]:
         return False, "Sai số kiểm tra — định dạng đúng nhưng mã kiểm tra không khớp"
 
     return True, ""
+
+
+def validate_container_identifier(container_number: str) -> tuple[bool, str]:
+    """Validate either an ISO 6346 number or a short special container code."""
+    if not container_number:
+        return False, "Vui lòng nhập số container"
+
+    normalized = normalize_container_number(container_number)
+
+    if validate_format(normalized):
+        return validate_container_number(normalized)
+
+    if SPECIAL_CONTAINER_RE.fullmatch(normalized):
+        return True, ""
+
+    return (
+        False,
+        "Sai định dạng. Nhập mã ISO 4 chữ + 7 số hoặc mã đặc biệt như HCWT0006",
+    )
 
 
 def suggest_corrections(container_number: str, max_results: int = 3) -> list[str]:
