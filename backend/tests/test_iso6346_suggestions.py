@@ -87,9 +87,10 @@ def test_normalizes_spaces_for_special_codes():
     assert normalize_container_number("hcwt 0006") == "HCWT0006"
 
 
-def test_special_container_format_accepts_hcwt_code():
-    assert validate_special_container_format("HCWT 0006")
-    valid, err = validate_container_identifier("HCWT 0006")
+@pytest.mark.parametrize("value", ["HCWT 0006", "HCVT0002"])
+def test_special_container_format_accepts_short_painted_codes(value: str):
+    assert validate_special_container_format(value)
+    valid, err = validate_container_identifier(value)
     assert valid and err == ""
 
 

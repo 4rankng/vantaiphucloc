@@ -39,6 +39,7 @@ def _trip(
     trip_date: date | None,
     driver_id: int | None = None,
     work_type: str = "CHUYEN_BAI",
+    cont_photo_hash: str | None = None,
 ) -> DeliveredTrip:
     return DeliveredTrip(
         client_id=client_id,
@@ -52,6 +53,7 @@ def _trip(
         revenue=0,
         driver_salary=0,
         trip_date=trip_date,
+        cont_photo_hash=cont_photo_hash,
     )
 
 
@@ -66,6 +68,7 @@ class TestFindDuplicateContainersRepo:
                     dropoff_id=seeded["dropoff_id"],
                     cont_number="HACU1234567",
                     trip_date=date(2026, 6, 10),
+                    cont_photo_hash="hash-a",
                 ),
                 _trip(
                     client_id=seeded["client_id"],
@@ -73,6 +76,7 @@ class TestFindDuplicateContainersRepo:
                     dropoff_id=seeded["dropoff_id"],
                     cont_number="HACU1234567",
                     trip_date=date(2026, 6, 12),
+                    cont_photo_hash="hash-a",
                 ),
             ]
         )
@@ -87,6 +91,110 @@ class TestFindDuplicateContainersRepo:
         assert groups[0].count == 2
         assert len(groups[0].trip_ids) == 2
         assert sorted(groups[0].trip_ids) == sorted(groups[0].trip_ids)
+
+    async def test_round_trip_reversed_direction_not_duplicate(
+        self, db_session, seeded
+    ):
+        """Regression: same container, same driver, but reversed direction
+        (A->B outbound, B->A return) is a legitimate round-trip, NOT a
+        duplicate. Mirrors the MSDU4258210 case from production."""
+        repo = SqlDeliveredTripRepository(db_session)
+        db_session.add_all(
+            [
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["pickup_id"],
+                    dropoff_id=seeded["dropoff_id"],
+                    cont_number="MSDU4258210",
+                    trip_date=date(2026, 7, 2),
+                    driver_id=17,
+                    cont_photo_hash="hash-outbound",
+                ),
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["dropoff_id"],
+                    dropoff_id=seeded["pickup_id"],
+                    cont_number="MSDU4258210",
+                    trip_date=date(2026, 7, 7),
+                    driver_id=17,
+                    cont_photo_hash="hash-return",
+                ),
+            ]
+        )
+        await db_session.flush()
+
+        groups = await repo.find_duplicate_containers(
+            date_from=date(2026, 7, 1),
+            date_to=date(2026, 7, 31),
+        )
+        assert groups == []
+
+    async def test_same_direction_different_photos_not_duplicate(
+        self, db_session, seeded
+    ):
+        """Same container, same direction, but distinct photo hashes are two
+        distinct physical trips — not duplicates."""
+        repo = SqlDeliveredTripRepository(db_session)
+        db_session.add_all(
+            [
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["pickup_id"],
+                    dropoff_id=seeded["dropoff_id"],
+                    cont_number="HACU1234567",
+                    trip_date=date(2026, 6, 10),
+                    cont_photo_hash="hash-a",
+                ),
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["pickup_id"],
+                    dropoff_id=seeded["dropoff_id"],
+                    cont_number="HACU1234567",
+                    trip_date=date(2026, 6, 12),
+                    cont_photo_hash="hash-b",
+                ),
+            ]
+        )
+        await db_session.flush()
+
+        groups = await repo.find_duplicate_containers(
+            date_from=date(2026, 6, 1),
+            date_to=date(2026, 6, 30),
+        )
+        assert groups == []
+
+    async def test_photo_less_trips_still_group(self, db_session, seeded):
+        """Trips without a photo hash cannot be disambiguated, so they keep
+        grouping with each other (original catch-all behavior preserved)."""
+        repo = SqlDeliveredTripRepository(db_session)
+        db_session.add_all(
+            [
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["pickup_id"],
+                    dropoff_id=seeded["dropoff_id"],
+                    cont_number="HACU1234567",
+                    trip_date=date(2026, 6, 10),
+                    cont_photo_hash=None,
+                ),
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["pickup_id"],
+                    dropoff_id=seeded["dropoff_id"],
+                    cont_number="HACU1234567",
+                    trip_date=date(2026, 6, 12),
+                    cont_photo_hash=None,
+                ),
+            ]
+        )
+        await db_session.flush()
+
+        groups = await repo.find_duplicate_containers(
+            date_from=date(2026, 6, 1),
+            date_to=date(2026, 6, 30),
+        )
+        assert len(groups) == 1
+        assert groups[0].count == 2
 
     async def test_case_and_whitespace_normalize_into_one_group(
         self, db_session, seeded

@@ -277,21 +277,24 @@ def test_parse_regex_deduplicates():
     assert _parse_numbers_from_response(text) == ["MSKU1234565"]
 
 
-@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("container_number", "normalized"),
+    [("HCWT 0006", "HCWT0006"), ("HCVT0002", "HCVT0002")],
+)
 async def test_validate_container_endpoint_accepts_special_code(
-    async_client, make_auth_headers
+    async_client, make_auth_headers, container_number, normalized
 ):
     headers = await make_auth_headers("driver")
     response = await async_client.get(
         "/api/v1/delivered-trips/validate-container",
-        params={"container_number": "HCWT 0006"},
+        params={"container_number": container_number},
         headers=headers,
     )
 
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["valid"] is True
-    assert body["normalized"] == "HCWT0006"
+    assert body["normalized"] == normalized
     assert body["suggestions"] == []
 
 

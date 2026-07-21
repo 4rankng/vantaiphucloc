@@ -302,10 +302,17 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         client_id: int | None = None,
         driver_id: int | None = None,
     ) -> list:
-        """Return container numbers that appear on 2+ delivered trips in the window.
+        """Return containers appearing on 2+ delivered trips that look like re-entries.
 
-        Matching key is normalized (TRIM + lower) so 'hacu1234567' and
-        'HACU1234567 ' collapse into one group.
+        Two trips are considered duplicates only when they share ALL of:
+
+        - container number (normalized: TRIM + lower)
+        - direction (same pickup AND same dropoff) — so a legitimate round-trip
+          (A→B outbound, B→A return) is NOT a duplicate
+        - photo content hash — two trips with DIFFERENT photos are different
+          physical trips and never duplicates. Trips lacking a photo hash share
+          a ``no-photo`` bucket: we cannot disambiguate them, so they still group
+          (preserving the original catch-all behaviour for photo-less trips).
 
         Implementation: query all matching trips in one shot, then group in
         Python — keeps the SQL portable to SQLite (no array_agg) and Postgres.
@@ -315,16 +322,35 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         from app.contexts.operations.application.dto import DuplicateContainerGroup
 
         normalized = func.lower(func.trim(DeliveredTripORM.cont_number))
+        # Collapse NULL/empty/whitespace photo hashes into one shared bucket so
+        # photo-less trips still group with each other. Distinct hashes stay
+        # distinct. Normalization (TRIM) must match the Python-side bucketing
+        # below so SQL and Python agree on membership.
+        photo_bucket = func.coalesce(
+            func.nullif(func.trim(DeliveredTripORM.cont_photo_hash), ""), ""
+        )
 
-        # Step 1: identify duplicate keys (unfiltered by client/driver so a cont
-        # that appears twice across clients still counts) within the date window
+        # Step 1: identify duplicate composite keys (unfiltered by client/driver
+        # so a cont that appears twice across clients still counts) within the
+        # date window.
         dup_q = (
-            select(normalized.label("key"), func.count().label("cnt"))
+            select(
+                normalized.label("cont_key"),
+                DeliveredTripORM.pickup_location_id.label("pickup_id"),
+                DeliveredTripORM.dropoff_location_id.label("dropoff_id"),
+                photo_bucket.label("photo_key"),
+                func.count().label("cnt"),
+            )
             .where(
                 DeliveredTripORM.cont_number.isnot(None),
                 DeliveredTripORM.cont_number != "",
             )
-            .group_by(normalized)
+            .group_by(
+                normalized,
+                DeliveredTripORM.pickup_location_id,
+                DeliveredTripORM.dropoff_location_id,
+                photo_bucket,
+            )
             .having(func.count() > 1)
         )
         if date_from is not None:
@@ -332,20 +358,28 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         if date_to is not None:
             dup_q = dup_q.where(DeliveredTripORM.trip_date <= date_to)
 
-        dup_keys = {key for key, _ in (await self.session.execute(dup_q)).all() if key}
+        dup_rows = (await self.session.execute(dup_q)).all()
+        dup_keys = {
+            (cont_key, pickup_id, dropoff_id, photo_key)
+            for cont_key, pickup_id, dropoff_id, photo_key, _ in dup_rows
+            if cont_key
+        }
         if not dup_keys:
             return []
 
-        # Step 2: fetch every trip whose normalized key is in the duplicate set,
+        # Step 2: fetch every trip whose container appears in the duplicate set,
         # re-applying client/driver filters so the returned count reflects the
-        # caller's scope
-        keys = list(dup_keys)
+        # caller's scope.
+        cont_keys = list({k[0] for k in dup_keys})
         trips_q = select(
             DeliveredTripORM.cont_number,
             DeliveredTripORM.id,
             DeliveredTripORM.trip_date,
             DeliveredTripORM.driver_id,
-        ).where(normalized.in_(keys))
+            DeliveredTripORM.pickup_location_id,
+            DeliveredTripORM.dropoff_location_id,
+            DeliveredTripORM.cont_photo_hash,
+        ).where(normalized.in_(cont_keys))
         if date_from is not None:
             trips_q = trips_q.where(DeliveredTripORM.trip_date >= date_from)
         if date_to is not None:
@@ -355,25 +389,38 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         if driver_id is not None:
             trips_q = trips_q.where(DeliveredTripORM.driver_id == driver_id)
 
-        buckets: dict[str, list[tuple]] = defaultdict(list)
-        for raw, trip_id, trip_date, trip_driver_id in (
-            await self.session.execute(trips_q)
-        ).all():
-            key = (raw or "").strip().lower()
-            if not key:
+        buckets: dict[tuple, list[tuple]] = defaultdict(list)
+        for (
+            raw,
+            trip_id,
+            trip_date,
+            trip_driver_id,
+            pickup_id,
+            dropoff_id,
+            photo_hash,
+        ) in (await self.session.execute(trips_q)).all():
+            cont_key = (raw or "").strip().lower()
+            if not cont_key:
                 continue
-            buckets[key].append((raw, trip_id, trip_date, trip_driver_id))
+            photo_key = (photo_hash or "").strip()
+            composite = (cont_key, pickup_id, dropoff_id, photo_key)
+            # Only keep trips whose full composite key is actually a known
+            # duplicate — a container may have both a dup direction/photo pair
+            # and other non-dup variants.
+            if composite not in dup_keys:
+                continue
+            buckets[composite].append((raw, trip_id, trip_date, trip_driver_id))
 
         groups: list[DuplicateContainerGroup] = []
-        for key, items in buckets.items():
-            # A container duplicated globally but reduced to a single trip by
+        for items in buckets.values():
+            # A composite duplicated globally but reduced to a single trip by
             # the caller's client/driver scope is NOT a duplicate in that
             # scope — drop it so callers never see a count==1 "duplicate".
             if len(items) < 2:
                 continue
             display_cont = next(
                 (r.strip() for r, _, _, _ in items if r and r.strip()),
-                key.upper(),
+                items[0][0] or "",
             )
             groups.append(
                 DuplicateContainerGroup(
@@ -381,9 +428,7 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
                     count=len(items),
                     trip_ids=[int(i) for _, i, _, _ in items],
                     trip_dates=[d for _, _, d, _ in items],
-                    driver_ids=[
-                        dr if dr is not None else None for _, _, _, dr in items
-                    ],
+                    driver_ids=[dr for _, _, _, dr in items],
                 )
             )
         groups.sort(key=lambda g: (-g.count, g.cont_number))
