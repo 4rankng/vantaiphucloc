@@ -9,7 +9,6 @@ from typing import Any, Sequence
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
-
 # ── Constants ──
 
 TEMPLATE_VERSION = "1.0"
@@ -28,9 +27,7 @@ _THIN_BORDER = Border(
 
 # Date formats used across all Excel files
 DATE_FORMATS = ["%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d", "%d/%m/%y"]
-
-# Container number pattern
-CONTAINER_RE = re.compile(r"\b[A-Z]{4}\d{7}\b")
+CONTAINER_RE = re.compile(r"(?<![A-Z0-9])(?:[A-Z]{4}\d{7}|[A-Z]{4}\d{4})(?![A-Z0-9])")
 
 
 def parse_date(raw: Any) -> date | None:
@@ -60,8 +57,7 @@ def looks_like_container(val: Any) -> bool:
     """Check if a value looks like a container number."""
     if val is None:
         return False
-    s = str(val).strip().upper()
-    return bool(CONTAINER_RE.match(s))
+    return bool(CONTAINER_RE.match(str(val).strip().upper()))
 
 
 def detect_column_mapping(

@@ -11,10 +11,11 @@ import re
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from app.utils.iso6346 import normalize_container_number
+from app.utils.iso6346 import (
+    normalize_container_number,
+    validate_container_identifier_format,
+)
 
-
-CONTAINER_NO_RE = re.compile(r"^[A-Z]{4}\d{7}$")
 PLATE_RE = re.compile(r"\s+")
 
 
@@ -36,7 +37,7 @@ def parse_container_no(raw: Any) -> str:
     if not s or s.startswith("#"):
         raise ValueError("missing_container_no")
     norm = normalize_container_number(s)
-    if not CONTAINER_NO_RE.match(norm):
+    if not validate_container_identifier_format(norm):
         raise ValueError("bad_container_no")
     return norm
 

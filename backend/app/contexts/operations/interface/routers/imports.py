@@ -29,7 +29,7 @@ from fastapi import (
     HTTPException,
     UploadFile,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -62,6 +62,9 @@ from app.contexts.operations.infrastructure.import_pipeline.llm import (
 )
 from app.contexts.operations.infrastructure.import_pipeline.pipeline import (
     run_preview,
+)
+from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
+    parse_container_no,
 )
 from app.contexts.operations.infrastructure.import_pipeline.workbook import (
     load_workbook,
@@ -100,6 +103,14 @@ class CommitRow(BaseModel):
     vessel: str = ""
     remarks: str = ""
     freight_kind_unknown: bool = False  # True if freight_kind needs ketoan resolution
+
+    @field_validator("container_no")
+    @classmethod
+    def normalize_container_no(cls, value: str) -> str:
+        try:
+            return parse_container_no(value)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from None
 
 
 class CommitRequest(BaseModel):

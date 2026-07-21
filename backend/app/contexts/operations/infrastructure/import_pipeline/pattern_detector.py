@@ -10,13 +10,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.contexts.operations.infrastructure.import_pipeline._extractor_common import (
-    _CONTAINER_NO_RE,
     _PORT_CODE_RE,
     _SETTLEMENT_WT_HEADERS,
     cell_text as _cell_text,
     cell_upper as _cell_upper,
     is_container_header,
 )
+from app.utils.iso6346 import validate_container_identifier_format
 from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     normalize_for_match,
 )
@@ -151,7 +151,9 @@ def _score_stacking_plan(sheet: SheetView) -> float:
         data_containers = 0
         for r2 in range(r + 1, min(r + 15, len(sheet.rows))):
             for cell in sheet.rows[r2]:
-                if cell is not None and _CONTAINER_NO_RE.match(_cell_text(cell)):
+                if cell is not None and validate_container_identifier_format(
+                    _cell_text(cell)
+                ):
                     data_containers += 1
                     break
         if data_containers >= 5:
@@ -207,7 +209,9 @@ def _score_dual_panel(sheet: SheetView) -> float:
         for r2 in range(r + 1, min(r + 15, len(sheet.rows))):
             row2 = sheet.rows[r2]
             for c, cell in enumerate(row2):
-                if cell is not None and _CONTAINER_NO_RE.match(_cell_text(cell)):
+                if cell is not None and validate_container_identifier_format(
+                    _cell_text(cell)
+                ):
                     if c < container_cols[1]:
                         left_containers += 1
                     else:

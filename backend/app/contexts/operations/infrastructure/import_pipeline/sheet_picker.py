@@ -22,9 +22,9 @@ from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     synonym_substring_match,
 )
 from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView
+from app.utils.iso6346 import validate_container_identifier_format
 
 
-CONTAINER_NO_RE = re.compile(r"^[A-Z]{4}\d{7}$")
 SIZE_TOKEN_RE = re.compile(
     r"\b(20|22|40|42|45)(?:DC|GP|HC|RF|RE|G[01]|R[01]|T0|U0)?$", re.IGNORECASE
 )
@@ -93,7 +93,7 @@ def _score_one(sheet: SheetView) -> SheetScore:
                     error_count += 1
                     continue
                 up = s.upper()
-                if CONTAINER_NO_RE.match(up):
+                if validate_container_identifier_format(up):
                     row_container_count += 1
                     continue
                 if SIZE_TOKEN_RE.match(s) and len(s) <= 6:

@@ -28,6 +28,8 @@ from app.contexts.operations.infrastructure.import_pipeline.value_parsers import
     parse_size_type,
     parse_weight_kg,
 )
+from app.contexts.operations.interface.routers.imports import CommitRow
+from app.utils.excel_utils import CONTAINER_RE, looks_like_container
 
 
 DOCS = Path(__file__).resolve().parents[2] / "docs"
@@ -48,6 +50,8 @@ BDST = DOCS / "BDST 11.4.xls"
         ("ABCD1234567", "ABCD1234567"),
         ("ABCD-123456-7", "ABCD1234567"),
         ("abcd1234567", "ABCD1234567"),
+        ("HCVT0002", "HCVT0002"),
+        ("hcvt 0002", "HCVT0002"),
     ],
 )
 def test_parse_container_no_normalizes(raw, expected):
@@ -59,6 +63,11 @@ def test_parse_container_no_normalizes(raw, expected):
     [
         ("#REF!", "missing_container_no"),
         ("0", "bad_container_no"),
+        ("HCVT002", "bad_container_no"),
+        ("HCVT00020", "bad_container_no"),
+        ("HCV0002", "bad_container_no"),
+        ("HCVT00A2", "bad_container_no"),
+        ("HCVT0002EXTRA", "bad_container_no"),
         ("", "missing_container_no"),
         (None, "missing_container_no"),
     ],
@@ -66,6 +75,38 @@ def test_parse_container_no_normalizes(raw, expected):
 def test_parse_container_no_rejects(raw, expected):
     with pytest.raises(ValueError, match=expected):
         parse_container_no(raw)
+
+
+def test_import_commit_row_normalizes_short_painted_container_code():
+    row = CommitRow(
+        container_no="hcvt 0002",
+        container_size="20",
+        freight_kind="F",
+        trip_date=date(2026, 7, 21),
+    )
+    assert row.container_no == "HCVT0002"
+
+
+def test_import_commit_row_rejects_malformed_container_code():
+    with pytest.raises(ValueError, match="bad_container_no"):
+        CommitRow(
+            container_no="HCVT00020",
+            container_size="20",
+            freight_kind="F",
+            trip_date=date(2026, 7, 21),
+        )
+
+
+def test_legacy_excel_detection_accepts_short_painted_container_code():
+    assert looks_like_container("HCVT0002")
+    assert looks_like_container("MSKU1234567")
+    assert looks_like_container("HCVT0002 note")
+    assert looks_like_container("MSKU1234567 note")
+    assert not looks_like_container("HCVT00020")
+    assert CONTAINER_RE.search("Cont: HCVT0002 note").group() == "HCVT0002"
+    assert CONTAINER_RE.search("Cont: MSKU1234567 note").group() == "MSKU1234567"
+    assert CONTAINER_RE.search("Cont: HCVT00020") is None
+    assert CONTAINER_RE.search("Cont: HCVT0002EXTRA") is None
 
 
 @pytest.mark.parametrize(
@@ -145,6 +186,26 @@ def test_parse_date_excel_serial():
     assert parsed is not None
     # Confirm it's a date, in 2026, and reverse-derives the same serial
     assert parsed.year == 2026 and parsed.month == 4
+
+
+async def test_import_preview_accepts_short_painted_container_code():
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.append(["Số container", "Kích thước", "F/E", "Điểm đi", "Điểm đến"])
+    sheet.append(["HCVT0002", "20", "F", "Cảng", "Kho"])
+    content = io.BytesIO()
+    workbook.save(content)
+
+    result = await run_preview(
+        content.getvalue(),
+        "special-container-code.xlsx",
+        default_trip_date=date(2026, 7, 21),
+        classifier=NullBatchHeaderClassifier(),
+    )
+
+    assert result.stats["accepted_count"] == 1
+    assert result.stats["rejected_count"] == 0
+    assert result.accepted[0]["values"]["container_no"] == "HCVT0002"
 
 
 @pytest.mark.asyncio

@@ -1,0 +1,17 @@
+{
+  "decision": "PASS",
+  "score": 9.7,
+  "criticalCount": 0,
+  "acceptanceCoverage": [
+    "Short-code parser, preview, legacy importer, joined-cell extraction, and direct commit cases are covered.",
+    "Malformed, overlong, and adjacent-token cases are covered.",
+    "Full backend regression suite passed."
+  ],
+  "regressionProof": [
+    "196 focused tests passed.",
+    "468 full backend tests passed with only documented skips and one expected failure.",
+    "Ruff lint and format checks passed for every Python file changed by this fix."
+  ],
+  "contractStatus": "OK",
+  "blockingReasons": []
+}

@@ -15,20 +15,22 @@ The driver reported that painted code `HCVT0002` could not be entered. The histo
 
 Current source and the deployed frontend bundle already accept generic `AAAA9999`-style input, and backend direct repro now accepts `HCVT0002`, `HCVT 0002`, and `hcvt-0002`. The regression coverage was added in `backend/tests/test_iso6346_suggestions.py` and `backend/tests/test_ocr.py`.
 
-The focused verification pass was clean: 96 tests plus lint and format checks passed. A full backend run landed at 455 passed with one unrelated order-sensitive `Doi Soat` export test failure; that test passed when rerun in isolation.
+The follow-up aligned BookedTrip imports on the shared exact validator. Preview, sheet/column/pattern detection, joined cells, the AI prompt, legacy token extraction, and `CommitRow` normalization now accept short painted codes while rejecting malformed near-misses. Review also found and fixed a compatibility gap in legacy token extraction.
+
+Strict ISO checks remain available for paths that intentionally require canonical ISO 6346 codes. Focused verification passed 196 tests; the full backend suite passed 468 tests with 37 skipped and 1 expected failure.
 
 ## Reflection
 
-The incident looked like an input failure, but the underlying contract was too narrow. Testing the exact painted-code variants users type is necessary in addition to canonical ISO examples.
+The incident looked like an input failure, but the underlying contract was too narrow and duplicated across import stages. A shared exact validator plus coverage at every ingestion boundary is safer than fixing only the first visible rejection.
 
 ## Decisions
 
-The driver path remains scoped to validation and regression coverage. No evergreen docs update was needed because `CONTEXT.md` already documents short painted codes. Review found that BookedTrip import paths still assume 11-character ISO numbers; that is a separate downstream compatibility issue rather than part of the driver-input fix.
+Generic container-code ingestion uses the shared exact validator; legacy strict ISO validation remains unchanged for explicit ISO-only workflows. No evergreen docs update was needed because `CONTEXT.md` already documents short painted codes.
 
 ## Next
 
-Keep the new regression tests in place. Follow up separately on short-code support in BookedTrip imports and on the order-sensitive `Doi Soat` export test.
+Keep the regression matrix across direct entry and BookedTrip import stages. Treat future validator changes as a shared contract change and run both focused and full backend suites.
 
-Status: DONE_WITH_CONCERNS
-Summary: The painted-code driver regression is fixed and covered. One unrelated order-sensitive backend test failed only in the full run.
-Concerns: BookedTrip imports still reject short painted codes, and the `Doi Soat` export ordering test needs separate follow-up.
+Status: DONE
+Summary: Short painted codes are accepted consistently across driver entry and BookedTrip imports, malformed variants remain rejected, and focused plus full backend verification passed.
+Concerns: None.

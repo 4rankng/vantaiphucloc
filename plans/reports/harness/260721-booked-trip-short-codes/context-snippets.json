@@ -1,0 +1,29 @@
+{
+  "skill": "ck:fix",
+  "mode": "interactive",
+  "task": "Allow BookedTrip Excel imports to accept short painted container codes such as HCVT0002.",
+  "acceptanceCriteria": [
+    "Legacy and preview BookedTrip imports normalize and accept four-letter/four-digit identifiers.",
+    "ISO 6346 identifiers remain supported without weakening legacy validation.",
+    "Malformed and overlong identifiers remain rejected.",
+    "Reconciliation continues matching normalized identifiers."
+  ],
+  "touchpoints": [
+    "backend/app/contexts/operations/infrastructure/excel/booked_trip_import.py",
+    "backend/app/contexts/operations/infrastructure/import_pipeline/",
+    "backend/app/contexts/operations/interface/routers/imports.py",
+    "backend/app/utils/iso6346.py",
+    "backend/app/utils/excel_utils.py"
+  ],
+  "publicContracts": [
+    "BookedTrip Excel preview and commit accept HCVT0002-style short codes.",
+    "Malformed direct commit container identifiers return request validation errors."
+  ],
+  "blastRadius": [
+    "BookedTrip Excel import parsing",
+    "sheet and column detection",
+    "joined-cell container extraction",
+    "import commit validation"
+  ],
+  "scoutSummary": "The driver/OCR path already used shared container-identifier validation, while BookedTrip import stages retained ISO-only regular expressions and validators. Reconciliation normalizes identifiers and is length-agnostic."
+}

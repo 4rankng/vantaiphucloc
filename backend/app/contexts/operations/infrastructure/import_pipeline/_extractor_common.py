@@ -71,7 +71,6 @@ def is_container_header(cell) -> bool:
 # Shared compiled regexes
 # ---------------------------------------------------------------------------
 
-_CONTAINER_NO_RE = re.compile(r"^[A-Z]{4}\d{7}$")
 _PORT_CODE_RE = re.compile(r"^[A-Z]{2,5}$")
 _SETTLEMENT_WT_HEADERS = {"F20", "F40", "E20", "E40"}
 

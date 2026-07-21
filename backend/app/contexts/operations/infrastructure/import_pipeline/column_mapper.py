@@ -46,9 +46,9 @@ from app.contexts.operations.infrastructure.import_pipeline.workbook import Shee
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
     parse_date,
 )
+from app.utils.iso6346 import validate_container_identifier_format
 
 
-CONTAINER_RE = re.compile(r"^[A-Z]{4}\d{7}$")
 SIZE_VALUE_RE = re.compile(
     r"^(20|22|40|42|45)(?:DC|GP|HC|RF|RE|G[01]|R[01]|T0|U0)?$", re.IGNORECASE
 )
@@ -289,7 +289,7 @@ def _value_pattern_match(c: int, header_text: str, samples: list[str]) -> Column
         return ColumnMapping(
             c, header_text, None, 0.0, "unmapped", sample_values=samples
         )
-    container_hits = sum(1 for s in samples if CONTAINER_RE.match(s.strip().upper()))
+    container_hits = sum(1 for s in samples if validate_container_identifier_format(s))
     if container_hits / max(len(samples), 1) >= 0.5:
         return ColumnMapping(
             c,
@@ -298,7 +298,7 @@ def _value_pattern_match(c: int, header_text: str, samples: list[str]) -> Column
             confidence=0.9,
             source="value_pattern",
             sample_values=samples,
-            reason="ISO 6346 shape",
+            reason="container identifier shape",
         )
 
     fe_hits = sum(1 for s in samples if FE_VALUE_RE.match(s.strip()))

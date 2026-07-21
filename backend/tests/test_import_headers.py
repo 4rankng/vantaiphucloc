@@ -285,3 +285,7 @@ def test_split_container_cell_other_separators():
         "HACU2215738",
         "HACU2242754",
     ]
+
+
+def test_split_container_cell_accepts_short_painted_codes():
+    assert _split_container_cell("HCVT0002/HCWT0006") == ["HCVT0002", "HCWT0006"]

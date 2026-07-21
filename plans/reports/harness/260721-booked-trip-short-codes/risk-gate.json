@@ -1,0 +1,9 @@
+{
+  "highRisk": true,
+  "reasons": [
+    "Import request validation and accepted public input shapes changed."
+  ],
+  "autoStopRequired": true,
+  "humanApproved": true,
+  "largeDiff": false
+}

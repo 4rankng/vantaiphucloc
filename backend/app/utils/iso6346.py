@@ -54,6 +54,7 @@ LETTER_MAP = {
 # Powers of 2 for each position (0-9 for 10 characters)
 POWERS_2 = [2**i for i in range(10)]
 SPECIAL_CONTAINER_RE = re.compile(r"^[A-Z]{4}\d{4}$")
+CONTAINER_IDENTIFIER_RE = re.compile(r"^(?:[A-Z]{4}\d{7}|[A-Z]{4}\d{4})$")
 
 
 def normalize_container_number(container_number: str) -> str:
@@ -66,6 +67,12 @@ def normalize_container_number(container_number: str) -> str:
         Normalized container number (uppercase, no spaces or hyphens)
     """
     return re.sub(r"[-\s]+", "", container_number).upper().strip()
+
+
+def validate_container_identifier_format(container_number: str) -> bool:
+    """Validate an ISO-shaped number or short painted container code."""
+    normalized = normalize_container_number(container_number)
+    return bool(CONTAINER_IDENTIFIER_RE.fullmatch(normalized))
 
 
 def validate_format(container_number: str) -> bool:

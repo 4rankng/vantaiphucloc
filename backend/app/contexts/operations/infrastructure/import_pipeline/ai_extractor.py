@@ -34,8 +34,9 @@ CONTEXT:
 - Merged header cells may span multiple rows — look at the data pattern, not just one row
 
 FIELDS TO EXTRACT:
-- container_number: ISO 6346 format, 4 uppercase letters + 7 digits (e.g. TCNU2473728).
-  Must match pattern [A-Z]{4}[0-9]{7}. Skip rows without a valid container number.
+- container_number: either ISO 6346 format (4 uppercase letters + 7 digits,
+  e.g. TCNU2473728) or a short painted code (4 uppercase letters + 4 digits,
+  e.g. HCVT0002). Skip rows without either accepted shape.
 - cont_type: One of E20, E40, F20, F40.
   E = empty/vỏ rỗng. F = full/có hàng. 20/40 = container size in feet.
   May appear as separate columns (size + full/empty) or combined (F20', E40').
@@ -52,7 +53,7 @@ FIELDS TO EXTRACT:
 - freight_charge: Price/freight as integer VND. null if unknown.
 
 RULES:
-- Return ONLY rows that have a valid container number matching [A-Z]{4}[0-9]{7}.
+- Return ONLY rows with 4 uppercase letters followed by either 7 or 4 digits.
 - If a field is not available, use empty string "" for strings, null for numbers/dates.
 - source_row MUST match the R-index prefix from the input data.
 """

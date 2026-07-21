@@ -12,7 +12,7 @@ from app.models.domain import (
     BookedTrip,
     Client,
 )
-from app.utils.iso6346 import normalize_container_number, validate_container_number
+from app.utils.iso6346 import normalize_container_number, validate_container_identifier
 
 _logger = logging.getLogger(__name__)
 
@@ -167,7 +167,7 @@ async def import_booked_trips(
             )
             ct = str(row.get("work_type", "")).strip().upper()
             if cn:
-                valid, err = validate_container_number(cn)
+                valid, err = validate_container_identifier(cn)
                 if not valid:
                     errors.append(f"Nhóm {key}: Container {cn} không hợp lệ — {err}")
                     continue

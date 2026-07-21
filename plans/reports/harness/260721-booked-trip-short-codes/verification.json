@@ -1,0 +1,29 @@
+{
+  "commands": [
+    {
+      "command": "PYTHONPATH=. .venv/bin/python -m pytest -q tests/test_import_parsing.py tests/test_import_headers.py tests/test_import_templates.py tests/test_excel_upload_integration.py tests/test_iso6346_suggestions.py tests/test_terminal_log_pattern.py tests/test_terminal_log_extractor.py",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-21T10:12:52Z",
+      "summary": "196 passed and 29 skipped because optional sample workbooks are absent."
+    },
+    {
+      "command": "PYTHONPATH=. .venv/bin/python -m pytest -q",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-21T10:12:52Z",
+      "summary": "Full backend suite: 468 passed, 37 skipped, and 1 expected failure."
+    },
+    {
+      "command": ".venv/bin/ruff check <13 changed Python files> && .venv/bin/ruff format --check <13 changed Python files>",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-21T10:12:52Z",
+      "summary": "Lint and format checks passed for all 13 Python files changed by this fix."
+    }
+  ],
+  "beforeAfter": {
+    "before": "BookedTrip Excel preview and legacy import rejected HCVT0002 as bad_container_no or invalid ISO 6346.",
+    "after": "All BookedTrip import stages normalize and accept HCVT0002 while malformed and overlong values remain rejected."
+  }
+}

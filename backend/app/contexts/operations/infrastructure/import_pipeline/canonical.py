@@ -28,7 +28,12 @@ class CanonicalField:
 # Single source of truth — the preview UI iterates this to render the
 # mapping table.
 CANONICAL_FIELDS: tuple[CanonicalField, ...] = (
-    CanonicalField("container_no", "Số container", True, "ISO 6346 (4 chữ + 7 số)."),
+    CanonicalField(
+        "container_no",
+        "Số container",
+        True,
+        "ISO 6346 (4 chữ + 7 số) hoặc mã đặc biệt (4 chữ + 4 số).",
+    ),
     CanonicalField("container_size", "Kích thước", True, "20 hoặc 40."),
     CanonicalField(
         "freight_kind", "Loại hàng (F/E)", True, "F = có hàng, E = vỏ rỗng."
