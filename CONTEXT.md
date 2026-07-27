@@ -67,6 +67,7 @@ These are the authoritative English names used in code and database. UI labels a
 - **Matching model**: 1:1 by container. Each BookedTrip and each DeliveredTrip has exactly one container (`cont_number` + `cont_type` directly on the row, no join tables). A BookedTrip matches at most one DeliveredTrip and vice versa. If a truck carries 2 containers, that's 2 separate DeliveredTrip rows.
 - **Match state**: `matched` boolean on both BookedTrip and DeliveredTrip. No lifecycle statuses (no PENDING/MATCHED/CONFIRMED/COMPLETED/CANCELLED/DRAFT). A trip is either matched or not.
 - **Fraud detection**: A BookedTrip must match at most one DeliveredTrip. If a vendor claims a trip already matched to our own driver (or another vendor), this is fraud — flag and highlight for review, do not auto-match.
+- **Duplicate delivered trips**: Within the same normalized container number and direction, flag duplicates when trips share the same trip date, share the same non-empty photo hash, or both have no photo hash. Reversed routes remain legitimate; different-date and different-photo trips stay distinct.
 - **Revenue flow**: DeliveredTrip.revenue defaults to 0 at creation. Gets populated from the matched BookedTrip's revenue during reconciliation. Driver never enters financial data.
 - **Financial fields are manual (Phase 1)**: Revenue, driver_salary, allowance on both BookedTrip and DeliveredTrip are entered by the accountant. No auto-population from pricing during matching. Simplify now, automate later if customer asks.
 

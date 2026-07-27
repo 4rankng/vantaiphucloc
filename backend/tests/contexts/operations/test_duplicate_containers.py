@@ -129,11 +129,9 @@ class TestFindDuplicateContainersRepo:
         )
         assert groups == []
 
-    async def test_same_direction_different_photos_not_duplicate(
+    async def test_same_direction_different_dates_and_photos_not_duplicate(
         self, db_session, seeded
     ):
-        """Same container, same direction, but distinct photo hashes are two
-        distinct physical trips — not duplicates."""
         repo = SqlDeliveredTripRepository(db_session)
         db_session.add_all(
             [
@@ -162,6 +160,77 @@ class TestFindDuplicateContainersRepo:
             date_to=date(2026, 6, 30),
         )
         assert groups == []
+
+    async def test_same_day_same_route_different_photos_is_duplicate(
+        self, db_session, seeded
+    ):
+        repo = SqlDeliveredTripRepository(db_session)
+        db_session.add_all(
+            [
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["pickup_id"],
+                    dropoff_id=seeded["dropoff_id"],
+                    cont_number="UETU2790035",
+                    trip_date=date(2026, 7, 20),
+                    driver_id=17,
+                    cont_photo_hash="hash-a",
+                ),
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["pickup_id"],
+                    dropoff_id=seeded["dropoff_id"],
+                    cont_number="UETU2790035",
+                    trip_date=date(2026, 7, 20),
+                    driver_id=17,
+                    cont_photo_hash="hash-b",
+                ),
+            ]
+        )
+        await db_session.flush()
+
+        groups = await repo.find_duplicate_containers(
+            date_from=date(2026, 6, 26),
+            date_to=date(2026, 7, 25),
+        )
+
+        assert len(groups) == 1
+        assert groups[0].cont_number == "UETU2790035"
+        assert groups[0].count == 2
+
+    async def test_same_day_same_route_mixed_photo_state_is_duplicate(
+        self, db_session, seeded
+    ):
+        repo = SqlDeliveredTripRepository(db_session)
+        db_session.add_all(
+            [
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["pickup_id"],
+                    dropoff_id=seeded["dropoff_id"],
+                    cont_number="UETU2790035",
+                    trip_date=date(2026, 7, 20),
+                    cont_photo_hash="hash-a",
+                ),
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["pickup_id"],
+                    dropoff_id=seeded["dropoff_id"],
+                    cont_number="UETU2790035",
+                    trip_date=date(2026, 7, 20),
+                    cont_photo_hash=None,
+                ),
+            ]
+        )
+        await db_session.flush()
+
+        groups = await repo.find_duplicate_containers(
+            date_from=date(2026, 6, 26),
+            date_to=date(2026, 7, 25),
+        )
+
+        assert len(groups) == 1
+        assert groups[0].count == 2
 
     async def test_photo_less_trips_still_group(self, db_session, seeded):
         """Trips without a photo hash cannot be disambiguated, so they keep
@@ -428,6 +497,124 @@ class TestDuplicateContainersEndpoint:
         assert body["groups"][0]["count"] == 2
         assert len(body["groups"][0]["trip_ids"]) == 2
         assert len(body["groups"][0]["trip_dates"]) == 2
+
+    async def test_endpoint_returns_same_day_duplicate_with_different_photos(
+        self,
+        async_client,
+        db_session,
+        seeded,
+        make_auth_headers,
+    ):
+        db_session.add_all(
+            [
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["pickup_id"],
+                    dropoff_id=seeded["dropoff_id"],
+                    cont_number="UETU2790035",
+                    trip_date=date(2026, 7, 20),
+                    driver_id=17,
+                    cont_photo_hash="hash-a",
+                ),
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["pickup_id"],
+                    dropoff_id=seeded["dropoff_id"],
+                    cont_number="UETU2790035",
+                    trip_date=date(2026, 7, 20),
+                    driver_id=17,
+                    cont_photo_hash="hash-b",
+                ),
+            ]
+        )
+        await db_session.flush()
+
+        headers = await make_auth_headers("accountant")
+        response = await async_client.get(
+            "/api/v1/delivered-trips/duplicate-containers",
+            params={
+                "date_from": "2026-06-26",
+                "date_to": "2026-07-25",
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 200, response.text
+        assert response.json() == {
+            "groups": [
+                {
+                    "cont_number": "UETU2790035",
+                    "count": 2,
+                    "trip_ids": [1, 2],
+                    "trip_dates": ["2026-07-20", "2026-07-20"],
+                    "driver_ids": [17, 17],
+                }
+            ],
+            "total_groups": 1,
+            "total_extra_rows": 1,
+        }
+
+    async def test_endpoint_counts_disconnected_duplicate_pairs_separately(
+        self,
+        async_client,
+        db_session,
+        seeded,
+        make_auth_headers,
+    ):
+        db_session.add_all(
+            [
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["pickup_id"],
+                    dropoff_id=seeded["dropoff_id"],
+                    cont_number="UETU2790035",
+                    trip_date=date(2026, 7, 20),
+                    cont_photo_hash="hash-a",
+                ),
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["pickup_id"],
+                    dropoff_id=seeded["dropoff_id"],
+                    cont_number="UETU2790035",
+                    trip_date=date(2026, 7, 20),
+                    cont_photo_hash="hash-b",
+                ),
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["pickup_id"],
+                    dropoff_id=seeded["dropoff_id"],
+                    cont_number="UETU2790035",
+                    trip_date=date(2026, 7, 21),
+                    cont_photo_hash="hash-c",
+                ),
+                _trip(
+                    client_id=seeded["client_id"],
+                    pickup_id=seeded["pickup_id"],
+                    dropoff_id=seeded["dropoff_id"],
+                    cont_number="UETU2790035",
+                    trip_date=date(2026, 7, 21),
+                    cont_photo_hash="hash-d",
+                ),
+            ]
+        )
+        await db_session.flush()
+
+        headers = await make_auth_headers("accountant")
+        response = await async_client.get(
+            "/api/v1/delivered-trips/duplicate-containers",
+            params={
+                "date_from": "2026-06-26",
+                "date_to": "2026-07-25",
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["total_groups"] == 2
+        assert body["total_extra_rows"] == 2
+        assert [group["count"] for group in body["groups"]] == [2, 2]
+        assert [group["trip_ids"] for group in body["groups"]] == [[1, 2], [3, 4]]
 
     async def test_endpoint_returns_empty_when_no_duplicates(
         self,
