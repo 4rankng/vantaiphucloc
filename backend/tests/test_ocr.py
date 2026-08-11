@@ -1240,6 +1240,72 @@ async def test_ocr_stats_accuracy_uses_original_container_snapshot(
 
 
 @pytest.mark.asyncio
+async def test_ocr_stats_accuracy_includes_matches_within_sixty_days(
+    db_session, async_client, make_auth_headers
+):
+    client = Client(code="OCR60", name="OCR 60-day Client", is_active=True)
+    pickup = Location(name="Cang OCR 60-day", is_active=True)
+    dropoff = Location(name="Kho OCR 60-day", is_active=True)
+    driver = User(
+        phone="0900600060",
+        username="ocr_60_day_driver",
+        hashed_password="unused",
+        role="driver",
+        is_active=True,
+    )
+    db_session.add_all([client, pickup, dropoff, driver])
+    await db_session.flush()
+
+    created_at = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(days=40)
+    booked = BookedTrip(
+        trip_date=created_at.date(),
+        client_id=client.id,
+        pickup_location_id=pickup.id,
+        dropoff_location_id=dropoff.id,
+        work_type="F20",
+        cont_number="MSKU1234565",
+        cont_type="F20",
+        created_at=created_at,
+    )
+    db_session.add(booked)
+    await db_session.flush()
+    db_session.add(
+        DeliveredTrip(
+            client_id=client.id,
+            pickup_location_id=pickup.id,
+            dropoff_location_id=dropoff.id,
+            driver_id=driver.id,
+            work_type="F20",
+            cont_number="MSKU1234565",
+            original_cont_number="MSKU1234565",
+            cont_type="F20",
+            trip_date=created_at.date(),
+            booked_trip_id=booked.id,
+            created_at=created_at,
+        )
+    )
+    await db_session.commit()
+
+    headers = await make_auth_headers("superadmin")
+    response = await async_client.get(
+        "/api/v1/dashboard/ocr-stats", params={"days": 60}, headers=headers
+    )
+
+    assert response.status_code == 200, response.text
+    accuracy = response.json()["accuracy"]
+    assert accuracy["totals"]["evaluated"] == 1
+    assert accuracy["totals"]["exact"] == 1
+    assert (
+        next(
+            point
+            for point in accuracy["daily"]
+            if point["date"] == created_at.date().isoformat()
+        )["evaluated"]
+        == 1
+    )
+
+
+@pytest.mark.asyncio
 async def test_ocr_stats_accuracy_rolling_window_uses_last_100_matched_trips(
     db_session, async_client, make_auth_headers
 ):

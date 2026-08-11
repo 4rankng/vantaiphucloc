@@ -19,7 +19,7 @@ interface OcrAccuracyChartProps {
  * latest 100 evaluated OCR trip snapshots.
  */
 export function OcrAccuracyChart({
-  days = 30,
+  days = 60,
   className,
 }: OcrAccuracyChartProps) {
   const { data: stats, isLoading } = useOcrStats(days)
