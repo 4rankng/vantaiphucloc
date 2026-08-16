@@ -43,8 +43,10 @@ async def get_trip_daily_stats(
     stmt = select(
         DeliveredTrip.trip_date,
         DeliveredTrip.booked_trip_id,
+        DeliveredTrip.cont_type,
         func.count(DeliveredTrip.id),
         func.coalesce(func.sum(DeliveredTrip.revenue), 0),
+        func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
     ).where(
         DeliveredTrip.trip_date >= df,
         DeliveredTrip.trip_date <= dt,
@@ -63,7 +65,11 @@ async def get_trip_daily_stats(
 
     rows = (
         await db.execute(
-            stmt.group_by(DeliveredTrip.trip_date, DeliveredTrip.booked_trip_id)
+            stmt.group_by(
+                DeliveredTrip.trip_date,
+                DeliveredTrip.booked_trip_id,
+                DeliveredTrip.cont_type,
+            )
         )
     ).all()
 
@@ -74,7 +80,9 @@ async def get_trip_daily_stats(
     internal_count = 0
     vendor_count = 0
     total_revenue = 0
-    for trip_date, booked_id, cnt, rev in rows:
+    total_productivity_salary = 0
+    cont_type_counts = {"F20": 0, "F40": 0, "E20": 0, "E40": 0}
+    for trip_date, booked_id, cont_type, cnt, rev, salary in rows:
         ds = (
             str(trip_date)
             if not hasattr(trip_date, "isoformat")
@@ -90,6 +98,9 @@ async def get_trip_daily_stats(
             bucket["pending"] += cnt
             pending += cnt
             total_revenue += int(rev)
+        total_productivity_salary += int(salary)
+        if cont_type in cont_type_counts:
+            cont_type_counts[cont_type] += cnt
 
     # Build one bucket per day across the full date range
     from datetime import timedelta as _td
@@ -154,6 +165,11 @@ async def get_trip_daily_stats(
         internal_count=internal_count,
         vendor_count=vendor_count,
         total_revenue=total_revenue,
+        total_productivity_salary=total_productivity_salary,
+        f20_count=cont_type_counts["F20"],
+        f40_count=cont_type_counts["F40"],
+        e20_count=cont_type_counts["E20"],
+        e40_count=cont_type_counts["E40"],
         match_rate=round(matched / total * 100) if total > 0 else None,
         buckets=buckets,
     )

@@ -150,6 +150,11 @@ class TripDailyStatsOut(BaseModel):
     internal_count: int = 0
     vendor_count: int = 0
     total_revenue: int = 0
+    total_productivity_salary: int = 0
+    f20_count: int = 0
+    f40_count: int = 0
+    e20_count: int = 0
+    e40_count: int = 0
     match_rate: float | None = None
     buckets: list[TripDayBucket] = []
 

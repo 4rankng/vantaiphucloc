@@ -89,6 +89,11 @@ export interface TripDailyStats {
   internalCount: number
   vendorCount: number
   totalRevenue: number
+  totalProductivitySalary: number
+  f20Count: number
+  f40Count: number
+  e20Count: number
+  e40Count: number
   matchRate: number | null
   buckets: TripDayBucket[]
 }

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/navigation/MonthNavigator'
 import { PageHeader } from '@/components/shared/layouts/PageHeader'
-import { StatBreakdownCard } from '@/components/shared/data-display/StatBreakdownCard'
+import { ReconciliationSummary } from '@/components/shared/data-display/ReconciliationSummary'
 import { Panel } from '@/components/shared/overlays/Panel'
 import { DataTable } from '@/components/shared/data-display/DataTable'
 import { ToolbarSearch } from '@/components/shared/navigation/Toolbar'
@@ -233,6 +233,12 @@ export function DoiSoatPage() {
   const globalPending = dailyStats?.pending ?? 0
   const globalInternal = dailyStats?.internalCount ?? 0
   const globalVendor = dailyStats?.vendorCount ?? 0
+  const globalF20 = dailyStats?.f20Count ?? 0
+  const globalF40 = dailyStats?.f40Count ?? 0
+  const globalE20 = dailyStats?.e20Count ?? 0
+  const globalE40 = dailyStats?.e40Count ?? 0
+  const globalRevenue = dailyStats?.totalRevenue ?? 0
+  const globalProductivitySalary = dailyStats?.totalProductivitySalary ?? 0
 
   const filtered = trips
 
@@ -268,24 +274,19 @@ export function DoiSoatPage() {
 
       {/* ── Stats ── */}
       {!isLoading && globalTotal > 0 && (
-        <div className="grid grid-cols-2 gap-2.5">
-          <StatBreakdownCard
-            label="Tổng chuyến"
-            total={globalTotal.toLocaleString('vi-VN')}
-            items={[
-              { label: 'Đã ghép', value: globalMatched.toLocaleString('vi-VN') },
-              { label: 'Chờ ghép', value: globalPending.toLocaleString('vi-VN') },
-            ]}
-          />
-          <StatBreakdownCard
-            label="Tổng xe"
-            total={(globalInternal + globalVendor).toLocaleString('vi-VN')}
-            items={[
-              { label: 'Xe nội bộ', value: globalInternal.toLocaleString('vi-VN') },
-              { label: 'Xe ngoài', value: globalVendor.toLocaleString('vi-VN') },
-            ]}
-          />
-        </div>
+        <ReconciliationSummary
+          total={globalTotal}
+          matched={globalMatched}
+          pending={globalPending}
+          internalCount={globalInternal}
+          vendorCount={globalVendor}
+          f20Count={globalF20}
+          f40Count={globalF40}
+          e20Count={globalE20}
+          e40Count={globalE40}
+          totalRevenue={globalRevenue}
+          totalProductivitySalary={globalProductivitySalary}
+        />
       )}
 
       {/* ── Table section ── */}

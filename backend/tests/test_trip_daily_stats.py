@@ -59,8 +59,10 @@ async def test_get_trip_daily_stats_revenue(db_session, async_client):
         driver_id=driver.id,
         trip_date=date(2026, 5, 10),
         revenue=1200000,
+        driver_salary=100000,
         booked_trip_id=1,
-        work_type="F20",
+        work_type="XUAT_NHAP_TAU",
+        cont_type="F20",
     )
     t2 = DeliveredTrip(
         client_id=partner.id,
@@ -69,9 +71,34 @@ async def test_get_trip_daily_stats_revenue(db_session, async_client):
         driver_id=driver.id,
         trip_date=date(2026, 5, 11),
         revenue=800000,
-        work_type="F20",
+        driver_salary=125000,
+        work_type="XUAT_NHAP_TAU",
+        cont_type="F40",
     )
-    db_session.add_all([t1, t2])
+    t3 = DeliveredTrip(
+        client_id=partner.id,
+        pickup_location_id=pickup.id,
+        dropoff_location_id=dropoff.id,
+        driver_id=driver.id,
+        trip_date=date(2026, 5, 12),
+        revenue=900000,
+        driver_salary=75000,
+        booked_trip_id=2,
+        work_type="XUAT_NHAP_TAU",
+        cont_type="E20",
+    )
+    t4 = DeliveredTrip(
+        client_id=partner.id,
+        pickup_location_id=pickup.id,
+        dropoff_location_id=dropoff.id,
+        driver_id=driver.id,
+        trip_date=date(2026, 5, 13),
+        revenue=0,
+        driver_salary=50000,
+        work_type="XUAT_NHAP_TAU",
+        cont_type="E40",
+    )
+    db_session.add_all([t1, t2, t3, t4])
     await db_session.commit()
 
     res = await async_client.get(
@@ -81,10 +108,15 @@ async def test_get_trip_daily_stats_revenue(db_session, async_client):
     )
     assert res.status_code == 200, res.text
     data = res.json()
-    assert data["total"] == 2
-    assert data["matched"] == 1
-    assert data["pending"] == 1
-    assert data["total_revenue"] == 2000000  # 1.2M + 800K
+    assert data["total"] == 4
+    assert data["matched"] == 2
+    assert data["pending"] == 2
+    assert data["total_revenue"] == 2900000
+    assert data["total_productivity_salary"] == 350000
+    assert data["f20_count"] == 1
+    assert data["f40_count"] == 1
+    assert data["e20_count"] == 1
+    assert data["e40_count"] == 1
 
     # Test with valid client filter
     res = await async_client.get(
@@ -97,7 +129,7 @@ async def test_get_trip_daily_stats_revenue(db_session, async_client):
         headers=headers,
     )
     assert res.status_code == 200
-    assert res.json()["total"] == 2
+    assert res.json()["total"] == 4
 
     # Test with invalid client filter
     res = await async_client.get(
