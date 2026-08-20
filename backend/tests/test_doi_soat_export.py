@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from io import BytesIO
 
 import openpyxl
@@ -63,6 +63,41 @@ async def test_doi_soat_export_includes_revenue_and_salary_columns(db_session):
     assert row[14] == 300_000
     assert row[15] == "Đã ghép"
     assert row[16] == "Tài xế báo kẹt cổng"
+
+
+@pytest.mark.asyncio
+async def test_doi_soat_export_includes_driver_recorded_time_in_vietnam_time(
+    db_session,
+):
+    client = Client(id=2, code="KH02", name="Khach Hang 02", is_active=True)
+    pickup = Location(id=3, name="Cang Dinh Vu", is_active=True)
+    dropoff = Location(id=4, name="Kho Hai An", is_active=True)
+    db_session.add_all([client, pickup, dropoff])
+
+    trip = DeliveredTrip(
+        id=201,
+        trip_date=date(2026, 6, 5),
+        client_id=2,
+        pickup_location_id=3,
+        dropoff_location_id=4,
+        work_type="NANG HA",
+        cont_number="TIME1234567",
+        cont_type="F20",
+        vehicle_plate="15C-54321",
+        created_at=datetime(2026, 6, 5, 5, 14, tzinfo=timezone.utc),
+    )
+    db_session.add(trip)
+    await db_session.flush()
+
+    content, _client_name = await generate_doi_soat_excel(
+        db_session,
+        client_id=2,
+        date_from="2026-06-01",
+        date_to="2026-06-30",
+    )
+
+    wb = openpyxl.load_workbook(BytesIO(content), data_only=False)
+    assert wb.active["B12"].value == "05/06/2026 12:14"
 
 
 @pytest.mark.asyncio

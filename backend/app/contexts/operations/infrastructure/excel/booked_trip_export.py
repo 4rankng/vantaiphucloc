@@ -1,6 +1,8 @@
 """Booked trip and doi-soat Excel export helpers."""
 
 import logging
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +20,23 @@ from app.utils.excel_utils import (
 )
 
 _logger = logging.getLogger(__name__)
+_VIETNAM_TIMEZONE = ZoneInfo("Asia/Ho_Chi_Minh")
+
+
+def _format_doi_soat_trip_datetime(
+    trip_date, driver_recorded_at: datetime | None
+) -> str:
+    if trip_date is None:
+        return ""
+
+    display_date = trip_date.strftime("%d/%m/%Y")
+    if driver_recorded_at is None:
+        return display_date
+
+    if driver_recorded_at.tzinfo is None:
+        driver_recorded_at = driver_recorded_at.replace(tzinfo=timezone.utc)
+    display_time = driver_recorded_at.astimezone(_VIETNAM_TIMEZONE).strftime("%H:%M")
+    return f"{display_date} {display_time}"
 
 
 async def generate_booked_trips_excel(
@@ -278,6 +297,10 @@ async def generate_doi_soat_excel(
         fb = fallback
         return {
             "trip_date": source.trip_date or (fb.trip_date if fb else None),
+            "source_id": source.id,
+            "driver_recorded_at": (
+                source.created_at if isinstance(source, DeliveredTrip) else None
+            ),
             "client_id": source.client_id or (fb.client_id if fb else None),
             "cont_number": source.cont_number or (fb.cont_number if fb else None) or "",
             "cont_type": source.cont_type or (fb.cont_type if fb else None),
@@ -324,7 +347,14 @@ async def generate_doi_soat_excel(
         deduped_rows.append(_doi_soat_row(trip, None, STATUS_UNMATCHED))
 
     # Sort by trip_date then container number for stable ordering
-    deduped_rows.sort(key=lambda r: (r["trip_date"] or df, r["cont_number"] or ""))
+    deduped_rows.sort(
+        key=lambda r: (
+            r["trip_date"] or df,
+            r["client_id"] or 0,
+            r["cont_number"] or "",
+            r["source_id"],
+        )
+    )
 
     # -- 6. Load lookup names --
     client_ids = {row["client_id"] for row in deduped_rows if row["client_id"]}
@@ -470,8 +500,8 @@ async def generate_doi_soat_excel(
     for row in deduped_rows:
         pickup = loc_name_by_id.get(row["pickup_location_id"] or 0, "")
         dropoff = loc_name_by_id.get(row["dropoff_location_id"] or 0, "")
-        trip_date_str = (
-            row["trip_date"].strftime("%d/%m/%Y") if row["trip_date"] else ""
+        trip_date_str = _format_doi_soat_trip_datetime(
+            row["trip_date"], row["driver_recorded_at"]
         )
 
         ct = (row["cont_type"] or "").upper()
@@ -519,7 +549,7 @@ async def generate_doi_soat_excel(
                 cell.number_format = "#,##0"
 
     # -- Column widths --
-    col_widths = [6, 12, 12, 18, 6, 6, 6, 6, 14, 20, 20, 14, 16, 14, 14, 14, 24]
+    col_widths = [6, 18, 12, 18, 6, 6, 6, 6, 14, 20, 20, 14, 16, 14, 14, 14, 24]
     for i, width in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
 
