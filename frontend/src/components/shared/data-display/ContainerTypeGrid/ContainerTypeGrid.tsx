@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { CheckCircle, Plus } from 'lucide-react'
 import {
   CONT_TYPES, WORK_TYPE_LABELS,
@@ -30,10 +30,8 @@ interface ContainerTypeGridProps {
   contTypeError?: boolean
   /** Show warning border on the workType group. */
   workTypeError?: boolean
-  /** Dynamic operation types from API. Falls back to hardcoded WORK_TYPES. */
+  /** Dynamic operation types from API. */
   operationTypes?: OperationTypeEntity[]
-  /** Operation type names that are unavailable in this workflow. */
-  hiddenOperationTypes?: readonly string[]
 }
 
 const CONT_TYPE_SET: ReadonlySet<string> = new Set(CONT_TYPES)
@@ -53,37 +51,30 @@ export function ContainerTypeGrid({
   onContTypeChange, onWorkTypeChange,
   contTypeError, workTypeError,
   operationTypes,
-  hiddenOperationTypes = [],
 }: ContainerTypeGridProps) {
   const [showCustom, setShowCustom] = useState(false)
   const [customValue, setCustomValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
-  const hiddenOperationTypeNames = useMemo(
-    () => new Set(hiddenOperationTypes.map(normalizeOperationTypeName)),
-    [hiddenOperationTypes],
+  const inactiveOperationTypeNames = useMemo(
+    () => new Set(
+      (operationTypes ?? [])
+        .filter(operationType => !operationType.isActive)
+        .map(operationType => normalizeOperationTypeName(operationType.name)),
+    ),
+    [operationTypes],
   )
-  const isHiddenOperationType = useCallback(
-    (workType: string) => hiddenOperationTypeNames.has(normalizeOperationTypeName(workType)),
-    [hiddenOperationTypeNames],
-  )
+  const isInactiveOperationType = (workType: string) =>
+    inactiveOperationTypeNames.has(normalizeOperationTypeName(workType))
 
   useEffect(() => {
     if (showCustom && inputRef.current) inputRef.current.focus()
   }, [showCustom])
 
-  // Use API data when available, fallback to hardcoded
   const activeOps = useMemo(() => {
-    if (operationTypes && operationTypes.length > 0) {
-      return operationTypes
-        .filter(o => o.isActive && !isHiddenOperationType(o.name))
-        .map(o => o.name)
-    }
-    return WORK_TYPE_LABELS
-      ? (Object.entries(WORK_TYPE_LABELS) as [string, string][])
-          .filter(([k]) => !CONT_TYPE_SET.has(k) && !isHiddenOperationType(k))
-          .map(([k]) => k)
-      : []
-  }, [isHiddenOperationType, operationTypes])
+    return (operationTypes ?? [])
+      .filter(operationType => operationType.isActive)
+      .map(operationType => operationType.name)
+  }, [operationTypes])
 
   const labelFor = (wt: string): string => {
     if (operationTypes && operationTypes.length > 0) {
@@ -108,7 +99,7 @@ export function ContainerTypeGrid({
 
   const handleCustomConfirm = () => {
     const trimmed = customValue.trim()
-    if (trimmed && !isHiddenOperationType(trimmed)) {
+    if (trimmed && !isInactiveOperationType(trimmed)) {
       hapticTap(); playTick()
       onWorkTypeChange(trimmed as WorkType)
     }
@@ -124,7 +115,7 @@ export function ContainerTypeGrid({
   // Custom value detection: workType is set but it's not a known operation/cont.
   const isCustomValue =
     !!workType
-    && !isHiddenOperationType(workType)
+    && !isInactiveOperationType(workType)
     && !activeOps.includes(workType)
     && !CONT_TYPE_SET.has(workType)
 

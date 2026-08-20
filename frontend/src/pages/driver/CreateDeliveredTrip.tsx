@@ -23,8 +23,6 @@ import { useOperationTypes } from '@/hooks/queries/operation-types'
 import { useToast } from '@/components/atoms/Toast'
 import type { DeliveredTrip } from '@/data/domain'
 
-const HIDDEN_DRIVER_OPERATION_TYPES = ['XUẤT/NHẬP TÀU'] as const
-
 /**
  * CreateDeliveredTrip — mobile-first redesign
  *
@@ -176,7 +174,6 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                 onContTypeChange={updateAllContType}
                 onWorkTypeChange={updateAllWorkType}
                 operationTypes={operationTypes}
-                hiddenOperationTypes={HIDDEN_DRIVER_OPERATION_TYPES}
               />
               {isEdit && original && (
                 <div className="space-y-0.5 mt-2">
