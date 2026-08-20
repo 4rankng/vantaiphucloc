@@ -2,7 +2,7 @@ import { Loader2, Unlink, Trash2 } from 'lucide-react'
 import { type Column } from '@/components/shared/data-display/DataTable'
 import { getWorkTypeLabel } from '@/data/domain'
 import { formatMatchDate } from '@/lib/match-utils'
-import { formatTime } from '@/lib/format'
+import { formatDate, formatTime } from '@/lib/format'
 import type { DeliveredTrip } from '@/data/domain'
 
 function money(val: number | undefined | null): string {
