@@ -3,6 +3,7 @@ import { Unlink, Trash2, Loader2, ArrowRight } from 'lucide-react'
 import { Plate } from '@/components/shared/data-display/Plate'
 import { getWorkTypeLabel, formatCurrency, type DeliveredTrip } from '@/data/domain'
 import { formatMatchDate } from '@/lib/match-utils'
+import { formatTime } from '@/lib/format'
 
 export interface DeliveredTripMobileCardProps {
   trip: DeliveredTrip
@@ -142,7 +143,9 @@ export const DeliveredTripMobileCard = memo(function DeliveredTripMobileCard({
         {trip.tripDate && (
           <>
             <span style={{ color: 'var(--ink-4)' }}>·</span>
-            <span className="tabular-nums">{formatMatchDate(trip.tripDate)}</span>
+            <span className="tabular-nums">
+              {formatMatchDate(trip.tripDate)} {formatTime(trip.createdAt)}
+            </span>
           </>
         )}
         {trip.driver?.name && (

@@ -69,6 +69,7 @@ class DeliveredTripRepository(ABC):
         date_from: date | None = None,
         date_to: date | None = None,
         matched: bool | None = None,
+        work_types: tuple[str, ...] | None = None,
         sort_by: str | None = None,
         sort_order: str = "desc",
         search: str | None = None,

@@ -93,8 +93,8 @@ export const queryKeys = {
     ['monthly-pnl', startDate, endDate] as const,
   vehiclePnL: (dateFrom: string, dateTo: string, vehicleId?: number) =>
     ['vehicle-pnl', dateFrom, dateTo, vehicleId ?? 'all'] as const,
-  tripDailyStats: (dateFrom: string, dateTo: string, clientId?: number | null, driverId?: number | null, matched?: boolean | null) =>
-    ['trip-daily-stats', dateFrom, dateTo, clientId ?? null, driverId ?? null, matched ?? null] as const,
+  tripDailyStats: (dateFrom: string, dateTo: string, clientId?: number | null, driverId?: number | null, matched?: boolean | null, workType?: string | null) =>
+    ['trip-daily-stats', dateFrom, dateTo, clientId ?? null, driverId ?? null, matched ?? null, workType ?? null] as const,
 
   // ─── Route Pricing ──────────────────────────────────────────────────────────
   routePricings: ['route-pricings'] as const,

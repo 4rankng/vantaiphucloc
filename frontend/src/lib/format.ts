@@ -30,6 +30,13 @@ function pad(n: number): string {
 
 export type DateFormat = 'full' | 'short' | 'compact' | 'month' | 'datetime'
 
+export function formatTime(value: string | Date | null | undefined): string {
+  const d = parseDate(value)
+  if (!d) return '—'
+
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 /**
  * Format a date string for display.
  *

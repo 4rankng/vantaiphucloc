@@ -263,3 +263,36 @@ class OperationTypeResolverService:
             .all()
         )
         refresh_work_types_from_async(frozenset(rows))
+
+
+async def operation_type_filter_values(
+    db: AsyncSession, raw_name: str
+) -> tuple[str, ...]:
+    canonical_name = await OperationTypeResolverService(db).resolve(raw_name)
+    values = {raw_name.strip(), canonical_name or raw_name.strip()}
+    if canonical_name:
+        operation_type_id = await db.scalar(
+            select(OperationType.id).where(OperationType.name == canonical_name)
+        )
+        if operation_type_id is not None:
+            aliases = (
+                (
+                    await db.execute(
+                        select(OperationTypeAlias.alias).where(
+                            OperationTypeAlias.operation_type_id == operation_type_id
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            values.update(aliases)
+
+    for value in tuple(values):
+        normalized = normalize_operation_type(value)
+        if normalized:
+            values.add(normalized)
+            values.add(normalized.replace("/", "_").replace(" ", "_"))
+            values.add(normalized.replace("/", " "))
+
+    return tuple(sorted(value for value in values if value))

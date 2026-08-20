@@ -140,6 +140,57 @@ async def test_get_trip_daily_stats_revenue(db_session, async_client):
     assert res.status_code == 200
     assert res.json()["total"] == 0
 
+    work_type_params = {
+        "date_from": "2026-05-01",
+        "date_to": "2026-05-31",
+        "work_type": "XUẤT/NHẬP TÀU",
+    }
+    res = await async_client.get(
+        "/api/v1/dashboard/trip-daily-stats",
+        params=work_type_params,
+        headers=headers,
+    )
+    assert res.status_code == 200
+    assert res.json()["total"] == 4
+
+    res = await async_client.get(
+        "/api/v1/delivered-trips",
+        params=work_type_params,
+        headers=headers,
+    )
+    assert res.status_code == 200
+    assert res.json()["total"] == 4
+
+
+@pytest.mark.asyncio
+async def test_work_type_filter_matches_legacy_underscored_value(
+    db_session, async_client
+):
+    partner, pickup, dropoff, driver = await _seed_partner_locations_driver(db_session)
+    headers = await _accountant_headers(db_session, async_client)
+    db_session.add(
+        DeliveredTrip(
+            client_id=partner.id,
+            pickup_location_id=pickup.id,
+            dropoff_location_id=dropoff.id,
+            driver_id=driver.id,
+            trip_date=date(2026, 5, 10),
+            work_type="CHUYEN_BAI",
+            cont_type="F20",
+        )
+    )
+    await db_session.commit()
+
+    params = {
+        "date_from": "2026-05-01",
+        "date_to": "2026-05-31",
+        "work_type": "CHUYỂN BÃI",
+    }
+    for path in ("/api/v1/delivered-trips", "/api/v1/dashboard/trip-daily-stats"):
+        res = await async_client.get(path, params=params, headers=headers)
+        assert res.status_code == 200
+        assert res.json()["total"] == 1
+
 
 async def _director_headers(db_session, async_client):
     phone = "09000000003"

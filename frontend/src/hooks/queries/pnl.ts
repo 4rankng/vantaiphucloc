@@ -33,11 +33,12 @@ export function useTripDailyStats(
   clientId?: number,
   driverId?: number,
   matched?: boolean,
+  workType?: string,
 ) {
   return useQuery({
-    queryKey: queryKeys.tripDailyStats(dateFrom, dateTo, clientId, driverId, matched),
+    queryKey: queryKeys.tripDailyStats(dateFrom, dateTo, clientId, driverId, matched, workType),
     queryFn: async () => {
-      const res = await apiClient.getTripDailyStats(dateFrom, dateTo, clientId, driverId, matched)
+      const res = await apiClient.getTripDailyStats(dateFrom, dateTo, clientId, driverId, matched, workType)
       return res.success ? res.data : null
     },
     enabled: !!dateFrom && !!dateTo,

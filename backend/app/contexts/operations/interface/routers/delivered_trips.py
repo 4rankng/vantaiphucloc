@@ -77,6 +77,9 @@ from app.contexts.operations.infrastructure.photo_storage import (
     hash_image_bytes,
     save_base64_photo,
 )
+from app.contexts.operations.infrastructure.operation_type_resolver import (
+    operation_type_filter_values,
+)
 from app.utils.iso6346 import normalize_container_number as _norm
 
 _logger = logging.getLogger(__name__)
@@ -581,6 +584,7 @@ async def list_delivered_trips(
     date_from: date | None = None,
     date_to: date | None = None,
     matched: bool | None = None,
+    work_type: str | None = None,
     search: str | None = Query(
         None, description="Search vessel, container number, client name/code"
     ),
@@ -598,6 +602,11 @@ async def list_delivered_trips(
         driver_id = current_user.id
 
     safe_sort_by = sort_by if sort_by in _VALID_SORT_COLS else None
+    work_types = (
+        await operation_type_filter_values(use_case.repo.session, work_type)
+        if work_type
+        else None
+    )
 
     items, total = await use_case(
         DeliveredTripListFilters(
@@ -609,6 +618,7 @@ async def list_delivered_trips(
             date_from=date_from,
             date_to=date_to,
             matched=matched,
+            work_types=work_types,
             sort_by=safe_sort_by,
             sort_order=sort_order,
             search=search,

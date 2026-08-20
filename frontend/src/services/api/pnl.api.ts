@@ -104,6 +104,7 @@ export function getTripDailyStats(
   clientId?: number,
   driverId?: number,
   matched?: boolean,
+  workType?: string,
 ): Promise<ApiResponse<TripDailyStats>> {
   return safeRequest(() => api.get('/dashboard/trip-daily-stats', {
     params: {
@@ -112,6 +113,7 @@ export function getTripDailyStats(
       ...(clientId ? { client_id: clientId } : {}),
       ...(driverId ? { driver_id: driverId } : {}),
       ...(matched !== undefined ? { matched } : {}),
+      ...(workType ? { work_type: workType } : {}),
     },
   }))
 }

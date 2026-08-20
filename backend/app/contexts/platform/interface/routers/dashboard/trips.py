@@ -11,6 +11,9 @@ from app.models.base import User
 from app.core.deps import get_current_user
 from app.database import get_db
 from app.schemas.domain import TripDailyStatsOut
+from app.contexts.operations.infrastructure.operation_type_resolver import (
+    operation_type_filter_values,
+)
 
 router = APIRouter()
 
@@ -22,6 +25,7 @@ async def get_trip_daily_stats(
     client_id: int | None = None,
     driver_id: int | None = None,
     matched: bool | None = None,
+    work_type: str | None = None,
     _current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -39,6 +43,10 @@ async def get_trip_daily_stats(
         raise HTTPException(
             status_code=422, detail="Invalid date format. Use YYYY-MM-DD."
         )
+
+    work_types = (
+        await operation_type_filter_values(db, work_type) if work_type else None
+    )
 
     stmt = select(
         DeliveredTrip.trip_date,
@@ -62,6 +70,8 @@ async def get_trip_daily_stats(
             if matched
             else DeliveredTrip.booked_trip_id.is_(None)
         )
+    if work_types:
+        stmt = stmt.where(DeliveredTrip.work_type.in_(work_types))
 
     rows = (
         await db.execute(
@@ -137,6 +147,8 @@ async def get_trip_daily_stats(
             if matched
             else DeliveredTrip.booked_trip_id.is_(None)
         )
+    if work_types:
+        base_where.append(DeliveredTrip.work_type.in_(work_types))
 
     internal_count = (
         await db.execute(

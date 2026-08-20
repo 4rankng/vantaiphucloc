@@ -17,7 +17,7 @@ const PAGE_SIZE = 10
 
 export function useDeliveredTripsInfinite(filters?: {
   clientId?: number; driverId?: number; vendorId?: number
-  dateFrom?: string; dateTo?: string; matched?: boolean; search?: string
+  dateFrom?: string; dateTo?: string; matched?: boolean; workType?: string; search?: string
   sortBy?: DeliveredTripSortBy; sortOrder?: SortOrder
 }) {
   return useInfiniteQuery<PaginatedResult<DeliveredTrip>, Error>({
@@ -25,7 +25,7 @@ export function useDeliveredTripsInfinite(filters?: {
       queryKeys.deliveredTripsInfinite[0],
       filters?.clientId ?? '', filters?.driverId ?? '', filters?.vendorId ?? '',
       filters?.dateFrom ?? '', filters?.dateTo ?? '',
-      String(filters?.matched ?? ''), filters?.search ?? '',
+      String(filters?.matched ?? ''), filters?.workType ?? '', filters?.search ?? '',
       filters?.sortBy ?? '', filters?.sortOrder ?? '',
     ],
     queryFn: async ({ pageParam }) => {
@@ -41,7 +41,7 @@ export function useDeliveredTripsInfinite(filters?: {
 }
 
 
-export function useDeliveredTrips(filters?: { clientId?: number; driverId?: number; vendorId?: number; dateFrom?: string; dateTo?: string; matched?: boolean; search?: string; page?: number; pageSize?: number; sortBy?: DeliveredTripSortBy; sortOrder?: SortOrder }) {
+export function useDeliveredTrips(filters?: { clientId?: number; driverId?: number; vendorId?: number; dateFrom?: string; dateTo?: string; matched?: boolean; workType?: string; search?: string; page?: number; pageSize?: number; sortBy?: DeliveredTripSortBy; sortOrder?: SortOrder }) {
   const flatFilters: Record<string, string> = {}
   if (filters?.clientId) flatFilters.clientId = String(filters.clientId)
   if (filters?.driverId) flatFilters.driverId = String(filters.driverId)
@@ -49,6 +49,7 @@ export function useDeliveredTrips(filters?: { clientId?: number; driverId?: numb
   if (filters?.dateFrom) flatFilters.dateFrom = filters.dateFrom
   if (filters?.dateTo) flatFilters.dateTo = filters.dateTo
   if (filters?.matched !== undefined) flatFilters.matched = String(filters.matched)
+  if (filters?.workType) flatFilters.workType = filters.workType
   if (filters?.search) flatFilters.search = filters.search
   if (filters?.page) flatFilters.page = String(filters.page)
   if (filters?.pageSize) flatFilters.pageSize = String(filters.pageSize)
@@ -158,4 +159,3 @@ export function useDuplicateContainers(filters?: {
     gcTime: 0,
   })
 }
-

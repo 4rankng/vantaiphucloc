@@ -31,6 +31,7 @@ import { getDeliveredTripColumns } from '@/components/shared/data-display/Delive
 import { useMonthParams } from './use-month-params'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { useOperationTypes } from '@/hooks/queries/operation-types'
 import { DeliveredTripMobileCard } from '@/components/shared/cards/DeliveredTripMobileCard'
 import type { DeliveredTrip } from '@/data/domain'
 import type { DeliveredTripSortBy, SortOrder } from '@/services/api/deliveredTrips.api'
@@ -63,6 +64,7 @@ export function DoiSoatPage() {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
+  const [workTypeFilter, setWorkTypeFilter] = useState('ALL')
   const [showImport, setShowImport] = useState(false)
   const [matchTarget, setMatchTarget] = useState<DeliveredTrip | null>(null)
   const [doiSoatClientId, setDoiSoatClientId] = useState<string>('ALL')
@@ -91,6 +93,7 @@ export function DoiSoatPage() {
   const exportDoiSoat = useExportDoiSoatExcel()
   const { data: clients = [] } = useClients()
   const { data: drivers = [] } = useDrivers()
+  const { data: operationTypes = [] } = useOperationTypes()
 
   // Auto-match
   const [showAutoMatchDate, setShowAutoMatchDate] = useState(false)
@@ -208,6 +211,7 @@ export function DoiSoatPage() {
     driverId: driverIdFilter !== 'ALL' && driverIdFilter !== '' ? Number(driverIdFilter) : undefined,
     vendorId: vendorId !== 'ALL' && vendorId !== '' ? Number(vendorId) : undefined,
     matched: statusFilter !== 'ALL' ? (statusFilter === 'MATCHED') : undefined,
+    workType: workTypeFilter !== 'ALL' ? workTypeFilter : undefined,
     search: debouncedSearch || undefined,
     sortBy,
     sortOrder,
@@ -227,6 +231,7 @@ export function DoiSoatPage() {
     doiSoatClientId !== 'ALL' && doiSoatClientId !== '' ? Number(doiSoatClientId) : undefined,
     driverIdFilter !== 'ALL' && driverIdFilter !== '' ? Number(driverIdFilter) : undefined,
     statusFilter !== 'ALL' ? (statusFilter === 'MATCHED') : undefined,
+    workTypeFilter !== 'ALL' ? workTypeFilter : undefined,
   )
   const globalTotal = dailyStats?.total ?? 0
   const globalMatched = dailyStats?.matched ?? 0
@@ -393,6 +398,21 @@ export function DoiSoatPage() {
                     ...drivers.map((d) => ({ value: String(d.id), label: d.fullName || d.username, sublabel: d.phone })),
                   ]}
                   onChange={setDriverIdFilter}
+                  style={{ width: '100%', height: 32, fontSize: 12.5 }}
+                />
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <InlineSelect
+                  placeholder="Tất cả tác nghiệp"
+                  value={workTypeFilter}
+                  options={[
+                    { value: 'ALL', label: 'Tất cả tác nghiệp' },
+                    ...operationTypes.map((operationType) => ({
+                      value: operationType.name,
+                      label: operationType.label,
+                    })),
+                  ]}
+                  onChange={setWorkTypeFilter}
                   style={{ width: '100%', height: 32, fontSize: 12.5 }}
                 />
               </div>

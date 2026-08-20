@@ -28,6 +28,7 @@ interface DeliveredTripFilters {
   dateFrom?: string
   dateTo?: string
   matched?: boolean
+  workType?: string
   search?: string
   page?: number
   pageSize?: number
@@ -85,6 +86,7 @@ export function getDeliveredTrips(filters?: DeliveredTripFilters): Promise<ApiRe
     if (filters?.dateFrom) params.date_from = filters.dateFrom
     if (filters?.dateTo) params.date_to = filters.dateTo
     if (filters?.matched !== undefined) params.matched = String(filters.matched)
+    if (filters?.workType) params.work_type = filters.workType
     if (filters?.search) params.search = filters.search
     if (filters?.sortBy) params.sort_by = filters.sortBy
     if (filters?.sortOrder) params.sort_order = filters.sortOrder

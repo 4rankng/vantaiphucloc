@@ -150,6 +150,7 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         date_from: date | None = None,
         date_to: date | None = None,
         matched: bool | None = None,
+        work_types: tuple[str, ...] | None = None,
         sort_by: str | None = None,
         sort_order: str = "desc",
         search: str | None = None,
@@ -220,6 +221,8 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
                 q = q.where(DeliveredTripORM.booked_trip_id.isnot(None))
             else:
                 q = q.where(DeliveredTripORM.booked_trip_id.is_(None))
+        if work_types:
+            q = q.where(DeliveredTripORM.work_type.in_(work_types))
         total = (
             await self.session.scalar(select(func.count()).select_from(q.subquery()))
             or 0

@@ -2,7 +2,7 @@ import { Loader2, Unlink, Trash2 } from 'lucide-react'
 import { type Column } from '@/components/shared/data-display/DataTable'
 import { getWorkTypeLabel } from '@/data/domain'
 import { formatMatchDate } from '@/lib/match-utils'
-import { formatDate } from '@/lib/format'
+import { formatTime } from '@/lib/format'
 import type { DeliveredTrip } from '@/data/domain'
 
 function money(val: number | undefined | null): string {
@@ -108,15 +108,17 @@ export function getDeliveredTripColumns(opts: DeliveredTripColumnsOptions): Colu
     {
       key: 'date',
       header: 'Ngày đi',
-      width: 64,
+      width: 84,
       sortKey: 'trip_date',
       render: (t) => (
-        <span
-          className="tabular-nums"
-          style={{ color: 'var(--ink-2)', fontFamily: 'var(--theme-font-mono)', fontSize: 12.5 }}
-        >
-          {formatMatchDate(t.tripDate)}
-        </span>
+        <div className="flex flex-col tabular-nums leading-tight" style={{ fontFamily: 'var(--theme-font-mono)' }}>
+          <span style={{ color: 'var(--ink-2)', fontSize: 12.5 }}>
+            {formatMatchDate(t.tripDate)}
+          </span>
+          <span style={{ color: 'var(--ink-4)', fontSize: 11 }}>
+            {formatTime(t.createdAt)}
+          </span>
+        </div>
       ),
     },
     {
