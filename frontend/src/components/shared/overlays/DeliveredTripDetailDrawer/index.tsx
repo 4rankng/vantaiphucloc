@@ -19,6 +19,8 @@ import { CriteriaEditRow } from './CriteriaEditRow'
 import { InlineSelect } from './InlineSelect'
 import { AISuggestionDialog } from '@/components/shared/feedback/AISuggestionDialog'
 
+const HIDDEN_ACCOUNTANT_OPERATION_TYPES = new Set(['XUẤT/NHẬP TÀU'])
+
 function statusPillVariant(matched: boolean): PillVariant {
   return matched ? 'success' : 'warn'
 }
@@ -173,7 +175,9 @@ export function DeliveredTripDetailDrawer({
                 <InlineSelect
                   value={trip.workType ?? null}
                   displayValue={operationTypes.find(o => o.name === trip.workType)?.label ?? trip.workType}
-                  options={operationTypes.filter(o => o.isActive).map((o) => ({ value: o.name, label: o.label }))}
+                  options={operationTypes
+                    .filter(o => o.isActive && !HIDDEN_ACCOUNTANT_OPERATION_TYPES.has(o.name))
+                    .map((o) => ({ value: o.name, label: o.label }))}
                   onChange={(v) => updateTrip.mutate({ id: trip.id, data: { workType: v as string || null } })}
                 />
               </CriteriaEditRow>
