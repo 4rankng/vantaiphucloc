@@ -7,7 +7,7 @@
 BACKEND_PORT  ?= 8100
 PROD_SERVER   := phucloc.tingting.vip
 FRONTEND_PORT ?= 5174
-ADMINER_PORT  ?= 8083
+ADMINER_PORT  ?= 8085
 POSTGRES_PORT ?= 5433
 REDIS_PORT    ?= 6381
 # Local Adminer → PRODUCTION over SSH tunnel (make adminer)
@@ -153,7 +153,7 @@ api-test:
 
 ## lint: Run ruff on backend and eslint on frontend
 lint:
-	cd backend && ruff check .
+	cd backend && .venv/bin/ruff check .
 	cd frontend && pnpm eslint src
 
 # ── Test ────────────────────────────────────────────────────────────────────────
@@ -164,9 +164,9 @@ test: test-backend test-frontend
 ## test-backend: Run ruff lint, ruff format check, and pytest
 test-backend:
 	@echo "── Backend: ruff lint ───────────────────"
-	cd backend && ruff check .
+	cd backend && .venv/bin/ruff check .
 	@echo "── Backend: ruff format check ───────────"
-	cd backend && ruff format --check .
+	cd backend && .venv/bin/ruff format --check .
 	@echo "── Backend: pytest ──────────────────────"
 	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -q
 

@@ -1,9 +1,9 @@
-"""Dev seed with realistic operational data for Feb–May 2026.
+"""Dev seed with realistic operational data for Feb–Aug 2026.
 
 Usage:
     cd backend && python -m app.seed_dev
 
-Generates production-like data spanning 4 months with realistic P&L:
+Generates production-like data spanning 7 months with realistic P&L:
   - ~70-90 trips/vehicle/month (2-3 container moves/day)
   - 3 clients: HAIAN (main), GLORY, CONSCIENCE
   - 12 routes across 7 port/depot locations
@@ -53,6 +53,9 @@ MONTHS = [
     (2026, 3),
     (2026, 4),
     (2026, 5),
+    (2026, 6),
+    (2026, 7),
+    (2026, 8),
 ]
 
 rng = Random(42)
@@ -917,7 +920,7 @@ async def seed_dev() -> None:
         print(f"  Created {pending_count} PENDING trip orders")
 
         # ── 9. Vehicle Expenses (all 4 months) ─────────────────────────
-        print("\n=== Seeding Vehicle Expenses (Feb–May) ===")
+        print("\n=== Seeding Vehicle Expenses (Feb–Aug) ===")
         expense_count = 0
         for year, month in MONTHS:
             for plate, veh in vehicle_map.items():
@@ -1023,7 +1026,9 @@ async def seed_dev() -> None:
             for _ in range(n_reqs):
                 provider = rng.choices(["openrouter", "gemini"], weights=[85, 15])[0]
                 model = (
-                    "qwen/qwen3-vl-32b-instruct" if provider == "openrouter" else "gemini-1.5-flash"
+                    "qwen/qwen3-vl-32b-instruct"
+                    if provider == "openrouter"
+                    else "gemini-1.5-flash"
                 )
                 success = rng.random() < 0.94
                 container_numbers_found = rng.choice([1, 2]) if success else 0
@@ -1060,7 +1065,7 @@ async def seed_dev() -> None:
 
         # ── Summary ─────────────────────────────────────────────────────
         print("\n" + "=" * 60)
-        print("SEED COMPLETE — Realistic P&L data (Feb–May 2026)")
+        print("SEED COMPLETE — Realistic P&L data (Feb–Aug 2026)")
         print("=" * 60)
         for t in [
             "users",
