@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect, useMemo, useState } from 'react'
 import type { ElementType, ReactNode, RefObject } from 'react'
-import { Route, ChevronRight, ChevronsUpDown, Search, MapPin, Clock3 } from 'lucide-react'
+import { Route, ChevronRight, ChevronsUpDown, Search, MapPin, Clock3, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { EmptyState } from '@/components/shared/feedback/EmptyState'
 import { TableSkeleton } from '@/components/shared/data-display/TableSkeleton/TableSkeleton'
 import { RoutePricingEditRow } from './RoutePricingEditRow'
@@ -100,6 +100,7 @@ function ClientRail({
 
   return (
     <aside
+      id="route-pricing-client-list"
       className="flex min-h-[620px] flex-col overflow-hidden rounded-xl"
       style={{
         background: 'var(--theme-bg-secondary)',
@@ -394,6 +395,7 @@ export function RoutePricingTable({
 }: RoutePricingTableProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [activePricingTab, setActivePricingTab] = useState<PricingTab>('fare')
+  const [isClientRailVisible, setIsClientRailVisible] = useState(true)
 
   const handleStartEdit = useCallback(
     (rp: RoutePricing, field: FocusableField = 'f20Price') => onStartEdit(rp, field),
@@ -514,14 +516,17 @@ export function RoutePricingTable({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-      <ClientRail
-        groups={groups}
-        selectedClientId={selectedGroup?.clientId ?? groups[0].clientId}
-        onSelectClient={onSelectClient ?? onToggleClient}
-      />
+    <div className={isClientRailVisible ? 'grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]' : 'grid grid-cols-1 gap-4'}>
+      {isClientRailVisible && (
+        <ClientRail
+          groups={groups}
+          selectedClientId={selectedGroup?.clientId ?? groups[0].clientId}
+          onSelectClient={onSelectClient ?? onToggleClient}
+        />
+      )}
 
       <div
+        data-route-pricing-workspace
         className="overflow-hidden rounded-xl"
         style={{
           background: 'var(--theme-bg-secondary)',
@@ -554,6 +559,21 @@ export function RoutePricingTable({
                     </div>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  aria-controls="route-pricing-client-list"
+                  aria-expanded={isClientRailVisible}
+                  onClick={() => setIsClientRailVisible(visible => !visible)}
+                  className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition-colors"
+                  style={{
+                    color: 'var(--theme-text-secondary)',
+                    background: 'var(--theme-bg-primary)',
+                    border: '1px solid var(--theme-border-default)',
+                  }}
+                >
+                  {isClientRailVisible ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+                  {isClientRailVisible ? 'Ẩn danh sách chủ hàng' : 'Hiện danh sách chủ hàng'}
+                </button>
               </div>
               <PricingTabs activeTab={activePricingTab} onChange={handlePricingTabChange} />
             </div>
