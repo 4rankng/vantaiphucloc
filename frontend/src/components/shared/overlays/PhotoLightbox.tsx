@@ -3,13 +3,19 @@ import {
   useEffect,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type SyntheticEvent,
   type WheelEvent as ReactWheelEvent,
 } from 'react'
 import { createPortal } from 'react-dom'
-import { AlertTriangle, Check, Download, Loader2, X } from 'lucide-react'
-import { downloadImage, prefetchImageBlob } from '@/lib/download'
+import { AlertTriangle, Check, Download, ImageOff, Loader2, RefreshCw, X } from 'lucide-react'
+import {
+  downloadImage,
+  getImageDownloadHref,
+  prefetchImageBlob,
+  shouldPrepareImageDownload,
+} from '@/lib/download'
 import { cn } from '@/lib/utils'
 
 interface PhotoLightboxProps {
@@ -35,6 +41,7 @@ interface Size {
 }
 
 type DownloadState = 'idle' | 'working' | 'done' | 'error'
+type ImageState = 'loading' | 'ready' | 'error'
 
 const MIN_SCALE = 1
 const MAX_SCALE = 5
@@ -107,6 +114,9 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
   const [isInteracting, setIsInteracting] = useState(false)
   const [downloadState, setDownloadState] = useState<DownloadState>('idle')
   const [downloadError, setDownloadError] = useState('')
+  const [imageState, setImageState] = useState<ImageState>('loading')
+  const [imageAttempt, setImageAttempt] = useState(0)
+  const [reducedMotion, setReducedMotion] = useState(false)
 
   const stageRef = useRef<HTMLDivElement | null>(null)
   const transformRef = useRef<Transform>(EMPTY_TRANSFORM)
@@ -216,13 +226,27 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
     }
   }, [alt, clearDownloadStatusTimer, downloadState, finishDownloadStatus, src])
 
+  const handleDownloadClick = useCallback((e: ReactMouseEvent<HTMLAnchorElement>) => {
+    e.stopPropagation()
+    if (!shouldPrepareImageDownload()) return
+
+    e.preventDefault()
+    void handleDownload()
+  }, [handleDownload])
+
   const handleImageLoad = useCallback((e: SyntheticEvent<HTMLImageElement>) => {
     naturalSizeRef.current = {
       width: e.currentTarget.naturalWidth,
       height: e.currentTarget.naturalHeight,
     }
+    setImageState('ready')
     commitTransform((current) => current)
   }, [commitTransform])
+
+  const handleImageRetry = useCallback(() => {
+    setImageState('loading')
+    setImageAttempt((current) => current + 1)
+  }, [])
 
   const handleWheel = useCallback((e: ReactWheelEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -554,6 +578,14 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
   }, [])
 
   useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const updatePreference = () => setReducedMotion(media.matches)
+    updatePreference()
+    media.addEventListener('change', updatePreference)
+    return () => media.removeEventListener('change', updatePreference)
+  }, [])
+
+  useEffect(() => {
     pointersRef.current.clear()
     dragRef.current = null
     pinchRef.current = null
@@ -564,6 +596,8 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
     setTransform(EMPTY_TRANSFORM)
     setDownloadState('idle')
     setDownloadError('')
+    setImageState('loading')
+    setImageAttempt(0)
     clearDownloadStatusTimer()
     void prefetchImageBlob(src)
   }, [clearDownloadStatusTimer, src])
@@ -571,6 +605,7 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
   useEffect(() => clearDownloadStatusTimer, [clearDownloadStatusTimer])
 
   const canReset = transform.scale > MIN_SCALE + 0.001
+  const downloadHref = getImageDownloadHref(src)
   const downloadLabel = downloadState === 'working'
     ? 'Đang tải'
     : downloadState === 'done'
@@ -584,8 +619,11 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
       role="dialog"
       aria-modal="true"
       aria-label="Xem ảnh toàn màn hình"
-      className="fixed inset-0 z-[200] overflow-hidden animate-in fade-in duration-150"
-      style={{ background: 'color-mix(in srgb, var(--theme-text-primary) 96%, transparent)' }}
+      aria-busy={imageState === 'loading'}
+      className="fixed inset-0 z-[200] overflow-hidden animate-in fade-in duration-150 motion-reduce:animate-none"
+      style={{
+        background: 'radial-gradient(circle at 50% 44%, color-mix(in srgb, var(--theme-sidebar) 24%, var(--theme-text-primary)), var(--theme-text-primary) 72%)',
+      }}
     >
       <div
         ref={stageRef}
@@ -597,50 +635,95 @@ export function PhotoLightbox({ src, alt = 'Ảnh container', onClose }: PhotoLi
         onPointerDown={handlePointerDown}
         onWheel={handleWheel}
       >
+        {imageState === 'loading' && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="absolute inset-0 grid place-items-center text-[var(--theme-text-inverse)]"
+          >
+            <div className="flex items-center gap-3 rounded-xl border border-[color-mix(in_srgb,var(--theme-text-inverse)_12%,transparent)] bg-[color-mix(in_srgb,var(--theme-text-primary)_46%,transparent)] px-4 py-3 text-sm font-medium backdrop-blur-md">
+              <Loader2 className="h-4 w-4 animate-spin opacity-75 motion-reduce:animate-none" />
+              Đang tải ảnh…
+            </div>
+          </div>
+        )}
+        {imageState === 'error' && (
+          <div role="alert" className="absolute inset-0 z-10 grid place-items-center px-6 text-center text-[var(--theme-text-inverse)]">
+            <div className="flex max-w-xs flex-col items-center gap-4">
+              <span className="grid h-12 w-12 place-items-center rounded-xl border border-[color-mix(in_srgb,var(--theme-text-inverse)_14%,transparent)] bg-[color-mix(in_srgb,var(--theme-text-inverse)_8%,transparent)]">
+                <ImageOff className="h-5 w-5 opacity-70" />
+              </span>
+              <div className="space-y-1">
+                <p className="text-[15px] font-semibold">Không tải được ảnh</p>
+                <p className="text-[13px] opacity-70">Kiểm tra kết nối rồi thử lại.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleImageRetry}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[color-mix(in_srgb,var(--theme-text-inverse)_22%,transparent)] bg-[color-mix(in_srgb,var(--theme-text-inverse)_10%,transparent)] px-4 text-sm font-semibold backdrop-blur-md transition-[background,transform] duration-150 hover:bg-[color-mix(in_srgb,var(--theme-text-inverse)_16%,transparent)] active:scale-[0.98]"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Thử tải lại
+              </button>
+            </div>
+          </div>
+        )}
         <img
+          key={imageAttempt}
           src={src}
           alt={alt}
-          className="max-h-[100dvh] max-w-screen object-contain select-none rounded-sm will-change-transform"
+          data-viewer-image-state={imageState}
+          className="max-h-[100dvh] max-w-screen object-contain select-none rounded-[2px]"
           style={{
             transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale})`,
-            transition: isInteracting ? 'none' : 'transform 140ms ease-out',
+            opacity: imageState === 'ready' ? 1 : 0,
+            transition: reducedMotion || isInteracting
+              ? 'none'
+              : 'transform 140ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease-out',
+            willChange: isInteracting ? 'transform' : 'auto',
           }}
           draggable={false}
           onLoad={handleImageLoad}
+          onError={() => setImageState('error')}
         />
       </div>
 
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-end gap-2 px-3 pb-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] sm:px-4"
+        className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-end pb-8 pt-[calc(env(safe-area-inset-top,0px)+12px)]"
         style={{
-          background: 'linear-gradient(to bottom, color-mix(in srgb, var(--theme-text-primary) 72%, transparent), transparent)',
+          paddingLeft: 'max(12px, env(safe-area-inset-left, 0px))',
+          paddingRight: 'max(12px, env(safe-area-inset-right, 0px))',
+          background: 'linear-gradient(to bottom, color-mix(in srgb, var(--theme-text-primary) 88%, transparent), color-mix(in srgb, var(--theme-text-primary) 30%, transparent) 58%, transparent)',
         }}
       >
-        <div className="pointer-events-auto flex max-w-full items-center gap-1.5 sm:gap-2">
-          <button
-            type="button"
-            onClick={handleDownload}
-            disabled={downloadState === 'working'}
+        <div className="pointer-events-auto flex max-w-full items-center gap-2">
+          <a
+            href={downloadHref}
+            download
+            onClick={handleDownloadClick}
+            aria-disabled={downloadState === 'working'}
             className={cn(
-              'inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-[12px] font-semibold backdrop-blur-md transition-[background,color,border-color,transform] duration-150 active:scale-95 disabled:opacity-70 sm:h-11 sm:gap-2 sm:px-3 sm:text-[13px]',
-              'border-[color-mix(in_srgb,var(--theme-bg-secondary)_18%,transparent)] bg-[color-mix(in_srgb,var(--theme-bg-secondary)_14%,transparent)] text-[var(--theme-bg-primary)] hover:bg-[color-mix(in_srgb,var(--theme-bg-secondary)_24%,transparent)]',
+              'inline-flex h-12 items-center justify-center gap-2 rounded-xl border px-3 text-[13px] font-semibold backdrop-blur-md transition-[background,color,border-color,transform] duration-150 active:scale-[0.98] disabled:opacity-70 sm:h-11',
+              'border-[color-mix(in_srgb,var(--theme-text-inverse)_18%,transparent)] bg-[color-mix(in_srgb,var(--theme-text-inverse)_10%,transparent)] text-[var(--theme-text-inverse)] hover:bg-[color-mix(in_srgb,var(--theme-text-inverse)_16%,transparent)]',
+              downloadState === 'working' && 'pointer-events-none opacity-70',
               downloadState === 'done' && 'text-[var(--theme-status-success)]',
               downloadState === 'error' && 'text-[var(--theme-status-error)]'
             )}
             aria-label="Tải về"
             aria-live="polite"
+            tabIndex={downloadState === 'working' ? -1 : undefined}
           >
             {downloadState === 'working' ? <Loader2 className="h-5 w-5 animate-spin" />
               : downloadState === 'done' ? <Check className="h-5 w-5" />
                 : downloadState === 'error' ? <AlertTriangle className="h-5 w-5" />
                   : <Download className="h-5 w-5" />}
             <span>{downloadLabel}</span>
-          </button>
+          </a>
 
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[color-mix(in_srgb,var(--theme-bg-secondary)_18%,transparent)] bg-[color-mix(in_srgb,var(--theme-bg-secondary)_14%,transparent)] text-[var(--theme-bg-primary)] backdrop-blur-md transition-[background,transform] duration-150 hover:bg-[color-mix(in_srgb,var(--theme-bg-secondary)_24%,transparent)] active:scale-95 sm:h-11 sm:w-11"
+            className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-[color-mix(in_srgb,var(--theme-text-inverse)_18%,transparent)] bg-[color-mix(in_srgb,var(--theme-text-inverse)_10%,transparent)] text-[var(--theme-text-inverse)] backdrop-blur-md transition-[background,transform] duration-150 hover:bg-[color-mix(in_srgb,var(--theme-text-inverse)_16%,transparent)] active:scale-[0.98] sm:h-11 sm:w-11"
             aria-label="Đóng"
           >
             <X className="h-5 w-5" />
