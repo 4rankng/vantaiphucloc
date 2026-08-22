@@ -111,9 +111,9 @@ _CONTAINER_TOKEN_RE = re.compile(
 
 def _is_container_identifier(value: str) -> bool:
     normalized = normalize_container_number(value)
-    return bool(_CONTAINER_RE.fullmatch(normalized)) or validate_special_container_format(
-        normalized
-    )
+    return bool(
+        _CONTAINER_RE.fullmatch(normalized)
+    ) or validate_special_container_format(normalized)
 
 
 def _json_container_candidates(data: object) -> list[object]:
@@ -155,7 +155,9 @@ def _parse_numbers_from_response(text: str) -> list[str]:
     cleaned = re.sub(r"[`\"'\n\r]", " ", text).strip().upper()
     if cleaned == "NONE":
         return []
-    matches = [normalize_container_number(m) for m in _CONTAINER_TOKEN_RE.findall(cleaned)]
+    matches = [
+        normalize_container_number(m) for m in _CONTAINER_TOKEN_RE.findall(cleaned)
+    ]
     return _prefer_iso_identifiers([m for m in matches if _is_container_identifier(m)])
 
 

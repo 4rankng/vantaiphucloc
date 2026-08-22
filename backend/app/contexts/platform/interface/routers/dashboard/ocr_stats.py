@@ -835,6 +835,4 @@ async def get_ocr_failures(
         )
         if len(items) >= 50:
             break
-    return {
-        "items": items
-    }
+    return {"items": items}

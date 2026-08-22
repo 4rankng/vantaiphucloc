@@ -7,7 +7,7 @@ import { createServer } from 'vite'
 
 const frontendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const chromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-const selectorTimeout = 3_000
+const selectorTimeout = 10_000
 const image = Buffer.from(`
   <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
     <rect width="1600" height="900" fill="#26372f"/>

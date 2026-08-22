@@ -147,7 +147,9 @@ async def _compact_context(db: AsyncSession) -> CompactContextResponse:
 @router.post("/fast-answer", response_model=FastAnswerResponse)
 async def chatbot_fast_answer(
     body: FastAnswerRequest,
-    _current_user: User = Depends(require_roles("superadmin", "director", "accountant")),
+    _current_user: User = Depends(
+        require_roles("superadmin", "director", "accountant")
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     if not _is_staff_count_question(body.message):
@@ -175,7 +177,9 @@ async def chatbot_fast_answer(
 
 @router.get("/compact-context", response_model=CompactContextResponse)
 async def chatbot_compact_context(
-    _current_user: User = Depends(require_roles("superadmin", "director", "accountant")),
+    _current_user: User = Depends(
+        require_roles("superadmin", "director", "accountant")
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     return await _compact_context(db)

@@ -81,11 +81,32 @@ numbers. Do not include any conversational text. Example: \
 )
 
 LETTER_MAP: dict[str, int] = {
-    "A": 10, "B": 12, "C": 13, "D": 14, "E": 15, "F": 16,
-    "G": 17, "H": 18, "I": 19, "J": 20, "K": 21, "L": 23,
-    "M": 24, "N": 25, "O": 26, "P": 27, "Q": 28, "R": 29,
-    "S": 30, "T": 31, "U": 32, "V": 34, "W": 35, "X": 36,
-    "Y": 37, "Z": 38,
+    "A": 10,
+    "B": 12,
+    "C": 13,
+    "D": 14,
+    "E": 15,
+    "F": 16,
+    "G": 17,
+    "H": 18,
+    "I": 19,
+    "J": 20,
+    "K": 21,
+    "L": 23,
+    "M": 24,
+    "N": 25,
+    "O": 26,
+    "P": 27,
+    "Q": 28,
+    "R": 29,
+    "S": 30,
+    "T": 31,
+    "U": 32,
+    "V": 34,
+    "W": 35,
+    "X": 36,
+    "Y": 37,
+    "Z": 38,
 }
 POWERS_2 = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
 
@@ -520,7 +541,9 @@ def main():
             f"\n{image_path.name} "
             f"({len(raw_bytes) // 1024} KB -> {len(processed) // 1024} KB, {mime_type})"
         )
-        print(f"  Expected: {', '.join(expected_numbers) if expected_numbers else '(none)'}")
+        print(
+            f"  Expected: {', '.join(expected_numbers) if expected_numbers else '(none)'}"
+        )
         for label, model in models:
             for prompt_label, prompt_text in prompts:
                 result = run_openrouter(
@@ -546,7 +569,9 @@ def main():
         if root.is_dir()
         else root.with_suffix(".ocr_compare.json")
     )
-    dump_path.write_text(json.dumps(result_dump(results), ensure_ascii=False, indent=2), "utf-8")
+    dump_path.write_text(
+        json.dumps(result_dump(results), ensure_ascii=False, indent=2), "utf-8"
+    )
     print(f"\nJSON dump saved: {dump_path}")
 
 

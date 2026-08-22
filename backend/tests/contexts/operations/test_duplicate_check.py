@@ -400,10 +400,14 @@ class TestDuplicateCheckEndpoint:
         assert second.status_code == 409, second.text
 
         rows = (
-            await db_session.execute(
-                select(DeliveredTrip).where(DeliveredTrip.driver_id == driver.id)
+            (
+                await db_session.execute(
+                    select(DeliveredTrip).where(DeliveredTrip.driver_id == driver.id)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(rows) == 1
         assert rows[0].cont_photo_hash == PHOTO_A
 

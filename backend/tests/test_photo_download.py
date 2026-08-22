@@ -19,7 +19,9 @@ async def test_photo_download_returns_attachment(async_client, tmp_path, monkeyp
     assert "container.jpg" in response.headers["content-disposition"]
 
 
-async def test_photo_download_rejects_path_traversal(async_client, tmp_path, monkeypatch):
+async def test_photo_download_rejects_path_traversal(
+    async_client, tmp_path, monkeypatch
+):
     monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path / "photos"))
     secret = tmp_path / "secret.jpg"
     secret.write_bytes(b"secret")

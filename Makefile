@@ -177,7 +177,7 @@ test-frontend:
 	@echo "── Frontend: build ──────────────────────"
 	cd frontend && pnpm build
 	@echo "── Frontend: unit tests ─────────────────"
-	cd frontend && pnpm test -- --run 2>/dev/null || echo "(no frontend tests configured)"
+	cd frontend && pnpm test
 
 ## ocr: Benchmark OCR models over docs/ocr images
 ## Usage: make ocr [IMG=path/to/photo-or-dir] [PROMPT=scripts/new_prompt.txt]

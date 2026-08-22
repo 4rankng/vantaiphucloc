@@ -25,7 +25,9 @@ async def download_photo(path: str = Query(..., min_length=1)) -> FileResponse:
 def _resolve_photo_path(raw_path: str) -> Path:
     decoded = unquote(raw_path)
     if decoded.startswith("http://") or decoded.startswith("https://"):
-        raise HTTPException(status_code=400, detail="Only local photo paths are supported")
+        raise HTTPException(
+            status_code=400, detail="Only local photo paths are supported"
+        )
 
     if decoded.startswith("/photos/"):
         relative = decoded.removeprefix("/photos/")
