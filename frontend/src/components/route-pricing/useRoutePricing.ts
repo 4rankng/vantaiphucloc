@@ -67,6 +67,9 @@ export function useRoutePricing() {
     useQuery: useRoutePricings as unknown as (params: Record<string, unknown>) => {
       data?: { items?: unknown[]; total?: number; totalPages?: number } | null
       isLoading: boolean
+      isError?: boolean
+      error?: unknown
+      refetch?: () => Promise<unknown>
     },
     useCreateMutation: useCreateRoutePricing as () => { mutate: (arg: unknown, opts?: { onSuccess?: () => void; onError?: (err: Error) => void }) => void; isPending: boolean },
     useUpdateMutation: useUpdateRoutePricing as () => { mutate: (arg: unknown, opts?: { onSuccess?: () => void; onError?: (err: Error) => void }) => void; isPending: boolean },
@@ -141,6 +144,8 @@ export function useRoutePricing() {
     routePricings: mgr.items as RoutePricingEntity[],
     total: mgr.total,
     isLoading: mgr.isLoading,
+    loadError: mgr.error,
+    retryLoad: mgr.refetch,
     clients: clientsData ?? [],
     locations: locationsData ?? [],
     clientId: mgr.filterValue,

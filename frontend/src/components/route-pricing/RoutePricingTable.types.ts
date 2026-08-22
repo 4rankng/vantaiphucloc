@@ -40,6 +40,8 @@ export interface ClientGroup {
 export interface RoutePricingTableProps {
   data: RoutePricing[]
   isLoading: boolean
+  error?: Error | null
+  onRetry?: () => void
   editingId: number | null
   editingField?: FocusableField
   onStartEdit: (rp: RoutePricing, field?: FocusableField) => void

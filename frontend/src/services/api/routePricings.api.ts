@@ -39,19 +39,15 @@ export async function getRoutePricings(params?: {
   page?: number
   pageSize?: number
 }): Promise<PaginatedResult<RoutePricing>> {
-  try {
-    const res = await api.get('/route-pricings', {
-      params: toSnake({
-        clientId: params?.clientId,
-        workType: params?.workType,
-        page: params?.page ?? 1,
-        pageSize: params?.pageSize ?? 100,
-      }),
-    })
-    return unwrapPaginated(res.data, (raw) => toCamel<RoutePricing>(raw))
-  } catch {
-    return { items: [], total: 0, page: 1, pageSize: 100, totalPages: 0 }
-  }
+  const res = await api.get('/route-pricings', {
+    params: toSnake({
+      clientId: params?.clientId,
+      workType: params?.workType,
+      page: params?.page ?? 1,
+      pageSize: params?.pageSize ?? 100,
+    }),
+  })
+  return unwrapPaginated(res.data, (raw) => toCamel<RoutePricing>(raw))
 }
 
 export function createRoutePricing(

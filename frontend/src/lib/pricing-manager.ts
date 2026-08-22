@@ -7,6 +7,9 @@ export interface PricingManagerConfig {
   useQuery: (params: Record<string, unknown>) => {
     data?: { items?: unknown[]; total?: number; totalPages?: number } | null
     isLoading: boolean
+    isError?: boolean
+    error?: unknown
+    refetch?: () => Promise<unknown>
   }
   /** Hook that creates */
   useCreateMutation: () => UseMutationResult
@@ -64,6 +67,8 @@ export interface PricingManagerResult {
   total: number
   totalPages: number
   isLoading: boolean
+  error: Error | null
+  refetch: () => Promise<unknown>
   filterValue: number | undefined
   setFilterValue: (id?: number) => void
   workType: string | undefined
@@ -121,9 +126,17 @@ export function usePricingManager(config: PricingManagerConfig): PricingManagerR
   const [deleteId, setDeleteId] = useState<number | null>(null)
 
   const pagination = paginationEnabled ? { page, pageSize } : { pageSize }
-  const { data: queryData, isLoading } = useQuery(
+  const query = useQuery(
     buildQueryParams(filterValue, workType, pagination),
   )
+  const { data: queryData, isLoading } = query
+  const queryError = query.error instanceof Error
+    ? query.error
+    : query.error && typeof query.error === 'object' && 'message' in query.error
+      ? new Error(String(query.error.message))
+      : query.isError
+        ? new Error('Không thể tải dữ liệu, vui lòng thử lại')
+        : null
 
   const setFilterValue = useCallback(
     (id?: number) => {
@@ -239,6 +252,8 @@ export function usePricingManager(config: PricingManagerConfig): PricingManagerR
     total: queryData?.total ?? 0,
     totalPages: queryData?.totalPages ?? 0,
     isLoading,
+    error: queryError,
+    refetch: query.refetch ?? (() => Promise.resolve()),
     filterValue,
     setFilterValue,
     workType,

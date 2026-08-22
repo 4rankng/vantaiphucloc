@@ -62,6 +62,8 @@ export function RoutePricingPage() {
   const {
     routePricings,
     isLoading,
+    loadError,
+    retryLoad,
     clients,
     locations,
     clientId,
@@ -326,6 +328,8 @@ export function RoutePricingPage() {
         <RoutePricingTable
           data={filteredRoutePricings}
           isLoading={isLoading}
+          error={loadError}
+          onRetry={() => { void retryLoad() }}
           editingId={inlineEditId}
           editingField={inlineEditField}
           onStartEdit={handleStartEdit}
@@ -348,6 +352,8 @@ export function RoutePricingPage() {
         <RoutePricingTable
           data={filteredRoutePricings}
           isLoading={isLoading}
+          error={loadError}
+          onRetry={() => { void retryLoad() }}
           editingId={inlineEditId}
           editingField={inlineEditField}
           onStartEdit={handleStartEdit}
@@ -369,7 +375,7 @@ export function RoutePricingPage() {
         />
       )}
 
-      <section
+      {!loadError && <section
         className="rounded-xl p-5"
         style={{
           background: 'var(--theme-bg-secondary)',
@@ -403,7 +409,7 @@ export function RoutePricingPage() {
             </div>
           ))}
         </div>
-      </section>
+      </section>}
 
       {/* Create/edit dialog */}
       <RoutePricingDialog

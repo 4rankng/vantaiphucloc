@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect, useMemo, useState } from 'react'
 import type { ElementType, ReactNode, RefObject } from 'react'
 import { Route, ChevronRight, ChevronsUpDown, Search, MapPin, Clock3, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { EmptyState } from '@/components/shared/feedback/EmptyState'
+import { InlineError } from '@/components/shared/forms/InlineError'
 import { TableSkeleton } from '@/components/shared/data-display/TableSkeleton/TableSkeleton'
 import { RoutePricingEditRow } from './RoutePricingEditRow'
 import { RoutePricingRow } from './RoutePricingRow'
@@ -372,6 +373,8 @@ function GroupTable({
 
 export function RoutePricingTable({
   isLoading,
+  error,
+  onRetry,
   editingId,
   editingField,
   onStartEdit,
@@ -462,6 +465,16 @@ export function RoutePricingTable({
   }, [editingId, onCancelEdit])
 
   if (isLoading) return <TableSkeleton rows={5} />
+
+  if (error) {
+    return (
+      <InlineError
+        error={error}
+        component="Không thể tải bảng giá cước"
+        onRetry={onRetry ?? (() => undefined)}
+      />
+    )
+  }
 
   if (!groups.length) {
     return (

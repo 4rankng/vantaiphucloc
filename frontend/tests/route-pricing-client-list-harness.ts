@@ -43,38 +43,49 @@ const routes: RoutePricing[] = [
   },
 ]
 
+const params = new URLSearchParams(window.location.search)
+const loadFailed = params.get('error') === '1'
+
+const groups = [
+  {
+    clientId: 1,
+    clientName: routes[0].client.name,
+    clientCode: routes[0].client.code ?? null,
+    routeCount: 1,
+    routes: [routes[0]],
+  },
+  {
+    clientId: 2,
+    clientName: routes[1].client.name,
+    clientCode: routes[1].client.code ?? null,
+    routeCount: 1,
+    routes: [routes[1]],
+  },
+]
+
+const tableProps = {
+  data: loadFailed ? [] : routes,
+  isLoading: false,
+  error: loadFailed ? new Error('Lỗi máy chủ, vui lòng thử lại sau') : null,
+  onRetry: () => {
+    document.body.dataset.retried = 'true'
+  },
+  editingId: null,
+  onStartEdit: () => undefined,
+  onSave: () => undefined,
+  onCancelEdit: () => undefined,
+  onDelete: () => undefined,
+  clients: routes.map(route => route.client),
+  locations: [routes[0].pickupLocation, routes[0].dropoffLocation],
+  groups: loadFailed ? [] : groups,
+  expandedClients: new Set([1, 2]),
+  onToggleClient: () => undefined,
+  onExpandAll: () => undefined,
+  onCollapseAll: () => undefined,
+  selectedClientId: 1,
+  onSelectClient: () => undefined,
+}
+
 createRoot(document.getElementById('root')!).render(
-  createElement(RoutePricingTable, {
-    data: routes,
-    isLoading: false,
-    editingId: null,
-    onStartEdit: () => undefined,
-    onSave: () => undefined,
-    onCancelEdit: () => undefined,
-    onDelete: () => undefined,
-    clients: routes.map(route => route.client),
-    locations: [routes[0].pickupLocation, routes[0].dropoffLocation],
-    groups: [
-      {
-        clientId: 1,
-        clientName: routes[0].client.name,
-        clientCode: routes[0].client.code ?? null,
-        routeCount: 1,
-        routes: [routes[0]],
-      },
-      {
-        clientId: 2,
-        clientName: routes[1].client.name,
-        clientCode: routes[1].client.code ?? null,
-        routeCount: 1,
-        routes: [routes[1]],
-      },
-    ],
-    expandedClients: new Set([1, 2]),
-    onToggleClient: () => undefined,
-    onExpandAll: () => undefined,
-    onCollapseAll: () => undefined,
-    selectedClientId: 1,
-    onSelectClient: () => undefined,
-  }),
+  createElement(RoutePricingTable, tableProps),
 )
