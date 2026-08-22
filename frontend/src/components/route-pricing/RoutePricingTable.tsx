@@ -585,7 +585,7 @@ export function RoutePricingTable({
                   }}
                 >
                   {isClientRailVisible ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
-                  {isClientRailVisible ? 'Ẩn danh sách chủ hàng' : 'Hiện danh sách chủ hàng'}
+                  {isClientRailVisible ? 'Ẩn chủ hàng' : 'Hiện chủ hàng'}
                 </button>
               </div>
               <PricingTabs activeTab={activePricingTab} onChange={handlePricingTabChange} />
