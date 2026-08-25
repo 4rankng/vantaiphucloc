@@ -238,5 +238,90 @@ async def test_doi_soat_export_all_clients_does_not_cross_match_same_container(
         [cell.value for cell in row] for row in ws.iter_rows(min_row=12, max_row=13)
     ]
 
-    assert [row[2] for row in rows] == ["KHA", "KHB"]
+    # Same date: the delivered trip (KHB, has a recorded time) precedes the
+    # booked-only row (KHA) because untimed rows sort after timed ones.
+    assert [row[2] for row in rows] == ["KHB", "KHA"]
     assert [row[15] for row in rows] == ["Chưa ghép", "Chưa ghép"]
+
+
+@pytest.mark.asyncio
+async def test_doi_soat_export_rows_sorted_by_trip_date_then_recorded_time(
+    db_session,
+):
+    client = Client(id=41, code="KH09", name="Khach Hang 09", is_active=True)
+    pickup = Location(id=41, name="Cang A", is_active=True)
+    dropoff = Location(id=42, name="Kho B", is_active=True)
+    db_session.add_all([client, pickup, dropoff])
+
+    # Container numbers deliberately run against the recorded times so an
+    # alphabetical sort would produce a different order.
+    trip_earlier_date = DeliveredTrip(
+        id=501,
+        trip_date=date(2026, 6, 4),
+        client_id=41,
+        pickup_location_id=41,
+        dropoff_location_id=42,
+        work_type="NANG HA",
+        cont_number="CCC1234567",
+        cont_type="F20",
+        vehicle_plate="15C-33333",
+        created_at=datetime(2026, 6, 4, 10, 0, tzinfo=timezone.utc),
+    )
+    trip_later_time = DeliveredTrip(
+        id=502,
+        trip_date=date(2026, 6, 5),
+        client_id=41,
+        pickup_location_id=41,
+        dropoff_location_id=42,
+        work_type="NANG HA",
+        cont_number="AAA1234567",
+        cont_type="F20",
+        vehicle_plate="15C-11111",
+        created_at=datetime(2026, 6, 5, 8, 0, tzinfo=timezone.utc),
+    )
+    trip_earlier_time = DeliveredTrip(
+        id=503,
+        trip_date=date(2026, 6, 5),
+        client_id=41,
+        pickup_location_id=41,
+        dropoff_location_id=42,
+        work_type="NANG HA",
+        cont_number="ZZZ1234567",
+        cont_type="F20",
+        vehicle_plate="15C-99999",
+        created_at=datetime(2026, 6, 5, 1, 0, tzinfo=timezone.utc),
+    )
+    # Booked-only row (no driver-recorded time) shares 05/06 with two timed
+    # rows and must follow them, not sort alphabetically among them.
+    booked_only = BookedTrip(
+        id=504,
+        trip_date=date(2026, 6, 5),
+        client_id=41,
+        pickup_location_id=41,
+        dropoff_location_id=42,
+        work_type="NANG HA",
+        cont_number="BBB1234567",
+        cont_type="F20",
+    )
+    db_session.add_all(
+        [trip_earlier_date, trip_later_time, trip_earlier_time, booked_only]
+    )
+    await db_session.flush()
+
+    content, _client_name = await generate_doi_soat_excel(
+        db_session,
+        client_id=41,
+        date_from="2026-06-01",
+        date_to="2026-06-30",
+    )
+
+    wb = openpyxl.load_workbook(BytesIO(content), data_only=False)
+    ws = wb.active
+    cont_numbers = [row[3].value for row in ws.iter_rows(min_row=12, max_row=15)]
+
+    assert cont_numbers == [
+        "CCC1234567",  # 04/06 — earlier date first
+        "ZZZ1234567",  # 05/06 08:00 VN (01:00 UTC) — earlier recorded time
+        "AAA1234567",  # 05/06 15:00 VN (08:00 UTC) — later recorded time
+        "BBB1234567",  # 05/06 booked-only, no recorded time — after timed rows
+    ]

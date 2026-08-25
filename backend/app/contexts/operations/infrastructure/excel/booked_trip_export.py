@@ -346,10 +346,24 @@ async def generate_doi_soat_excel(
     for trip in dt_no_cont:
         deduped_rows.append(_doi_soat_row(trip, None, STATUS_UNMATCHED))
 
-    # Sort by trip_date then container number for stable ordering
+    # Sort so the sheet reads chronologically: trip date first, then the
+    # driver-recorded time shown in the NGÀY ĐI column (naive timestamps are
+    # UTC, same assumption as _format_doi_soat_trip_datetime). Rows without a
+    # recorded time (booked-only) follow the timed rows of the same date;
+    # client/container/id only break remaining ties so the order is stable
+    # across exports.
+    def _recorded_sort_time(row: dict) -> tuple[int, str]:
+        ts = row["driver_recorded_at"]
+        if ts is None:
+            return (1, "")
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        return (0, ts.astimezone(timezone.utc).isoformat())
+
     deduped_rows.sort(
         key=lambda r: (
             r["trip_date"] or df,
+            _recorded_sort_time(r),
             r["client_id"] or 0,
             r["cont_number"] or "",
             r["source_id"],
