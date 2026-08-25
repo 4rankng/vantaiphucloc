@@ -646,11 +646,11 @@ export function DirectorDashboard() {
                 className="pb-3"
               />
               <div className="mb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }} />
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 420 }}>
                 {topDrivers.length === 0 && (
                   <p className="text-xs py-4 text-center" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu</p>
                 )}
-                {topDrivers.slice(0, 5).map((d, i) => (
+                {topDrivers.map((d, i) => (
                   <div
                     key={d.name + d.plate}
                     className="flex items-center gap-3 py-2 px-2 rounded-lg"

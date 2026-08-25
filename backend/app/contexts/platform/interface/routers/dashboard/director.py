@@ -271,7 +271,6 @@ async def get_director_dashboard(
                 .where(DeliveredTrip.trip_date >= start, DeliveredTrip.trip_date <= end)
                 .group_by(User.full_name, DeliveredTrip.vehicle_plate)
                 .order_by(func.count(DeliveredTrip.id).desc())
-                .limit(5)
             )
         ).all()
         top_drivers = [
