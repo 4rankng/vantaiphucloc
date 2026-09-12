@@ -34,14 +34,14 @@ test('hides and restores the client list without losing the selected pricing wor
   await page.waitForSelector(toggle)
   assert.ok(await page.$('#route-pricing-client-list'))
   assert.equal(await page.$eval(toggle, element => element.getAttribute('aria-expanded')), 'true')
-  assert.match(await page.$eval(toggle, element => element.textContent || ''), /Ẩn danh sách chủ hàng/)
+  assert.match(await page.$eval(toggle, element => element.textContent || ''), /Ẩn chủ hàng/)
 
   const widthWithList = await page.$eval('[data-route-pricing-workspace]', element => element.getBoundingClientRect().width)
   await page.click(toggle)
   await page.waitForFunction(() => document.querySelector('#route-pricing-client-list') === null)
 
   assert.equal(await page.$eval(toggle, element => element.getAttribute('aria-expanded')), 'false')
-  assert.match(await page.$eval(toggle, element => element.textContent || ''), /Hiện danh sách chủ hàng/)
+  assert.match(await page.$eval(toggle, element => element.textContent || ''), /Hiện chủ hàng/)
   assert.match(await page.$eval('h2', element => element.textContent || ''), /HẢI AN/)
   const widthWithoutList = await page.$eval('[data-route-pricing-workspace]', element => element.getBoundingClientRect().width)
   assert.ok(widthWithoutList > widthWithList + 200)
