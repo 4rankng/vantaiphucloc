@@ -164,13 +164,20 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   // ─── Validation ───────────────────────────────────────────────────────────
   const canSubmit = useMemo(() => {
     const hasAtLeastOneContainer = containers.some(c => c.containerNumber.trim())
-    return hasAtLeastOneContainer && !!clientId && !!pickupLocation && !!dropoffLocation
+    // Tác nghiệp is mandatory. The selection is shared across all container
+    // rows (updateAllWorkType, and scans inherit from row 0), so checking any
+    // row covers the whole trip. Without this gate a null workType reaches
+    // POST /delivered-trips and the backend 422s with a cryptic
+    // "Input should be a valid string".
+    const hasWorkType = containers.some(c => c.workType)
+    return hasAtLeastOneContainer && hasWorkType && !!clientId && !!pickupLocation && !!dropoffLocation
       && Object.keys(containerErrors).length === 0
   }, [containers, clientId, pickupLocation, dropoffLocation, containerErrors])
 
   const missingFields = useMemo(() => {
     const fields: string[] = []
     if (!containers.some(c => c.containerNumber.trim())) fields.push('số cont')
+    if (!containers.some(c => c.workType)) fields.push('tác nghiệp')
     if (!clientId) fields.push('khách hàng')
     if (!pickupLocation) fields.push('điểm đi')
     if (!dropoffLocation) fields.push('điểm đến')
