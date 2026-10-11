@@ -125,12 +125,10 @@ settings = Settings()
 GEMINI_MODELS: list[str] = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
 # OpenRouter OCR models tried in sequence on every request. Each entry is
-# (label, model_slug, per_call_timeout_seconds). The fast 32B model gets a
-# short timeout so a hung call fails fast and hands off to the fallback; the
-# heavier model gets the remainder of the 75s SLA. Code-only — not configurable
-# via env / .env.
+# (label, model_slug, per_call_timeout_seconds). Single-model chain: the
+# per-call timeout bounds a hung call well inside the wall-clock SLA.
+# Code-only — not configurable via env / .env.
 OPENROUTER_MODELS: list[tuple[str, str, float]] = [
-    ("Qwen3-VL-32B", "qwen/qwen3-vl-32b-instruct", 15.0),
-    ("Qwen3.7-Plus", "qwen/qwen3.7-plus", 55.0),
+    ("Claude-Haiku-5.5", "anthropic/claude-haiku-5.5", 30.0),
 ]
 OPENROUTER_MODEL: str = OPENROUTER_MODELS[0][1]  # default for direct callers

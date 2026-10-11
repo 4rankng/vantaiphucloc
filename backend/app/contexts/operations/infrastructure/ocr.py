@@ -1,8 +1,7 @@
 """OCR service for extracting container numbers from images.
 
-OpenRouter is the sole OCR provider. Each request tries the OpenRouter models
-in sequence (Qwen3-VL-32B then Qwen3.7-Plus); the first model that returns a
-valid identifier wins.
+OpenRouter is the sole OCR provider. Each request calls the single
+OpenRouter model (Claude Haiku 5.5).
 
 SLA: the whole provider chain is bounded by ``settings.OCR_DEADLINE_SECONDS``
 (wall-clock budget for every attempt combined) and each individual call is
@@ -235,8 +234,8 @@ def _available_providers() -> list[tuple[str, str | None, float, ProviderCallabl
     """Ordered OCR providers enabled by config, as ``(name, model, timeout, callable)``.
 
     OpenRouter only — Gemini has been retired from the OCR chain. When enabled,
-    its models are tried in sequence (Qwen3-VL-32B then Qwen3.7-Plus), each
-    with its own per-call timeout. The ``model`` hint is carried alongside each
+    its configured models are tried in sequence, each with its own per-call
+    timeout. The ``model`` hint is carried alongside each
     callable so a timed-out call can still attribute the failure to the right
     model in analytics.
     """
@@ -276,8 +275,8 @@ async def extract_container_numbers(
 ) -> dict:
     """Extract ALL container identifiers using single-shot OCR.
 
-    Tries each OpenRouter model in sequence (Qwen3-VL-32B then Qwen3.7-Plus);
-    the first model that returns ≥1 accepted identifier wins. ISO numbers with
+    Tries each configured OpenRouter model in sequence; the first model that
+    returns ≥1 accepted identifier wins. ISO numbers with
     invalid check digits are auto-corrected when a near-miss valid number
     exists. Short special codes are returned as-is after format filtering.
 
@@ -339,9 +338,9 @@ async def extract_container_numbers(
     salvage_texts: list[str] = []
 
     # Wall-clock backstop matching the frontend axios timeout (60s). Each model
-    # already carries its own per-call timeout (see OPENROUTER_MODELS), sized so
-    # the two-model chain sums to the SLA (10s + 50s); this deadline only bites
-    # if a future model is added or a cap is raised past the budget. monotonic()
+    # already carries its own per-call timeout (see OPENROUTER_MODELS); this
+    # deadline only bites if a future model is added or a cap is raised past
+    # the budget. monotonic()
     # is immune to system-clock jumps across the awaits below.
     deadline = time.monotonic() + settings.OCR_DEADLINE_SECONDS
 
