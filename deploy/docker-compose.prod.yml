@@ -1,4 +1,4 @@
-# Production Docker Compose — pull pre-built images from Docker Hub
+# Production Docker Compose — pull pre-built images from GHCR
 # Usage: docker compose -f deploy/docker-compose.prod.yml up -d
 name: vantaiphucloc
 
@@ -35,7 +35,7 @@ services:
       retries: 5
 
   backend:
-    image: franknguyenvd/phucloc-backend:latest
+    image: ghcr.io/4rankng/phucloc-backend:latest
     restart: unless-stopped
     env_file:
       - .env
@@ -56,7 +56,7 @@ services:
         condition: service_healthy
 
   worker:
-    image: franknguyenvd/phucloc-backend:latest
+    image: ghcr.io/4rankng/phucloc-backend:latest
     restart: unless-stopped
     env_file:
       - .env
@@ -74,7 +74,7 @@ services:
         condition: service_healthy
 
   frontend:
-    image: franknguyenvd/phucloc-frontend:latest
+    image: ghcr.io/4rankng/phucloc-frontend:latest
     restart: unless-stopped
     expose:
       - "80"

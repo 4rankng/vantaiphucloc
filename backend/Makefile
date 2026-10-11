@@ -1,10 +1,6 @@
-# Load environment variables from .env file
-include .env
-export
-
 .PHONY: push deploy
 
-IMAGE_NAME  := $(DOCKERHUB_USERNAME)/phucloc-backend
+IMAGE_NAME  := ghcr.io/4rankng/phucloc-backend
 GIT_SHA     := $(shell git rev-parse --short HEAD)
 BUILDER     := bb
 PROD_SERVER := phucloc.tingting.vip
@@ -13,8 +9,8 @@ push:
 	@docker buildx inspect $(BUILDER) >/dev/null 2>&1 || docker buildx create --name $(BUILDER) --driver docker-container --use
 	@docker buildx use $(BUILDER)
 	@docker buildx inspect --bootstrap >/dev/null
-	@echo "Logging into DockerHub..."
-	@echo "$(DOCKERHUB_PASSWORD)" | docker login -u "$(DOCKERHUB_USERNAME)" --password-stdin
+	@echo "Logging into GHCR..."
+	@gh auth token | docker login ghcr.io -u 4rankng --password-stdin
 	@echo "Building & pushing AMD64 image (with inline cache)..."
 	docker buildx build \
 		--platform linux/amd64 \
