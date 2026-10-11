@@ -180,10 +180,10 @@ test-frontend:
 	cd frontend && pnpm test
 
 ## ocr: Benchmark OCR models over docs/ocr images
-## Usage: make ocr [IMG=path/to/photo-or-dir] [PROMPT=scripts/new_prompt.txt]
+## Usage: make ocr [IMG=path/to/photo-or-dir]
 IMG ?= docs/ocr
 ocr:
-	cd backend && .venv/bin/python scripts/compare_ocr.py "$(abspath $(IMG))" $(if $(PROMPT),--new-prompt $(PROMPT))
+	cd backend && .venv/bin/python scripts/compare_ocr.py "$(abspath $(IMG))"
 
 # ── Production deploy ──────────────────────────────────────────────────────────
 

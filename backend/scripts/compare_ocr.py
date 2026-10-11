@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-compare_ocr.py — benchmark container OCR across Qwen vision LLMs.
+compare_ocr.py — benchmark container OCR across vision LLMs via OpenRouter.
 
 Run:
     python backend/scripts/compare_ocr.py docs/ocr
     python backend/scripts/compare_ocr.py docs/ocr/00.jpeg --env backend/.env
+    make ocr IMG=docs/ocr
 
-Prompt A/B (compare the built-in prompt vs a challenger):
-    python backend/scripts/compare_ocr.py docs/ocr --new-prompt backend/scripts/new_prompt.txt
-    make ocr IMG=docs/ocr PROMPT=scripts/new_prompt.txt
-
-Standalone — zero backend app imports. Request payloads mirror production
-OpenRouter calls closely enough to compare real OCR behavior.
+Uses a copy of the production OCR prompt (MULTI_CONTAINER_PROMPT in
+app/contexts/operations/infrastructure/ocr.py) — keep it in sync when
+production changes. Standalone — zero backend app imports. Request payloads
+mirror production OpenRouter calls closely enough to compare real OCR
+behavior.
 """
 
 from __future__ import annotations
@@ -57,27 +57,47 @@ QWEN_MODELS = [
 
 MULTI_CONTAINER_PROMPT = textwrap.dedent(
     """\
-Role: You are an expert logistics OCR assistant specializing in shipping \
-containers. Examine the provided image and extract all standard ISO \
-shipping container numbers.
+You are reading shipping container identifiers from a photo.
 
-Extraction Rules:
-Format: A valid container number ALWAYS consists of exactly 4 uppercase \
-letters followed by exactly 7 digits (e.g., MSKU1234567 or ALLU5216535).
-Layout: The letters and digits may be separated by spaces, dashes, or \
-printed across multiple lines. Concatenate them into a single, continuous \
-11-character alphanumeric string without spaces.
-Exclusions: Strictly ignore ISO size/type codes (e.g., 22G1, 45G1, 42G1), \
-company names, and weight/capacity specifications (e.g., MAX GW, TARE, NET, \
-CU CAP, KG, LB).
-Common Errors: Pay close attention to characters that look similar (e.g., \
-distinguish the letter O from the number 0, the letter Q from O, and the \
-letter S from the number 5). Remember: the first 4 characters are always \
-letters, and the last 7 are always numbers.
+Return a JSON array of container identifiers.
 
-Output: Return ONLY a clean JSON array containing the recognized container \
-numbers. Do not include any conversational text. Example: \
-{"container_numbers": ["ALLU5216535", "LSQU1077376"]}"""
+Most container numbers are ISO numbers with 11 characters:
+- first 4 characters are uppercase letters A-Z
+- last 7 characters are digits 0-9
+- spaces, dashes, vertical layout, or line breaks between characters should be removed
+
+Some special containers have a short painted code instead:
+- first 4 characters are uppercase letters A-Z
+- last 4 characters are digits 0-9
+- example: HCWT 0006 should be returned as HCWT0006
+
+Critical instruction:
+If you can see any plausible container identifier, return your best reading.
+Do NOT return an empty array just because some characters are blurry, partially hidden, low contrast, or the ISO check digit may be invalid.
+A visually reasonable best guess is better than [].
+
+Only return [] when there is truly no visible container identifier-like text anywhere in the image.
+
+How to read:
+1. Scan the whole visible container: door panels, top/bottom edges, vertical markings, and nearby repeated markings.
+2. First look for ISO numbers: 4 letters followed by 7 digits, even if split across lines.
+3. If an ISO number is visible, return only the ISO number(s).
+4. If no ISO number is visible, look for a special code: 4 letters followed by exactly 4 digits.
+5. Normalize spaces, dashes, vertical layout, or line breaks into 4 letters + digits.
+6. The first 4 positions must be letters. If a character in the first 4 positions looks like a digit, convert it to the most visually similar letter when reasonable:
+   0→O, 1→I, 2→Z, 5→S, 6→G, 8→B.
+7. The digit positions must be digits. If a character in the digit positions looks like a letter, convert it to the most visually similar digit when reasonable:
+   O/Q→0, I/L/T→1, Z→2, S→5, G→6, B→8.
+8. Ignore ISO size/type codes such as 22G1, 42G1, 45G1, company names, KG, and LB.
+9. If several readings are possible, return the single most visually likely container identifier first. If two different container identifiers are visible, return both.
+
+Output rules:
+- Return ONLY a JSON array.
+- Do not explain.
+- Do not include confidence.
+- Do not include markdown.
+- Example output: ["MSKU1234567"]
+- Example special-code output: ["HCWT0006"]"""
 )
 
 LETTER_MAP: dict[str, int] = {
@@ -117,7 +137,6 @@ class OCRResult:
     image: str
     expected_numbers: list[str] = field(default_factory=list)
     model: str | None = None
-    prompt: str | None = None
     raw_response: str | None = None
     container_numbers: list[str] = field(default_factory=list)
     check_digit_valid: dict[str, bool] = field(default_factory=dict)
@@ -253,14 +272,12 @@ def run_openrouter(
     label: str,
     model: str,
     prompt: str,
-    prompt_label: str,
 ) -> OCRResult:
     res = OCRResult(
-        engine=f"{label} · {prompt_label}",
+        engine=label,
         image=image_name,
         expected_numbers=expected_numbers,
         model=model,
-        prompt=prompt_label,
     )
     if httpx is None:
         res.error = "httpx not installed — pip install httpx"
@@ -412,7 +429,6 @@ def result_dump(results: list[OCRResult]) -> dict[str, Any]:
     for result in results:
         dump.setdefault(result.image, {})[result.engine] = {
             "model": result.model,
-            "prompt": result.prompt,
             "success": result.success,
             "exact_match": result.exact_match,
             "expected_numbers": result.expected_numbers,
@@ -423,17 +439,6 @@ def result_dump(results: list[OCRResult]) -> dict[str, Any]:
             "raw_response": result.raw_response,
         }
     return dump
-
-
-def load_new_prompt(path: str) -> str:
-    """Load and validate the challenger prompt file for --new-prompt."""
-    p = Path(path)
-    if not p.is_file():
-        sys.exit(f"--new-prompt file not found: {path}")
-    text = p.read_text("utf-8").strip()
-    if not text:
-        sys.exit(f"--new-prompt file is empty: {path}")
-    return text
 
 
 def parse_model_arg(value: str) -> tuple[str, str]:
@@ -451,17 +456,11 @@ def parse_model_arg(value: str) -> tuple[str, str]:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Benchmark container OCR across Qwen3-VL-32B and Qwen3-VL-235B",
+        description="Benchmark container OCR across vision models via OpenRouter",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("path", help="Path to a container photo or directory of photos")
     parser.add_argument("--env", default=None, help="Path to .env file")
-    parser.add_argument(
-        "--new-prompt",
-        default=None,
-        help="Path to a challenger prompt file. When set, each model runs with both "
-        "the built-in (old) prompt and this new one for A/B comparison.",
-    )
     parser.add_argument(
         "-m",
         "--model",
@@ -508,10 +507,6 @@ def main():
         print(f"No images found under {args.path}", file=sys.stderr)
         sys.exit(1)
 
-    prompts: list[tuple[str, str]] = [("old", MULTI_CONTAINER_PROMPT)]
-    if args.new_prompt:
-        prompts.append(("new", load_new_prompt(args.new_prompt)))
-
     models: list[tuple[str, str]] = list(QWEN_MODELS)
     for raw_model in args.model:
         models.append(parse_model_arg(raw_model))
@@ -528,7 +523,6 @@ def main():
     print(f"Images: {len(images)}")
     print(f"Env file: {env_path or '(environment only)'}")
     print(f"OpenRouter: {'key set' if openrouter_key else 'NO KEY'}")
-    print(f"Prompts: {', '.join(label for label, _ in prompts)}")
     print(f"Models: {', '.join(label for label, _ in models)}")
     print("=" * 80)
 
@@ -545,21 +539,19 @@ def main():
             f"  Expected: {', '.join(expected_numbers) if expected_numbers else '(none)'}"
         )
         for label, model in models:
-            for prompt_label, prompt_text in prompts:
-                result = run_openrouter(
-                    image_path.name,
-                    expected_numbers,
-                    processed,
-                    mime_type,
-                    openrouter_key,
-                    openrouter_base_url,
-                    label,
-                    model,
-                    prompt_text,
-                    prompt_label,
-                )
-                print_result(result)
-                results.append(result)
+            result = run_openrouter(
+                image_path.name,
+                expected_numbers,
+                processed,
+                mime_type,
+                openrouter_key,
+                openrouter_base_url,
+                label,
+                model,
+                MULTI_CONTAINER_PROMPT,
+            )
+            print_result(result)
+            results.append(result)
 
     print_summary(results)
 
