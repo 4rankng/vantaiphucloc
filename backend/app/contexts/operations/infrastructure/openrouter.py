@@ -100,7 +100,9 @@ async def call_openrouter_vision(
     ``success``, ``text``, ``error``, ``provider`` ("openrouter"), ``model``.
     HTTP errors carry the status code + OpenRouter error message so a wrong
     model slug (404) is distinguishable from a bad key (401) or rate limit
-    (429) in the OCR analytics.
+    (429) in the OCR analytics. Transient failures — HTTP 5xx, network
+    errors/timeouts, and 200 responses with no usable content — are flagged
+    with ``transient: True`` so the OCR worker retries them.
 
     ``model`` overrides ``settings.OPENROUTER_MODEL`` — used to run a second
     (larger) OpenRouter model as a within-provider fallback before Gemini.
@@ -186,6 +188,7 @@ async def call_openrouter_vision(
             "status_code": status if isinstance(status, int) else None,
             "rate_limited": status == 429,
             "retry_after_seconds": retry_after_seconds,
+            "transient": isinstance(status, int) and status >= 500,
         }
     except Exception as e:
         _logger.warning("[OpenRouter] request failed: %s: %s", type(e).__name__, e)
@@ -195,6 +198,7 @@ async def call_openrouter_vision(
             "error": f"{type(e).__name__}: {e}",
             "provider": "openrouter",
             "model": model_slug,
+            "transient": True,
         }
 
     try:
@@ -206,6 +210,7 @@ async def call_openrouter_vision(
                 "error": "No response generated",
                 "provider": "openrouter",
                 "model": model_slug,
+                "transient": True,
             }
         text = _extract_text(choices[0].get("message", {}).get("content"))
         if not text:
@@ -215,6 +220,7 @@ async def call_openrouter_vision(
                 "error": "Empty OpenRouter response",
                 "provider": "openrouter",
                 "model": model_slug,
+                "transient": True,
             }
         return {
             "success": True,

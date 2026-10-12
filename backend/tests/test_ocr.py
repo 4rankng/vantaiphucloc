@@ -1906,6 +1906,383 @@ async def test_process_ocr_job_marks_failed_when_slots_requeue_fails(
     assert refreshed.dead_lettered_at is None
 
 
+# ---------------------------------------------------------------------------
+# Transient retry classification — empty responses, 5xx, timeouts
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_call_openrouter_vision_empty_response_is_transient(monkeypatch):
+    """HTTP 200 with blank content is an upstream hiccup → transient=True."""
+    import httpx
+
+    monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
+    request = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+    response = httpx.Response(
+        200, request=request, json={"choices": [{"message": {"content": "  "}}]}
+    )
+
+    class _Client:
+        async def post(self, url, json=None, headers=None):
+            return response
+
+    monkeypatch.setattr(
+        "app.contexts.operations.infrastructure.openrouter._get_http_client",
+        lambda: _async_return(_Client()),
+    )
+
+    result = await call_openrouter_vision("p", b"img", "image/jpeg")
+    assert result["success"] is False
+    assert result["error"] == "Empty OpenRouter response"
+    assert result["transient"] is True
+
+
+@pytest.mark.asyncio
+async def test_call_openrouter_vision_no_choices_is_transient(monkeypatch):
+    """HTTP 200 with zero choices is an upstream hiccup → transient=True."""
+    import httpx
+
+    monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
+    request = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+    response = httpx.Response(200, request=request, json={"choices": []})
+
+    class _Client:
+        async def post(self, url, json=None, headers=None):
+            return response
+
+    monkeypatch.setattr(
+        "app.contexts.operations.infrastructure.openrouter._get_http_client",
+        lambda: _async_return(_Client()),
+    )
+
+    result = await call_openrouter_vision("p", b"img", "image/jpeg")
+    assert result["success"] is False
+    assert result["error"] == "No response generated"
+    assert result["transient"] is True
+
+
+@pytest.mark.asyncio
+async def test_call_openrouter_vision_5xx_is_transient(monkeypatch):
+    """HTTP 5xx is a provider-side outage → transient=True, not rate_limited."""
+    import httpx
+
+    monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
+    request = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+    response = httpx.Response(
+        502, request=request, json={"error": {"message": "bad gateway"}}
+    )
+
+    class _Client:
+        async def post(self, url, json=None, headers=None):
+            return response
+
+    monkeypatch.setattr(
+        "app.contexts.operations.infrastructure.openrouter._get_http_client",
+        lambda: _async_return(_Client()),
+    )
+
+    result = await call_openrouter_vision("p", b"img", "image/jpeg")
+    assert result["success"] is False
+    assert result["status_code"] == 502
+    assert result["rate_limited"] is False
+    assert result["transient"] is True
+
+
+@pytest.mark.asyncio
+async def test_call_openrouter_vision_timeout_is_transient(monkeypatch):
+    """Network errors / timeouts (httpx exceptions) → transient=True."""
+    import httpx
+
+    monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
+
+    class _Client:
+        async def post(self, url, json=None, headers=None):
+            raise httpx.ReadTimeout("timed out")
+
+    monkeypatch.setattr(
+        "app.contexts.operations.infrastructure.openrouter._get_http_client",
+        lambda: _async_return(_Client()),
+    )
+
+    result = await call_openrouter_vision("p", b"img", "image/jpeg")
+    assert result["success"] is False
+    assert result["error"].startswith("ReadTimeout")
+    assert result["transient"] is True
+
+
+@pytest.mark.asyncio
+async def test_call_openrouter_vision_4xx_is_terminal(monkeypatch):
+    """4xx (bad key, out of credits, wrong slug) must NOT be retried."""
+    import httpx
+
+    monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
+    request = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+    response = httpx.Response(
+        402, request=request, json={"error": {"message": "out of credits"}}
+    )
+
+    class _Client:
+        async def post(self, url, json=None, headers=None):
+            return response
+
+    monkeypatch.setattr(
+        "app.contexts.operations.infrastructure.openrouter._get_http_client",
+        lambda: _async_return(_Client()),
+    )
+
+    result = await call_openrouter_vision("p", b"img", "image/jpeg")
+    assert result["success"] is False
+    assert result["status_code"] == 402
+    assert result["transient"] is False
+
+
+@pytest.mark.asyncio
+async def test_extract_empty_response_propagates_transient():
+    """A chain that ends on an upstream empty response carries transient=True
+    so the worker retries the job."""
+
+    async def _empty(image_bytes, mime_type):
+        return {
+            "success": False,
+            "text": None,
+            "error": "Empty OpenRouter response",
+            "provider": "openrouter",
+            "model": "anthropic/claude-haiku-5.5",
+            "transient": True,
+        }
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=[("openrouter", "anthropic/claude-haiku-5.5", 30.0, _empty)],
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert result["success"] is False
+    assert result["analytics_error"] == "Empty OpenRouter response"
+    assert result["transient"] is True
+    assert result["container_numbers"] == []  # nothing to salvage from empty
+
+
+@pytest.mark.asyncio
+async def test_extract_timeout_propagates_transient(monkeypatch):
+    """A chain that ends on a per-call timeout carries transient=True."""
+    monkeypatch.setattr(settings, "OCR_DEADLINE_SECONDS", 5.0)
+
+    async def _slow(image_bytes, mime_type):
+        await asyncio.sleep(1)
+        return {
+            "success": True,
+            "text": '{"container_numbers": ["MSKU1234565"]}',
+            "error": None,
+            "provider": "openrouter",
+            "model": "slow",
+        }
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=[("openrouter", "slow", 0.1, _slow)],
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert result["success"] is False
+    assert result["attempts"][0]["error"].startswith("timeout")
+    assert result["transient"] is True
+
+
+@pytest.mark.asyncio
+async def test_extract_no_valid_numbers_is_not_transient():
+    """'no valid numbers' is a genuine no-detection, not a transient hiccup —
+    retrying the same model at temperature 0 mostly repeats, so the job fails."""
+
+    async def _blank(image_bytes, mime_type):
+        return {
+            "success": True,
+            "text": "no numbers here at all",
+            "error": None,
+            "provider": "openrouter",
+            "model": "m",
+        }
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=[("openrouter", "m", 30.0, _blank)],
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert result["success"] is False
+    assert result["analytics_error"] == "no valid numbers"
+    assert result.get("transient") is not True
+
+
+@pytest.mark.asyncio
+async def test_process_ocr_job_retries_transient_empty_response(
+    db_session, monkeypatch, tmp_path
+):
+    """An 'Empty OpenRouter response' must re-enqueue the job for retry with
+    backoff instead of failing it permanently (the 87× prod failure class)."""
+    from sqlalchemy import select
+    from app import workers as workers_mod
+    from app.workers.tasks import ocr as ocr_task
+
+    class _FakeRedis:
+        async def eval(self, *_args):
+            return 1
+
+    @asynccontextmanager
+    async def _test_session():
+        try:
+            yield db_session
+            await db_session.commit()
+        except Exception:
+            await db_session.rollback()
+            raise
+
+    enqueued: list[dict] = []
+
+    async def _fake_enqueue(job_id, *, attempt_count=0, defer_by=0, unique=True):
+        enqueued.append(
+            {
+                "job_id": job_id,
+                "attempt_count": attempt_count,
+                "defer_by": defer_by,
+                "unique": unique,
+            }
+        )
+        return f"ocr:{job_id}:attempt:{attempt_count}"
+
+    async def _fake_extract(_image_bytes, _mime_type):
+        return {
+            "success": False,
+            "container_numbers": [],
+            "error": "Không nhận diện được số cont",
+            "analytics_error": "Empty OpenRouter response",
+            "provider": "openrouter",
+            "model": "anthropic/claude-haiku-5.5",
+            "transient": True,
+            "attempts": [
+                {
+                    "provider": "openrouter",
+                    "model": "anthropic/claude-haiku-5.5",
+                    "success": False,
+                    "latency_ms": 800,
+                    "error": "Empty OpenRouter response",
+                    "container_numbers_found": 0,
+                }
+            ],
+        }
+
+    monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setattr(ocr_task, "get_session", _test_session)
+    monkeypatch.setattr(ocr_task, "extract_container_numbers", _fake_extract)
+    monkeypatch.setattr(workers_mod, "enqueue_ocr_job", _fake_enqueue)
+
+    image_path = tmp_path / "ocr-test.jpg"
+    image_path.write_bytes(_make_test_image(100, 100))
+    job = OcrJob(
+        image_path="/photos/ocr-test.jpg",
+        image_hash="hash-empty",
+        status="queued",
+    )
+    db_session.add(job)
+    await db_session.commit()
+
+    result = await ocr_task.process_ocr_job_task({"redis": _FakeRedis()}, int(job.id))
+
+    assert result["status"] == "retrying"
+    # No Retry-After on an empty response → exponential backoff: 2s + jitter.
+    assert len(enqueued) == 1
+    assert enqueued[0]["job_id"] == int(job.id)
+    assert enqueued[0]["attempt_count"] == 1
+    assert 2.0 <= enqueued[0]["defer_by"] <= 3.0
+
+    refreshed = await db_session.get(OcrJob, int(job.id))
+    assert refreshed.status == "retrying"
+    assert refreshed.error_message == "Empty OpenRouter response"
+    assert refreshed.next_retry_at is not None
+    assert refreshed.attempt_count == 1
+
+    attempt_rows = (await db_session.execute(select(OcrRequest))).scalars().all()
+    assert len(attempt_rows) == 1
+    assert attempt_rows[0].error == "Empty OpenRouter response"
+
+
+@pytest.mark.asyncio
+async def test_process_ocr_job_transient_fails_after_max_retries(
+    db_session, monkeypatch, tmp_path
+):
+    """A transient failure on the last allowed attempt (OCR_MAX_RETRIES=3)
+    marks the job failed without dead-lettering it."""
+    from app import workers as workers_mod
+    from app.workers.tasks import ocr as ocr_task
+
+    class _FakeRedis:
+        async def eval(self, *_args):
+            return 1
+
+    @asynccontextmanager
+    async def _test_session():
+        try:
+            yield db_session
+            await db_session.commit()
+        except Exception:
+            await db_session.rollback()
+            raise
+
+    async def _unexpected_enqueue(*_args, **_kwargs):
+        raise AssertionError("transient failure past max retries must not re-enqueue")
+
+    async def _fake_extract(_image_bytes, _mime_type):
+        return {
+            "success": False,
+            "container_numbers": [],
+            "error": "Không nhận diện được số cont",
+            "analytics_error": "Empty OpenRouter response",
+            "provider": "openrouter",
+            "model": "anthropic/claude-haiku-5.5",
+            "transient": True,
+            "attempts": [
+                {
+                    "provider": "openrouter",
+                    "model": "anthropic/claude-haiku-5.5",
+                    "success": False,
+                    "latency_ms": 800,
+                    "error": "Empty OpenRouter response",
+                    "container_numbers_found": 0,
+                }
+            ],
+        }
+
+    monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setattr(ocr_task, "get_session", _test_session)
+    monkeypatch.setattr(ocr_task, "extract_container_numbers", _fake_extract)
+    monkeypatch.setattr(workers_mod, "enqueue_ocr_job", _unexpected_enqueue)
+
+    image_path = tmp_path / "ocr-test.jpg"
+    image_path.write_bytes(_make_test_image(100, 100))
+    job = OcrJob(
+        image_path="/photos/ocr-test.jpg",
+        image_hash="hash-empty-exhausted",
+        status="queued",
+        attempt_count=2,
+    )
+    db_session.add(job)
+    await db_session.commit()
+
+    result = await ocr_task.process_ocr_job_task({"redis": _FakeRedis()}, int(job.id))
+
+    assert result["status"] == "failed"
+
+    refreshed = await db_session.get(OcrJob, int(job.id))
+    assert refreshed.status == "failed"
+    assert refreshed.error_message == "Empty OpenRouter response"
+    assert refreshed.attempt_count == 3
+    assert refreshed.dead_lettered_at is None
+    assert refreshed.next_retry_at is None
+
+
 @pytest.mark.asyncio
 async def test_ocr_stats_driver_experience(db_session, async_client, make_auth_headers):
     """driverExperience reports photo-upload counts + e2e latency from

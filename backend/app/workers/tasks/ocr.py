@@ -307,7 +307,8 @@ async def process_ocr_job_task(ctx: dict, job_id: int) -> dict:
             }
 
         error = result.get("analytics_error") or result.get("error") or "OCR failed"
-        if result.get("rate_limited") and current_attempt < settings.OCR_MAX_RETRIES:
+        retryable = bool(result.get("rate_limited")) or bool(result.get("transient"))
+        if retryable and current_attempt < settings.OCR_MAX_RETRIES:
             delay = _retry_delay_seconds(
                 result.get("retry_after_seconds"),
                 current_attempt,
@@ -328,7 +329,7 @@ async def process_ocr_job_task(ctx: dict, job_id: int) -> dict:
                     retrying.next_retry_at = next_retry_at
             await _enqueue_retry(job, delay)
             logger.warning(
-                "[OCR] job %s hit OpenRouter 429 attempt=%s delay=%.2fs error=%s",
+                "[OCR] job %s hit retryable provider error attempt=%s delay=%.2fs error=%s",
                 job_id,
                 current_attempt,
                 delay,

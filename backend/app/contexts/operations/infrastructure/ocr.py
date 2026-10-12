@@ -328,6 +328,10 @@ async def extract_container_numbers(
         "latency_ms": None,
         "error": None,
     }
+    # Whether the last failed attempt was transient (5xx, timeout, empty
+    # upstream response) — propagated to the worker so it can re-enqueue
+    # the job instead of failing it permanently.
+    last_transient = False
     # One entry per provider LLM call (fail / no-valid / winner). Returned so
     # the caller can log a row per attempt — every 429 and every fallback is
     # then visible to analytics, not just the winning provider.
@@ -361,6 +365,7 @@ async def extract_container_numbers(
             )
         except asyncio.TimeoutError:
             latency_ms = int((time.perf_counter() - t0) * 1000)
+            last_transient = True
             last = {
                 "provider": name,
                 "model": model_hint,
@@ -389,6 +394,7 @@ async def extract_container_numbers(
 
         if not result["success"]:
             is_rate_limited = bool(result.get("rate_limited"))
+            last_transient = bool(result.get("transient"))
             last = {
                 "provider": provider_label,
                 "model": result.get("model"),
@@ -438,6 +444,7 @@ async def extract_container_numbers(
         valid = [n for n in merged if _is_container_identifier(n)]
 
         if not valid:
+            last_transient = False
             last = {
                 "provider": provider_label,
                 "model": result.get("model"),
@@ -530,4 +537,5 @@ async def extract_container_numbers(
         "model": last["model"],
         "latency_ms": last["latency_ms"],
         "attempts": attempts,
+        "transient": last_transient,
     }
