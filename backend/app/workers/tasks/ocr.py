@@ -233,24 +233,26 @@ async def process_ocr_job_task(ctx: dict, job_id: int) -> dict:
     if job is None:
         return {"status": "skipped", "job_id": job_id}
 
-    if not await _try_acquire_slots(redis, job.user_id):
-        delay = settings.OCR_QUEUE_RETRY_DELAY_SECONDS
-        async with get_session() as db:
-            locked = await db.get(OcrJob, job_id)
-            if locked is not None and locked.status not in TERMINAL_STATUSES:
-                locked.status = "queued"
-                locked.error_message = "OCR queue busy"
-                locked.next_retry_at = utcnow() + timedelta(seconds=delay)
-        await _enqueue_retry(job, delay, unique=False)
-        logger.info(
-            "[OCR] job %s requeued because concurrency slots are full delay=%.2fs",
-            job_id,
-            delay,
-        )
-        return {"status": "queued", "job_id": job_id, "reason": "slots_full"}
-
+    slots_acquired = False
     t_start = asyncio.get_running_loop().time()
     try:
+        if not await _try_acquire_slots(redis, job.user_id):
+            delay = settings.OCR_QUEUE_RETRY_DELAY_SECONDS
+            async with get_session() as db:
+                locked = await db.get(OcrJob, job_id)
+                if locked is not None and locked.status not in TERMINAL_STATUSES:
+                    locked.status = "queued"
+                    locked.error_message = "OCR queue busy"
+                    locked.next_retry_at = utcnow() + timedelta(seconds=delay)
+            await _enqueue_retry(job, delay, unique=False)
+            logger.info(
+                "[OCR] job %s requeued because concurrency slots are full delay=%.2fs",
+                job_id,
+                delay,
+            )
+            return {"status": "queued", "job_id": job_id, "reason": "slots_full"}
+        slots_acquired = True
+
         async with get_session() as db:
             processing = await db.get(OcrJob, job_id)
             if processing is None or processing.status in TERMINAL_STATUSES:
@@ -363,4 +365,5 @@ async def process_ocr_job_task(ctx: dict, job_id: int) -> dict:
         )
         return await _mark_failed(job_id, f"{type(exc).__name__}: {exc}")
     finally:
-        await _release_slots(redis, job.user_id)
+        if slots_acquired:
+            await _release_slots(redis, job.user_id)

@@ -3,6 +3,7 @@ import logging
 from arq.connections import RedisSettings
 
 from app.config import settings
+from app.core.worker import close_arq_pool, init_arq_pool
 
 
 from app.workers.tasks.salary import calculate_salary_task
@@ -37,6 +38,10 @@ class WorkerSettings:
 
     @staticmethod
     async def on_startup(ctx: dict) -> None:
+        # The worker process runs outside the API lifespan, so the shared pool
+        # must be initialized here or any worker-side re-enqueue (e.g. the OCR
+        # retry/slots-full paths) hits "arq pool not initialized".
+        await init_arq_pool()
         logger.info("Worker started")
 
     @staticmethod
@@ -44,6 +49,7 @@ class WorkerSettings:
         from app.database import engine
 
         await engine.dispose()
+        await close_arq_pool()
         logger.info("Worker stopped")
 
     @staticmethod

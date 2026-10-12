@@ -1693,6 +1693,220 @@ async def test_process_ocr_job_dead_letters_when_retry_after_exceeds_queue_timeo
 
 
 @pytest.mark.asyncio
+async def test_process_ocr_job_429_reenqueues_for_retry(
+    db_session, monkeypatch, tmp_path
+):
+    """A 429 must schedule a deferred re-enqueue, not crash the task.
+
+    Regression: the re-enqueue used get_arq_pool(), which is only initialized
+    in the API process — inside the worker it raised
+    "RuntimeError: arq pool not initialized" and the job was marked failed.
+    """
+    from sqlalchemy import select
+    from app import workers as workers_mod
+    from app.workers.tasks import ocr as ocr_task
+
+    class _FakeRedis:
+        async def eval(self, *_args):
+            return 1
+
+    @asynccontextmanager
+    async def _test_session():
+        try:
+            yield db_session
+            await db_session.commit()
+        except Exception:
+            await db_session.rollback()
+            raise
+
+    enqueued: list[dict] = []
+
+    async def _fake_enqueue(job_id, *, attempt_count=0, defer_by=0, unique=True):
+        enqueued.append(
+            {
+                "job_id": job_id,
+                "attempt_count": attempt_count,
+                "defer_by": defer_by,
+                "unique": unique,
+            }
+        )
+        return f"ocr:{job_id}:attempt:{attempt_count}"
+
+    async def _fake_extract(_image_bytes, _mime_type):
+        return {
+            "success": False,
+            "container_numbers": [],
+            "error": "OpenRouter đang giới hạn tốc độ, hệ thống sẽ tự thử lại",
+            "analytics_error": "HTTP 429: rate limit exceeded",
+            "provider": "openrouter",
+            "model": "anthropic/claude-haiku-5.5",
+            "rate_limited": True,
+            "retry_after_seconds": 4.0,
+            "attempts": [
+                {
+                    "provider": "openrouter",
+                    "model": "anthropic/claude-haiku-5.5",
+                    "success": False,
+                    "latency_ms": 10,
+                    "error": "HTTP 429: rate limit exceeded",
+                    "container_numbers_found": 0,
+                    "status_code": 429,
+                    "rate_limited": True,
+                    "retry_after_seconds": 4.0,
+                }
+            ],
+        }
+
+    monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setattr(ocr_task, "get_session", _test_session)
+    monkeypatch.setattr(ocr_task, "extract_container_numbers", _fake_extract)
+    monkeypatch.setattr(workers_mod, "enqueue_ocr_job", _fake_enqueue)
+
+    image_path = tmp_path / "ocr-test.jpg"
+    image_path.write_bytes(_make_test_image(100, 100))
+    job = OcrJob(
+        image_path="/photos/ocr-test.jpg",
+        image_hash="hash-429",
+        status="queued",
+    )
+    db_session.add(job)
+    await db_session.commit()
+
+    result = await ocr_task.process_ocr_job_task({"redis": _FakeRedis()}, int(job.id))
+
+    assert result["status"] == "retrying"
+    assert result["delay_seconds"] == 4.0
+    assert enqueued == [
+        {
+            "job_id": int(job.id),
+            "attempt_count": 1,
+            "defer_by": 4.0,
+            "unique": True,
+        }
+    ]
+
+    refreshed = await db_session.get(OcrJob, int(job.id))
+    assert refreshed.status == "retrying"
+    assert refreshed.error_message == "HTTP 429: rate limit exceeded"
+    assert refreshed.next_retry_at is not None
+    assert refreshed.attempt_count == 1
+
+    attempt_rows = (await db_session.execute(select(OcrRequest))).scalars().all()
+    assert len(attempt_rows) == 1
+    assert attempt_rows[0].error == "HTTP 429: rate limit exceeded"
+
+
+@pytest.mark.asyncio
+async def test_process_ocr_job_requeues_when_slots_full(
+    db_session, monkeypatch, tmp_path
+):
+    """Concurrency slots full → job stays queued with a deferred re-enqueue;
+    no provider call is made and attempt_count is untouched."""
+    from app import workers as workers_mod
+    from app.workers.tasks import ocr as ocr_task
+
+    class _FullSlotsRedis:
+        async def eval(self, *_args):
+            return 0
+
+    @asynccontextmanager
+    async def _test_session():
+        try:
+            yield db_session
+            await db_session.commit()
+        except Exception:
+            await db_session.rollback()
+            raise
+
+    enqueued: list[tuple[int, int, float, bool]] = []
+
+    async def _fake_enqueue(job_id, *, attempt_count=0, defer_by=0, unique=True):
+        enqueued.append((job_id, attempt_count, defer_by, unique))
+        return f"ocr:{job_id}:attempt:{attempt_count}"
+
+    monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setattr(ocr_task, "get_session", _test_session)
+    monkeypatch.setattr(workers_mod, "enqueue_ocr_job", _fake_enqueue)
+
+    image_path = tmp_path / "ocr-test.jpg"
+    image_path.write_bytes(_make_test_image(100, 100))
+    job = OcrJob(
+        image_path="/photos/ocr-test.jpg",
+        image_hash="hash-slots",
+        status="queued",
+    )
+    db_session.add(job)
+    await db_session.commit()
+
+    result = await ocr_task.process_ocr_job_task(
+        {"redis": _FullSlotsRedis()}, int(job.id)
+    )
+
+    assert result == {"status": "queued", "job_id": int(job.id), "reason": "slots_full"}
+    assert enqueued == [(int(job.id), 0, settings.OCR_QUEUE_RETRY_DELAY_SECONDS, False)]
+
+    refreshed = await db_session.get(OcrJob, int(job.id))
+    assert refreshed.status == "queued"
+    assert refreshed.error_message == "OCR queue busy"
+    assert refreshed.next_retry_at is not None
+    assert refreshed.attempt_count == 0
+
+
+@pytest.mark.asyncio
+async def test_process_ocr_job_marks_failed_when_slots_requeue_fails(
+    db_session, monkeypatch, tmp_path
+):
+    """If the slots-full re-enqueue itself raises, the job must be marked
+    failed — not left stranded in status='queued' forever."""
+    from app import workers as workers_mod
+    from app.workers.tasks import ocr as ocr_task
+
+    class _FullSlotsRedis:
+        async def eval(self, *_args):
+            return 0
+
+    @asynccontextmanager
+    async def _test_session():
+        try:
+            yield db_session
+            await db_session.commit()
+        except Exception:
+            await db_session.rollback()
+            raise
+
+    async def _raising_enqueue(*_args, **_kwargs):
+        raise RuntimeError(
+            "arq pool not initialized — call init_arq_pool() during lifespan"
+        )
+
+    monkeypatch.setattr(settings, "PHOTO_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setattr(ocr_task, "get_session", _test_session)
+    monkeypatch.setattr(workers_mod, "enqueue_ocr_job", _raising_enqueue)
+
+    image_path = tmp_path / "ocr-test.jpg"
+    image_path.write_bytes(_make_test_image(100, 100))
+    job = OcrJob(
+        image_path="/photos/ocr-test.jpg",
+        image_hash="hash-requeue-fail",
+        status="queued",
+    )
+    db_session.add(job)
+    await db_session.commit()
+
+    result = await ocr_task.process_ocr_job_task(
+        {"redis": _FullSlotsRedis()}, int(job.id)
+    )
+
+    assert result["status"] == "failed"
+
+    refreshed = await db_session.get(OcrJob, int(job.id))
+    assert refreshed.status == "failed"
+    assert "RuntimeError: arq pool not initialized" in refreshed.error_message
+    assert refreshed.next_retry_at is None
+    assert refreshed.dead_lettered_at is None
+
+
+@pytest.mark.asyncio
 async def test_ocr_stats_driver_experience(db_session, async_client, make_auth_headers):
     """driverExperience reports photo-upload counts + e2e latency from
     ocr_driver_requests, separate from the per-attempt ocr_requests grain."""
