@@ -50,8 +50,10 @@ def preprocess_image(image_bytes: bytes) -> tuple[bytes, str]:
     except Exception as e:
         _logger.warning("[OCR] auto-contrast failed, using original: %s", e)
 
-    # Downsize large images to reduce payload without losing OCR accuracy
-    MAX_DIMENSION = 2048
+    # Downsize large images to reduce payload without losing OCR accuracy.
+    # 1280 keeps container paint digits fully legible (they occupy a large
+    # fraction of the frame) while cutting Gemini image tokens ~40% vs 2048.
+    MAX_DIMENSION = 1280
     if max(img.size) > MAX_DIMENSION:
         img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
 
