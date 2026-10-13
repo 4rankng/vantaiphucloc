@@ -72,6 +72,14 @@ class Settings(BaseSettings):
     OCR_JOB_TIMEOUT_SECONDS: int = 90
     OCR_CONCURRENCY_SLOT_TTL_SECONDS: int = 180
 
+    # Fallback OCR model — retried within the same request when the primary
+    # OpenRouter chain (OPENROUTER_MODELS) returns no valid numbers or a
+    # failed/transient call. Rides the same OPENROUTER_API_KEY. The per-call
+    # cap is code-only (30s in ocr.py) so primary+fallback together fit
+    # OCR_DEADLINE_SECONDS.
+    OCR_FALLBACK_ENABLE: bool = True
+    OCR_FALLBACK_MODEL: str = "google/gemini-2.5-flash"
+
     CHATBOT_ENABLE: int = 0
 
     # Push notifications (VAPID)

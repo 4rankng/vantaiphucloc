@@ -1,7 +1,10 @@
 """OCR service for extracting container numbers from images.
 
-OpenRouter is the sole OCR provider. Each request calls the single
-OpenRouter model (Claude Haiku 5.5).
+OpenRouter is the sole OCR provider. The primary chain calls Claude Haiku
+5.5 (``OPENROUTER_MODELS``); when it returns no valid numbers or a failed
+call, the same request is retried with a fallback model
+(``OCR_FALLBACK_MODEL``, default google/gemini-2.5-flash) before salvage —
+never after a primary success.
 
 SLA: the whole provider chain is bounded by ``settings.OCR_DEADLINE_SECONDS``
 (wall-clock budget for every attempt combined) and each individual call is
@@ -230,20 +233,50 @@ def _make_openrouter_provider(model: str) -> ProviderCallable:
     return _call
 
 
+# Per-call cap for the fallback model. The primary chain (haiku) caps at 30s,
+# so 30s + 30s stays inside the 70s OCR_DEADLINE_SECONDS budget with 10s to
+# spare. Code-only, same convention as the OPENROUTER_MODELS timeouts.
+_FALLBACK_TIMEOUT_SECONDS = 30.0
+
+
+def _fallback_openrouter_model() -> str | None:
+    """Fallback model slug when enabled, else ``None``.
+
+    The fallback rides the same OpenRouter key/pipe as the primary chain, so
+    the caller must additionally check OPENROUTER_ENABLE + OPENROUTER_API_KEY.
+    """
+    if not settings.OCR_FALLBACK_ENABLE:
+        return None
+    model = (settings.OCR_FALLBACK_MODEL or "").strip()
+    return model or None
+
+
 def _available_providers() -> list[tuple[str, str | None, float, ProviderCallable]]:
     """Ordered OCR providers enabled by config, as ``(name, model, timeout, callable)``.
 
-    OpenRouter only — Gemini has been retired from the OCR chain. When enabled,
-    its configured models are tried in sequence, each with its own per-call
-    timeout. The ``model`` hint is carried alongside each
-    callable so a timed-out call can still attribute the failure to the right
-    model in analytics.
+    Primary: the OpenRouter models in ``OPENROUTER_MODELS`` (Claude Haiku 5.5),
+    each with its own per-call timeout. Optional gemini-2.5-flash fallback
+    appended after them — the chain only reaches it when every primary model
+    missed (no valid numbers / failed / timed out), never after a success.
+    Gated by ``OCR_FALLBACK_ENABLE`` (default on). The ``model`` hint is
+    carried alongside each callable so a timed-out call can still attribute
+    the failure to the right model in analytics.
     """
     providers: list[tuple[str, str | None, float, ProviderCallable]] = []
     if settings.OPENROUTER_ENABLE and settings.OPENROUTER_API_KEY:
         for _, model, timeout in _available_openrouter_models():
             providers.append(
                 ("openrouter", model, timeout, _make_openrouter_provider(model))
+            )
+        fallback_model = _fallback_openrouter_model()
+        if fallback_model:
+            providers.append(
+                (
+                    "openrouter",
+                    fallback_model,
+                    _FALLBACK_TIMEOUT_SECONDS,
+                    _make_openrouter_provider(fallback_model),
+                )
             )
     return providers
 

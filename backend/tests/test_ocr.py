@@ -1,8 +1,9 @@
 """Tests for the OCR module (single-shot container number extraction).
 
-Verifies the single-pass extraction flow (OpenRouter model chain: 32B →
-Qwen3.7-Plus, bounded by a wall-clock SLA deadline and a per-call timeout)
-without making real API calls, plus the /dashboard/ocr-stats aggregation logic.
+Verifies the single-pass extraction flow (primary OpenRouter chain, optional
+gemini-2.5-flash fallback, bounded by a wall-clock SLA deadline and a
+per-call timeout) without making real API calls, plus the
+/dashboard/ocr-stats aggregation logic.
 """
 
 import asyncio
@@ -141,9 +142,11 @@ async def test_extract_container_numbers_no_provider_configured(monkeypatch):
 
 
 def test_available_providers_order_and_gating(monkeypatch):
-    """OpenRouter is the sole provider: one entry per configured model, in sequence."""
+    """Primary chain: one entry per configured model, in sequence. The gemini
+    fallback slot is covered by test_available_providers_gemini_fallback_gating."""
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
     monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
+    monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", False)
     monkeypatch.setattr(
         ocr_mod,
         "OPENROUTER_MODELS",
@@ -534,6 +537,39 @@ def test_available_providers_openrouter_no_key(monkeypatch):
     assert _available_providers() == []
 
 
+def test_available_providers_gemini_fallback_gating(monkeypatch):
+    """Gemini fallback: appended after the primary chain by default, gated by
+    OCR_FALLBACK_ENABLE / OCR_FALLBACK_MODEL and the OpenRouter credentials."""
+    monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
+    monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
+
+    providers = _available_providers()
+    assert [model for _, model, _, _ in providers] == [
+        "anthropic/claude-haiku-5.5",
+        "google/gemini-2.5-flash",
+    ]
+    # 30s primary cap + 30s fallback cap stays inside the 70s deadline.
+    assert [timeout for _, _, timeout, _ in providers] == [30.0, 30.0]
+
+    # Flag off → primary only.
+    monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", False)
+    assert [model for _, model, _, _ in _available_providers()] == [
+        "anthropic/claude-haiku-5.5"
+    ]
+
+    # Blank slug → no fallback entry.
+    monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", True)
+    monkeypatch.setattr(settings, "OCR_FALLBACK_MODEL", "  ")
+    assert [model for _, model, _, _ in _available_providers()] == [
+        "anthropic/claude-haiku-5.5"
+    ]
+
+    # OpenRouter gate off → nothing at all; the fallback rides the same pipe.
+    monkeypatch.setattr(settings, "OCR_FALLBACK_MODEL", "google/gemini-2.5-flash")
+    monkeypatch.setattr(settings, "OPENROUTER_ENABLE", False)
+    assert _available_providers() == []
+
+
 @pytest.mark.asyncio
 async def test_openrouter_provider_uses_multi_container_prompt(monkeypatch):
     """Every OpenRouter model is called with the same MULTI_CONTAINER_PROMPT."""
@@ -677,6 +713,159 @@ async def test_first_format_valid_wins_does_not_try_next_provider():
     assert result["model"] == "qwen/qwen3-vl-32b-instruct"
     assert result["container_numbers"] == ["MSKU1234565"]
     assert calls == ["32b"]  # second model never reached
+
+
+# ---------------------------------------------------------------------------
+# Gemini fallback — haiku miss → same request retried with gemini-2.5-flash
+# ---------------------------------------------------------------------------
+
+
+def _haiku_gemini_providers(haiku_fn, gemini_fn):
+    return [
+        ("openrouter", "anthropic/claude-haiku-5.5", 30.0, haiku_fn),
+        ("openrouter", "google/gemini-2.5-flash", 30.0, gemini_fn),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_extract_falls_back_to_gemini_on_no_valid_numbers():
+    """Haiku returns no valid numbers → gemini-2.5-flash is retried within the
+    same request; its valid read wins and both attempts are logged."""
+
+    calls: list[str] = []
+
+    async def _haiku_miss(image_bytes, mime_type):
+        calls.append("haiku")
+        return {
+            "success": True,
+            "text": "no numbers here at all",
+            "error": None,
+            "provider": "openrouter",
+            "model": "anthropic/claude-haiku-5.5",
+        }
+
+    async def _gemini_hit(image_bytes, mime_type):
+        calls.append("gemini")
+        return {
+            "success": True,
+            "text": '{"container_numbers": ["MSKU1234565"]}',
+            "error": None,
+            "provider": "openrouter",
+            "model": "google/gemini-2.5-flash",
+        }
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=_haiku_gemini_providers(_haiku_miss, _gemini_hit),
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert result["success"] is True
+    assert result["provider"] == "openrouter"
+    assert result["model"] == "google/gemini-2.5-flash"
+    assert result["container_numbers"] == ["MSKU1234565"]
+    assert calls == ["haiku", "gemini"]
+
+    attempts = result["attempts"]
+    assert len(attempts) == 2
+    assert attempts[0]["model"] == "anthropic/claude-haiku-5.5"
+    assert attempts[0]["success"] is False
+    assert attempts[0]["error"] == "no valid numbers"
+    assert attempts[0]["container_numbers_found"] == 0
+    assert attempts[1]["model"] == "google/gemini-2.5-flash"
+    assert attempts[1]["success"] is True
+    assert attempts[1]["error"] is None
+    assert attempts[1]["container_numbers_found"] == 1
+
+
+@pytest.mark.asyncio
+async def test_extract_primary_success_skips_gemini_fallback():
+    """A valid haiku read ends the chain — gemini is never called."""
+
+    calls: list[str] = []
+
+    async def _haiku_hit(image_bytes, mime_type):
+        calls.append("haiku")
+        return {
+            "success": True,
+            "text": '{"container_numbers": ["MSKU1234565"]}',
+            "error": None,
+            "provider": "openrouter",
+            "model": "anthropic/claude-haiku-5.5",
+        }
+
+    async def _gemini_unreachable(image_bytes, mime_type):
+        calls.append("gemini")
+        raise AssertionError("fallback must not run after a primary success")
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=_haiku_gemini_providers(_haiku_hit, _gemini_unreachable),
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert result["success"] is True
+    assert result["model"] == "anthropic/claude-haiku-5.5"
+    assert result["container_numbers"] == ["MSKU1234565"]
+    assert calls == ["haiku"]
+    assert len(result["attempts"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_extract_both_providers_fail_logs_both_attempts():
+    """Haiku error and gemini error → failed result with both attempts logged;
+    the last (transient) error drives the worker's retry classification."""
+
+    calls: list[str] = []
+
+    async def _haiku_error(image_bytes, mime_type):
+        calls.append("haiku")
+        return {
+            "success": False,
+            "text": None,
+            "error": "Empty OpenRouter response",
+            "provider": "openrouter",
+            "model": "anthropic/claude-haiku-5.5",
+            "transient": True,
+        }
+
+    async def _gemini_error(image_bytes, mime_type):
+        calls.append("gemini")
+        return {
+            "success": False,
+            "text": None,
+            "error": "HTTP 502: bad gateway",
+            "provider": "openrouter",
+            "model": "google/gemini-2.5-flash",
+            "status_code": 502,
+            "transient": True,
+        }
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=_haiku_gemini_providers(_haiku_error, _gemini_error),
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert result["success"] is False
+    assert result["container_numbers"] == []  # no text to salvage from either
+    assert result["error"] == "Không nhận diện được số cont"
+    assert result["analytics_error"] == "HTTP 502: bad gateway"
+    assert result["transient"] is True  # last failed attempt was transient
+    assert calls == ["haiku", "gemini"]
+
+    attempts = result["attempts"]
+    assert len(attempts) == 2
+    assert [a["model"] for a in attempts] == [
+        "anthropic/claude-haiku-5.5",
+        "google/gemini-2.5-flash",
+    ]
+    assert all(a["success"] is False for a in attempts)
+    assert attempts[0]["error"] == "Empty OpenRouter response"
+    assert attempts[1]["error"] == "HTTP 502: bad gateway"
 
 
 # ---------------------------------------------------------------------------
