@@ -8,7 +8,7 @@
 #
 # Environment variables (see backend/.env):
 #   DATABASE_URL, SECRET_KEY, CORS_ORIGINS, REDIS_URL
-#   GEMINI_API_KEY, GEMINI_MODEL
+#   OPENROUTER_API_KEY (sole AI provider — OCR + Excel AI extraction)
 
 services:
 

@@ -134,10 +134,10 @@ async def run_preview(
     except ValueError:
         pass
 
-    # Step 3: Full AI extraction fallback (always on when a key is set)
+    # Step 3: Full AI extraction fallback (OpenRouter; on when a key is set)
     from app.config import settings
 
-    if getattr(settings, "GEMINI_API_KEY", None):
+    if getattr(settings, "OPENROUTER_API_KEY", None):
         try:
             from app.contexts.operations.infrastructure.import_pipeline.ai_extractor import (
                 extract_with_ai,

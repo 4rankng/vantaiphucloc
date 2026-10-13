@@ -122,7 +122,6 @@ async def test_extract_container_numbers_fail():
 @pytest.mark.asyncio
 async def test_extract_container_numbers_no_provider_configured(monkeypatch):
     """No provider enabled → clear configuration error (not an exception)."""
-    monkeypatch.setattr(settings, "GEMINI_ENABLE", False)
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", False)
     monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "")

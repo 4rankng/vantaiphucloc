@@ -69,7 +69,7 @@ All config via `pydantic_settings.BaseSettings` in `app/config.py`. Key environm
 | `SECRET_KEY` | `change-me-to-a-random-secret-key` | **Production guard** raises ValueError if still default |
 | `REDIS_URL` | `redis://localhost:6379/0` | |
 | `CORS_ORIGINS` | `http://localhost:5173,...` | Comma-separated |
-| `GEMINI_API_KEY` | `""` | Google Gemini for AI parsing features |
+| `OPENROUTER_API_KEY` | `""` | OpenRouter — sole AI provider (OCR + Excel AI extraction) |
 | `PHOTO_STORAGE_ROOT` | `./data/photos` | |
 | `DEFAULT_DRIVER_PASSWORD` | `Phucloc@123` | Default password for new drivers |
 
