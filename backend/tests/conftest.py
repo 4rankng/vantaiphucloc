@@ -14,10 +14,13 @@ from app.core.redis import get_redis
 
 # Gemini is always on in prod (gated on GEMINI_API_KEY). Force the key off
 # for the whole suite so no test ever hits the Gemini network — the import
-# pipeline then degrades to heuristics + NullBatchHeaderClassifier.
+# pipeline then degrades to heuristics + NullBatchHeaderClassifier. Same
+# hygiene for the OpenRouter-backed AI extraction fallback: a local .env
+# with a real key must never cause live calls from run_preview tests.
 from app.config import settings as _settings
 
 _settings.GEMINI_API_KEY = ""
+_settings.OPENROUTER_API_KEY = ""
 
 
 class _FakePipeline:

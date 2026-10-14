@@ -6,9 +6,10 @@ client — only the host, model, and API-key settings differ.
 
 Uses:
     POST {OPENROUTER_BASE_URL}/chat/completions   (Authorization: Bearer <key>)
-with an ``image_url`` content block carrying a base64 data URI. The default
-model is Qwen3-VL-8B-Instruct (use the Instruct variant, not "Thinking" —
-Thinking emits large ``<think>`` blocks that can truncate before an answer).
+with an ``image_url`` content block carrying a base64 data URI for vision
+calls, or a plain text prompt for ``call_openrouter_completion``. The
+default model (settings.OPENROUTER_MODEL) is google/gemini-2.5-flash —
+vision-capable and 10/10 in the Oct 13 OCR shootout.
 """
 
 import base64
@@ -19,7 +20,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from app.config import OPENROUTER_MODEL as _DEFAULT_MODEL, settings
+from app.config import settings
 
 _logger = logging.getLogger(__name__)
 
@@ -88,77 +89,26 @@ def _parse_retry_after(value: str | None) -> float | None:
         return None
 
 
-async def call_openrouter_vision(
-    prompt: str,
-    image_bytes: bytes,
-    mime_type: str = "image/jpeg",
-    model: str | None = None,
-) -> dict:
-    """Call an OpenRouter vision model via the OpenAI-compatible endpoint.
+async def _request_chat_completion(payload: dict, model_slug: str):
+    """POST a chat/completions payload and return ``(result, error)``.
 
-    Returns a dict with the same shape as the other providers:
-    ``success``, ``text``, ``error``, ``provider`` ("openrouter"), ``model``.
-    HTTP errors carry the status code + OpenRouter error message so a wrong
-    model slug (404) is distinguishable from a bad key (401) or rate limit
-    (429) in the OCR analytics. Transient failures — HTTP 5xx, network
-    errors/timeouts, and 200 responses with no usable content — are flagged
-    with ``transient: True`` so the OCR worker retries them.
-
-    ``model`` overrides ``settings.OPENROUTER_MODEL`` — used to run a second
-    (larger) OpenRouter model as a within-provider fallback before Gemini.
+    Exactly one element is set: ``result`` is the decoded JSON body on HTTP
+    200, ``error`` is a provider-tagged failure dict otherwise. HTTP errors
+    carry the status code + OpenRouter error message so a wrong model slug
+    (404) is distinguishable from a bad key (401) or rate limit (429) in the
+    OCR analytics. Transient failures — HTTP 5xx, network errors/timeouts —
+    are flagged ``transient: True`` so the OCR worker retries them.
     """
-    if not settings.OPENROUTER_API_KEY:
-        return {
-            "success": False,
-            "text": None,
-            "error": "OpenRouter API key not configured",
-            "provider": "openrouter",
-            "model": None,
-        }
-
-    try:
-        encoded = base64.b64encode(image_bytes).decode("utf-8")
-    except Exception as e:
-        _logger.error("[OpenRouter] base64 encode failed: %s", e)
-        return {
-            "success": False,
-            "text": None,
-            "error": "Image encoding failed",
-            "provider": "openrouter",
-            "model": None,
-        }
-
-    model_slug = model or _DEFAULT_MODEL
-
-    payload = {
-        "model": model_slug,
-        "temperature": 0,
-        "max_tokens": 2048,
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:{mime_type};base64,{encoded}"},
-                    },
-                ],
-            }
-        ],
-    }
-
     url = f"{settings.OPENROUTER_BASE_URL.rstrip('/')}/chat/completions"
     headers = {
         "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
     }
-
     try:
         client = await _get_http_client()
         response = await client.post(url, json=payload, headers=headers)
         response.raise_for_status()
-        result = response.json()
+        return response.json(), None
     except httpx.HTTPStatusError as e:
         status = e.response.status_code if e.response is not None else "?"
         detail = ""
@@ -179,7 +129,7 @@ async def call_openrouter_vision(
             else None
         )
         _logger.warning("[OpenRouter] request failed: %s", msg)
-        return {
+        return None, {
             "success": False,
             "text": None,
             "error": msg,
@@ -192,7 +142,7 @@ async def call_openrouter_vision(
         }
     except Exception as e:
         _logger.warning("[OpenRouter] request failed: %s: %s", type(e).__name__, e)
-        return {
+        return None, {
             "success": False,
             "text": None,
             "error": f"{type(e).__name__}: {e}",
@@ -201,6 +151,9 @@ async def call_openrouter_vision(
             "transient": True,
         }
 
+
+def _chat_text_result(result: dict, model_slug: str) -> dict:
+    """Extract the assistant text from a chat/completions response body."""
     try:
         choices = result.get("choices") or []
         if not choices:
@@ -238,3 +191,109 @@ async def call_openrouter_vision(
             "provider": "openrouter",
             "model": model_slug,
         }
+
+
+async def call_openrouter_vision(
+    prompt: str,
+    image_bytes: bytes,
+    mime_type: str = "image/jpeg",
+    model: str | None = None,
+) -> dict:
+    """Call an OpenRouter vision model via the OpenAI-compatible endpoint.
+
+    Returns a dict with the same shape as the other providers:
+    ``success``, ``text``, ``error``, ``provider`` ("openrouter"), ``model``.
+    HTTP errors carry the status code + OpenRouter error message so a wrong
+    model slug (404) is distinguishable from a bad key (401) or rate limit
+    (429) in the OCR analytics. Transient failures — HTTP 5xx, network
+    errors/timeouts, and 200 responses with no usable content — are flagged
+    with ``transient: True`` so the OCR worker retries them.
+
+    ``model`` overrides ``settings.OPENROUTER_MODEL`` — used to run a second
+    (larger) OpenRouter model as a within-provider fallback, e.g. the OCR
+    fallback model.
+    """
+    if not settings.OPENROUTER_API_KEY:
+        return {
+            "success": False,
+            "text": None,
+            "error": "OpenRouter API key not configured",
+            "provider": "openrouter",
+            "model": None,
+        }
+
+    try:
+        encoded = base64.b64encode(image_bytes).decode("utf-8")
+    except Exception as e:
+        _logger.error("[OpenRouter] base64 encode failed: %s", e)
+        return {
+            "success": False,
+            "text": None,
+            "error": "Image encoding failed",
+            "provider": "openrouter",
+            "model": None,
+        }
+
+    model_slug = model or settings.OPENROUTER_MODEL
+
+    payload = {
+        "model": model_slug,
+        "temperature": 0,
+        "max_tokens": 2048,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{mime_type};base64,{encoded}"},
+                    },
+                ],
+            }
+        ],
+    }
+
+    result, error = await _request_chat_completion(payload, model_slug)
+    if error is not None:
+        return error
+    return _chat_text_result(result, model_slug)
+
+
+async def call_openrouter_completion(
+    prompt: str,
+    model: str | None = None,
+    max_tokens: int = 2048,
+    response_format: dict | None = None,
+) -> dict:
+    """Call an OpenRouter model with a plain text prompt (no image).
+
+    Shares settings (``OPENROUTER_API_KEY`` / ``OPENROUTER_BASE_URL`` /
+    ``OPENROUTER_MODEL``), the HTTP client, the 60s timeout, and the failure
+    contract with :func:`call_openrouter_vision`: returns a dict with
+    ``success`` / ``text`` / ``error`` / ``provider`` ("openrouter") /
+    ``model``, and never raises.
+    """
+    if not settings.OPENROUTER_API_KEY:
+        return {
+            "success": False,
+            "text": None,
+            "error": "OpenRouter API key not configured",
+            "provider": "openrouter",
+            "model": None,
+        }
+
+    model_slug = model or settings.OPENROUTER_MODEL
+    payload = {
+        "model": model_slug,
+        "temperature": 0,
+        "max_tokens": max_tokens,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    if response_format is not None:
+        payload["response_format"] = response_format
+
+    result, error = await _request_chat_completion(payload, model_slug)
+    if error is not None:
+        return error
+    return _chat_text_result(result, model_slug)

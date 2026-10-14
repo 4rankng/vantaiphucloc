@@ -47,13 +47,21 @@ class Settings(BaseSettings):
     WORKER_TIMEOUT: int = 600
     WORKER_MAX_TRIES: int = 3
 
+    # Deprecated: the Gemini API key has been removed from all environments
+    # and every AI path now routes through OpenRouter. Remaining references
+    # (legacy OCR analytics, schema inference, reconciliation) are inert
+    # without a key and pending migration. Do not use in new code.
     GEMINI_API_KEY: str = ""
-    GEMINI_API_KEY2: str = ""
-    GEMINI_ENABLE: bool = False
-    # OpenRouter (OpenAI-compatible). Opt-in trial provider; off by default.
+    # OpenRouter (OpenAI-compatible) — the sole AI provider. Container OCR
+    # additionally requires OPENROUTER_ENABLE; the Excel AI extractor and
+    # other direct callers only need the API key.
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_ENABLE: bool = False
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    # Default model for direct OpenRouter callers (Excel AI extraction).
+    # Vision-capable; google/gemini-2.5-flash scored 10/10 in the Oct 13 OCR
+    # shootout. The OCR chain pins its own models in OPENROUTER_MODELS.
+    OPENROUTER_MODEL: str = "google/gemini-2.5-flash"
 
     # OCR worker limits. Each OpenRouter model carries its own per-call timeout
     # in OPENROUTER_MODELS; OCR_DEADLINE_SECONDS is the wall-clock backstop for
@@ -139,4 +147,3 @@ GEMINI_MODELS: list[str] = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 OPENROUTER_MODELS: list[tuple[str, str, float]] = [
     ("Claude-Haiku-5.5", "anthropic/claude-haiku-5.5", 30.0),
 ]
-OPENROUTER_MODEL: str = OPENROUTER_MODELS[0][1]  # default for direct callers

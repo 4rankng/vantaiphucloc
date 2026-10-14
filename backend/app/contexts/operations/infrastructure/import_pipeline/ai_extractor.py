@@ -1,8 +1,9 @@
 """AI-powered fallback extraction for unparseable shipping Excel files.
 
 When no known pattern matches and the generic pipeline fails, this module
-sends the raw sheet data to Gemini for extraction.  Uses the same Gemini
-API infrastructure as ``llm.py``.
+sends the raw sheet data to an OpenRouter model (OpenAI-compatible
+chat/completions; default ``settings.OPENROUTER_MODEL``) for extraction.
+Uses the same OpenRouter client infrastructure as ``openrouter.py``.
 """
 
 from __future__ import annotations
@@ -56,110 +57,97 @@ RULES:
 - Return ONLY rows with 4 uppercase letters followed by either 7 or 4 digits.
 - If a field is not available, use empty string "" for strings, null for numbers/dates.
 - source_row MUST match the R-index prefix from the input data.
+
+OUTPUT:
+- Return ONLY a JSON object of the form {"rows": [ ... ]} — no prose, no
+  markdown fences. Each array item has the keys: container_number, cont_type,
+  pickup, dropoff, vessel_name, consignee, vehicle_plate, freight_charge,
+  source_row.
 """
+
+_JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
 
 
 async def extract_with_ai(
     sheets: list[SheetView], filename: str = ""
 ) -> list[ExtractedRow]:
-    """Send sheet data to Gemini and parse the response.
+    """Send sheet data to an OpenRouter model and parse the response.
 
     Returns an empty list on any failure — never raises.
     """
     try:
-        from app.config import GEMINI_MODELS, settings
+        from app.config import settings
 
-        api_key = getattr(settings, "GEMINI_API_KEY", None)
-    except Exception:
+        if not settings.OPENROUTER_API_KEY:
+            return []
+
+        # Pick the most content-rich sheet
+        sheet = _pick_richest_sheet(sheets)
+        if sheet is None:
+            return []
+
+        # Convert to text representation (max 200 rows)
+        text_data = _sheet_to_text(sheet, max_rows=200)
+        if not text_data.strip():
+            return []
+
+        prompt = (
+            _EXTRACT_PROMPT
+            + "\n\n--- DATA START ---\n"
+            + text_data
+            + "\n--- DATA END ---"
+        )
+
+        from app.contexts.operations.infrastructure.openrouter import (
+            call_openrouter_completion,
+        )
+
+        result = await call_openrouter_completion(
+            prompt,
+            max_tokens=8192,
+            response_format={"type": "json_object"},
+        )
+        if not result.get("success"):
+            _logger.warning("[AI extract] OpenRouter failed: %s", result.get("error"))
+            return []
+
+        items = _parse_json_rows(result.get("text") or "")
+        if items is None:
+            _logger.warning("[AI extract] could not parse JSON rows from response")
+            return []
+
+        return _parse_extracted_items(items)
+    except Exception as exc:
+        _logger.warning("[AI extract] failed: %s", exc)
         return []
 
-    if not api_key:
-        return []
 
-    # Pick the most content-rich sheet
-    sheet = _pick_richest_sheet(sheets)
-    if sheet is None:
-        return []
+def _parse_json_rows(text: str) -> list[dict] | None:
+    """Best-effort parse of a model response into a list of row dicts.
 
-    # Convert to text representation (max 200 rows)
-    text_data = _sheet_to_text(sheet, max_rows=200)
-    if not text_data.strip():
-        return []
-
-    prompt = (
-        _EXTRACT_PROMPT + "\n\n--- DATA START ---\n" + text_data + "\n--- DATA END ---"
-    )
-
-    import httpx
-
-    _SCHEMA = {
-        "type": "ARRAY",
-        "items": {
-            "type": "OBJECT",
-            "properties": {
-                "container_number": {"type": "STRING"},
-                "cont_type": {"type": "STRING", "enum": ["E20", "E40", "F20", "F40"]},
-                "pickup": {"type": "STRING"},
-                "dropoff": {"type": "STRING"},
-                "vessel_name": {"type": "STRING"},
-                "consignee": {"type": "STRING"},
-                "vehicle_plate": {"type": "STRING"},
-                "freight_charge": {"type": "INTEGER", "nullable": True},
-                "source_row": {"type": "INTEGER"},
-            },
-            "required": ["container_number", "cont_type", "source_row"],
-        },
-    }
-
-    last_error = None
-    for model_name in GEMINI_MODELS:
-        try:
-            url = (
-                f"https://generativelanguage.googleapis.com/v1beta/"
-                f"models/{model_name}:generateContent?key={api_key}"
-            )
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {
-                    "temperature": 0,
-                    "maxOutputTokens": 8192,
-                    "responseMimeType": "application/json",
-                    "responseSchema": _SCHEMA,
-                },
-            }
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                resp = await client.post(url, json=payload)
-                resp.raise_for_status()
-                data = resp.json()
-
-            text = (
-                data.get("candidates", [{}])[0]
-                .get("content", {})
-                .get("parts", [{}])[0]
-                .get("text", "")
-                .strip()
-            )
-            if not text:
-                last_error = "empty response"
-                continue
-
-            items = json.loads(text)
-            if not isinstance(items, list):
-                last_error = "non-array response"
-                continue
-
-            return _parse_extracted_items(items)
-
-        except Exception as exc:
-            last_error = str(exc)
-            _logger.warning("[AI extract] %s failed: %s", model_name, last_error)
-
-    _logger.warning("[AI extract] all models failed: %s", last_error)
-    return []
+    Accepts the prompted ``{"rows": [...]}`` object, a bare JSON array, or an
+    array embedded in prose/markdown fences. Returns None when nothing
+    array-shaped can be recovered.
+    """
+    data = None
+    try:
+        data = json.loads(text)
+    except (ValueError, TypeError):
+        match = _JSON_ARRAY_RE.search(text)
+        if match is not None:
+            try:
+                data = json.loads(match.group(0))
+            except (ValueError, TypeError):
+                return None
+    if isinstance(data, dict):
+        data = data.get("rows")
+    if not isinstance(data, list):
+        return None
+    return [item for item in data if isinstance(item, dict)]
 
 
 def _parse_extracted_items(items: list[dict]) -> list[ExtractedRow]:
-    """Convert Gemini JSON items into ExtractedRow objects."""
+    """Convert model JSON items into ExtractedRow objects."""
     rows: list[ExtractedRow] = []
     for item in items:
         cont_no = str(item.get("container_number", "")).strip().upper()
