@@ -1,8 +1,8 @@
 """Tests for the OCR module (single-shot container number extraction).
 
 Verifies the single-pass extraction flow (primary OpenRouter chain, optional
-gemini-2.5-flash fallback, bounded by a wall-clock SLA deadline and a
-per-call timeout) without making real API calls, plus the
+gemini-2.5-flash + glm-4.5v fallbacks, bounded by a wall-clock SLA deadline
+and a per-call timeout) without making real API calls, plus the
 /dashboard/ocr-stats aggregation logic.
 """
 
@@ -141,8 +141,8 @@ async def test_extract_container_numbers_no_provider_configured(monkeypatch):
 
 
 def test_available_providers_order_and_gating(monkeypatch):
-    """Primary chain: one entry per configured model, in sequence. The gemini
-    fallback slot is covered by test_available_providers_gemini_fallback_gating."""
+    """Primary chain: one entry per configured model, in sequence. The
+    fallback slots are covered by test_available_providers_fallback_gating."""
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
     monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
     monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", False)
@@ -536,9 +536,9 @@ def test_available_providers_openrouter_no_key(monkeypatch):
     assert _available_providers() == []
 
 
-def test_available_providers_gemini_fallback_gating(monkeypatch):
-    """Gemini fallback: appended after the primary chain by default, gated by
-    OCR_FALLBACK_ENABLE / OCR_FALLBACK_MODEL and the OpenRouter credentials."""
+def test_available_providers_fallback_gating(monkeypatch):
+    """Fallbacks: appended after the primary chain in OCR_FALLBACK_MODELS
+    order, gated by OCR_FALLBACK_ENABLE and the OpenRouter credentials."""
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
     monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
 
@@ -546,25 +546,30 @@ def test_available_providers_gemini_fallback_gating(monkeypatch):
     assert [model for _, model, _, _ in providers] == [
         "anthropic/claude-haiku-5.5",
         "google/gemini-2.5-flash",
+        "z-ai/glm-4.5v",
     ]
-    # 30s primary cap + 30s fallback cap stays inside the 70s deadline.
-    assert [timeout for _, _, timeout, _ in providers] == [30.0, 30.0]
+    # 30s primary cap + 30s fallback-1 cap + 20s fallback-2 cap; the 80s sum
+    # is cut by the 70s OCR_DEADLINE_SECONDS wall-clock backstop, so
+    # fallback 2 only runs while budget remains.
+    assert [timeout for _, _, timeout, _ in providers] == [30.0, 30.0, 20.0]
 
-    # Flag off → primary only.
+    # Flag off → primary only (both fallbacks disabled).
     monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", False)
     assert [model for _, model, _, _ in _available_providers()] == [
         "anthropic/claude-haiku-5.5"
     ]
 
-    # Blank slug → no fallback entry.
+    # Empty fallback list → primary only.
     monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", True)
-    monkeypatch.setattr(settings, "OCR_FALLBACK_MODEL", "  ")
+    monkeypatch.setattr(ocr_mod, "OCR_FALLBACK_MODELS", [])
     assert [model for _, model, _, _ in _available_providers()] == [
         "anthropic/claude-haiku-5.5"
     ]
 
-    # OpenRouter gate off → nothing at all; the fallback rides the same pipe.
-    monkeypatch.setattr(settings, "OCR_FALLBACK_MODEL", "google/gemini-2.5-flash")
+    # OpenRouter gate off → nothing at all; the fallbacks ride the same pipe.
+    monkeypatch.setattr(
+        ocr_mod, "OCR_FALLBACK_MODELS", [("google/gemini-2.5-flash", 30.0)]
+    )
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", False)
     assert _available_providers() == []
 
@@ -865,6 +870,97 @@ async def test_extract_both_providers_fail_logs_both_attempts():
     assert all(a["success"] is False for a in attempts)
     assert attempts[0]["error"] == "Empty OpenRouter response"
     assert attempts[1]["error"] == "HTTP 502: bad gateway"
+
+
+# ---------------------------------------------------------------------------
+# Fallback 2 — haiku + gemini miss → glm-4.5v retries the same request
+# ---------------------------------------------------------------------------
+
+
+def _haiku_gemini_glm_providers(haiku_fn, gemini_fn, glm_fn):
+    return [
+        ("openrouter", "anthropic/claude-haiku-5.5", 30.0, haiku_fn),
+        ("openrouter", "google/gemini-2.5-flash", 30.0, gemini_fn),
+        ("openrouter", "z-ai/glm-4.5v", 20.0, glm_fn),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_extract_falls_back_to_glm_after_haiku_and_gemini_miss():
+    """Haiku and gemini return no valid numbers → glm-4.5v is tried next
+    within the same request; its valid read wins and all three attempts are
+    logged."""
+    calls: list[str] = []
+
+    async def _haiku_miss(image_bytes, mime_type):
+        calls.append("haiku")
+        return {
+            "success": True,
+            "text": "no numbers here at all",
+            "error": None,
+            "provider": "openrouter",
+            "model": "anthropic/claude-haiku-5.5",
+        }
+
+    async def _gemini_miss(image_bytes, mime_type):
+        calls.append("gemini")
+        return {
+            "success": True,
+            "text": "nothing readable",
+            "error": None,
+            "provider": "openrouter",
+            "model": "google/gemini-2.5-flash",
+        }
+
+    async def _glm_hit(image_bytes, mime_type):
+        calls.append("glm")
+        return {
+            "success": True,
+            "text": '{"container_numbers": ["OOLU2371034"]}',
+            "error": None,
+            "provider": "openrouter",
+            "model": "z-ai/glm-4.5v",
+        }
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=_haiku_gemini_glm_providers(_haiku_miss, _gemini_miss, _glm_hit),
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert result["success"] is True
+    assert result["provider"] == "openrouter"
+    assert result["model"] == "z-ai/glm-4.5v"
+    assert result["container_numbers"] == ["OOLU2371034"]
+    assert calls == ["haiku", "gemini", "glm"]
+
+    attempts = result["attempts"]
+    assert len(attempts) == 3
+    assert [a["model"] for a in attempts] == [
+        "anthropic/claude-haiku-5.5",
+        "google/gemini-2.5-flash",
+        "z-ai/glm-4.5v",
+    ]
+    assert attempts[0]["success"] is False
+    assert attempts[0]["error"] == "no valid numbers"
+    assert attempts[1]["success"] is False
+    assert attempts[1]["error"] == "no valid numbers"
+    assert attempts[2]["success"] is True
+    assert attempts[2]["error"] is None
+    assert attempts[2]["container_numbers_found"] == 1
+
+
+def test_fallback_models_disabled_by_flag(monkeypatch):
+    """OCR_FALLBACK_ENABLE=False drops BOTH fallback models from the chain —
+    only the primary remains."""
+    monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
+    monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
+    monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", False)
+
+    assert [model for _, model, _, _ in _available_providers()] == [
+        "anthropic/claude-haiku-5.5"
+    ]
 
 
 # ---------------------------------------------------------------------------
