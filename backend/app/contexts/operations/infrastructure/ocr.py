@@ -84,23 +84,21 @@ Only return [] when there is truly no visible container identifier-like text any
 
 How to read:
 1. Scan the whole visible container: door panels, top/bottom edges, vertical markings, and nearby repeated markings.
-2. First look for ISO numbers: 4 letters followed by 7 digits, even if split across lines.
+2. First look for 11-character ISO numbers (4 letters + 6 serial digits + 1 boxed check digit). These appear either on a SINGLE horizontal line, stacked in a single 1-character-wide vertical column, or with the 4 letters directly above the 7 digits.
 3. If an ISO number is visible, return only the ISO number(s).
 4. If no ISO number is visible, look for a special code: 4 letters followed by exactly 4 digits.
-5. Normalize spaces, dashes, vertical layout, or line breaks into 4 letters + digits.
-6. The first 4 positions must be letters. If a character in the first 4 positions looks like a digit, convert it to the most visually similar letter when reasonable:
-   0→O, 1→I, 2→Z, 5→S, 6→G, 8→B.
-7. The digit positions must be digits. If a character in the digit positions looks like a letter, convert it to the most visually similar digit when reasonable:
-   O/Q→0, I/L/T→1, Z→2, S→5, G→6, B→8.
-8. Ignore ISO size/type codes such as 22G1, 42G1, 45G1, company names, KG, and LB.
-9. If several readings are possible, return the single most visually likely container identifier first. If two different container identifiers are visible, return both.
+5. Remove spaces, dashes, and box borders. NEVER merge the main number line with the line printed directly below the serial digits.
+6. The first 4 positions are letters (owner prefix). The 4th letter of an ISO container is almost always "U" (e.g., MSKU, OOLU, TCNU) — do not misread the 4th letter "U" as 0, O, V, D, or 11. Convert digit-like shapes in positions 1–4 to letters:
+   0→O (or U in position 4), 1→I, 2→Z, 4→A, 5→S, 6→G, 7→T, 8→B.
+7. All remaining positions after the 4 letters are digits. Convert letter-like shapes in digit positions to digits:
+   O/Q/D/U→0, I/L/T→1, Z→2, E→3, A→4, S→5, G→6, B→8. Watch for corrugated door shadows making 1↔7, 3↔8, and 5↔6 look similar.
+8. The 4-character code printed directly BELOW the serial digits (such as 22G1, 42G1, 45G1, 45R1, 25G1, L5G1) is the size/type code. Ignore it completely — never use any character from that lower line as part of the serial or check digit. Also ignore tare/gross weight markings (KG, LB) and company names.
+9. Return at most ONE string per physical container (your single best reading). Only return multiple strings in the array if multiple distinct containers are visible in the photo.
 
 Check digit:
-- Many containers paint a single boxed or separated digit right after the serial, e.g. "OOLU 237103 4".
-- That boxed digit IS part of the ISO number: serial (6 digits) + check digit (1 digit) = the 7 trailing digits.
-- ALWAYS include it: "OOLU 237103 4" must be returned as "OOLU2371034".
-- Never confuse the check digit with the size/type code (22G1, 42G1, 45G1) — that code is NOT part of the number.
-- A common mistake is returning only 6 digits after the letters. The correct form has exactly 7 digits (6 serial + 1 check digit).
+- An ISO container number has 7 digits total: 6 serial digits + 1 check digit on the SAME horizontal level (or bottom of a vertical column).
+- The 7th digit (check digit) is almost always enclosed in a painted box/square, separated by a gap or a vertical door locking rod, or painted in inverted contrast, e.g., "OOLU 237103 [4]" → "OOLU2371034".
+- SELF-CHECK: If your reading has 4 letters and only 6 digits (10 characters), STOP and scan further right on the same line—past any gap, box border, or vertical door rod—to read the 7th boxed digit. Do NOT look at the line below (e.g., 22G1) to find the 7th digit.
 
 Output rules:
 - Return ONLY a JSON array.
