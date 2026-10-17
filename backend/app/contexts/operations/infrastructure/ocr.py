@@ -1,10 +1,10 @@
 """OCR service for extracting container numbers from images.
 
-OpenRouter is the sole OCR provider. The primary chain calls Claude Haiku
-5.5 (``OPENROUTER_MODELS``); when it returns no valid numbers or a failed
-call, the same request is retried with the fallback models
-(``OCR_FALLBACK_MODELS``: google/gemini-2.5-flash, then z-ai/glm-4.5v)
-before salvage — never after a primary success.
+OpenRouter is the sole OCR provider. The primary chain calls DeepSeek V4
+Flash Vision (``OPENROUTER_MODELS``); when it returns no valid numbers or a
+failed call, the same request is retried with the fallback model
+(``OCR_FALLBACK_MODELS``: z-ai/glm-4.5v) before salvage — never after a
+primary success.
 
 SLA: the whole provider chain is bounded by ``settings.OCR_DEADLINE_SECONDS``
 (wall-clock budget for every attempt combined) and each individual call is
@@ -94,6 +94,13 @@ How to read:
    O/Q→0, I/L/T→1, Z→2, S→5, G→6, B→8.
 8. Ignore ISO size/type codes such as 22G1, 42G1, 45G1, company names, KG, and LB.
 9. If several readings are possible, return the single most visually likely container identifier first. If two different container identifiers are visible, return both.
+
+Check digit:
+- Many containers paint a single boxed or separated digit right after the serial, e.g. "OOLU 237103 4".
+- That boxed digit IS part of the ISO number: serial (6 digits) + check digit (1 digit) = the 7 trailing digits.
+- ALWAYS include it: "OOLU 237103 4" must be returned as "OOLU2371034".
+- Never confuse the check digit with the size/type code (22G1, 42G1, 45G1) — that code is NOT part of the number.
+- A common mistake is returning only 6 digits after the letters. The correct form has exactly 7 digits (6 serial + 1 check digit).
 
 Output rules:
 - Return ONLY a JSON array.
@@ -247,12 +254,13 @@ def _fallback_openrouter_models() -> list[tuple[str, float]]:
 def _available_providers() -> list[tuple[str, str | None, float, ProviderCallable]]:
     """Ordered OCR providers enabled by config, as ``(name, model, timeout, callable)``.
 
-    Primary: the OpenRouter models in ``OPENROUTER_MODELS`` (Claude Haiku
-    5.5), each with its own per-call timeout. Optional fallbacks from
-    ``OCR_FALLBACK_MODELS`` (gemini-2.5-flash, then glm-4.5v) appended after
-    them, each with its own cap — the chain only reaches a fallback when
-    every earlier model missed (no valid numbers / failed / timed out),
-    never after a success. Gated by ``OCR_FALLBACK_ENABLE`` (default on).
+    Primary: the OpenRouter models in ``OPENROUTER_MODELS`` (DeepSeek V4
+    Flash Vision), each with its own per-call timeout. Optional fallbacks
+    from ``OCR_FALLBACK_MODELS`` (glm-4.5v) appended after them, each with
+    its own cap read from the same constant — the chain only reaches a
+    fallback when every earlier model missed (no valid numbers / failed /
+    timed out), never after a success. Gated by ``OCR_FALLBACK_ENABLE``
+    (default on).
     The ``model`` hint is carried alongside each callable so a timed-out
     call can still attribute the failure to the right model in analytics.
     """

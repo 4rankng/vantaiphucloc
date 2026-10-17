@@ -91,6 +91,13 @@ How to read:
 8. Ignore ISO size/type codes such as 22G1, 42G1, 45G1, company names, KG, and LB.
 9. If several readings are possible, return the single most visually likely container identifier first. If two different container identifiers are visible, return both.
 
+Check digit:
+- Many containers paint a single boxed or separated digit right after the serial, e.g. "OOLU 237103 4".
+- That boxed digit IS part of the ISO number: serial (6 digits) + check digit (1 digit) = the 7 trailing digits.
+- ALWAYS include it: "OOLU 237103 4" must be returned as "OOLU2371034".
+- Never confuse the check digit with the size/type code (22G1, 42G1, 45G1) — that code is NOT part of the number.
+- A common mistake is returning only 6 digits after the letters. The correct form has exactly 7 digits (6 serial + 1 check digit).
+
 Output rules:
 - Return ONLY a JSON array.
 - Do not explain.

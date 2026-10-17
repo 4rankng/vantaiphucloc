@@ -139,22 +139,22 @@ settings = Settings()
 GEMINI_MODELS: list[str] = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
 # OpenRouter OCR models tried in sequence on every request. Each entry is
-# (label, model_slug, per_call_timeout_seconds). Single-model chain: the
-# per-call timeout bounds a hung call well inside the wall-clock SLA.
+# (label, model_slug, per_call_timeout_seconds).
+# Primary DeepSeek v4 Flash Vision (benchmark 17/10: 5/7 exact, avg 3.8s);
+# per-call timeout phân bổ theo latency đo được (avg 3.8s / max 12.3s → 20s).
 # Code-only — not configurable via env / .env.
 OPENROUTER_MODELS: list[tuple[str, str, float]] = [
-    ("Claude-Haiku-5.5", "anthropic/claude-haiku-5.5", 30.0),
+    ("DeepSeek-V4-Flash-Vision", "deepseek/deepseek-v4-flash-vision-exp", 20.0),
 ]
 
 # Fallback OCR models tried in order AFTER the primary chain
 # (OPENROUTER_MODELS) misses (no valid numbers / failed / timed out), before
 # salvage. Each entry is (model_slug, per_call_timeout_seconds). Rides the
 # same OPENROUTER_API_KEY. Code-only — not configurable via env / .env.
-# Fallback 2 z-ai/glm-4.5v added owner 2026-10-17 (validated OOLU2371034 on
-# a real container photo). 30+30+20s exceeds the 70s OCR_DEADLINE_SECONDS
-# budget, so the wall-clock deadline cuts the chain — fallback 2 only runs
-# while budget remains.
+# Timeout theo benchmark 17/10: glm-4.5v avg 14.4s/max 32.5s → 35s.
+# gemini-2.5-flash dropped owner 2026-10-17: zero unique wins in the 7-image
+# benchmark (every correct gemini read also covered by DeepSeek or GLM) —
+# not worth $0.59/1000 photos as a middle slot. Tổng 20+35=55 ≤ 70s deadline.
 OCR_FALLBACK_MODELS: list[tuple[str, float]] = [
-    ("google/gemini-2.5-flash", 30.0),
-    ("z-ai/glm-4.5v", 20.0),
+    ("z-ai/glm-4.5v", 35.0),
 ]

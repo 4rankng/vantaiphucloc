@@ -1,7 +1,7 @@
 """Tests for the OCR module (single-shot container number extraction).
 
 Verifies the single-pass extraction flow (primary OpenRouter chain, optional
-gemini-2.5-flash + glm-4.5v fallbacks, bounded by a wall-clock SLA deadline
+glm-4.5v fallback, bounded by a wall-clock SLA deadline
 and a per-call timeout) without making real API calls, plus the
 /dashboard/ocr-stats aggregation logic.
 """
@@ -544,31 +544,29 @@ def test_available_providers_fallback_gating(monkeypatch):
 
     providers = _available_providers()
     assert [model for _, model, _, _ in providers] == [
-        "anthropic/claude-haiku-5.5",
-        "google/gemini-2.5-flash",
+        "deepseek/deepseek-v4-flash-vision-exp",
         "z-ai/glm-4.5v",
     ]
-    # 30s primary cap + 30s fallback-1 cap + 20s fallback-2 cap; the 80s sum
-    # is cut by the 70s OCR_DEADLINE_SECONDS wall-clock backstop, so
-    # fallback 2 only runs while budget remains.
-    assert [timeout for _, _, timeout, _ in providers] == [30.0, 30.0, 20.0]
+    # 20s primary cap + 35s fallback cap = 55s, inside the 70s
+    # OCR_DEADLINE_SECONDS budget (benchmark 17/10 allocation).
+    assert [timeout for _, _, timeout, _ in providers] == [20.0, 35.0]
 
-    # Flag off → primary only (both fallbacks disabled).
+    # Flag off → primary only (the fallback is disabled).
     monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", False)
     assert [model for _, model, _, _ in _available_providers()] == [
-        "anthropic/claude-haiku-5.5"
+        "deepseek/deepseek-v4-flash-vision-exp"
     ]
 
     # Empty fallback list → primary only.
     monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", True)
     monkeypatch.setattr(ocr_mod, "OCR_FALLBACK_MODELS", [])
     assert [model for _, model, _, _ in _available_providers()] == [
-        "anthropic/claude-haiku-5.5"
+        "deepseek/deepseek-v4-flash-vision-exp"
     ]
 
-    # OpenRouter gate off → nothing at all; the fallbacks ride the same pipe.
+    # OpenRouter gate off → nothing at all; the fallback rides the same pipe.
     monkeypatch.setattr(
-        ocr_mod, "OCR_FALLBACK_MODELS", [("google/gemini-2.5-flash", 30.0)]
+        ocr_mod, "OCR_FALLBACK_MODELS", [("z-ai/glm-4.5v", 35.0)]
     )
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", False)
     assert _available_providers() == []
@@ -720,196 +718,32 @@ async def test_first_format_valid_wins_does_not_try_next_provider():
 
 
 # ---------------------------------------------------------------------------
-# Gemini fallback — haiku miss → same request retried with gemini-2.5-flash
+# GLM fallback — deepseek miss → same request retried with glm-4.5v
 # ---------------------------------------------------------------------------
 
 
-def _haiku_gemini_providers(haiku_fn, gemini_fn):
+def _deepseek_glm_providers(deepseek_fn, glm_fn):
     return [
-        ("openrouter", "anthropic/claude-haiku-5.5", 30.0, haiku_fn),
-        ("openrouter", "google/gemini-2.5-flash", 30.0, gemini_fn),
+        ("openrouter", "deepseek/deepseek-v4-flash-vision-exp", 20.0, deepseek_fn),
+        ("openrouter", "z-ai/glm-4.5v", 35.0, glm_fn),
     ]
 
 
 @pytest.mark.asyncio
-async def test_extract_falls_back_to_gemini_on_no_valid_numbers():
-    """Haiku returns no valid numbers → gemini-2.5-flash is retried within the
+async def test_extract_falls_back_to_glm_on_no_valid_numbers():
+    """DeepSeek returns no valid numbers → glm-4.5v is retried within the
     same request; its valid read wins and both attempts are logged."""
 
     calls: list[str] = []
 
-    async def _haiku_miss(image_bytes, mime_type):
-        calls.append("haiku")
+    async def _deepseek_miss(image_bytes, mime_type):
+        calls.append("deepseek")
         return {
             "success": True,
             "text": "no numbers here at all",
             "error": None,
             "provider": "openrouter",
-            "model": "anthropic/claude-haiku-5.5",
-        }
-
-    async def _gemini_hit(image_bytes, mime_type):
-        calls.append("gemini")
-        return {
-            "success": True,
-            "text": '{"container_numbers": ["MSKU1234565"]}',
-            "error": None,
-            "provider": "openrouter",
-            "model": "google/gemini-2.5-flash",
-        }
-
-    test_bytes = _make_test_image(800, 600)
-    with patch(
-        "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=_haiku_gemini_providers(_haiku_miss, _gemini_hit),
-    ):
-        result = await extract_container_numbers(test_bytes, "image/jpeg")
-
-    assert result["success"] is True
-    assert result["provider"] == "openrouter"
-    assert result["model"] == "google/gemini-2.5-flash"
-    assert result["container_numbers"] == ["MSKU1234565"]
-    assert calls == ["haiku", "gemini"]
-
-    attempts = result["attempts"]
-    assert len(attempts) == 2
-    assert attempts[0]["model"] == "anthropic/claude-haiku-5.5"
-    assert attempts[0]["success"] is False
-    assert attempts[0]["error"] == "no valid numbers"
-    assert attempts[0]["container_numbers_found"] == 0
-    assert attempts[1]["model"] == "google/gemini-2.5-flash"
-    assert attempts[1]["success"] is True
-    assert attempts[1]["error"] is None
-    assert attempts[1]["container_numbers_found"] == 1
-
-
-@pytest.mark.asyncio
-async def test_extract_primary_success_skips_gemini_fallback():
-    """A valid haiku read ends the chain — gemini is never called."""
-
-    calls: list[str] = []
-
-    async def _haiku_hit(image_bytes, mime_type):
-        calls.append("haiku")
-        return {
-            "success": True,
-            "text": '{"container_numbers": ["MSKU1234565"]}',
-            "error": None,
-            "provider": "openrouter",
-            "model": "anthropic/claude-haiku-5.5",
-        }
-
-    async def _gemini_unreachable(image_bytes, mime_type):
-        calls.append("gemini")
-        raise AssertionError("fallback must not run after a primary success")
-
-    test_bytes = _make_test_image(800, 600)
-    with patch(
-        "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=_haiku_gemini_providers(_haiku_hit, _gemini_unreachable),
-    ):
-        result = await extract_container_numbers(test_bytes, "image/jpeg")
-
-    assert result["success"] is True
-    assert result["model"] == "anthropic/claude-haiku-5.5"
-    assert result["container_numbers"] == ["MSKU1234565"]
-    assert calls == ["haiku"]
-    assert len(result["attempts"]) == 1
-
-
-@pytest.mark.asyncio
-async def test_extract_both_providers_fail_logs_both_attempts():
-    """Haiku error and gemini error → failed result with both attempts logged;
-    the last (transient) error drives the worker's retry classification."""
-
-    calls: list[str] = []
-
-    async def _haiku_error(image_bytes, mime_type):
-        calls.append("haiku")
-        return {
-            "success": False,
-            "text": None,
-            "error": "Empty OpenRouter response",
-            "provider": "openrouter",
-            "model": "anthropic/claude-haiku-5.5",
-            "transient": True,
-        }
-
-    async def _gemini_error(image_bytes, mime_type):
-        calls.append("gemini")
-        return {
-            "success": False,
-            "text": None,
-            "error": "HTTP 502: bad gateway",
-            "provider": "openrouter",
-            "model": "google/gemini-2.5-flash",
-            "status_code": 502,
-            "transient": True,
-        }
-
-    test_bytes = _make_test_image(800, 600)
-    with patch(
-        "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=_haiku_gemini_providers(_haiku_error, _gemini_error),
-    ):
-        result = await extract_container_numbers(test_bytes, "image/jpeg")
-
-    assert result["success"] is False
-    assert result["container_numbers"] == []  # no text to salvage from either
-    assert result["error"] == "Không nhận diện được số cont"
-    assert result["analytics_error"] == "HTTP 502: bad gateway"
-    assert result["transient"] is True  # last failed attempt was transient
-    assert calls == ["haiku", "gemini"]
-
-    attempts = result["attempts"]
-    assert len(attempts) == 2
-    assert [a["model"] for a in attempts] == [
-        "anthropic/claude-haiku-5.5",
-        "google/gemini-2.5-flash",
-    ]
-    assert all(a["success"] is False for a in attempts)
-    assert attempts[0]["error"] == "Empty OpenRouter response"
-    assert attempts[1]["error"] == "HTTP 502: bad gateway"
-
-
-# ---------------------------------------------------------------------------
-# Fallback 2 — haiku + gemini miss → glm-4.5v retries the same request
-# ---------------------------------------------------------------------------
-
-
-def _haiku_gemini_glm_providers(haiku_fn, gemini_fn, glm_fn):
-    return [
-        ("openrouter", "anthropic/claude-haiku-5.5", 30.0, haiku_fn),
-        ("openrouter", "google/gemini-2.5-flash", 30.0, gemini_fn),
-        ("openrouter", "z-ai/glm-4.5v", 20.0, glm_fn),
-    ]
-
-
-@pytest.mark.asyncio
-async def test_extract_falls_back_to_glm_after_haiku_and_gemini_miss():
-    """Haiku and gemini return no valid numbers → glm-4.5v is tried next
-    within the same request; its valid read wins and all three attempts are
-    logged."""
-    calls: list[str] = []
-
-    async def _haiku_miss(image_bytes, mime_type):
-        calls.append("haiku")
-        return {
-            "success": True,
-            "text": "no numbers here at all",
-            "error": None,
-            "provider": "openrouter",
-            "model": "anthropic/claude-haiku-5.5",
-        }
-
-    async def _gemini_miss(image_bytes, mime_type):
-        calls.append("gemini")
-        return {
-            "success": True,
-            "text": "nothing readable",
-            "error": None,
-            "provider": "openrouter",
-            "model": "google/gemini-2.5-flash",
+            "model": "deepseek/deepseek-v4-flash-vision-exp",
         }
 
     async def _glm_hit(image_bytes, mime_type):
@@ -925,7 +759,7 @@ async def test_extract_falls_back_to_glm_after_haiku_and_gemini_miss():
     test_bytes = _make_test_image(800, 600)
     with patch(
         "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=_haiku_gemini_glm_providers(_haiku_miss, _gemini_miss, _glm_hit),
+        return_value=_deepseek_glm_providers(_deepseek_miss, _glm_hit),
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
@@ -933,34 +767,145 @@ async def test_extract_falls_back_to_glm_after_haiku_and_gemini_miss():
     assert result["provider"] == "openrouter"
     assert result["model"] == "z-ai/glm-4.5v"
     assert result["container_numbers"] == ["OOLU2371034"]
-    assert calls == ["haiku", "gemini", "glm"]
+    assert calls == ["deepseek", "glm"]
 
     attempts = result["attempts"]
-    assert len(attempts) == 3
-    assert [a["model"] for a in attempts] == [
-        "anthropic/claude-haiku-5.5",
-        "google/gemini-2.5-flash",
-        "z-ai/glm-4.5v",
-    ]
+    assert len(attempts) == 2
+    assert attempts[0]["model"] == "deepseek/deepseek-v4-flash-vision-exp"
     assert attempts[0]["success"] is False
     assert attempts[0]["error"] == "no valid numbers"
-    assert attempts[1]["success"] is False
-    assert attempts[1]["error"] == "no valid numbers"
-    assert attempts[2]["success"] is True
-    assert attempts[2]["error"] is None
-    assert attempts[2]["container_numbers_found"] == 1
+    assert attempts[0]["container_numbers_found"] == 0
+    assert attempts[1]["model"] == "z-ai/glm-4.5v"
+    assert attempts[1]["success"] is True
+    assert attempts[1]["error"] is None
+    assert attempts[1]["container_numbers_found"] == 1
+
+
+@pytest.mark.asyncio
+async def test_extract_primary_success_skips_glm_fallback():
+    """A valid deepseek read ends the chain — glm is never called."""
+
+    calls: list[str] = []
+
+    async def _deepseek_hit(image_bytes, mime_type):
+        calls.append("deepseek")
+        return {
+            "success": True,
+            "text": '{"container_numbers": ["MSKU1234565"]}',
+            "error": None,
+            "provider": "openrouter",
+            "model": "deepseek/deepseek-v4-flash-vision-exp",
+        }
+
+    async def _glm_unreachable(image_bytes, mime_type):
+        calls.append("glm")
+        raise AssertionError("fallback must not run after a primary success")
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=_deepseek_glm_providers(_deepseek_hit, _glm_unreachable),
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert result["success"] is True
+    assert result["model"] == "deepseek/deepseek-v4-flash-vision-exp"
+    assert result["container_numbers"] == ["MSKU1234565"]
+    assert calls == ["deepseek"]
+    assert len(result["attempts"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_extract_both_providers_fail_logs_both_attempts():
+    """DeepSeek error and glm error → failed result with both attempts
+    logged; the last (transient) error drives the worker's retry
+    classification."""
+
+    calls: list[str] = []
+
+    async def _deepseek_error(image_bytes, mime_type):
+        calls.append("deepseek")
+        return {
+            "success": False,
+            "text": None,
+            "error": "Empty OpenRouter response",
+            "provider": "openrouter",
+            "model": "deepseek/deepseek-v4-flash-vision-exp",
+            "transient": True,
+        }
+
+    async def _glm_error(image_bytes, mime_type):
+        calls.append("glm")
+        return {
+            "success": False,
+            "text": None,
+            "error": "HTTP 502: bad gateway",
+            "provider": "openrouter",
+            "model": "z-ai/glm-4.5v",
+            "status_code": 502,
+            "transient": True,
+        }
+
+    test_bytes = _make_test_image(800, 600)
+    with patch(
+        "app.contexts.operations.infrastructure.ocr._available_providers",
+        return_value=_deepseek_glm_providers(_deepseek_error, _glm_error),
+    ):
+        result = await extract_container_numbers(test_bytes, "image/jpeg")
+
+    assert result["success"] is False
+    assert result["container_numbers"] == []  # no text to salvage from either
+    assert result["error"] == "Không nhận diện được số cont"
+    assert result["analytics_error"] == "HTTP 502: bad gateway"
+    assert result["transient"] is True  # last failed attempt was transient
+    assert calls == ["deepseek", "glm"]
+
+    attempts = result["attempts"]
+    assert len(attempts) == 2
+    assert [a["model"] for a in attempts] == [
+        "deepseek/deepseek-v4-flash-vision-exp",
+        "z-ai/glm-4.5v",
+    ]
+    assert all(a["success"] is False for a in attempts)
+    assert attempts[0]["error"] == "Empty OpenRouter response"
+    assert attempts[1]["error"] == "HTTP 502: bad gateway"
 
 
 def test_fallback_models_disabled_by_flag(monkeypatch):
-    """OCR_FALLBACK_ENABLE=False drops BOTH fallback models from the chain —
+    """OCR_FALLBACK_ENABLE=False drops the fallback model from the chain —
     only the primary remains."""
     monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
     monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
     monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", False)
 
     assert [model for _, model, _, _ in _available_providers()] == [
-        "anthropic/claude-haiku-5.5"
+        "deepseek/deepseek-v4-flash-vision-exp"
     ]
+
+
+def test_fallback_chain_timeouts_come_from_config_constants(monkeypatch):
+    """Chain order deepseek → glm with per-call timeouts read from the
+    OPENROUTER_MODELS / OCR_FALLBACK_MODELS tuples (20s / 35s per the 17/10
+    benchmark allocation) — ocr.py must never hardcode a fallback timeout."""
+    from app.config import OCR_FALLBACK_MODELS as config_fallbacks
+    from app.config import OPENROUTER_MODELS as config_primary
+
+    monkeypatch.setattr(settings, "OPENROUTER_ENABLE", True)
+    monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "or")
+    monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", True)
+
+    providers = _available_providers()
+
+    expected_models = [config_primary[0][1]] + [m for m, _ in config_fallbacks]
+    assert expected_models == [
+        "deepseek/deepseek-v4-flash-vision-exp",
+        "z-ai/glm-4.5v",
+    ]
+    assert [model for _, model, _, _ in providers] == expected_models
+
+    expected_timeouts = [config_primary[0][2]] + [t for _, t in config_fallbacks]
+    assert expected_timeouts == [20.0, 35.0]
+    assert [timeout for _, _, timeout, _ in providers] == expected_timeouts
 
 
 # ---------------------------------------------------------------------------
@@ -2023,13 +1968,13 @@ async def test_process_ocr_job_429_reenqueues_for_retry(
             "error": "OpenRouter đang giới hạn tốc độ, hệ thống sẽ tự thử lại",
             "analytics_error": "HTTP 429: rate limit exceeded",
             "provider": "openrouter",
-            "model": "anthropic/claude-haiku-5.5",
+            "model": "deepseek/deepseek-v4-flash-vision-exp",
             "rate_limited": True,
             "retry_after_seconds": 4.0,
             "attempts": [
                 {
                     "provider": "openrouter",
-                    "model": "anthropic/claude-haiku-5.5",
+                    "model": "deepseek/deepseek-v4-flash-vision-exp",
                     "success": False,
                     "latency_ms": 10,
                     "error": "HTTP 429: rate limit exceeded",
@@ -2331,14 +2276,16 @@ async def test_extract_empty_response_propagates_transient():
             "text": None,
             "error": "Empty OpenRouter response",
             "provider": "openrouter",
-            "model": "anthropic/claude-haiku-5.5",
+            "model": "deepseek/deepseek-v4-flash-vision-exp",
             "transient": True,
         }
 
     test_bytes = _make_test_image(800, 600)
     with patch(
         "app.contexts.operations.infrastructure.ocr._available_providers",
-        return_value=[("openrouter", "anthropic/claude-haiku-5.5", 30.0, _empty)],
+        return_value=[
+            ("openrouter", "deepseek/deepseek-v4-flash-vision-exp", 20.0, _empty)
+        ],
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
@@ -2444,12 +2391,12 @@ async def test_process_ocr_job_retries_transient_empty_response(
             "error": "Không nhận diện được số cont",
             "analytics_error": "Empty OpenRouter response",
             "provider": "openrouter",
-            "model": "anthropic/claude-haiku-5.5",
+            "model": "deepseek/deepseek-v4-flash-vision-exp",
             "transient": True,
             "attempts": [
                 {
                     "provider": "openrouter",
-                    "model": "anthropic/claude-haiku-5.5",
+                    "model": "deepseek/deepseek-v4-flash-vision-exp",
                     "success": False,
                     "latency_ms": 800,
                     "error": "Empty OpenRouter response",
@@ -2525,12 +2472,12 @@ async def test_process_ocr_job_transient_fails_after_max_retries(
             "error": "Không nhận diện được số cont",
             "analytics_error": "Empty OpenRouter response",
             "provider": "openrouter",
-            "model": "anthropic/claude-haiku-5.5",
+            "model": "deepseek/deepseek-v4-flash-vision-exp",
             "transient": True,
             "attempts": [
                 {
                     "provider": "openrouter",
-                    "model": "anthropic/claude-haiku-5.5",
+                    "model": "deepseek/deepseek-v4-flash-vision-exp",
                     "success": False,
                     "latency_ms": 800,
                     "error": "Empty OpenRouter response",
