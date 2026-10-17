@@ -80,13 +80,11 @@ class Settings(BaseSettings):
     OCR_JOB_TIMEOUT_SECONDS: int = 90
     OCR_CONCURRENCY_SLOT_TTL_SECONDS: int = 180
 
-    # Fallback OCR model — retried within the same request when the primary
-    # OpenRouter chain (OPENROUTER_MODELS) returns no valid numbers or a
-    # failed/transient call. Rides the same OPENROUTER_API_KEY. The per-call
-    # cap is code-only (30s in ocr.py) so primary+fallback together fit
-    # OCR_DEADLINE_SECONDS.
+    # Master switch for the code-only fallback models (OCR_FALLBACK_MODELS
+    # at the bottom of this module), retried within the same request when
+    # the primary OpenRouter chain (OPENROUTER_MODELS) returns no valid
+    # numbers or a failed/transient call.
     OCR_FALLBACK_ENABLE: bool = True
-    OCR_FALLBACK_MODEL: str = "google/gemini-2.5-flash"
 
     CHATBOT_ENABLE: int = 0
 
@@ -146,4 +144,17 @@ GEMINI_MODELS: list[str] = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 # Code-only — not configurable via env / .env.
 OPENROUTER_MODELS: list[tuple[str, str, float]] = [
     ("Claude-Haiku-5.5", "anthropic/claude-haiku-5.5", 30.0),
+]
+
+# Fallback OCR models tried in order AFTER the primary chain
+# (OPENROUTER_MODELS) misses (no valid numbers / failed / timed out), before
+# salvage. Each entry is (model_slug, per_call_timeout_seconds). Rides the
+# same OPENROUTER_API_KEY. Code-only — not configurable via env / .env.
+# Fallback 2 z-ai/glm-4.5v added owner 2026-10-17 (validated OOLU2371034 on
+# a real container photo). 30+30+20s exceeds the 70s OCR_DEADLINE_SECONDS
+# budget, so the wall-clock deadline cuts the chain — fallback 2 only runs
+# while budget remains.
+OCR_FALLBACK_MODELS: list[tuple[str, float]] = [
+    ("google/gemini-2.5-flash", 30.0),
+    ("z-ai/glm-4.5v", 20.0),
 ]

@@ -2,9 +2,9 @@
 
 OpenRouter is the sole OCR provider. The primary chain calls Claude Haiku
 5.5 (``OPENROUTER_MODELS``); when it returns no valid numbers or a failed
-call, the same request is retried with a fallback model
-(``OCR_FALLBACK_MODEL``, default google/gemini-2.5-flash) before salvage —
-never after a primary success.
+call, the same request is retried with the fallback models
+(``OCR_FALLBACK_MODELS``: google/gemini-2.5-flash, then z-ai/glm-4.5v)
+before salvage — never after a primary success.
 
 SLA: the whole provider chain is bounded by ``settings.OCR_DEADLINE_SECONDS``
 (wall-clock budget for every attempt combined) and each individual call is
@@ -39,7 +39,7 @@ import re
 import time
 from collections.abc import Awaitable, Callable
 
-from app.config import OPENROUTER_MODELS, settings
+from app.config import OCR_FALLBACK_MODELS, OPENROUTER_MODELS, settings
 from app.contexts.operations.infrastructure.ai import preprocess_image
 from app.contexts.operations.infrastructure.openrouter import call_openrouter_vision
 from app.utils.iso6346 import (
@@ -233,34 +233,28 @@ def _make_openrouter_provider(model: str) -> ProviderCallable:
     return _call
 
 
-# Per-call cap for the fallback model. The primary chain (haiku) caps at 30s,
-# so 30s + 30s stays inside the 70s OCR_DEADLINE_SECONDS budget with 10s to
-# spare. Code-only, same convention as the OPENROUTER_MODELS timeouts.
-_FALLBACK_TIMEOUT_SECONDS = 30.0
+def _fallback_openrouter_models() -> list[tuple[str, float]]:
+    """Fallback ``(model, per-call timeout)`` entries when enabled, else empty.
 
-
-def _fallback_openrouter_model() -> str | None:
-    """Fallback model slug when enabled, else ``None``.
-
-    The fallback rides the same OpenRouter key/pipe as the primary chain, so
+    The fallbacks ride the same OpenRouter key/pipe as the primary chain, so
     the caller must additionally check OPENROUTER_ENABLE + OPENROUTER_API_KEY.
     """
     if not settings.OCR_FALLBACK_ENABLE:
-        return None
-    model = (settings.OCR_FALLBACK_MODEL or "").strip()
-    return model or None
+        return []
+    return list(OCR_FALLBACK_MODELS)
 
 
 def _available_providers() -> list[tuple[str, str | None, float, ProviderCallable]]:
     """Ordered OCR providers enabled by config, as ``(name, model, timeout, callable)``.
 
-    Primary: the OpenRouter models in ``OPENROUTER_MODELS`` (Claude Haiku 5.5),
-    each with its own per-call timeout. Optional gemini-2.5-flash fallback
-    appended after them — the chain only reaches it when every primary model
-    missed (no valid numbers / failed / timed out), never after a success.
-    Gated by ``OCR_FALLBACK_ENABLE`` (default on). The ``model`` hint is
-    carried alongside each callable so a timed-out call can still attribute
-    the failure to the right model in analytics.
+    Primary: the OpenRouter models in ``OPENROUTER_MODELS`` (Claude Haiku
+    5.5), each with its own per-call timeout. Optional fallbacks from
+    ``OCR_FALLBACK_MODELS`` (gemini-2.5-flash, then glm-4.5v) appended after
+    them, each with its own cap — the chain only reaches a fallback when
+    every earlier model missed (no valid numbers / failed / timed out),
+    never after a success. Gated by ``OCR_FALLBACK_ENABLE`` (default on).
+    The ``model`` hint is carried alongside each callable so a timed-out
+    call can still attribute the failure to the right model in analytics.
     """
     providers: list[tuple[str, str | None, float, ProviderCallable]] = []
     if settings.OPENROUTER_ENABLE and settings.OPENROUTER_API_KEY:
@@ -268,13 +262,12 @@ def _available_providers() -> list[tuple[str, str | None, float, ProviderCallabl
             providers.append(
                 ("openrouter", model, timeout, _make_openrouter_provider(model))
             )
-        fallback_model = _fallback_openrouter_model()
-        if fallback_model:
+        for fallback_model, fallback_timeout in _fallback_openrouter_models():
             providers.append(
                 (
                     "openrouter",
                     fallback_model,
-                    _FALLBACK_TIMEOUT_SECONDS,
+                    fallback_timeout,
                     _make_openrouter_provider(fallback_model),
                 )
             )
