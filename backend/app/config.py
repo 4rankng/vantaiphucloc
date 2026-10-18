@@ -140,11 +140,12 @@ GEMINI_MODELS: list[str] = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
 # OpenRouter OCR models tried in sequence on every request. Each entry is
 # (label, model_slug, per_call_timeout_seconds).
-# Primary DeepSeek v4 Flash Vision (benchmark 17/10: 5/7 exact, avg 3.8s);
-# per-call timeout phân bổ theo latency đo được (avg 3.8s / max 12.3s → 20s).
+# Primary DeepSeek v4.1 Flash 1017 (benchmark 18/10: 6/7 exact, avg 4.0s,
+# $0.150/1M — beats deepseek-v4-flash-vision-exp 4/7, 7.2s, $0.216/1M);
+# per-call timeout phân bổ theo latency đo được → 20s.
 # Code-only — not configurable via env / .env.
 OPENROUTER_MODELS: list[tuple[str, str, float]] = [
-    ("DeepSeek-V4-Flash-Vision", "deepseek/deepseek-v4-flash-vision-exp", 20.0),
+    ("DeepSeek-V4.1-Flash-1017", "deepseek/deepseek-v4.1-flash-1017", 20.0),
 ]
 
 # Fallback OCR models tried in order AFTER the primary chain

@@ -544,7 +544,7 @@ def test_available_providers_fallback_gating(monkeypatch):
 
     providers = _available_providers()
     assert [model for _, model, _, _ in providers] == [
-        "deepseek/deepseek-v4-flash-vision-exp",
+        "deepseek/deepseek-v4.1-flash-1017",
         "z-ai/glm-4.5v",
     ]
     # 20s primary cap + 35s fallback cap = 55s, inside the 70s
@@ -554,14 +554,14 @@ def test_available_providers_fallback_gating(monkeypatch):
     # Flag off → primary only (the fallback is disabled).
     monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", False)
     assert [model for _, model, _, _ in _available_providers()] == [
-        "deepseek/deepseek-v4-flash-vision-exp"
+        "deepseek/deepseek-v4.1-flash-1017"
     ]
 
     # Empty fallback list → primary only.
     monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", True)
     monkeypatch.setattr(ocr_mod, "OCR_FALLBACK_MODELS", [])
     assert [model for _, model, _, _ in _available_providers()] == [
-        "deepseek/deepseek-v4-flash-vision-exp"
+        "deepseek/deepseek-v4.1-flash-1017"
     ]
 
     # OpenRouter gate off → nothing at all; the fallback rides the same pipe.
@@ -724,7 +724,7 @@ async def test_first_format_valid_wins_does_not_try_next_provider():
 
 def _deepseek_glm_providers(deepseek_fn, glm_fn):
     return [
-        ("openrouter", "deepseek/deepseek-v4-flash-vision-exp", 20.0, deepseek_fn),
+        ("openrouter", "deepseek/deepseek-v4.1-flash-1017", 20.0, deepseek_fn),
         ("openrouter", "z-ai/glm-4.5v", 35.0, glm_fn),
     ]
 
@@ -743,7 +743,7 @@ async def test_extract_falls_back_to_glm_on_no_valid_numbers():
             "text": "no numbers here at all",
             "error": None,
             "provider": "openrouter",
-            "model": "deepseek/deepseek-v4-flash-vision-exp",
+            "model": "deepseek/deepseek-v4.1-flash-1017",
         }
 
     async def _glm_hit(image_bytes, mime_type):
@@ -771,7 +771,7 @@ async def test_extract_falls_back_to_glm_on_no_valid_numbers():
 
     attempts = result["attempts"]
     assert len(attempts) == 2
-    assert attempts[0]["model"] == "deepseek/deepseek-v4-flash-vision-exp"
+    assert attempts[0]["model"] == "deepseek/deepseek-v4.1-flash-1017"
     assert attempts[0]["success"] is False
     assert attempts[0]["error"] == "no valid numbers"
     assert attempts[0]["container_numbers_found"] == 0
@@ -794,7 +794,7 @@ async def test_extract_primary_success_skips_glm_fallback():
             "text": '{"container_numbers": ["MSKU1234565"]}',
             "error": None,
             "provider": "openrouter",
-            "model": "deepseek/deepseek-v4-flash-vision-exp",
+            "model": "deepseek/deepseek-v4.1-flash-1017",
         }
 
     async def _glm_unreachable(image_bytes, mime_type):
@@ -809,7 +809,7 @@ async def test_extract_primary_success_skips_glm_fallback():
         result = await extract_container_numbers(test_bytes, "image/jpeg")
 
     assert result["success"] is True
-    assert result["model"] == "deepseek/deepseek-v4-flash-vision-exp"
+    assert result["model"] == "deepseek/deepseek-v4.1-flash-1017"
     assert result["container_numbers"] == ["MSKU1234565"]
     assert calls == ["deepseek"]
     assert len(result["attempts"]) == 1
@@ -830,7 +830,7 @@ async def test_extract_both_providers_fail_logs_both_attempts():
             "text": None,
             "error": "Empty OpenRouter response",
             "provider": "openrouter",
-            "model": "deepseek/deepseek-v4-flash-vision-exp",
+            "model": "deepseek/deepseek-v4.1-flash-1017",
             "transient": True,
         }
 
@@ -863,7 +863,7 @@ async def test_extract_both_providers_fail_logs_both_attempts():
     attempts = result["attempts"]
     assert len(attempts) == 2
     assert [a["model"] for a in attempts] == [
-        "deepseek/deepseek-v4-flash-vision-exp",
+        "deepseek/deepseek-v4.1-flash-1017",
         "z-ai/glm-4.5v",
     ]
     assert all(a["success"] is False for a in attempts)
@@ -879,7 +879,7 @@ def test_fallback_models_disabled_by_flag(monkeypatch):
     monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", False)
 
     assert [model for _, model, _, _ in _available_providers()] == [
-        "deepseek/deepseek-v4-flash-vision-exp"
+        "deepseek/deepseek-v4.1-flash-1017"
     ]
 
 
@@ -898,7 +898,7 @@ def test_fallback_chain_timeouts_come_from_config_constants(monkeypatch):
 
     expected_models = [config_primary[0][1]] + [m for m, _ in config_fallbacks]
     assert expected_models == [
-        "deepseek/deepseek-v4-flash-vision-exp",
+        "deepseek/deepseek-v4.1-flash-1017",
         "z-ai/glm-4.5v",
     ]
     assert [model for _, model, _, _ in providers] == expected_models
@@ -1968,13 +1968,13 @@ async def test_process_ocr_job_429_reenqueues_for_retry(
             "error": "OpenRouter đang giới hạn tốc độ, hệ thống sẽ tự thử lại",
             "analytics_error": "HTTP 429: rate limit exceeded",
             "provider": "openrouter",
-            "model": "deepseek/deepseek-v4-flash-vision-exp",
+            "model": "deepseek/deepseek-v4.1-flash-1017",
             "rate_limited": True,
             "retry_after_seconds": 4.0,
             "attempts": [
                 {
                     "provider": "openrouter",
-                    "model": "deepseek/deepseek-v4-flash-vision-exp",
+                    "model": "deepseek/deepseek-v4.1-flash-1017",
                     "success": False,
                     "latency_ms": 10,
                     "error": "HTTP 429: rate limit exceeded",
@@ -2276,7 +2276,7 @@ async def test_extract_empty_response_propagates_transient():
             "text": None,
             "error": "Empty OpenRouter response",
             "provider": "openrouter",
-            "model": "deepseek/deepseek-v4-flash-vision-exp",
+            "model": "deepseek/deepseek-v4.1-flash-1017",
             "transient": True,
         }
 
@@ -2284,7 +2284,7 @@ async def test_extract_empty_response_propagates_transient():
     with patch(
         "app.contexts.operations.infrastructure.ocr._available_providers",
         return_value=[
-            ("openrouter", "deepseek/deepseek-v4-flash-vision-exp", 20.0, _empty)
+            ("openrouter", "deepseek/deepseek-v4.1-flash-1017", 20.0, _empty)
         ],
     ):
         result = await extract_container_numbers(test_bytes, "image/jpeg")
@@ -2391,12 +2391,12 @@ async def test_process_ocr_job_retries_transient_empty_response(
             "error": "Không nhận diện được số cont",
             "analytics_error": "Empty OpenRouter response",
             "provider": "openrouter",
-            "model": "deepseek/deepseek-v4-flash-vision-exp",
+            "model": "deepseek/deepseek-v4.1-flash-1017",
             "transient": True,
             "attempts": [
                 {
                     "provider": "openrouter",
-                    "model": "deepseek/deepseek-v4-flash-vision-exp",
+                    "model": "deepseek/deepseek-v4.1-flash-1017",
                     "success": False,
                     "latency_ms": 800,
                     "error": "Empty OpenRouter response",
@@ -2472,12 +2472,12 @@ async def test_process_ocr_job_transient_fails_after_max_retries(
             "error": "Không nhận diện được số cont",
             "analytics_error": "Empty OpenRouter response",
             "provider": "openrouter",
-            "model": "deepseek/deepseek-v4-flash-vision-exp",
+            "model": "deepseek/deepseek-v4.1-flash-1017",
             "transient": True,
             "attempts": [
                 {
                     "provider": "openrouter",
-                    "model": "deepseek/deepseek-v4-flash-vision-exp",
+                    "model": "deepseek/deepseek-v4.1-flash-1017",
                     "success": False,
                     "latency_ms": 800,
                     "error": "Empty OpenRouter response",
