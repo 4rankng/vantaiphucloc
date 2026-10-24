@@ -2,8 +2,9 @@
 
 OpenRouter is the sole OCR provider. The primary chain calls DeepSeek V4
 Flash Vision (``OPENROUTER_MODELS``); when it returns no valid numbers or a
-failed call, the same request is retried with the fallback model
-(``OCR_FALLBACK_MODELS``: z-ai/glm-4.5v) before salvage — never after a
+failed call, the same request is retried with the fallback models
+(``OCR_FALLBACK_MODELS``: the Sep DeepSeek checkpoint — the only model that
+reads SEKU-type images — then z-ai/glm-4.5v) before salvage — never after a
 primary success.
 
 SLA: the whole provider chain is bounded by ``settings.OCR_DEADLINE_SECONDS``
@@ -241,12 +242,15 @@ def _make_openrouter_provider(model: str) -> ProviderCallable:
 def _fallback_openrouter_models() -> list[tuple[str, float]]:
     """Fallback ``(model, per-call timeout)`` entries when enabled, else empty.
 
-    The fallbacks ride the same OpenRouter key/pipe as the primary chain, so
+    Each OCR_FALLBACK_MODELS entry is ``(model, timeout)`` or carries a
+    leading display label — ``(label, model, timeout)``; only the
+    ``(model, timeout)`` tail reaches the chain. The fallbacks ride the same
+    OpenRouter key/pipe as the primary chain, so
     the caller must additionally check OPENROUTER_ENABLE + OPENROUTER_API_KEY.
     """
     if not settings.OCR_FALLBACK_ENABLE:
         return []
-    return list(OCR_FALLBACK_MODELS)
+    return [entry[-2:] for entry in OCR_FALLBACK_MODELS]
 
 
 def _available_providers() -> list[tuple[str, str | None, float, ProviderCallable]]:
@@ -254,7 +258,8 @@ def _available_providers() -> list[tuple[str, str | None, float, ProviderCallabl
 
     Primary: the OpenRouter models in ``OPENROUTER_MODELS`` (DeepSeek V4
     Flash Vision), each with its own per-call timeout. Optional fallbacks
-    from ``OCR_FALLBACK_MODELS`` (glm-4.5v) appended after them, each with
+    from ``OCR_FALLBACK_MODELS`` (Sep checkpoint, then glm-4.5v) appended
+    after them, each with
     its own cap read from the same constant — the chain only reaches a
     fallback when every earlier model missed (no valid numbers / failed /
     timed out), never after a success. Gated by ``OCR_FALLBACK_ENABLE``
