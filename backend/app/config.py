@@ -141,8 +141,9 @@ GEMINI_MODELS: list[str] = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 # OpenRouter OCR models tried in sequence on every request. Each entry is
 # (label, model_slug, per_call_timeout_seconds).
 # Primary DeepSeek v4.1 Flash 1017 (benchmark 18/10: 6/7 exact, avg 4.0s,
-# $0.150/1M — beats deepseek-v4-flash-vision-exp 4/7, 7.2s, $0.216/1M);
-# per-call timeout phân bổ theo latency đo được → 20s.
+# $0.150/1M — beats deepseek-v4-flash-vision-exp 4/7, 7.2s, $0.216/1M;
+# bench 24/10 đọc đúng SEKU5653845 2/2 lần, 1.4-6.7s). Per-call timeout
+# phân bổ theo latency đo được → 20s.
 # Code-only — not configurable via env / .env.
 OPENROUTER_MODELS: list[tuple[str, str, float]] = [
     ("DeepSeek-V4.1-Flash-1017", "deepseek/deepseek-v4.1-flash-1017", 20.0),
@@ -150,12 +151,24 @@ OPENROUTER_MODELS: list[tuple[str, str, float]] = [
 
 # Fallback OCR models tried in order AFTER the primary chain
 # (OPENROUTER_MODELS) misses (no valid numbers / failed / timed out), before
-# salvage. Each entry is (model_slug, per_call_timeout_seconds). Rides the
-# same OPENROUTER_API_KEY. Code-only — not configurable via env / .env.
-# Timeout theo benchmark 17/10: glm-4.5v avg 14.4s/max 32.5s → 35s.
+# salvage. Each entry is either (label, model_slug, per_call_timeout_seconds)
+# or just (model_slug, per_call_timeout_seconds) — ocr.py only reads the
+# (model_slug, timeout) tail. Rides the same OPENROUTER_API_KEY. Code-only —
+# not configurable via env / .env.
+# Bench 24/10 (7 ảnh: 5 chuẩn docs/ocr/ + SEKU5653845 của user,
+# backend/scripts/compare_ocr.py):
+# - DeepSeek-V4.1-Flash-Sep $0.055/1M: 6/7 exact, avg 10.5s — model DUY NHẤT
+#   đọc đúng SEKU5653845 (12.5s), loại ảnh SEKU-type mà glm-4.5v thất bại
+#   → chen làm FALLBACK ĐẦU.
+# - glm-4.5v: 5/7, SAI SEKU (trả [] sau 29.6s) — chỉ giữ slot cuối; timeout
+#   hạ 35→20s (bench 17/10: avg 14.4s).
+# - qwen3.7-plus: 4/7, avg 21.5s — LOẠI khỏi chuỗi.
 # gemini-2.5-flash dropped owner 2026-10-17: zero unique wins in the 7-image
 # benchmark (every correct gemini read also covered by DeepSeek or GLM) —
-# not worth $0.59/1000 photos as a middle slot. Tổng 20+35=55 ≤ 70s deadline.
-OCR_FALLBACK_MODELS: list[tuple[str, float]] = [
-    ("z-ai/glm-4.5v", 35.0),
+# not worth $0.59/1000 photos as a middle slot.
+# Budget: 20 (primary 1017) + 30 (Sep) + 20 (glm-4.5v) = 70s = đúng
+# OCR_DEADLINE_SECONDS.
+OCR_FALLBACK_MODELS: list[tuple[str, str, float] | tuple[str, float]] = [
+    ("DeepSeek-V4.1-Flash-Sep", "deepseek/deepseek-v4.1-flash", 30.0),
+    ("z-ai/glm-4.5v", 20.0),
 ]
