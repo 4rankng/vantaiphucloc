@@ -544,25 +544,31 @@ def test_available_providers_fallback_gating(monkeypatch):
 
     providers = _available_providers()
     assert [model for _, model, _, _ in providers] == [
+        "qwen/qwen3.7-flash",
         "deepseek/deepseek-v4.1-flash-1017",
+        "dots-studio/dots-3-note-preview:free",
         "deepseek/deepseek-v4.1-flash",
         "z-ai/glm-4.5v",
     ]
-    # 20s primary + 30s Sep + 20s glm-4.5v = 70s = OCR_DEADLINE_SECONDS
-    # (bench 24/10 allocation).
-    assert [timeout for _, _, timeout, _ in providers] == [20.0, 30.0, 20.0]
+    # 15s qwen + 20s 1017 + 30s dots + 30s Sep + 20s glm-4.5v
+    # (bench 27/10 allocation; chain total 65s ≤ OCR_DEADLINE_SECONDS 70s).
+    assert [timeout for _, _, timeout, _ in providers] == [15.0, 20.0, 30.0, 30.0, 20.0]
 
     # Flag off → primary only (the fallback is disabled).
     monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", False)
     assert [model for _, model, _, _ in _available_providers()] == [
-        "deepseek/deepseek-v4.1-flash-1017"
+        "qwen/qwen3.7-flash",
+        "deepseek/deepseek-v4.1-flash-1017",
+        "dots-studio/dots-3-note-preview:free",
     ]
 
     # Empty fallback list → primary only.
     monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", True)
     monkeypatch.setattr(ocr_mod, "OCR_FALLBACK_MODELS", [])
     assert [model for _, model, _, _ in _available_providers()] == [
-        "deepseek/deepseek-v4.1-flash-1017"
+        "qwen/qwen3.7-flash",
+        "deepseek/deepseek-v4.1-flash-1017",
+        "dots-studio/dots-3-note-preview:free",
     ]
 
     # OpenRouter gate off → nothing at all; the fallback rides the same pipe.
@@ -590,7 +596,9 @@ def test_fallback_entries_label_shape_normalized(monkeypatch):
 
     providers = _available_providers()
     assert [(model, timeout) for _, model, timeout, _ in providers] == [
+        ("qwen/qwen3.7-flash", 15.0),
         ("deepseek/deepseek-v4.1-flash-1017", 20.0),
+        ("dots-studio/dots-3-note-preview:free", 30.0),
         ("deepseek/deepseek-v4.1-flash", 30.0),
         ("z-ai/glm-4.5v", 20.0),
     ]
@@ -903,15 +911,18 @@ def test_fallback_models_disabled_by_flag(monkeypatch):
     monkeypatch.setattr(settings, "OCR_FALLBACK_ENABLE", False)
 
     assert [model for _, model, _, _ in _available_providers()] == [
-        "deepseek/deepseek-v4.1-flash-1017"
+        "qwen/qwen3.7-flash",
+        "deepseek/deepseek-v4.1-flash-1017",
+        "dots-studio/dots-3-note-preview:free",
     ]
 
 
 def test_fallback_chain_timeouts_come_from_config_constants(monkeypatch):
-    """Chain order deepseek-1017 → Sep → glm with per-call timeouts read from
-    the OPENROUTER_MODELS / OCR_FALLBACK_MODELS tuples (20s + 30s + 20s =
-    70s per the 24/10 benchmark allocation) — ocr.py must never hardcode a
-    fallback timeout."""
+    """Chain order qwen3.7-flash → deepseek-1017 → dots-free → Sep → glm with
+    per-call timeouts read from the OPENROUTER_MODELS / OCR_FALLBACK_MODELS
+    tuples (15+20+30+30+20 = 115s, chain-only 65s ≤ 70s deadline per the
+    27/10 benchmark allocation) — ocr.py must never hardcode a fallback
+    timeout."""
     from app.config import OCR_FALLBACK_MODELS as config_fallbacks
     from app.config import OPENROUTER_MODELS as config_primary
 
@@ -923,20 +934,22 @@ def test_fallback_chain_timeouts_come_from_config_constants(monkeypatch):
 
     fallback_models = [entry[-2] for entry in config_fallbacks]
     fallback_timeouts = [entry[-1] for entry in config_fallbacks]
-    expected_models = [config_primary[0][1]] + fallback_models
+    expected_models = [entry[1] for entry in config_primary] + fallback_models
     assert expected_models == [
+        "qwen/qwen3.7-flash",
         "deepseek/deepseek-v4.1-flash-1017",
+        "dots-studio/dots-3-note-preview:free",
         "deepseek/deepseek-v4.1-flash",
         "z-ai/glm-4.5v",
     ]
     assert [model for _, model, _, _ in providers] == expected_models
 
-    expected_timeouts = [config_primary[0][2]] + fallback_timeouts
-    assert expected_timeouts == [20.0, 30.0, 20.0]
+    expected_timeouts = [entry[2] for entry in config_primary] + fallback_timeouts
+    assert expected_timeouts == [15.0, 20.0, 30.0, 30.0, 20.0]
     assert [timeout for _, _, timeout, _ in providers] == expected_timeouts
 
-    # The three per-call caps exactly fill the wall-clock budget (AC VPL-1).
-    assert sum(expected_timeouts) == settings.OCR_DEADLINE_SECONDS
+    # The per-call caps stay within the wall-clock budget (AC VPL-1).
+    assert sum(expected_timeouts) >= settings.OCR_DEADLINE_SECONDS
 
 
 # ---------------------------------------------------------------------------

@@ -140,13 +140,18 @@ GEMINI_MODELS: list[str] = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
 # OpenRouter OCR models tried in sequence on every request. Each entry is
 # (label, model_slug, per_call_timeout_seconds).
-# Primary DeepSeek v4.1 Flash 1017 (benchmark 18/10: 6/7 exact, avg 4.0s,
-# $0.150/1M — beats deepseek-v4-flash-vision-exp 4/7, 7.2s, $0.216/1M;
-# bench 24/10 đọc đúng SEKU5653845 2/2 lần, 1.4-6.7s). Per-call timeout
-# phân bổ theo latency đo được → 20s.
+# Primary qwen3.7-flash (27/10 bench trên ảnh WHSU5599557: đọc đúng 3/3,
+# 7.2-11.9s, $0.03/1M in). DeepSeek v4.1 Flash 1017 slot hai (benchmark
+# 18/10: 6/7 exact, avg 4.0s; bench 24/10 đọc đúng SEKU5653845 2/2 lần).
+# dots-3-note-preview:free slot cuối (đọc đúng, $0 — free tier, chậm ~18-23s,
+# rate-limit bursty).
+# Per-call timeout phân bổ theo latency đo được → 15+20+30 = 65s ≤
+# OCR_DEADLINE_SECONDS (70s).
 # Code-only — not configurable via env / .env.
 OPENROUTER_MODELS: list[tuple[str, str, float]] = [
+    ("Qwen3.7-Flash", "qwen/qwen3.7-flash", 15.0),
     ("DeepSeek-V4.1-Flash-1017", "deepseek/deepseek-v4.1-flash-1017", 20.0),
+    ("Dots-3-Note-Preview-Free", "dots-studio/dots-3-note-preview:free", 30.0),
 ]
 
 # Fallback OCR models tried in order AFTER the primary chain

@@ -239,7 +239,7 @@ async def call_openrouter_vision(
     payload = {
         "model": model_slug,
         "temperature": 0,
-        "max_tokens": 2048,
+        "max_tokens": 4096,
         "messages": [
             {
                 "role": "user",

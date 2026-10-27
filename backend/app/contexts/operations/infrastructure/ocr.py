@@ -1,7 +1,8 @@
 """OCR service for extracting container numbers from images.
 
-OpenRouter is the sole OCR provider. The primary chain calls DeepSeek V4
-Flash Vision (``OPENROUTER_MODELS``); when it returns no valid numbers or a
+OpenRouter is the sole OCR provider. The primary chain calls the models in
+``OPENROUTER_MODELS`` (qwen3.7-flash → DeepSeek V4 Flash 1017 →
+dots-3-note-preview:free); when it returns no valid numbers or a
 failed call, the same request is retried with the fallback models
 (``OCR_FALLBACK_MODELS``: the Sep DeepSeek checkpoint — the only model that
 reads SEKU-type images — then z-ai/glm-4.5v) before salvage — never after a
