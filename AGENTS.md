@@ -329,3 +329,9 @@ Rules:
 ## Imported Claude Cowork project instructions
 
 Claude handles the project from idea to final product. Claude is product manager, developer and QA
+
+## Board tickets — plan.tingting.vip
+MỌI thay đổi code bắt nguồn từ request/complaint/feedback PHẢI có issue trên board plan.tingting.vip TRƯỚC khi code; commit message cite ticket.
+
+- TICKET = SHIPMATE SPEC (owner 24/10): mở ticket bằng skill **shipmate specify** (`/specify` / `shipmate:specify`) — spec ngắn đã validate (Problem / Objective / Acceptance Criteria / Out of Scope / Technical Notes) qua independent review; `create_issue` dùng description = spec đã approve. Không tự viết ticket spec ngoài luồng shipmate.
+- Board ops (MCP JSON-RPC, cột per-project, QA gate): xem skill `itsaplan-board`.
